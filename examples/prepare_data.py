@@ -5,7 +5,7 @@ Convert raw school math dataset, into Dataset format.
 import json
 import tarfile
 
-from datasets import Dataset, DatasetDict
+from datasets import Dataset
 
 from jasnah.dataset import get_dataset
 from jasnah.registry import dataset

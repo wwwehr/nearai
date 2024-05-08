@@ -1,6 +1,20 @@
 # Jasnah CLI
 
-## Roadmap
+## Installation
+
+```
+git clone jasnah-cli
+cd jasnah-cli
+python3 -m pip install -e .
+```
+
+## Usage
+
+```
+jasnah-cli --help
+```
+
+## TODO
 
 -   Create alias for models and datasets on the database. For example
 

@@ -30,7 +30,7 @@ class InferenceSession:
             load_in_8bit=False,
             device_map="auto",
             low_cpu_mem_usage=True,
-            # attn_implementation="sdpa",
+            attn_implementation="sdpa",
         )
 
         if peft_model is not None:
@@ -56,12 +56,9 @@ class InferenceSession:
                 do_sample=True,
                 top_p=1.0,
                 temperature=0.1,
-                min_length=None,
                 use_cache=True,
-                top_k=5,
-                repetition_penalty=1.0,
-                length_penalty=1,
                 eos_token_id=self.stop_token,
+                pad_token_id=self.tokenizer.eos_token_id,
                 stop_strings=self.stop_string,
             )
 

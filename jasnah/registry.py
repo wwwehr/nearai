@@ -26,6 +26,8 @@ def download_directory(s3_prefix, local_directory: Path):
     s3_client = boto3.client("s3")
     paginator = s3_client.get_paginator("list_objects_v2")
 
+    found_file = False
+
     for page in paginator.paginate(Bucket=S3_BUCKET, Prefix=s3_prefix):
         if "Contents" not in page:
             continue
@@ -38,6 +40,9 @@ def download_directory(s3_prefix, local_directory: Path):
             # Skip directories, S3 keys ending with '/' are folders
             if not s3_key.endswith("/"):
                 download_file(s3_client, s3_key, local_path)
+                found_file = True
+
+    assert found_file, f"No files found in {s3_prefix}"
 
 
 class Registry:
@@ -80,7 +85,7 @@ class Registry:
         if not target.exists():
             prefix = os.path.join(S3_PREFIX, self.category, name)
             source = f"s3://{S3_BUCKET}/{prefix}"
-            print(f"Downloading {name} from {source}")
+            print(f"Downloading {name} from {source} to {target}")
             download_directory(prefix, target)
 
         return target

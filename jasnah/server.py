@@ -3,6 +3,8 @@ from typing import List
 
 from fabric import ThreadingGroup as Group
 
+import jasnah
+
 
 def parse_hosts(hosts_path: Path) -> List[str]:
     hosts = []
@@ -29,7 +31,7 @@ def install(hosts: List[str]):
         print(f"Host: {host}, hostname: {stdout}")
 
     # Install setup_host.sh script
-    setup_script = Path(__file__).parent.parent / "etc" / "setup_host.sh"
+    setup_script = jasnah.etc("setup_host.sh")
     assert setup_script.exists(), setup_script
     hosts.put(setup_script, "/tmp/setup_host.sh")
 
@@ -40,4 +42,3 @@ def install(hosts: List[str]):
 def start_server(hosts: Path):
     hosts = parse_hosts(hosts)
     install(hosts)
-    

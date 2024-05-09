@@ -1,8 +1,11 @@
+import shutil
 from pathlib import Path
+from subprocess import run
 
 import fire
 import pkg_resources
 
+import jasnah
 from jasnah import registry
 from jasnah.server import start_server
 from jasnah.supervisor import run_supervisor
@@ -28,6 +31,10 @@ class RegistryCli:
 class SupervisorCli:
     def install(self):
         """Install supervisor service in current machine"""
+        file = jasnah.etc("supervisor.service")
+        target = Path("/etc/systemd/system/jasnah_supervisor.service")
+        run(["sudo", "cp", str(file), str(target)])
+        run(["sudo", "systemctl", "daemon-reload"])
 
     def start(self):
         """Start installed supervisor service in current machine"""
@@ -62,7 +69,7 @@ class CLI:
         raise NotImplementedError()
 
     def location(self):
-        print(Path(__file__).parent.parent)
+        print(jasnah.cli_path())
 
     def version(self):
         print(pkg_resources.get_distribution("jasnah").version)

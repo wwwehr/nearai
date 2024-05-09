@@ -25,4 +25,5 @@ if [[ "$CLI_PATH" == "$CURRENT_INSTALLATION" ]]; then
     python3 -m pip install -e .
 fi
 
+jasnah-cli supervisor install
 jasnah-cli supervisor start

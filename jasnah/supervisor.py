@@ -1,7 +1,6 @@
 import shlex
 import tempfile
 from dataclasses import dataclass
-from pathlib import Path
 from subprocess import run
 from threading import Lock
 from typing import Optional
@@ -45,7 +44,11 @@ def submit():
         return f"There is a task already running! {TASK}"
 
     try:
+        # TODO: Read task from the database instead
         TASK = TaskDescription(**request.json)
+
+        # Clone the repository via ssh instead of https to avoid password prompts
+        assert TASK.repository.startswith("git@")
 
         name = repository_name(TASK.repository)
         repository_path = REPOSITORIES / name
@@ -73,4 +76,4 @@ def submit():
 
 
 def run_supervisor():
-    app.run()
+    app.run("0.0.0.0", 8000)

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import fire
+import pkg_resources
 
 from jasnah import registry
 from jasnah.server import start_server
@@ -25,12 +26,14 @@ class RegistryCli:
 
 
 class SupervisorCli:
+    def install(self):
+        """Install supervisor service in current machine"""
+
     def start(self):
-        # Install service if it hasn't been installed before
-        # Start service
-        pass
+        """Start installed supervisor service in current machine"""
 
     def run(self):
+        """Run supervisor app in debug mode"""
         run_supervisor()
 
 
@@ -45,18 +48,24 @@ class CLI:
         hosts = Path(hosts)
         start_server(hosts)
 
-    def run(self):
+    def submit(self):
         """Submit task"""
         raise NotImplementedError()
 
     def inference(self):
-        """Run inference task"""
+        """Submit inference task"""
         raise NotImplementedError()
 
     def config(self):
         """Configure jasnah-cli settings"""
         # TODO: Host, database url, author
         raise NotImplementedError()
+
+    def location(self):
+        print(Path(__file__).parent.parent)
+
+    def version(self):
+        print(pkg_resources.get_distribution("jasnah").version)
 
 
 def main():

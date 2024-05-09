@@ -19,7 +19,7 @@ TASK: Optional["TaskDescription"] = None
 
 @app.route("/status")
 def status():
-    return f"Ok! task: {TASK}"
+    return f"Ok! task: {TASK}\n"
 
 
 @dataclass
@@ -54,18 +54,18 @@ def submit():
         repository_path = REPOSITORIES / name
 
         if not repository_path.exists():
-            run_supervisor(["git", "clone", TASK.repository, repository_path])
+            run(["git", "clone", TASK.repository, repository_path])
 
-        run_supervisor(["git", "reset", "--hard"], cwd=repository_path)
-        run_supervisor(["git", "checkout", TASK.commit], cwd=repository_path)
+        run(["git", "reset", "--hard"], cwd=repository_path)
+        run(["git", "checkout", TASK.commit], cwd=repository_path)
 
         if TASK.diff:
             with tempfile.NamedTemporaryFile("w") as f:
                 f.write(TASK.diff)
-                run_supervisor(["git", "apply", f.name], cwd=repository_path)
+                run(["git", "apply", f.name], cwd=repository_path)
 
         command = shlex.split(TASK.command)
-        run_supervisor(command, cwd=repository_path)
+        run(command, cwd=repository_path)
 
     except Exception as e:
         LOCK.release()

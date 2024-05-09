@@ -38,7 +38,7 @@ class SupervisorCli:
 
     def start(self):
         """Start installed supervisor service in current machine"""
-        run(["sudo", "systemctl", "start", "jasnah_supervisor"])
+        run(["sudo", "systemctl", "restart", "jasnah_supervisor"])
 
     def run(self):
         """Run supervisor app in debug mode"""

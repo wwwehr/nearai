@@ -7,7 +7,7 @@ import pkg_resources
 
 import jasnah
 from jasnah import registry
-from jasnah.server import start_server
+from jasnah.server import install, parse_hosts
 from jasnah.supervisor import run_supervisor
 
 
@@ -38,10 +38,20 @@ class SupervisorCli:
 
     def start(self):
         """Start installed supervisor service in current machine"""
+        run(["sudo", "systemctl", "start", "jasnah_supervisor"])
 
     def run(self):
         """Run supervisor app in debug mode"""
         run_supervisor()
+
+
+class ServerCli:
+    def install(self, hosts: str):
+        hosts = parse_hosts(hosts)
+        install(hosts)
+
+    def start(self):
+        raise NotImplementedError()
 
 
 class CLI:
@@ -49,11 +59,7 @@ class CLI:
         self.dataset = RegistryCli(registry.dataset)
         self.model = RegistryCli(registry.model)
         self.supervisor = SupervisorCli()
-
-    def server(self, hosts: str):
-        """Start controller server"""
-        hosts = Path(hosts)
-        start_server(hosts)
+        self.server = ServerCli()
 
     def submit(self):
         """Submit task"""

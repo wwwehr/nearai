@@ -36,7 +36,7 @@ def install(hosts: List[str]):
     hosts.put(setup_script, "/tmp/setup_host.sh")
 
     # Install supervisor
-    hosts.run("bash /tmp/setup_host.sh", hide=True, warn=False)
+    hosts.run("bash /tmp/setup_host.sh", warn=False)
 
 
 def start_server(hosts: Path):

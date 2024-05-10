@@ -1,0 +1,16 @@
+[Unit]
+Description=Jasnah Server
+After=network.target
+
+[Service]
+User=setup
+Type=simple
+Restart=no
+WorkingDirectory=/home/setup/.jasnah/jasnah-cli
+EnvironmentFile=/home/setup/.jasnah/jasnah-cli/etc/server.env
+ExecStart=/home/setup/.jasnah/jasnah-cli/etc/start_supervisor.sh
+LimitMEMLOCK=infinity
+LimitRSS=infinity
+
+[Install]
+WantedBy=multi-user.target

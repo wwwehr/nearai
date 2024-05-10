@@ -37,8 +37,3 @@ def install(hosts: List[str]):
 
     # Install supervisor
     hosts.run("bash /tmp/setup_host.sh", warn=False)
-
-
-def start_server(hosts: Path):
-    hosts = parse_hosts(hosts)
-    install(hosts)

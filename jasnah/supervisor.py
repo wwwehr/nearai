@@ -5,6 +5,7 @@ from subprocess import run
 from threading import Lock
 from typing import Optional
 
+import requests
 from flask import Flask, request
 
 import jasnah
@@ -40,6 +41,10 @@ def submit():
 
     locked = LOCK.acquire(blocking=False)
 
+    def teardown():
+        TASK = None
+        LOCK.release()
+
     if not locked:
         return f"There is a task already running! {TASK}"
 
@@ -69,14 +74,42 @@ def submit():
         run(command, cwd=repository_path)
 
     except Exception as e:
-        TASK = None
-        LOCK.release()
+        teardown()
         raise e
     else:
-        TASK = None
-        LOCK.release()
+        teardown()
         return "ok"
 
 
 def run_supervisor():
     app.run("0.0.0.0", 8000)
+
+
+class SupervisorClient:
+    def __init__(self, url):
+        self.url = url
+        self.conn = requests.Session()
+
+    def status(self):
+        result = self.conn.get(self.url + "/status")
+        print(result.text)
+
+    def submit(
+        self, repository: str, commit: str, command: str, diff: Optional[str] = None
+    ):
+        result = self.conn.post(
+            self.url + "/submit",
+            json=dict(repository=repository, commit=commit, command=command, diff=diff),
+        )
+        print(result)
+        return "Supervisor Ok"
+
+
+if __name__ == "__main__":
+    client = SupervisorClient("http://10.141.0.13:8000")
+    client.status()
+    client.submit(
+        "git@github.com:JasnahOrg/jasnah-cli.git",
+        "d215f25fdd3e56ccb802e72a9481ffc240c13643",
+        "python3 examples/simple_task.py",
+    )

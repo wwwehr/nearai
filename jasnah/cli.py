@@ -5,13 +5,15 @@ import fire
 import pkg_resources
 
 import jasnah
-from jasnah import registry
+from jasnah.config import update_config
+from jasnah.registry import Registry, dataset, model
 from jasnah.server import install, parse_hosts
+from jasnah.server_app import run_server
 from jasnah.supervisor import run_supervisor
 
 
 class RegistryCli:
-    def __init__(self, registry: registry.Registry):
+    def __init__(self, registry: Registry):
         self._registry = registry
 
     def list(self):
@@ -50,14 +52,20 @@ class ServerCli:
         hosts = parse_hosts(hosts)
         install(hosts)
 
-    def start(self):
-        raise NotImplementedError()
+    def start(self, hosts: str):
+        hosts = parse_hosts(hosts)
+        endpoints = [f"http://{x.split('@')[1]}:8000" for x in hosts]
+        update_config("supervisors", endpoints)
+
+    def run(self):
+        """Run server app in debug mode"""
+        run_server()
 
 
 class CLI:
     def __init__(self):
-        self.dataset = RegistryCli(registry.dataset)
-        self.model = RegistryCli(registry.model)
+        self.dataset = RegistryCli(dataset)
+        self.model = RegistryCli(model)
         self.supervisor = SupervisorCli()
         self.server = ServerCli()
 

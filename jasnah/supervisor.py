@@ -56,6 +56,7 @@ def submit():
         if not repository_path.exists():
             run(["git", "clone", TASK.repository, repository_path])
 
+        run(["git", "pull"])
         run(["git", "reset", "--hard"], cwd=repository_path)
         run(["git", "checkout", TASK.commit], cwd=repository_path)
 

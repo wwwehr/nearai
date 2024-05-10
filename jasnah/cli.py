@@ -1,4 +1,3 @@
-import shutil
 from pathlib import Path
 from subprocess import run
 
@@ -47,6 +46,7 @@ class SupervisorCli:
 
 class ServerCli:
     def install(self, hosts: str):
+        """Install and start supervisor in every host machine"""
         hosts = parse_hosts(hosts)
         install(hosts)
 

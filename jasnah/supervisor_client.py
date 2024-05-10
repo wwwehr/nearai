@@ -27,6 +27,6 @@ if __name__ == "__main__":
     client.status()
     client.submit(
         "git@github.com:JasnahOrg/jasnah-cli.git",
-        "75a28f025857589d085bd3bf15c4106b2c29d98c",
+        "d215f25fdd3e56ccb802e72a9481ffc240c13643",
         "python3 examples/simple_task.py",
     )

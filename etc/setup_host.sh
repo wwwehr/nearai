@@ -27,4 +27,4 @@ if [[ "$CLI_REPO" == "$CURRENT_INSTALLATION" ]]; then
 fi
 
 "$CLI_CMD" supervisor install
-"$CLI_CMD" supervisor restart
+"$CLI_CMD" supervisor start

@@ -47,7 +47,7 @@ class SupervisorCli:
 
 
 class ServerCli:
-    def install(self, hosts: str):
+    def install_supervisors(self, hosts: str):
         """Install and start supervisor in every host machine"""
         hosts = parse_hosts(hosts)
         install(hosts)
@@ -56,6 +56,13 @@ class ServerCli:
         hosts = parse_hosts(hosts)
         endpoints = [f"http://{x.split('@')[1]}:8000" for x in hosts]
         update_config("supervisors", endpoints)
+
+        file = jasnah.etc("server.service")
+        target = Path("/etc/systemd/system/jasnah_server.service")
+
+        run(["sudo", "cp", str(file), str(target)])
+        run(["sudo", "systemctl", "daemon-reload"])
+        run(["sudo", "systemctl", "restart", "jasnah_server"])
 
     def run(self):
         """Run server app in debug mode"""

@@ -8,7 +8,7 @@ Type=simple
 Restart=no
 WorkingDirectory=/home/setup/.jasnah/jasnah-cli
 EnvironmentFile=/home/setup/.jasnah/jasnah-cli/etc/server.env
-ExecStart=/home/setup/.jasnah/jasnah-cli/etc/start_supervisor.sh
+ExecStart=/home/setup/.jasnah/jasnah-cli/etc/start_server.sh
 LimitMEMLOCK=infinity
 LimitRSS=infinity
 

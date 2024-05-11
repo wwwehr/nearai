@@ -1,15 +1,16 @@
+from dataclasses import asdict
 from random import choice
 from typing import Optional
 
 import requests
 from flask import Flask, request
 
+import jasnah
 from jasnah.config import CONFIG
-from jasnah.db import db
 from jasnah.supervisor import TaskDescription
-from dataclasses import asdict
 
 app = Flask(__name__)
+CONFIG.origin = "server"
 
 
 @app.route("/status")
@@ -23,7 +24,7 @@ def submit():
 
     supervisor = choice(CONFIG.supervisors)
 
-    db.log({"supervisor": supervisor, "task": asdict(task)})
+    jasnah.log("server", {"supervisor": supervisor, "task": asdict(task)})
 
     result = requests.post(supervisor + "/submit", json=request.json)
 

@@ -31,7 +31,7 @@ When the supervisor finishes the task it sets itself as available again and ping
 | Column     | Type          | Description                                      | Example                                  |
 | ---------- | ------------- | ------------------------------------------------ | ---------------------------------------- |
 | id         | str           | Unique id per experiment                         |                                          |
-| repository | str           | SSH link to repository                           | git@github.com:JasnahOrg/jasnah-cli.git  |
+| repository | str           | SSH link to repository                           | git@github.com:nearai/jasnah-cli.git     |
 | author     | str           | Name of the user creating this experiment        |                                          |
 | commit     | str           | Valid commit in the git history                  | 28a193126f21f02de221f6ef2c635ad78d3ce6d7 |
 | diff       | Optional[str] | Patch with respect to the specified commit. null |                                          |

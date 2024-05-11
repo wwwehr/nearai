@@ -9,13 +9,15 @@ mkdir -p $JASNAH_DATA
 
 # Download jasnah-cli
 if [ ! -d "$CLI_REPO" ]; then
-    git clone git@github.com:JasnahOrg/jasnah-cli.git $CLI_REPO
+    git clone git@github.com:nearai/jasnah-cli.git $CLI_REPO
 fi
 
 # Update latest version
 cd $CLI_REPO
 git checkout main
 git pull
+
+python3 -m pip install --upgrade pip
 
 # If binary is not available install it
 "$CLI_CMD" version || python3 -m pip install -e .

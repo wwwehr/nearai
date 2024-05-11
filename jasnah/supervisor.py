@@ -109,7 +109,7 @@ if __name__ == "__main__":
     client = SupervisorClient("http://10.141.0.13:8000")
     client.status()
     client.submit(
-        "git@github.com:JasnahOrg/jasnah-cli.git",
+        "git@github.com:nearai/jasnah-cli.git",
         "d215f25fdd3e56ccb802e72a9481ffc240c13643",
         "python3 examples/simple_task.py",
     )

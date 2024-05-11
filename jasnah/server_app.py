@@ -56,7 +56,7 @@ if __name__ == "__main__":
     client = ServerClient("http://127.0.0.1:8100")
     client.status()
     client.submit(
-        "git@github.com:JasnahOrg/jasnah-cli.git",
+        "git@github.com:nearai/jasnah-cli.git",
         "d215f25fdd3e56ccb802e72a9481ffc240c13643",
         "python3 examples/simple_task.py",
     )

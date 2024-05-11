@@ -1,5 +1,4 @@
 from pathlib import Path
-from pprint import pprint
 from subprocess import check_output, run
 
 import fire
@@ -76,7 +75,7 @@ class ConfigCli:
         update_config(key, value, local)
 
     def show(self):
-        pprint(CONFIG)
+        print(CONFIG)
 
 
 class CLI:
@@ -98,7 +97,7 @@ class CLI:
         # https://adamj.eu/tech/2023/05/29/git-detect-in-progress-operation/
         operation = ["CHERRY_PICK_HEAD", "MERGE_HEAD", "REBASE_HEAD", "REVERT_HEAD"]
         for op in operation:
-            result = run(["git", "rev-parse", "--verify", op])
+            result = run(["git", "rev-parse", "--verify", op], capture_output=True)
             if result.returncode == 0:
                 print(f"Detected in-progress git operation: {op}")
                 return

@@ -1,3 +1,5 @@
+import json
+
 import pymysql
 
 from jasnah.config import CONFIG
@@ -28,6 +30,7 @@ class DB:
                             author VARCHAR(255) NOT NULL,
                             commit VARCHAR(255) NOT NULL,
                             diff TEXT,
+                            assigned VARCHAR(255),
                             status VARCHAR(255) NOT NULL)"""
             )
 
@@ -39,6 +42,14 @@ class DB:
                             content JSON)"""
             )
 
+        self.connection.commit()
+
+    def log(self, origin: str, content):
+        content = json.dumps(content)
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO logs (origin, content) VALUES (%s, %s)", (origin, content)
+            )
         self.connection.commit()
 
     def _drop(self):
@@ -83,5 +94,6 @@ except Exception as e:
 
 if __name__ == "__main__":
     print(db)
-    db._create()
+    # db._create()
+    db.log("test", {"hello": "world", "life": 42})
     db._check_all()

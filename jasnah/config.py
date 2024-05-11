@@ -49,6 +49,9 @@ class Config:
     db_port: int = 3306
     db_name: str = "marx_test"
     server_url: str = "http://10.141.0.11:8100"
+    origin: str = None
+    user_name: str = None
+    user_email: str = None
 
     def update_with(self, extra_config: Dict[str, Any], map_key=lambda x: x):
         keys = [f.name for f in fields(self)]

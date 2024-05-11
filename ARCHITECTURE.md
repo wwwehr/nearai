@@ -16,7 +16,7 @@ There are two components:
 
 1. Install `jasnah-cli` first. See [README.md](README.md).
 2. Create the host files with all hosts you want to use. See for example [etc/hosts_lambda.txt](etc/hosts_lambda.txt).
-3. Install the supervisor on every host by running: `jasnah-cli server install path/to/hosts.txt`. This command is idempotent, so it is ok if it is re-run multiple times with failures in some of the hosts.
+3. Install the supervisor on every host by running: `jasnah-cli server install path/to/hosts.txt`. This command is idempotent, so it is ok if it is re-run multiple times.
 4. Start server by running: `jasnah-cli server start path/to/hosts.txt`.
 
 ### Experiment flow

@@ -5,7 +5,7 @@ import fire
 import pkg_resources
 
 import jasnah
-from jasnah.config import CONFIG, update_config
+from jasnah.config import CONFIG, update_config, DATA_FOLDER
 from jasnah.registry import Registry, dataset, model
 from jasnah.server import install, parse_hosts
 from jasnah.server_app import ServerClient, run_server
@@ -123,6 +123,19 @@ class CLI:
 
     def version(self):
         print(pkg_resources.get_distribution("jasnah").version)
+
+    def update(self):
+        """Update jasnah-cli version"""
+        path = DATA_FOLDER / "jasnah-cli"
+
+        if path.absolute() != jasnah.cli_path().absolute():
+            print()
+            print(f"Updating jasnah-cli version installed in {path}")
+            print(f"The invoked jasnah-cli is in {jasnah.cli_path()}")
+            print()
+
+        if path.exists():
+            run(["git", "pull"], cwd=path)
 
 
 def main():

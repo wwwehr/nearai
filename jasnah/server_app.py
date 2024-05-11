@@ -24,7 +24,7 @@ def submit():
 
     supervisor = choice(CONFIG.supervisors)
 
-    jasnah.log("server", {"supervisor": supervisor, "task": asdict(task)})
+    jasnah.log({"supervisor": supervisor, "task": asdict(task)})
 
     result = requests.post(supervisor + "/submit", json=request.json)
 

@@ -1,14 +1,15 @@
 from pathlib import Path
-from subprocess import run
+from pprint import pprint
+from subprocess import check_output, run
 
 import fire
 import pkg_resources
 
 import jasnah
-from jasnah.config import update_config
+from jasnah.config import CONFIG, update_config
 from jasnah.registry import Registry, dataset, model
 from jasnah.server import install, parse_hosts
-from jasnah.server_app import run_server
+from jasnah.server_app import ServerClient, run_server
 from jasnah.supervisor import run_supervisor
 
 
@@ -69,24 +70,53 @@ class ServerCli:
         run_server()
 
 
+class ConfigCli:
+    def set(self, key: str, value: str, local: bool = False):
+        """Add key-value pair to the config file"""
+        update_config(key, value, local)
+
+    def show(self):
+        pprint(CONFIG)
+
+
 class CLI:
     def __init__(self):
         self.dataset = RegistryCli(dataset)
         self.model = RegistryCli(model)
         self.supervisor = SupervisorCli()
         self.server = ServerCli()
+        self.config = ConfigCli()
 
-    def submit(self):
+    def submit(self, command: str):
         """Submit task"""
-        raise NotImplementedError()
+        client = ServerClient(CONFIG.server_url)
+
+        # Check we can connect to the server
+        client.status()
+
+        # Detect in-progress git action
+        # https://adamj.eu/tech/2023/05/29/git-detect-in-progress-operation/
+        operation = ["CHERRY_PICK_HEAD", "MERGE_HEAD", "REBASE_HEAD", "REVERT_HEAD"]
+        for op in operation:
+            result = run(["git", "rev-parse", "--verify", op])
+            if result.returncode == 0:
+                print(f"Detected in-progress git operation: {op}")
+                return
+
+        repository_url = (
+            check_output(["git", "remote", "-v"])
+            .decode()
+            .split("\n")[0]
+            .split("\t")[1]
+            .split()[0]
+        )
+        commit = check_output(["git", "rev-parse", "HEAD"]).decode().strip()
+        diff = check_output(["git", "diff", "HEAD"]).decode()
+
+        client.submit(repository_url, commit, diff, command)
 
     def inference(self):
         """Submit inference task"""
-        raise NotImplementedError()
-
-    def config(self):
-        """Configure jasnah-cli settings"""
-        # TODO: Host, database url, author
         raise NotImplementedError()
 
     def location(self):

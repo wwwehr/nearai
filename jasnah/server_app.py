@@ -4,7 +4,7 @@ from typing import Optional
 import requests
 from flask import Flask, request
 
-import jasnah.config
+from jasnah.config import CONFIG
 from jasnah.supervisor import TaskDescription
 
 app = Flask(__name__)
@@ -20,7 +20,7 @@ def submit():
     task = TaskDescription(**request.json)
     assert task.repository.startswith("git@")
 
-    supervisor = choice(jasnah.config.SUPERVISORS)
+    supervisor = choice(CONFIG.supervisors)
     print("Selected supervisor", supervisor)
 
     result = requests.post(supervisor + "/submit", json=request.json)
@@ -40,7 +40,7 @@ class ServerClient:
 
     def status(self):
         result = self.conn.get(self.url + "/status")
-        print(result.text)
+        return result.text
 
     def submit(
         self, repository: str, commit: str, command: str, diff: Optional[str] = None
@@ -54,7 +54,7 @@ class ServerClient:
 
 if __name__ == "__main__":
     client = ServerClient("http://127.0.0.1:8100")
-    client.status()
+    print(client.status())
     client.submit(
         "git@github.com:nearai/jasnah-cli.git",
         "d215f25fdd3e56ccb802e72a9481ffc240c13643",

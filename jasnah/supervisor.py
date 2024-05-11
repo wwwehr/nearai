@@ -8,12 +8,11 @@ from typing import Optional
 import requests
 from flask import Flask, request
 
-import jasnah
-import jasnah.config
+from jasnah.config import DATA_FOLDER
 
 app = Flask(__name__)
 
-REPOSITORIES = jasnah.config.DATA_FOLDER / "repositories"
+REPOSITORIES = DATA_FOLDER / "repositories"
 LOCK = Lock()
 TASK: Optional["TaskDescription"] = None
 

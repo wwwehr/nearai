@@ -3,23 +3,23 @@ from pathlib import Path
 
 import boto3
 
-from jasnah.config import DATA_FOLDER, S3_BUCKET, S3_PREFIX
+from jasnah.config import CONFIG, DATA_FOLDER
 
 
 def upload_file(client, path: Path, s3_path: str):
     assert path.is_file()
     assert path.exists()
 
-    print(f"Uploading {path} to s3://{S3_BUCKET}/{s3_path}")
-    client.upload_file(str(path), S3_BUCKET, s3_path)
+    print(f"Uploading {path} to s3://{CONFIG.s3_bucket}/{s3_path}")
+    client.upload_file(str(path), CONFIG.s3_bucket, s3_path)
 
 
 def download_file(s3_client, s3_path: str, local_path: Path):
     if not os.path.exists(os.path.dirname(local_path)):
         os.makedirs(os.path.dirname(local_path))
 
-    s3_client.download_file(S3_BUCKET, s3_path, local_path)
-    print(f"Downloaded s3://{S3_BUCKET}/{s3_path} to {local_path}")
+    s3_client.download_file(CONFIG.s3_bucket, s3_path, local_path)
+    print(f"Downloaded s3://{CONFIG.s3_bucket}/{s3_path} to {local_path}")
 
 
 def download_directory(s3_prefix, local_directory: Path):
@@ -28,7 +28,7 @@ def download_directory(s3_prefix, local_directory: Path):
 
     found_file = False
 
-    for page in paginator.paginate(Bucket=S3_BUCKET, Prefix=s3_prefix):
+    for page in paginator.paginate(Bucket=CONFIG.s3_bucket, Prefix=s3_prefix):
         if "Contents" not in page:
             continue
 
@@ -61,7 +61,7 @@ class Registry:
 
         assert path.exists(), "Path does not exist"
 
-        prefix = os.path.join(S3_PREFIX, self.category, name)
+        prefix = os.path.join(CONFIG.s3_prefix, self.category, name)
         s3_client = boto3.client("s3")
 
         if path.is_file():
@@ -83,8 +83,8 @@ class Registry:
         target = self.download_folder / name
 
         if not target.exists():
-            prefix = os.path.join(S3_PREFIX, self.category, name)
-            source = f"s3://{S3_BUCKET}/{prefix}"
+            prefix = os.path.join(CONFIG.s3_prefix, self.category, name)
+            source = f"s3://{CONFIG.s3_bucket}/{prefix}"
             print(f"Downloading {name} from {source} to {target}")
             download_directory(prefix, target)
 

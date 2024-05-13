@@ -28,6 +28,8 @@ def load_config_file(local: bool = False) -> Dict[str, Any]:
 def save_config_file(config: Dict[str, Any], local: bool = False):
     path = get_config_path(local)
 
+    path.parent.mkdir(parents=True, exist_ok=True)
+
     with open(path, "w") as f:
         json.dump(config, f, indent=4)
 
@@ -52,6 +54,7 @@ class Config:
     origin: str = None
     user_name: str = None
     user_email: str = None
+    supervisor_id: str = None
 
     def update_with(self, extra_config: Dict[str, Any], map_key=lambda x: x):
         keys = [f.name for f in fields(self)]

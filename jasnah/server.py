@@ -1,39 +1,126 @@
-from pathlib import Path
-from typing import List
+from typing import Any, Dict, Optional
 
-from fabric import ThreadingGroup as Group
+import requests
+from flask import Flask, request
 
-import jasnah
+from jasnah.config import CONFIG
+from jasnah.db import db
+from jasnah.supervisor import SupervisorClient
 
-
-def parse_hosts(hosts_path: Path) -> List[str]:
-    hosts = []
-    with open(hosts_path) as f:
-        for line in f:
-            p = line.find("#")
-            if p != -1:
-                line = line[:p]
-            line = line.strip(" \n")
-            if not line:
-                continue
-            hosts.append(line)
-    return hosts
+app = Flask(__name__)
+CONFIG.origin = "server"
 
 
-def install(hosts: List[str]):
-    """Install supervisor on every host."""
-    hosts = Group(*hosts)
+def update_queue():
+    """Check for pending experiments and available supervisors"""
+    result = db.get_work_unit()
 
-    # Check we have connection to every host
-    result = hosts.run("hostname", hide=True, warn=False)
-    for host, res in sorted(result.items()):
-        stdout = res.stdout.strip(" \n")
-        print(f"Host: {host}, hostname: {stdout}")
+    if result is None:
+        return {"info": "No pending experiments or available supervisors"}
 
-    # Install setup_host.sh script
-    setup_script = jasnah.etc("setup_host.sh")
-    assert setup_script.exists(), setup_script
-    hosts.put(setup_script, "/tmp/setup_host.sh")
+    experiment, supervisor = result
 
-    # Install supervisor
-    hosts.run("bash /tmp/setup_host.sh", warn=False)
+    client = SupervisorClient(supervisor.endpoint)
+    result = client.update()
+
+    return {
+        "experiment": experiment,
+        "supervisor": supervisor,
+        "supervisor_result": result,
+    }
+
+
+@app.route("/status")
+def status():
+    experiments = db.pending_experiments(4)
+    return {"status": "ok", "pending_experiments": experiments}
+
+
+@app.route("/update")
+def update():
+    return update_queue()
+
+
+@app.post("/submit")
+def submit():
+    body: Dict[str, Any] = request.json
+
+    # TODO: Allow selecting multiple nodes
+
+    name = body["name"]
+    author = body["author"]
+    repository = body["repository"]
+    commit = body["commit"]
+    command = body["command"]
+    diff = body.get("diff")
+
+    experiment_id = db.new_experiment(name, author, repository, commit, command, diff)
+
+    result = {"status": "ok", "experiment": experiment_id}
+
+    update_queue()
+
+    experiment = db.get_experiment(experiment_id)
+
+    if experiment is not None:
+        result.update(
+            {
+                "name": experiment.name,
+                "status": experiment.status,
+                "assigned": experiment.assigned,
+            }
+        )
+
+    return result
+
+
+def run_server():
+    app.run("0.0.0.0", 8100)
+
+
+class ServerClient:
+    def __init__(self, url):
+        self.url = url
+        self.conn = requests.Session()
+
+    def status(self):
+        result = self.conn.get(self.url + "/status")
+        return result.text
+
+    def submit(
+        self,
+        name: str,
+        repository: str,
+        commit: str,
+        command: str,
+        diff: Optional[str] = None,
+        author: Optional[str] = None,
+    ):
+        if author is None:
+            author = CONFIG.user_name
+
+        result = self.conn.post(
+            self.url + "/submit",
+            json=dict(
+                name=name,
+                author=author,
+                repository=repository,
+                commit=commit,
+                command=command,
+                diff=diff,
+            ),
+        )
+        return result.json()
+
+
+if __name__ == "__main__":
+    client = ServerClient("http://127.0.0.1:8100")
+    print(client.status())
+    print(
+        client.submit(
+            "test_experiment",
+            "git@github.com:nearai/jasnah-cli.git",
+            "d215f25fdd3e56ccb802e72a9481ffc240c13643",
+            "python3 examples/simple_task.py",
+        )
+    )

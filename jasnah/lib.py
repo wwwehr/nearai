@@ -1,7 +1,8 @@
+from datetime import datetime as dt
 from pathlib import Path
 
 from jasnah.config import CONFIG
-from datetime import datetime as dt
+from jasnah.db import db
 
 
 def timestamp() -> str:
@@ -29,3 +30,4 @@ def get_origin():
 
 def log(content):
     origin = get_origin()
+    db.log(origin, content)

@@ -1,15 +1,70 @@
+from dataclasses import asdict
 from pathlib import Path
 from subprocess import check_output, run
+from typing import List
 
 import fire
 import pkg_resources
+from fabric import Connection
+from fabric import ThreadingGroup as Group
 
 import jasnah
-from jasnah.config import CONFIG, update_config, DATA_FOLDER
+from jasnah.config import CONFIG, DATA_FOLDER, update_config
 from jasnah.registry import Registry, dataset, model
-from jasnah.server import install, parse_hosts
-from jasnah.server_app import ServerClient, run_server
+from jasnah.server import ServerClient, run_server
 from jasnah.supervisor import run_supervisor
+
+
+class Host:
+    # SSH destination
+    host: str
+    # URL of the supervisor API
+    api_endpoint: str
+
+    def __init__(self, host: str):
+        self.host = host
+        url = host.split("@")[1]
+        self.api_endpoint = f"http://{url}:8000"
+
+
+def parse_hosts(hosts_path: Path) -> List[Host]:
+    hosts = []
+    with open(hosts_path) as f:
+        for line in f:
+            p = line.find("#")
+            if p != -1:
+                line = line[:p]
+            line = line.strip(" \n")
+            if not line:
+                continue
+            hosts.append(line)
+
+    assert len(set(hosts)) == len(hosts), ("Duplicate hosts", hosts)
+    return [Host(x) for x in hosts]
+
+
+def install(hosts_description: List[Host]):
+    """Install supervisor on every host."""
+    hosts = Group(*hosts_description)
+
+    # Check we have connection to every host
+    result = hosts.run("hostname", hide=True, warn=False)
+    for host, res in sorted(result.items()):
+        stdout = res.stdout.strip(" \n")
+        print(f"Host: {host}, hostname: {stdout}")
+
+    # Install setup_host.sh script
+    setup_script = jasnah.etc("setup_host.sh")
+    assert setup_script.exists(), setup_script
+    hosts.put(setup_script, "/tmp/setup_host.sh")
+
+    # Install supervisor
+    hosts.run("bash /tmp/setup_host.sh", warn=False)
+
+    def set_supervisor_id(conn: Connection):
+        conn.run(["jasnah-cli", "config", "set", "supervisor_id", conn.host])
+
+    hosts.run(set_supervisor_id, warn=False)
 
 
 class RegistryCli:
@@ -53,8 +108,8 @@ class ServerCli:
         install(hosts)
 
     def start(self, hosts: str):
-        hosts = parse_hosts(hosts)
-        endpoints = [f"http://{x.split('@')[1]}:8000" for x in hosts]
+        parsed_hosts = parse_hosts(hosts)
+        endpoints = [h.api_endpoint for h in parsed_hosts]
         update_config("supervisors", endpoints)
 
         file = jasnah.etc("server.service")
@@ -75,7 +130,8 @@ class ConfigCli:
         update_config(key, value, local)
 
     def show(self):
-        print(CONFIG)
+        for key, value in asdict(CONFIG).items():
+            print(f"{key}: {value}")
 
 
 class CLI:

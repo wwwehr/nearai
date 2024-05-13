@@ -19,6 +19,7 @@ fabric = "^3.2.2"
 gunicorn = "^22.0.0"
 requests = "^2.31.0"
 pymysql = "^1.1.0"
+setuptools = "^69.5.1"
 
 [tool.poetry.scripts]
 jasnah-cli = "jasnah.cli:main"

@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import List, Optional
 
 import backoff
+import fire
 import pymysql
 
 from jasnah.config import CONFIG
@@ -357,8 +358,13 @@ except Exception as e:
     db = None
 
 
+class CLI:
+    def drop(self):
+        db._drop()
+
+    def create(self):
+        db._create()
+
+
 if __name__ == "__main__":
-    # db._drop()
-    # db._create()
-    # db._check_all()
-    pass
+    fire.Fire(CLI)

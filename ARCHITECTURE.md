@@ -25,28 +25,3 @@ After the server is started it creates a new entry in the `Supervisors` dataset 
 Only the supervisor can set themselves as available. The server pings every supervisor so they can set themselves available.
 The server will check if there is a pending experiment and an available supervisor, if that is the case it changes the status of the supervisor and the experiment to `Running` and not available, and send the experiment id to the supervisor.
 When the supervisor finishes the task it sets itself as available again and pings the server.
-
-**Experiments**
-
-| Column     | Type          | Description                                      | Example                                  |
-| ---------- | ------------- | ------------------------------------------------ | ---------------------------------------- |
-| id         | str           | Unique id per experiment                         |                                          |
-| repository | str           | SSH link to repository                           | git@github.com:nearai/jasnah-cli.git     |
-| author     | str           | Name of the user creating this experiment        |                                          |
-| commit     | str           | Valid commit in the git history                  | 28a193126f21f02de221f6ef2c635ad78d3ce6d7 |
-| diff       | Optional[str] | Patch with respect to the specified commit. null |                                          |
-| status     | TaskStatus    |                                                  |                                          |
-
-```=py
-enum TaskStatus:
-    Pending
-    Running
-    Completed
-```
-
-**Supervisors**
-
-| Column    | Type | Description                                        |
-| --------- | ---- | -------------------------------------------------- |
-| Host      | str  | Host where the supervisor is running               |
-| Available | bool | True if the supervisor is idle and accepting tasks |

@@ -42,7 +42,7 @@ def update_config(key, value, local=False):
 
 @dataclass
 class Config:
-    s3_bucket: str = "kholinar-datasets"
+    s3_bucket: str = "kholinar-registry"
     s3_prefix: str = "registry"
     supervisors: List[str] = field(default_factory=list)
     db_user: Optional[str] = None

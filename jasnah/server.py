@@ -36,6 +36,7 @@ def submit():
     diff = body.get("diff")
     command = body["command"]
     num_nodes = body["num_nodes"]
+    cluster = body["cluster"]
 
     experiment_id = db.add_experiment(
         name, author, repository, commit, diff, command, num_nodes
@@ -43,7 +44,7 @@ def submit():
 
     result = {"info": "launch experiment"}
 
-    supervisors = db._lock_supervisors(experiment_id, num_nodes)
+    supervisors = db.lock_supervisors(experiment_id, num_nodes, cluster)
 
     if not supervisors:
         db.set_experiment_status(experiment_id, "ignored")
@@ -89,6 +90,7 @@ class ServerClient:
         diff: Optional[str] = None,
         author: Optional[str] = None,
         num_nodes=1,
+        cluster="truthwatcher",
     ):
         if author is None:
             author = CONFIG.user_name
@@ -103,6 +105,7 @@ class ServerClient:
                 command=command,
                 diff=diff,
                 num_nodes=num_nodes,
+                cluster=cluster,
             ),
         )
         return result.json()

@@ -175,7 +175,9 @@ class CLI:
         self.server = ServerCli()
         self.config = ConfigCli()
 
-    def submit(self, command: str):
+    def submit(
+        self, command: str, name: str, nodes: int = 1, cluster: str = "truthwatcher"
+    ):
         """Submit task"""
         client = ServerClient(CONFIG.server_url)
 
@@ -201,7 +203,11 @@ class CLI:
         commit = check_output(["git", "rev-parse", "HEAD"]).decode().strip()
         diff = check_output(["git", "diff", "HEAD"]).decode()
 
-        client.submit(repository_url, commit, diff, command)
+        author = CONFIG.user_name
+
+        client.submit(
+            name, repository_url, commit, command, diff, author, nodes, cluster
+        )
 
     def inference(self):
         """Submit inference task"""

@@ -202,13 +202,13 @@ class DB:
         self.connection.commit()
 
     @backoff.on_predicate(backoff.expo, lambda x: x is None, max_tries=7)
-    def _lock_supervisors(
-        self, experiment_id: int, total: int
+    def lock_supervisors(
+        self, experiment_id: int, total: int, cluster: str
     ) -> Optional[List[Supervisor]]:
         with self.connection.cursor() as cursor:
             cursor.execute(
-                "SELECT id FROM supervisors WHERE status='available' ORDER BY id LIMIT %s OFFSET %s",
-                (1, total - 1),
+                "SELECT id FROM supervisors WHERE status='available' AND cluster=%s ORDER BY id LIMIT %s OFFSET %s",
+                (cluster, 1, total - 1),
             )
             result = cursor.fetchone()
 
@@ -219,9 +219,10 @@ class DB:
             supervisor_id = result[0]
 
             cursor.execute(
-                "UPDATE supervisors SET experiment_id=%s, status='preassigned' WHERE status='available' AND id <= %s",
+                "UPDATE supervisors SET experiment_id=%s, status='preassigned' WHERE status='available' AND cluster=%s AND id <= %s",
                 (
                     experiment_id,
+                    cluster,
                     supervisor_id,
                 ),
             )

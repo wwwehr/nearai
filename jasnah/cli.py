@@ -60,11 +60,14 @@ def install(hosts_description: List[Host], skip_install: str):
         stdout = res.stdout.strip(" \n")
         print(f"Host: {host}, hostname: {stdout}")
 
-    # Install setup_host.sh script
-    setup_script = jasnah.etc("install_cli.sh")
-    assert setup_script.exists(), setup_script
-    install_hosts.put(setup_script, "/tmp/install_cli.sh")
-    install_hosts.run(f"bash /tmp/install_cli.sh", warn=False)
+    def run_bash_script(name):
+        # Install setup_host.sh script
+        script = jasnah.etc(name)
+        assert script.exists(), script
+        install_hosts.put(script, f"/tmp/{name}")
+        install_hosts.run(f"bash /tmp/{name}", warn=False)
+
+    run_bash_script("install_cli.sh")
 
     jasnah_cli_path = "/home/setup/.local/bin/jasnah-cli"
 
@@ -78,6 +81,8 @@ def install(hosts_description: List[Host], skip_install: str):
     for host, res in sorted(result.items()):
         stdout = res.stdout.strip(" \n")
         print(f"Host: {host}, supervisor_id: {stdout}")
+
+    run_bash_script("setup_supervisor.sh")
 
 
 class RegistryCli:

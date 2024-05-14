@@ -65,6 +65,9 @@ class Config:
                 # This will skip empty values, even if they are set in the `extra_config`
                 setattr(self, key, extra_config[key])
 
+    def get(self, key: str, default=None):
+        return getattr(self, key, default)
+
 
 # Load default configs
 CONFIG = Config()

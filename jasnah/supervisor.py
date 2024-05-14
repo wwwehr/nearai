@@ -95,6 +95,7 @@ def init():
     supervisor = Supervisor(SUPERVISOR_ID, None, cluster, endpoint, "available")
 
     db.add_supervisors([supervisor])
+    db.set_supervisor_status(SUPERVISOR_ID, "available")
 
     return asdict(supervisor)
 

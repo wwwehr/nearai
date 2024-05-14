@@ -9,6 +9,7 @@ from fabric import ThreadingGroup as Group
 
 import jasnah
 from jasnah.config import CONFIG, DATA_FOLDER, update_config
+from jasnah.db import db
 from jasnah.registry import Registry, dataset, model
 from jasnah.server import ServerClient, run_server
 from jasnah.supervisor import SupervisorClient, run_supervisor
@@ -133,6 +134,8 @@ class ServerCli:
     def start(self, hosts: str):
         parsed_hosts = parse_hosts(hosts)
         update_config("supervisors", [h.endpoint for h in parsed_hosts])
+
+        db.set_all_supervisors_unavailable()
 
         for host in parsed_hosts:
             client = SupervisorClient(host.endpoint)

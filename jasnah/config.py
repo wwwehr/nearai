@@ -49,7 +49,7 @@ class Config:
     db_password: Optional[str] = None
     db_host: str = "35.87.119.37"
     db_port: int = 3306
-    db_name: str = "marx_test"
+    db_name: str = "jasnah_test"
     server_url: str = "http://10.141.0.11:8100"
     origin: str = None
     user_name: str = None

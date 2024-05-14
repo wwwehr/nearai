@@ -194,6 +194,13 @@ class DB:
             )
             return [Supervisor.from_db(row) for row in cursor.fetchall()]
 
+    def set_all_supervisors_unavailable(self):
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE supervisors SET status='unavailable' WHERE status='available'"
+            )
+        self.connection.commit()
+
     @backoff.on_predicate(backoff.expo, lambda x: x is None, max_tries=7)
     def _lock_supervisors(
         self, experiment_id: int, total: int
@@ -336,17 +343,17 @@ if __name__ == "__main__":
     # db._drop()
     # db._create()
 
-    db.add_supervisors(
-        [
-            Supervisor(
-                "setup@10.141.0.11",
-                None,
-                "lambda",
-                "http://10.141.0.11:8000",
-                "unavailable",
-            )
-        ]
-    )
+    # db.add_supervisors(
+    #     [
+    #         Supervisor(
+    #             "setup@10.141.0.11",
+    #             None,
+    #             "lambda",
+    #             "http://10.141.0.11:8000",
+    #             "unavailable",
+    #         )
+    #     ]
+    # )
 
     # db.add_supervisors(
     #     [

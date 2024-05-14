@@ -19,12 +19,12 @@ class Host:
     # SSH destination
     host: str
     # URL of the supervisor API
-    api_endpoint: str
+    endpoint: str
 
     def __init__(self, host: str):
         self.host = host
         url = host.split("@")[1]
-        self.api_endpoint = f"http://{url}:8000"
+        self.endpoint = f"http://{url}:8000"
 
 
 def parse_hosts(hosts_path: Path) -> List[Host]:
@@ -43,25 +43,41 @@ def parse_hosts(hosts_path: Path) -> List[Host]:
     return [Host(x) for x in hosts]
 
 
-def install(hosts_description: List[Host]):
-    """Install supervisor on every host."""
-    hosts = Group(*hosts_description)
+def install(hosts_description: List[Host], skip_install: str):
+    """
+    Install supervisor on every host.
+    Skip jasnah-cli installation on the dev machine (skip_install)
+    """
+    hosts_str = [h.host for h in hosts_description]
+    all_hosts = Group(*hosts_str)
+    install_hosts = Group(
+        *[h.host for h in hosts_description if h.host != skip_install]
+    )
 
     # Check we have connection to every host
-    result = hosts.run("hostname", hide=True, warn=False)
+    result = all_hosts.run("hostname", hide=True, warn=False)
     for host, res in sorted(result.items()):
         stdout = res.stdout.strip(" \n")
         print(f"Host: {host}, hostname: {stdout}")
 
     # Install setup_host.sh script
-    setup_script = jasnah.etc("setup_host.sh")
+    setup_script = jasnah.etc("install_cli.sh")
     assert setup_script.exists(), setup_script
-    hosts.put(setup_script, "/tmp/setup_host.sh")
+    install_hosts.put(setup_script, "/tmp/install_cli.sh")
+    install_hosts.run(f"bash /tmp/install_cli.sh", warn=False)
 
-    # Install supervisor
-    def setup_host(conn: Connection):
-        conn.run(["bash", "/tmp/setup_host.sh",  conn.host])
-    hosts.run(setup_host, warn=False)
+    jasnah_cli_path = "/home/setup/.local/bin/jasnah-cli"
+
+    for conn in all_hosts:
+        conn.run(f"{jasnah_cli_path} config set supervisor_id {conn.host}")
+
+    all_hosts.run(f"{jasnah_cli_path} config set db_user {CONFIG.db_user}")
+    all_hosts.run(f"{jasnah_cli_path} config set db_password {CONFIG.db_password}")
+
+    result = all_hosts.run(f"{jasnah_cli_path} config get supervisor_id")
+    for host, res in sorted(result.items()):
+        stdout = res.stdout.strip(" \n")
+        print(f"Host: {host}, supervisor_id: {stdout}")
 
 
 class RegistryCli:
@@ -99,14 +115,14 @@ class SupervisorCli:
 
 
 class ServerCli:
-    def install_supervisors(self, hosts: str):
+    def install_supervisors(self, hosts: str, skip: str = ""):
         """Install and start supervisor in every host machine"""
         hosts = parse_hosts(hosts)
-        install(hosts)
+        install(hosts, skip)
 
     def start(self, hosts: str):
         parsed_hosts = parse_hosts(hosts)
-        endpoints = [h.api_endpoint for h in parsed_hosts]
+        endpoints = [h.endpoint for h in parsed_hosts]
         update_config("supervisors", endpoints)
 
         file = jasnah.etc("server.service")
@@ -125,6 +141,10 @@ class ConfigCli:
     def set(self, key: str, value: str, local: bool = False):
         """Add key-value pair to the config file"""
         update_config(key, value, local)
+
+    def get(self, key: str):
+        """Get value of a key in the config file"""
+        print(CONFIG.get(key))
 
     def show(self):
         for key, value in asdict(CONFIG).items():

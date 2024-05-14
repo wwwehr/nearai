@@ -54,7 +54,7 @@ def submit():
     command = body["command"]
     diff = body.get("diff")
 
-    experiment_id = db.new_experiment(name, author, repository, commit, command, diff)
+    experiment_id = db.add_experiment(name, author, repository, commit, command, diff)
 
     result = {"status": "ok", "experiment": experiment_id}
 

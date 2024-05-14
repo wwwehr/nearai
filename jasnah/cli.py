@@ -61,6 +61,7 @@ def install(hosts_description: List[Host]):
     # Install supervisor
     hosts.run("bash /tmp/setup_host.sh", warn=False)
 
+    # TODO: Merge this with setup_host.sh
     def set_supervisor_id(conn: Connection):
         conn.run(["jasnah-cli", "config", "set", "supervisor_id", conn.host])
 

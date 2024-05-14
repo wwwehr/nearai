@@ -61,7 +61,7 @@ def run_experiment(experiment: Experiment):
     run_experiment_inner(experiment)
 
     db.set_experiment_status(experiment.id, "done")
-    db.set_supervisor_available(SUPERVISOR_ID, True)
+    db.set_supervisor_status(SUPERVISOR_ID, "available")
 
     # Notify server that this supervisor is available
     requests.get(SERVER_URL + "/update")
@@ -92,7 +92,7 @@ def update():
         LOCK.release()
 
     if experiment is None:
-        db.set_supervisor_available(SUPERVISOR_ID, True)
+        db.set_supervisor_status(SUPERVISOR_ID, "available")
         # Notify server that this supervisor is available
         requests.get(SERVER_URL + "/update")
         return {"status": "ok", "info": "No assigned experiments"}

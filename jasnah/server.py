@@ -118,8 +118,9 @@ if __name__ == "__main__":
             client.submit(
                 "test_experiment",
                 "git@github.com:nearai/jasnah-cli.git",
-                "d215f25fdd3e56ccb802e72a9481ffc240c13643",
+                "b0dfca8637522eae9d20c5a7c2a843816b86ed87",
                 "python3 examples/simple_task.py",
+                num_nodes=2,
             )
         )
     )

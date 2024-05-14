@@ -59,13 +59,9 @@ def install(hosts_description: List[Host]):
     hosts.put(setup_script, "/tmp/setup_host.sh")
 
     # Install supervisor
-    hosts.run("bash /tmp/setup_host.sh", warn=False)
-
-    # TODO: Merge this with setup_host.sh
-    def set_supervisor_id(conn: Connection):
-        conn.run(["jasnah-cli", "config", "set", "supervisor_id", conn.host])
-
-    hosts.run(set_supervisor_id, warn=False)
+    def setup_host(conn: Connection):
+        conn.run(["bash", "/tmp/setup_host.sh",  conn.host])
+    hosts.run(setup_host, warn=False)
 
 
 class RegistryCli:

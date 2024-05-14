@@ -2,12 +2,18 @@ import json
 import os
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import backoff
 import pymysql
 
 from jasnah.config import CONFIG
+
+
+def datetime_serializer(obj):
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    return str(obj)
 
 
 @dataclass
@@ -22,7 +28,6 @@ class Experiment:
     command: str
     num_nodes: int = 1
     status: str = "pending"
-    lock_id: int = 0
 
     @staticmethod
     def from_db(row) -> Optional["Experiment"]:
@@ -73,7 +78,7 @@ class DB:
         self.connection.close()
 
     def log(self, origin: str, content):
-        content = json.dumps(content)
+        content = json.dumps(content, default=datetime_serializer)
         with self.connection.cursor() as cursor:
             cursor.execute(
                 "INSERT INTO logs (origin, content) VALUES (%s, %s)", (origin, content)
@@ -92,7 +97,7 @@ class DB:
     ) -> int:
         with self.connection.cursor() as cursor:
             cursor.execute(
-                "INSERT INTO experiments (name, author, repository, commit, diff, command, num_nodes, status, lock_id) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                "INSERT INTO experiments (name, author, repository, commit, diff, command, num_nodes, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
                 (
                     name,
                     author,
@@ -102,7 +107,6 @@ class DB:
                     command,
                     num_nodes,
                     "pending",
-                    0,
                 ),
             )
             self.connection.commit()
@@ -118,15 +122,26 @@ class DB:
     def get_assignment(self, supervisor_id: str) -> Optional[Experiment]:
         with self.connection.cursor() as cursor:
             cursor.execute(
-                "SELECT * FROM experiments WHERE assigned=%s LIMIT 1", (supervisor_id,)
+                "SELECT experiment_id FROM supervisors WHERE id=%s AND status='assigned'",
+                (supervisor_id,),
             )
+            row = cursor.fetchone()
+
+            if not row:
+                return None
+
+            experiment_id = row[0]
+
+            cursor.execute(
+                "SELECT * FROM experiments WHERE id=%s LIMIT 1", (experiment_id,)
+            )
+
             return Experiment.from_db(cursor.fetchone())
 
-    def pending_experiments(self, total: int = 1) -> List[Experiment]:
+    def last_experiments(self, total: int) -> List[Experiment]:
         with self.connection.cursor() as cursor:
             cursor.execute(
-                "SELECT * FROM experiments WHERE status='pending' ORDER BY time LIMIT %s",
-                (total,),
+                "SELECT * FROM experiments ORDER BY id DESC LIMIT %s", (total,)
             )
             return [Experiment.from_db(row) for row in cursor.fetchall()]
 
@@ -156,21 +171,6 @@ class DB:
             )
             return cursor.fetchone()[0]
 
-    def get_work_unit(self) -> Optional[Tuple[Experiment, List[Supervisor]]]:
-        experiment_id = self._lock_experiment()
-
-        if experiment_id < 0:
-            return None
-
-        num_nodes = self.num_nodes(experiment_id)
-        supervisors = self._lock_supervisors(experiment_id, num_nodes)
-
-        if not supervisors:
-            self._release_experiment(experiment_id)
-            return None
-
-        return self.get_experiment(experiment_id), supervisors
-
     def set_experiment_status(self, experiment_id: str, status: str):
         with self.connection.cursor() as cursor:
             cursor.execute(
@@ -186,45 +186,13 @@ class DB:
             )
         self.connection.commit()
 
-    def get_counter(self) -> int:
-        """Get unique number. This is used to fetch experiments and supervisors in a safe way."""
+    def get_assigned_supervisors(self, experiment_id: int) -> List[Supervisor]:
         with self.connection.cursor() as cursor:
-            cursor.execute("INSERT INTO counter () VALUES ()")
-            counter = cursor.lastrowid
-        self.connection.commit()
-        return counter
-
-    @backoff.on_predicate(backoff.expo, lambda x: x == -1, max_tries=7)
-    def _lock_experiment(self) -> int:
-        lock_id = self.get_counter()
-
-        with self.connection.cursor() as cursor:
-            cursor.execute("SELECT id FROM experiments WHERE status='pending' LIMIT 1")
-            result = cursor.fetchone()
-            if result is None:
-                # There is no pending experiment. Don't backoff
-                return -2
-
-            experiment_id = result[0]
             cursor.execute(
-                "UPDATE experiments SET status='assigned', lock_id=%s WHERE id=%s AND status='pending'",
-                (
-                    lock_id,
-                    experiment_id,
-                ),
+                "SELECT * FROM supervisors WHERE experiment_id=%s AND status='assigned' ORDER BY id",
+                (experiment_id,),
             )
-            self.connection.commit()
-
-            cursor.execute(
-                "SELECT lock_id FROM experiments WHERE id=%s", (experiment_id,)
-            )
-            result = cursor.fetchone()
-
-            if result != (lock_id,):
-                self._release_experiment(experiment_id)
-                return -1
-
-            return experiment_id
+            return [Supervisor.from_db(row) for row in cursor.fetchall()]
 
     @backoff.on_predicate(backoff.expo, lambda x: x is None, max_tries=7)
     def _lock_supervisors(
@@ -244,7 +212,7 @@ class DB:
             supervisor_id = result[0]
 
             cursor.execute(
-                "UPDATE supervisors SET experiment_id=%s, status='preassigned' WHERE status='available', id <= %s",
+                "UPDATE supervisors SET experiment_id=%s, status='preassigned' WHERE status='available' AND id <= %s",
                 (
                     experiment_id,
                     supervisor_id,
@@ -254,15 +222,15 @@ class DB:
             self.connection.commit()
 
             cursor.execute(
-                "SELECT * FROM supervisors WHERE experiment_id=%s",
+                "SELECT * FROM supervisors WHERE experiment_id=%s AND status='preassigned'",
                 (experiment_id,),
             )
 
-            selected = cursor.fetchmany()
+            selected = cursor.fetchall()
 
             if len(selected) == total:
                 cursor.execute(
-                    "UPDATE supervisor SET status='assigned' WHERE experiment_id=%s",
+                    "UPDATE supervisors SET status='assigned' WHERE experiment_id=%s",
                     (experiment_id,),
                 )
                 self.connection.commit()
@@ -276,24 +244,9 @@ class DB:
                 self.connection.commit()
                 return None
 
-    def _release_experiment(self, experiment_id: int):
-        with self.connection.cursor() as cursor:
-            cursor.execute(
-                "UPDATE experiments SET status='pending' WHERE id=%s", (experiment_id,)
-            )
-        self.connection.commit()
-
     def _create(self):
         """Create tables if they don't exist"""
         with self.connection.cursor() as cursor:
-            cursor.execute(
-                """CREATE TABLE IF NOT EXISTS counter(
-                           id INT AUTO_INCREMENT PRIMARY KEY
-                           )"""
-            )
-
-            cursor.execute("INSERT INTO counter () VALUES ()")
-
             cursor.execute(
                 """CREATE TABLE IF NOT EXISTS supervisors(
                             id VARCHAR(255) NOT NULL PRIMARY KEY,
@@ -315,8 +268,7 @@ class DB:
                             diff TEXT,
                             command TEXT NOT NULL,
                             num_nodes INT NOT NULL,
-                            status VARCHAR(255) NOT NULL,
-                            lock_id INT
+                            status VARCHAR(255) NOT NULL
                             )"""
             )
 
@@ -336,7 +288,6 @@ class DB:
         assert os.environ["JASNAH_I_KNOW_WHAT_I_AM_DOING"] == "yes"
 
         with self.connection.cursor() as cursor:
-            cursor.execute("DROP TABLE IF EXISTS counter")
             cursor.execute("DROP TABLE IF EXISTS supervisors")
             cursor.execute("DROP TABLE IF EXISTS experiments")
             cursor.execute("DROP TABLE IF EXISTS logs")
@@ -346,11 +297,6 @@ class DB:
     def _check_all(self):
         """Check all tables"""
         with self.connection.cursor() as cursor:
-            print("\nExperiment Counter:")
-            cursor.execute("SELECT * FROM counter ORDER BY id DESC LIMIT 1")
-            for row in cursor.fetchall():
-                print(row)
-
             cursor.execute("SELECT * FROM supervisors LIMIT 16")
             print("\nSupervisors:")
             for supervisor in map(Supervisor.from_db, cursor.fetchall()):
@@ -390,19 +336,29 @@ if __name__ == "__main__":
     # db._drop()
     # db._create()
 
+    db.add_supervisors(
+        [
+            Supervisor(
+                "setup@10.141.0.11",
+                None,
+                "lambda",
+                "http://10.141.0.11:8000",
+                "unavailable",
+            )
+        ]
+    )
+
     # db.add_supervisors(
     #     [
     #         Supervisor(
-    #             "setup@10.141.0.11",
+    #             "setup@10.141.0.12",
     #             None,
     #             "lambda",
-    #             "http://10.141.0.11:8000",
-    #             "unavailable",
+    #             "http://10.141.0.12:8000",
+    #             "available",
     #         )
     #     ]
     # )
-
-    db.set_supervisor_status("setup@10.141.0.11", "available")
 
     # db.add_experiment(
     #     "test_experiment_000",
@@ -411,8 +367,9 @@ if __name__ == "__main__":
     #     "123456",
     #     None,
     #     'echo "hello world"',
-    #     1,
+    #     2,
     # )
 
-    print(db.get_work_unit())
+    # print("Lock supervisors")
+    # db._lock_supervisors(1, 2)
     db._check_all()

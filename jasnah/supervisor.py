@@ -1,24 +1,25 @@
+import os
 import shlex
 import tempfile
 import threading
 from dataclasses import asdict
 from subprocess import run
 from threading import Lock
+from typing import List, Optional
 
 import requests
 from flask import Flask
 
 import jasnah
 from jasnah.config import CONFIG, DATA_FOLDER
-from jasnah.db import Experiment, db
+from jasnah.db import Experiment, Supervisor, db
 
 app = Flask(__name__)
 
 REPOSITORIES = DATA_FOLDER / "repositories"
 LOCK = Lock()
-EXPERIMENT = None
+EXPERIMENT: Optional[Experiment] = None
 SUPERVISOR_ID = CONFIG.supervisor_id
-CONFIG.origin = SUPERVISOR_ID
 SERVER_URL = CONFIG.server_url
 
 
@@ -31,7 +32,7 @@ def repository_name(repository: str):
     return repository.split("/")[-1]
 
 
-def run_experiment_inner(experiment: Experiment):
+def run_experiment_inner(experiment: Experiment, supervisors: List[Supervisor]):
     name = repository_name(experiment.repository)
     repository_path = REPOSITORIES / name
 
@@ -48,23 +49,33 @@ def run_experiment_inner(experiment: Experiment):
             f.write(experiment.diff)
             run(["git", "apply", f.name], cwd=repository_path)
 
+    assigned_supervisors = ",".join(s.id for s in supervisors)
+    env = os.environ.copy()
+    env["ASSIGNED_SUPERVISORS"] = assigned_supervisors
+
     command = shlex.split(experiment.command)
-    run(command, cwd=repository_path)
+    run(command, cwd=repository_path, env=env)
 
 
 def run_experiment(experiment: Experiment):
-    db.set_experiment_status(experiment.id, "running")
+    supervisors = db.get_assigned_supervisors(experiment.id)
+
+    if SUPERVISOR_ID == supervisors[0].id:
+        db.set_experiment_status(experiment.id, "running")
 
     jasnah.log(
-        {"info": "start experiment", "id": experiment.id, "name": experiment.name}
+        {
+            "info": "start experiment",
+            "id": experiment.id,
+            "name": experiment.name,
+            "author": experiment.author,
+        }
     )
-    run_experiment_inner(experiment)
+
+    run_experiment_inner(experiment, supervisors)
 
     db.set_experiment_status(experiment.id, "done")
     db.set_supervisor_status(SUPERVISOR_ID, "available")
-
-    # Notify server that this supervisor is available
-    requests.get(SERVER_URL + "/update")
 
     LOCK.acquire()
     global EXPERIMENT
@@ -74,6 +85,9 @@ def run_experiment(experiment: Experiment):
 
 @app.route("/update")
 def update():
+    # TODO: Move to create_app method
+    CONFIG.origin = SUPERVISOR_ID
+
     global EXPERIMENT
 
     LOCK.acquire()
@@ -93,8 +107,6 @@ def update():
 
     if experiment is None:
         db.set_supervisor_status(SUPERVISOR_ID, "available")
-        # Notify server that this supervisor is available
-        requests.get(SERVER_URL + "/update")
         return {"status": "ok", "info": "No assigned experiments"}
 
     threading.Thread(target=run_experiment, args=(experiment,)).start()
@@ -117,11 +129,11 @@ class SupervisorClient:
 
     def status(self):
         result = self.conn.get(self.url + "/status")
-        return result.json
+        return result.json()
 
     def update(self):
         result = self.conn.get(self.url + "/update")
-        return result.json
+        return result.json()
 
 
 if __name__ == "__main__":

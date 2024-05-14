@@ -1,75 +1,68 @@
+from dataclasses import asdict
 from typing import Any, Dict, Optional
 
 import requests
 from flask import Flask, request
 
+import jasnah
 from jasnah.config import CONFIG
 from jasnah.db import db
 from jasnah.supervisor import SupervisorClient
 
 app = Flask(__name__)
-CONFIG.origin = "server"
-
-
-def update_queue():
-    """Check for pending experiments and available supervisors"""
-    result = db.get_work_unit()
-
-    if result is None:
-        return {"info": "No pending experiments or available supervisors"}
-
-    experiment, supervisor = result
-
-    client = SupervisorClient(supervisor.endpoint)
-    result = client.update()
-
-    return {
-        "experiment": experiment,
-        "supervisor": supervisor,
-        "supervisor_result": result,
-    }
 
 
 @app.route("/status")
 def status():
-    experiments = db.pending_experiments(4)
-    return {"status": "ok", "pending_experiments": experiments}
-
-
-@app.route("/update")
-def update():
-    return update_queue()
+    experiments = db.last_experiments(4)
+    return {
+        "status": "ok",
+        "last_experiments": experiments,
+        "supervisors": CONFIG.supervisors,
+    }
 
 
 @app.post("/submit")
 def submit():
-    body: Dict[str, Any] = request.json
+    # TODO: Move to create_app method
+    CONFIG.origin = "server"
 
-    # TODO: Allow selecting multiple nodes
+    body: Dict[str, Any] = request.json
 
     name = body["name"]
     author = body["author"]
     repository = body["repository"]
     commit = body["commit"]
-    command = body["command"]
     diff = body.get("diff")
+    command = body["command"]
+    num_nodes = body["num_nodes"]
 
-    experiment_id = db.add_experiment(name, author, repository, commit, command, diff)
+    experiment_id = db.add_experiment(
+        name, author, repository, commit, diff, command, num_nodes
+    )
 
-    result = {"status": "ok", "experiment": experiment_id}
+    result = {"info": "launch experiment"}
 
-    update_queue()
+    supervisors = db._lock_supervisors(experiment_id, num_nodes)
 
-    experiment = db.get_experiment(experiment_id)
+    if not supervisors:
+        db.set_experiment_status(experiment_id, "ignored")
 
-    if experiment is not None:
-        result.update(
-            {
-                "name": experiment.name,
-                "status": experiment.status,
-                "assigned": experiment.assigned,
-            }
-        )
+        if supervisors is None:
+            result["error"] = f"Failed to lock {num_nodes} supervisors"
+        else:
+            result["error"] = "No available supervisors"
+
+    else:
+        db.set_experiment_status(experiment_id, "assigned")
+        clients = [SupervisorClient(supervisor.endpoint) for supervisor in supervisors]
+        results = [client.update() for client in clients]
+        result["clients"] = [asdict(s) for s in supervisors]
+        result["client_responses"] = results
+
+    result["experiment"] = asdict(db.get_experiment(experiment_id))
+
+    jasnah.log(result)
 
     return result
 
@@ -95,6 +88,7 @@ class ServerClient:
         command: str,
         diff: Optional[str] = None,
         author: Optional[str] = None,
+        num_nodes=1,
     ):
         if author is None:
             author = CONFIG.user_name
@@ -108,6 +102,7 @@ class ServerClient:
                 commit=commit,
                 command=command,
                 diff=diff,
+                num_nodes=num_nodes,
             ),
         )
         return result.json()
@@ -115,12 +110,16 @@ class ServerClient:
 
 if __name__ == "__main__":
     client = ServerClient("http://127.0.0.1:8100")
-    print(client.status())
+    # print(client.status())
+    import json
+
     print(
-        client.submit(
-            "test_experiment",
-            "git@github.com:nearai/jasnah-cli.git",
-            "d215f25fdd3e56ccb802e72a9481ffc240c13643",
-            "python3 examples/simple_task.py",
+        json.dumps(
+            client.submit(
+                "test_experiment",
+                "git@github.com:nearai/jasnah-cli.git",
+                "d215f25fdd3e56ccb802e72a9481ffc240c13643",
+                "python3 examples/simple_task.py",
+            )
         )
     )

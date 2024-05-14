@@ -39,14 +39,15 @@ def run_experiment_inner(experiment: Experiment, supervisors: List[Supervisor]):
     if not repository_path.exists():
         run(["git", "clone", experiment.repository, repository_path])
 
-    run(["git", "pull"], cwd=repository_path)
     run(["git", "reset", "--hard"], cwd=repository_path)
+    run(["git", "fetch"], cwd=repository_path)
     run(["git", "checkout", experiment.commit], cwd=repository_path)
 
     if experiment.diff:
         # TODO: Test this is working as expected
         with tempfile.NamedTemporaryFile("w") as f:
             f.write(experiment.diff)
+            f.flush()
             run(["git", "apply", f.name], cwd=repository_path)
 
     assigned_supervisors = ",".join(s.id for s in supervisors)
@@ -158,7 +159,9 @@ class SupervisorClient:
 
 
 if __name__ == "__main__":
-    client = SupervisorClient("http://10.141.0.11:8000")
-    print(client.init("cluster", "http://10.141.0.11:8000"))
+    experiment = db.get_experiment(8)
+    run_experiment_inner(experiment, [])
+    # client = SupervisorClient("http://10.141.0.11:8000")
+    # print(client.init("cluster", "http://10.141.0.11:8000"))
     # print(client.status())
     # print(client.update())

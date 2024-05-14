@@ -1,3 +1,4 @@
+import json
 from dataclasses import asdict
 from pathlib import Path
 from subprocess import check_output, run
@@ -205,9 +206,11 @@ class CLI:
 
         author = CONFIG.user_name
 
-        client.submit(
+        result = client.submit(
             name, repository_url, commit, command, diff, author, nodes, cluster
         )
+
+        print('experiment id:', result['experiment']['id'])
 
     def inference(self):
         """Submit inference task"""

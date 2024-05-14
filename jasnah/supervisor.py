@@ -8,7 +8,7 @@ from threading import Lock
 from typing import List, Optional
 
 import requests
-from flask import Flask
+from flask import Flask, request
 
 import jasnah
 from jasnah.config import CONFIG, DATA_FOLDER
@@ -83,6 +83,21 @@ def run_experiment(experiment: Experiment):
     LOCK.release()
 
 
+@app.post("/init")
+def init():
+    # TODO: Move to create_app method
+    CONFIG.origin = SUPERVISOR_ID
+
+    cluster = request.json["cluster"]
+    endpoint = request.json["endpoint"]
+
+    supervisor = Supervisor(SUPERVISOR_ID, None, cluster, endpoint, "available")
+
+    db.add_supervisors([supervisor])
+
+    return asdict(supervisor)
+
+
 @app.route("/update")
 def update():
     # TODO: Move to create_app method
@@ -127,6 +142,12 @@ class SupervisorClient:
         self.url = url
         self.conn = requests.Session()
 
+    def init(self, cluster, endpoint):
+        result = self.conn.post(
+            self.url + "/init", json={"cluster": cluster, "endpoint": endpoint}
+        )
+        return result.json()
+
     def status(self):
         result = self.conn.get(self.url + "/status")
         return result.json()
@@ -138,5 +159,6 @@ class SupervisorClient:
 
 if __name__ == "__main__":
     client = SupervisorClient("http://10.141.0.11:8000")
-    print(client.status())
-    print(client.update())
+    print(client.init("cluster", "http://10.141.0.11:8000"))
+    # print(client.status())
+    # print(client.update())

@@ -5,14 +5,13 @@ from typing import List
 
 import fire
 import pkg_resources
-from fabric import Connection
 from fabric import ThreadingGroup as Group
 
 import jasnah
 from jasnah.config import CONFIG, DATA_FOLDER, update_config
 from jasnah.registry import Registry, dataset, model
 from jasnah.server import ServerClient, run_server
-from jasnah.supervisor import run_supervisor
+from jasnah.supervisor import SupervisorClient, run_supervisor
 
 
 class Host:
@@ -20,14 +19,18 @@ class Host:
     host: str
     # URL of the supervisor API
     endpoint: str
+    # Name of the cluster for this endpoint
+    cluster: str
 
-    def __init__(self, host: str):
+    def __init__(self, host: str, cluster: str):
         self.host = host
         url = host.split("@")[1]
         self.endpoint = f"http://{url}:8000"
+        self.cluster = cluster
 
 
 def parse_hosts(hosts_path: Path) -> List[Host]:
+    hostnames = set()
     hosts = []
     with open(hosts_path) as f:
         for line in f:
@@ -37,10 +40,12 @@ def parse_hosts(hosts_path: Path) -> List[Host]:
             line = line.strip(" \n")
             if not line:
                 continue
-            hosts.append(line)
+            host, cluster = line.split()
+            hostnames.add(host)
+            hosts.append(Host(host, cluster))
 
-    assert len(set(hosts)) == len(hosts), ("Duplicate hosts", hosts)
-    return [Host(x) for x in hosts]
+    assert len(hostnames) == len(hosts), "Duplicate hosts"
+    return hosts
 
 
 def install(hosts_description: List[Host], skip_install: str):
@@ -127,8 +132,11 @@ class ServerCli:
 
     def start(self, hosts: str):
         parsed_hosts = parse_hosts(hosts)
-        endpoints = [h.endpoint for h in parsed_hosts]
-        update_config("supervisors", endpoints)
+        update_config("supervisors", [h.endpoint for h in parsed_hosts])
+
+        for host in parsed_hosts:
+            client = SupervisorClient(host.endpoint)
+            client.init(host.cluster, host.endpoint)
 
         file = jasnah.etc("server.service")
         target = Path("/etc/systemd/system/jasnah_server.service")

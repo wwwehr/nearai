@@ -4,6 +4,7 @@ from pathlib import Path
 import boto3
 
 from jasnah.config import CONFIG, DATA_FOLDER
+from jasnah.db import db
 
 
 def upload_file(client, path: Path, s3_path: str):
@@ -56,12 +57,15 @@ class Registry:
             self.download_folder.mkdir(parents=True, exist_ok=True)
 
     def upload(self, path: Path, name: str):
-        # TODO: Check if there is an existing element in the database with the same name
-        # TODO: Add the element to the database
-
         assert path.exists(), "Path does not exist"
 
         prefix = os.path.join(CONFIG.s3_prefix, self.category, name)
+
+        if db.exists_in_registry(str(prefix)):
+            raise ValueError(f"{prefix} already exists in the registry")
+
+        db.add_to_registry(str(prefix))
+
         s3_client = boto3.client("s3")
 
         if path.is_file():

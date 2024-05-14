@@ -251,6 +251,16 @@ class DB:
                 self.connection.commit()
                 return None
 
+    def exists_in_registry(self, s3_path: str) -> bool:
+        with self.connection.cursor() as cursor:
+            cursor.execute("SELECT * FROM registry WHERE s3_path=%s", (s3_path,))
+            return cursor.fetchone() is not None
+
+    def add_to_registry(self, s3_path: str):
+        with self.connection.cursor() as cursor:
+            cursor.execute("INSERT INTO registry (s3_path) VALUES (%s)", (s3_path,))
+        self.connection.commit()
+
     def _create(self):
         """Create tables if they don't exist"""
         with self.connection.cursor() as cursor:
@@ -286,6 +296,13 @@ class DB:
                             time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                             content JSON
                             )"""
+            )
+
+            cursor.execute(
+                """CREATE TABLE IF NOT EXISTS registry(
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        s3_path VARCHAR(255) NOT NULL
+                    )"""
             )
 
         self.connection.commit()
@@ -342,41 +359,5 @@ except Exception as e:
 if __name__ == "__main__":
     # db._drop()
     # db._create()
-
-    # db.add_supervisors(
-    #     [
-    #         Supervisor(
-    #             "setup@10.141.0.11",
-    #             None,
-    #             "lambda",
-    #             "http://10.141.0.11:8000",
-    #             "unavailable",
-    #         )
-    #     ]
-    # )
-
-    # db.add_supervisors(
-    #     [
-    #         Supervisor(
-    #             "setup@10.141.0.12",
-    #             None,
-    #             "lambda",
-    #             "http://10.141.0.12:8000",
-    #             "available",
-    #         )
-    #     ]
-    # )
-
-    # db.add_experiment(
-    #     "test_experiment_000",
-    #     "marcelo_000",
-    #     "github/jasnah",
-    #     "123456",
-    #     None,
-    #     'echo "hello world"',
-    #     2,
-    # )
-
-    # print("Lock supervisors")
-    # db._lock_supervisors(1, 2)
-    db._check_all()
+    # db._check_all()
+    pass

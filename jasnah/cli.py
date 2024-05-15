@@ -273,6 +273,7 @@ class CLI:
         print(jasnah.cli_path())
 
     def version(self):
+        # TODO: Show current commit
         print(pkg_resources.get_distribution("jasnah").version)
 
     def update(self):

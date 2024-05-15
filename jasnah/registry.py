@@ -148,8 +148,15 @@ class Registry:
                     upload_file(s3_client, Path(local_path), s3_path)
 
     def download(self, name: str):
-        # TODO: Download
-        target = self.download_folder / name
+        entry = db.get_registry_entry_by_alias_or_name(name)
+
+        if entry is None:
+            raise ValueError(f"{name} not found in the registry")
+
+        jasnah.log(target=f"Download {self.category} from S3", name=name)
+
+        name = entry.name
+        target = self.download_folder / entry.name
 
         if not target.exists():
             prefix = os.path.join(CONFIG.s3_prefix, self.category, name)

@@ -346,6 +346,30 @@ class DB:
             )
             return [RegistryEntry.from_db(row) for row in cursor.fetchall()]
 
+    def get_registry_entry_by_name(self, name: str) -> Optional[RegistryEntry]:
+        with self.connection.cursor() as cursor:
+            cursor.execute("SELECT * FROM registry WHERE name=%s LIMIT 1", (name,))
+            result = cursor.fetchone()
+            if not result:
+                return None
+            return RegistryEntry.from_db(result)
+
+    def get_registry_entry_by_alias(self, alias: str) -> Optional[RegistryEntry]:
+        with self.connection.cursor() as cursor:
+            cursor.execute("SELECT * FROM registry WHERE alias=%s LIMIT 1", (alias,))
+            result = cursor.fetchone()
+            if not result:
+                return None
+            return RegistryEntry.from_db(result)
+
+    def get_registry_entry_by_alias_or_name(
+        self, alias_or_name: str
+    ) -> Optional[RegistryEntry]:
+        by_alias = self.get_registry_entry_by_alias(alias_or_name)
+        if by_alias:
+            return by_alias
+        return self.get_registry_entry_by_name(alias_or_name)
+
     def _create(self):
         """Create tables if they don't exist"""
         with self.connection.cursor() as cursor:

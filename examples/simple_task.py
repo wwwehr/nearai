@@ -1,7 +1,7 @@
+import json
 import os
 import tempfile
 from pathlib import Path
-import json
 
 import jasnah
 import jasnah.registry

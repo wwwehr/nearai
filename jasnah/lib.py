@@ -28,6 +28,6 @@ def get_origin():
     return CONFIG.origin
 
 
-def log(content):
+def log(*, target: str, **content):
     origin = get_origin()
-    db.log(origin, content)
+    db.log(origin, target, content)

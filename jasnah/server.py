@@ -42,7 +42,7 @@ def submit():
         name, author, repository, commit, diff, command, num_nodes
     )
 
-    result = {"info": "launch experiment"}
+    result = {}
 
     supervisors = db.lock_supervisors(experiment_id, num_nodes, cluster)
 
@@ -63,7 +63,7 @@ def submit():
 
     result["experiment"] = asdict(db.get_experiment(experiment_id))
 
-    jasnah.log(result)
+    jasnah.log(target="launch experiment", **result)
 
     return result
 
@@ -87,13 +87,11 @@ class ServerClient:
         repository: str,
         commit: str,
         command: str,
+        author: str,
         diff: Optional[str] = None,
-        author: Optional[str] = None,
         num_nodes=1,
         cluster="truthwatcher",
     ):
-        if author is None:
-            author = CONFIG.user_name
 
         result = self.conn.post(
             self.url + "/submit",
@@ -123,6 +121,7 @@ if __name__ == "__main__":
                 "git@github.com:nearai/jasnah-cli.git",
                 "b0dfca8637522eae9d20c5a7c2a843816b86ed87",
                 "python3 examples/simple_task.py",
+                "test_author",
                 num_nodes=2,
             )
         )

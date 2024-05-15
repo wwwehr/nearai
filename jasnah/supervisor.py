@@ -44,7 +44,6 @@ def run_experiment_inner(experiment: Experiment, supervisors: List[Supervisor]):
     run(["git", "checkout", experiment.commit], cwd=repository_path)
 
     if experiment.diff:
-        # TODO: Test this is working as expected
         with tempfile.NamedTemporaryFile("w") as f:
             f.write(experiment.diff)
             f.flush()
@@ -65,12 +64,10 @@ def run_experiment(experiment: Experiment):
         db.set_experiment_status(experiment.id, "running")
 
     jasnah.log(
-        {
-            "info": "start experiment",
-            "id": experiment.id,
-            "name": experiment.name,
-            "author": experiment.author,
-        }
+        target="start experiment",
+        id=experiment.id,
+        name=experiment.name,
+        author=experiment.author,
     )
 
     run_experiment_inner(experiment, supervisors)

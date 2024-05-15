@@ -2,11 +2,12 @@ import json
 from dataclasses import asdict
 from pathlib import Path
 from subprocess import check_output, run
-from typing import List
+from typing import List, Optional
 
 import fire
 import pkg_resources
 from fabric import ThreadingGroup as Group
+from tabulate import tabulate
 
 import jasnah
 from jasnah.config import CONFIG, DATA_FOLDER, update_config
@@ -96,15 +97,67 @@ class RegistryCli:
     def __init__(self, registry: Registry):
         self._registry = registry
 
+    def add(self, name: str, description: str, alias: Optional[str] = None, **details):
+        assert self._registry.exists_in_s3(name), f"Item {name} does not exist in S3"
+        self._registry.add(
+            name, CONFIG.get_user_name(), description, alias, details, True
+        )
+
     def list(self):
         """List available items"""
-        self._registry.list()
+        header = [
+            "id",
+            "name",
+            "alias",
+            "description",
+        ]
 
-    def upload(self, path: str, name: str):
-        """Upload item"""
-        self._registry.upload(Path(path), name)
+        table = [header]
 
-    def get(self, name: str):
+        for entry in self._registry.list():
+            row = [entry.id, entry.name, entry.alias, entry.description]
+            table.append(row)
+
+        print(tabulate(table, headers="firstrow"))
+
+    def update(
+        self,
+        id: int,
+        *,
+        author: Optional[str] = None,
+        description: Optional[str] = None,
+        alias: Optional[str] = None,
+        details: Optional[dict] = None,
+        show_entry: Optional[bool] = None,
+    ):
+        self._registry.update(
+            id,
+            author=author,
+            description=description,
+            alias=alias,
+            details=details,
+            show_entry=show_entry,
+        )
+
+    def info(self):
+        """Show information about an item"""
+        raise NotImplementedError()
+
+    def upload(
+        self,
+        path: str,
+        name: str,
+        description: str,
+        alias: Optional[str] = None,
+        **details,
+    ):
+        """Upload item to the registry"""
+        author = CONFIG.get_user_name()
+        self._registry.upload(
+            Path(path), name, author, description, alias, details, True
+        )
+
+    def download(self, name: str):
         """Download item"""
         self._registry.download(name)
 
@@ -170,8 +223,8 @@ class ConfigCli:
 
 class CLI:
     def __init__(self):
-        self.dataset = RegistryCli(dataset)
-        self.model = RegistryCli(model)
+        self.datasets = RegistryCli(dataset)
+        self.models = RegistryCli(model)
         self.supervisor = SupervisorCli()
         self.server = ServerCli()
         self.config = ConfigCli()
@@ -180,6 +233,8 @@ class CLI:
         self, command: str, name: str, nodes: int = 1, cluster: str = "truthwatcher"
     ):
         """Submit task"""
+        author = CONFIG.get_user_name()
+
         client = ServerClient(CONFIG.server_url)
 
         # Check we can connect to the server
@@ -204,10 +259,8 @@ class CLI:
         commit = check_output(["git", "rev-parse", "HEAD"]).decode().strip()
         diff = check_output(["git", "diff", "HEAD"]).decode()
 
-        author = CONFIG.user_name
-
         result = client.submit(
-            name, repository_url, commit, command, diff, author, nodes, cluster
+            name, repository_url, commit, command, author, diff, nodes, cluster
         )
 
         print("experiment id:", result["experiment"]["id"])

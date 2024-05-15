@@ -68,6 +68,12 @@ class Config:
     def get(self, key: str, default=None):
         return getattr(self, key, default)
 
+    def get_user_name(self):
+        if self.user_name is None:
+            print("Please set user_name with `jasnah config set user_name <name>`")
+            exit(1)
+        return self.user_name
+
 
 # Load default configs
 CONFIG = Config()

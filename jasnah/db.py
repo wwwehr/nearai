@@ -1,5 +1,4 @@
 import json
-import os
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Optional
@@ -69,6 +68,26 @@ class Log:
         return Log(*row)
 
 
+@dataclass
+class RegistryEntry:
+    id: int
+    name: str
+    category: str
+    author: str
+    time: datetime
+    description: Optional[str]
+    alias: Optional[str]
+    details: Optional[dict]
+    show_entry: bool
+
+    @staticmethod
+    def from_db(row) -> Optional["RegistryEntry"]:
+        if row is None:
+            return None
+
+        return RegistryEntry(*row)
+
+
 class DB:
     def __init__(self, host, port, user, password, database):
         self.connection = pymysql.connect(
@@ -78,11 +97,12 @@ class DB:
     def close(self):
         self.connection.close()
 
-    def log(self, origin: str, content):
+    def log(self, origin: str, target: str, content: dict):
         content = json.dumps(content, default=datetime_serializer)
         with self.connection.cursor() as cursor:
             cursor.execute(
-                "INSERT INTO logs (origin, content) VALUES (%s, %s)", (origin, content)
+                "INSERT INTO logs (origin, target, content) VALUES (%s, %s, %s)",
+                (origin, target, content),
             )
         self.connection.commit()
 
@@ -253,15 +273,78 @@ class DB:
                 self.connection.commit()
                 return None
 
-    def exists_in_registry(self, s3_path: str) -> bool:
+    def exists_in_registry(self, name: str, category: str) -> bool:
         with self.connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM registry WHERE s3_path=%s", (s3_path,))
+            cursor.execute(
+                "SELECT * FROM registry WHERE name=%s AND category=%s", (name, category)
+            )
             return cursor.fetchone() is not None
 
-    def add_to_registry(self, s3_path: str):
+    def update_registry_entry(
+        self,
+        id: int,
+        author: Optional[str] = None,
+        description: Optional[str] = None,
+        alias: Optional[str] = None,
+        details: Optional[dict] = None,
+        show_entry: Optional[bool] = None,
+    ):
+        new_values = dict(
+            author=author,
+            description=description,
+            alias=alias,
+            details=details,
+            show_entry=show_entry,
+        )
+
         with self.connection.cursor() as cursor:
-            cursor.execute("INSERT INTO registry (s3_path) VALUES (%s)", (s3_path,))
+            for key, value in new_values.items():
+                if value is None:
+                    continue
+
+                if key == "details":
+                    value = json.dumps(value)
+
+                cursor.execute(f"UPDATE registry SET {key}=%s WHERE id=%s", (value, id))
+
+            self.connection.commit()
+
+    def add_to_registry(
+        self,
+        name: str,
+        category: str,
+        author: str,
+        description: Optional[str] = None,
+        alias: Optional[str] = None,
+        details: Optional[dict] = None,
+        show_entry: bool = True,
+    ):
+        with self.connection.cursor() as cursor:
+            details = details or {}
+            cursor.execute(
+                "INSERT INTO registry (name, category, author, description, alias, details, show_entry) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                (
+                    name,
+                    category,
+                    author,
+                    description,
+                    alias,
+                    json.dumps(details),
+                    show_entry,
+                ),
+            )
         self.connection.commit()
+
+    def list_registry_entries(
+        self, category: str, *, total: int = 128, show_hidden: bool = False
+    ):
+        with self.connection.cursor() as cursor:
+            show_hidden = 1 - int(show_hidden)
+            cursor.execute(
+                "SELECT * FROM registry WHERE category=%s AND show_entry>=%s LIMIT %s",
+                (category, show_hidden, total),
+            )
+            return [RegistryEntry.from_db(row) for row in cursor.fetchall()]
 
     def _create(self):
         """Create tables if they don't exist"""
@@ -296,27 +379,24 @@ class DB:
                             id INT AUTO_INCREMENT PRIMARY KEY,
                             origin VARCHAR(255) NOT NULL,
                             time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                            content JSON
+                            target VARCHAR(255) NOT NULL,
+                            content JSON NOT NULL
                             )"""
             )
 
             cursor.execute(
                 """CREATE TABLE IF NOT EXISTS registry(
                         id INT AUTO_INCREMENT PRIMARY KEY,
-                        s3_path VARCHAR(255) NOT NULL
-                    )"""
+                        name VARCHAR(255) NOT NULL,
+                        category VARCHAR(255) NOT NULL,
+                        author VARCHAR(255) NOT NULL,
+                        time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        description TEXT,
+                        alias VARCHAR(255),
+                        details JSON,
+                        show_entry BOOLEAN NOT NULL DEFAULT TRUE
+                        )"""
             )
-
-        self.connection.commit()
-
-    def _drop(self):
-        """Drop tables"""
-        assert os.environ["JASNAH_I_KNOW_WHAT_I_AM_DOING"] == "yes"
-
-        with self.connection.cursor() as cursor:
-            cursor.execute("DROP TABLE IF EXISTS supervisors")
-            cursor.execute("DROP TABLE IF EXISTS experiments")
-            cursor.execute("DROP TABLE IF EXISTS logs")
 
         self.connection.commit()
 
@@ -359,9 +439,6 @@ except Exception as e:
 
 
 class CLI:
-    def drop(self):
-        db._drop()
-
     def create(self):
         db._create()
 

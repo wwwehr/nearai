@@ -147,13 +147,13 @@ class Registry:
 
                     upload_file(s3_client, Path(local_path), s3_path)
 
-    def download(self, name: str):
-        entry = db.get_registry_entry_by_alias_or_name(name)
+    def download(self, alias_or_name: str):
+        entry = db.get_registry_entry_by_alias_or_name(alias_or_name)
 
         if entry is None:
-            raise ValueError(f"{name} not found in the registry")
+            raise ValueError(f"{alias_or_name} not found in the registry")
 
-        jasnah.log(target=f"Download {self.category} from S3", name=name)
+        jasnah.log(target=f"Download {self.category} from S3", name=alias_or_name)
 
         name = entry.name
         target = self.download_folder / entry.name

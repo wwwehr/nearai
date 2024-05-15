@@ -29,7 +29,7 @@ COLUMNS = [
 
 def main():
     # Download the raw dataset. This will download the file ac.tar.gz
-    dataset_path = get_dataset("test/school_math/raw")
+    dataset_path = get_dataset("school_math_ru_tar_gz")
 
     uncompressed = dataset_path / "uncompressed"
     processed_dataset = dataset_path / "final_dataset"
@@ -59,7 +59,15 @@ def main():
         ds = Dataset.from_dict(ds)
         ds.save_to_disk(str(processed_dataset))
 
-    dataset.upload(processed_dataset, "test/school_math/v1")
+    dataset.upload(
+        processed_dataset,
+        name="school_math_ru/transformed/v0",
+        author="prepare_data.py",
+        description="School math exercises in Russian. Transformed into a Dataset format.",
+        alias="school_math_ru",
+        details=None,
+        show_entry=True,
+    )
 
 
 if __name__ == "__main__":

@@ -210,7 +210,7 @@ class CLI:
             name, repository_url, commit, command, diff, author, nodes, cluster
         )
 
-        print('experiment id:', result['experiment']['id'])
+        print("experiment id:", result["experiment"]["id"])
 
     def inference(self):
         """Submit inference task"""
@@ -234,6 +234,11 @@ class CLI:
 
         if path.exists():
             run(["git", "pull"], cwd=path)
+
+    def status(self):
+        """Show status of the cluster"""
+        client = ServerClient(CONFIG.server_url)
+        print(json.dumps(client.status()))
 
 
 def main():

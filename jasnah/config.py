@@ -50,7 +50,7 @@ class Config:
     db_host: str = "35.87.119.37"
     db_port: int = 3306
     db_name: str = "jasnah"
-    server_url: str = "http://10.141.0.11:8100"
+    server_url: str = "http://ai.nearspace.info/cluster"
     origin: str = None
     user_name: str = None
     user_email: str = None

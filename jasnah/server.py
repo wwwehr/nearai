@@ -14,7 +14,7 @@ app = Flask(__name__)
 
 @app.route("/status")
 def status():
-    experiments = db.last_experiments(4)
+    experiments = db.last_experiments(2)
     return {
         "status": "ok",
         "last_experiments": experiments,
@@ -79,7 +79,7 @@ class ServerClient:
 
     def status(self):
         result = self.conn.get(self.url + "/status")
-        return result.text
+        return result.json()
 
     def submit(
         self,

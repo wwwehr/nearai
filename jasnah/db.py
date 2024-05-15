@@ -335,14 +335,12 @@ class DB:
             )
         self.connection.commit()
 
-    def list_registry_entries(
-        self, category: str, *, total: int = 128, show_hidden: bool = False
-    ):
+    def list_registry_entries(self, category: str, *, total: int, show_all: bool):
         with self.connection.cursor() as cursor:
-            show_hidden = 1 - int(show_hidden)
+            show_all = 1 - int(show_all)
             cursor.execute(
-                "SELECT * FROM registry WHERE category=%s AND show_entry>=%s LIMIT %s",
-                (category, show_hidden, total),
+                "SELECT * FROM registry WHERE category=%s AND show_entry>=%s ORDER BY id DESC LIMIT %s",
+                (category, show_all, total),
             )
             return [RegistryEntry.from_db(row) for row in cursor.fetchall()]
 

@@ -103,19 +103,26 @@ class RegistryCli:
             name, CONFIG.get_user_name(), description, alias, details, True
         )
 
-    def list(self):
+    def list(self, total: int = 16, show_all: bool = False, verbose: bool = False):
         """List available items"""
-        header = [
-            "id",
-            "name",
-            "alias",
-            "description",
-        ]
+        header = ["id", "name", "alias", "description"]
+
+        if verbose:
+            header += ["author", "show_entry", "time"]
 
         table = [header]
 
-        for entry in self._registry.list():
-            row = [entry.id, entry.name, entry.alias, entry.description]
+        for entry in self._registry.list(total, show_all):
+            row = [
+                entry.id,
+                entry.name,
+                entry.alias,
+                entry.description,
+            ]
+
+            if verbose:
+                row += [entry.author, entry.show_entry, entry.time]
+
             table.append(row)
 
         print(tabulate(table, headers="firstrow"))
@@ -292,7 +299,12 @@ class CLI:
     def status(self):
         """Show status of the cluster"""
         client = ServerClient(CONFIG.server_url)
-        print(json.dumps(client.status()))
+        status = client.status()
+
+        for experiment in status.get("last_experiments", []):
+            experiment["diff_len"] = len(experiment.pop("diff", ""))
+
+        print(json.dumps(status))
 
 
 def main():

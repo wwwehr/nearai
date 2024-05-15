@@ -166,8 +166,8 @@ class Registry:
 
         return target
 
-    def list(self) -> List[RegistryEntry]:
-        return db.list_registry_entries(self.category)
+    def list(self, total: int, show_all: bool) -> List[RegistryEntry]:
+        return db.list_registry_entries(self.category, total=total, show_all=show_all)
 
 
 dataset = Registry("datasets")

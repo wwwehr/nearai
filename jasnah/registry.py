@@ -6,7 +6,7 @@ import boto3
 from jasnah.config import CONFIG, DATA_FOLDER
 
 
-def upload_file(client, path: Path, s3_path: str):
+def upload_file(client, path: Path, s3_path: str) -> None:
     assert path.is_file()
     assert path.exists()
 

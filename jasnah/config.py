@@ -2,7 +2,7 @@ import json
 import os
 from dataclasses import dataclass, field, fields
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 DATA_FOLDER = Path.home() / ".jasnah"
 DATA_FOLDER.mkdir(parents=True, exist_ok=True)
@@ -22,17 +22,17 @@ def load_config_file(local: bool = False) -> Dict[str, Any]:
 
     with open(path) as f:
         config = json.load(f)
-    return config
+    return config  # type: ignore
 
 
-def save_config_file(config: Dict[str, Any], local: bool = False):
+def save_config_file(config: Dict[str, Any], local: bool = False) -> None:
     path = get_config_path(local)
 
     with open(path, "w") as f:
         json.dump(config, f, indent=4)
 
 
-def update_config(key, value, local=False):
+def update_config(key: str, value: Any, local: bool = False) -> None:
     config = load_config_file(local)
     config[key] = value
     save_config_file(config, local)
@@ -49,11 +49,13 @@ class Config:
     db_port: int = 3306
     db_name: str = "marx_test"
     server_url: str = "http://10.141.0.11:8100"
-    origin: str = None
-    user_name: str = None
-    user_email: str = None
+    origin: Optional[str] = None
+    user_name: Optional[str] = None
+    user_email: Optional[str] = None
 
-    def update_with(self, extra_config: Dict[str, Any], map_key=lambda x: x):
+    def update_with(
+        self, extra_config: Dict[str, Any], map_key: Callable[[str], str] = lambda x: x
+    ) -> None:
         keys = [f.name for f in fields(self)]
         for key in map(map_key, keys):
             value = extra_config.get(key, None)
@@ -70,4 +72,4 @@ CONFIG.update_with(load_config_file(local=False))
 # Update config from local config file
 CONFIG.update_with(load_config_file(local=True))
 # Update config from environment variables
-CONFIG.update_with(os.environ, map_key=str.upper)
+CONFIG.update_with(dict(os.environ), map_key=str.upper)

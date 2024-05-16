@@ -5,7 +5,7 @@ import fire
 import pkg_resources
 
 import jasnah
-from jasnah.config import CONFIG, update_config, DATA_FOLDER
+from jasnah.config import CONFIG, DATA_FOLDER, update_config
 from jasnah.registry import Registry, dataset, model
 from jasnah.server import install, parse_hosts
 from jasnah.server_app import ServerClient, run_server
@@ -16,15 +16,15 @@ class RegistryCli:
     def __init__(self, registry: Registry):
         self._registry = registry
 
-    def list(self):
+    def list(self) -> None:
         """List available items"""
         self._registry.list()
 
-    def upload(self, path: str, name: str):
+    def upload(self, path: str, name: str) -> None:
         """Upload item"""
         self._registry.upload(Path(path), name)
 
-    def get(self, name: str):
+    def get(self, name: str) -> None:
         """Download item"""
         self._registry.download(name)
 
@@ -103,11 +103,7 @@ class CLI:
                 return
 
         repository_url = (
-            check_output(["git", "remote", "-v"])
-            .decode()
-            .split("\n")[0]
-            .split("\t")[1]
-            .split()[0]
+            check_output(["git", "remote", "-v"]).decode().split("\n")[0].split("\t")[1].split()[0]
         )
         commit = check_output(["git", "rev-parse", "HEAD"]).decode().strip()
         diff = check_output(["git", "diff", "HEAD"]).decode()

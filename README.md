@@ -8,6 +8,12 @@ cd jasnah-cli
 python3 -m pip install -e .
 ```
 
+To install to a virtual environment, use the following command:
+
+```bash
+python3 -m poetry install --no-root --with dev
+```
+
 ## Usage
 
 ```

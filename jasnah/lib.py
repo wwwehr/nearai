@@ -1,11 +1,13 @@
+from datetime import datetime as dt
+from datetime import timezone
 from pathlib import Path
 
 from jasnah.config import CONFIG
-from datetime import datetime as dt
+from jasnah.db import db
 
 
 def timestamp() -> str:
-    return dt.now().strftime("%Y%m%d%H%M%S%f")
+    return dt.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
 
 
 def cli_path() -> Path:
@@ -27,5 +29,6 @@ def get_origin():
     return CONFIG.origin
 
 
-def log(content):
+def log(*, target: str, **content):
     origin = get_origin()
+    db.log(origin, target, content)

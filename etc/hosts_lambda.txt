@@ -1,13 +1,16 @@
 # Lambda nodes cluster
-setup@10.141.0.11
-setup@10.141.0.12
-setup@10.141.0.13
-setup@10.141.0.14
-setup@10.141.0.15
-setup@10.141.0.16
-setup@10.141.0.17
-setup@10.141.0.18
-setup@10.141.0.19
-setup@10.141.0.20
-setup@10.141.0.21
-setup@10.141.0.22
+# Each line contains:
+# - user@host of a node to ssh into
+# - cluster
+setup@10.141.0.11 truthwatcher
+# setup@10.141.0.12 truthwatcher
+# setup@10.141.0.13 truthwatcher
+setup@10.141.0.14 truthwatcher
+setup@10.141.0.15 truthwatcher
+setup@10.141.0.16 truthwatcher
+setup@10.141.0.17 truthwatcher
+setup@10.141.0.18 truthwatcher
+setup@10.141.0.19 truthwatcher
+setup@10.141.0.20 truthwatcher
+# setup@10.141.0.21 truthwatcher
+setup@10.141.0.22 truthwatcher

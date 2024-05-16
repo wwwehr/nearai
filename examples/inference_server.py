@@ -22,7 +22,7 @@ for _ in range(3):
 questions = [
     f"What is the sum of {randint(1, 100)} and {randint(1, 100)}?",
     f"What is the product of {randint(1, 10)} times {randint(1, 10)}?",
-    *hard_sum,``
+    *hard_sum,
     "What are the best three cities on the north of Africa to host a hackathon for a small team?",
 ]
 

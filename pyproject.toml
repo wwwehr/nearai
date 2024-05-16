@@ -51,6 +51,7 @@ warn_return_any = true
 warn_redundant_casts = true
 strict_equality = true
 warn_unused_configs = true
+no-any-return = false
 
 [tool.black]
 line-length = 100

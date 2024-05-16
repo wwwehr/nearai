@@ -1,3 +1,4 @@
+from random import randint
 from openai import OpenAI
 
 client = OpenAI(
@@ -8,10 +9,20 @@ client = OpenAI(
 for models in client.models.list():
     print(models)
 
+hard_sum = []
+
+for _ in range(3):
+    x = randint(1, 3)
+    y = randint(1, 3)
+    t = int("1" + "0" * x + "1" + "0" * y)
+    a = randint(1, t - 1)
+    b = t - a
+    hard_sum.append(f"What is the sum of {a} and {b}?")
+
 questions = [
-    "What is the product of 7 times 8?",
-    "What is the sum of 12 and 29?",
-    "What is the sum of 15801 and 84299?",
+    f"What is the sum of {randint(1, 100)} and {randint(1, 100)}?",
+    f"What is the product of {randint(1, 10)} times {randint(1, 10)}?",
+    *hard_sum,``
     "What are the best three cities on the north of Africa to host a hackathon for a small team?",
 ]
 

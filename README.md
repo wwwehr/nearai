@@ -29,6 +29,20 @@ This configuration can be manually edited at `~/.jasnah/config.json`, or per pro
 
 To use the registry (for downloading and uploading models and datasets) you need to setup access to S3. Do it by installing [aws-cli](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html) and configuring it (`aws configure`).
 
+## Update
+
+To update jasnah-cli run:
+
+```
+# Go to the jasnah-cli folder
+cd jasnah-cli
+
+git pull
+
+# The next step is only required in case some dependencies were added or updated, otherwise pulling new changes is enough
+python3 -m pip install -e .
+```
+
 ## Usage
 
 ### Submit an experiment
@@ -50,11 +64,12 @@ On each node the environment variable `ASSIGNED_SUPERVISORS` will be available w
 Upload a new dataset or model to the reigstry:
 
 ```
-jasnah-cli model upload --path <PATH_TO_MODEL> --name <MODEL_NAME>
-jasnah-cli dataset upload --path <PATH_TO_DATASET> --name <MODEL_NAME>
+jasnah-cli model upload <PATH_TO_MODEL> <MODEL_NAME> <DESCRIPTION> [--alias <ALIAS>]
+jasnah-cli dataset upload <PATH_TO_DATASET> <DATASET_NAME> <DESCRIPTION> [--alias <ALIAS>]
 ```
 
 The path could be either to a file or a folder.
+The name is a unique identifier, and the alias is a human readable name that can be used to refer to the model or dataset.
 
 
 ### Library

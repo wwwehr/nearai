@@ -8,6 +8,7 @@ First install jasnah-cli by running:
 git clone jasnah-cli
 cd jasnah-cli
 python3 -m pip install -e .
+pip install openai
 ```
 
 Check the installation worked with
@@ -27,7 +28,12 @@ jasnah-cli config set user_name <YOUR_NAME>
 The user name will be used to identify the author of the experiments.
 This configuration can be manually edited at `~/.jasnah/config.json`, or per project at `.jasnah/config.json` (relative to the current directory).
 
-To use the registry (for downloading and uploading models and datasets) you need to setup access to S3. Do it by installing [aws-cli](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html) and configuring it (`aws configure`).
+To use the registry (for downloading and uploading models and datasets) you need to setup access to S3. Do it by installing [aws-cli](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html) and configuring it:
+
+```
+export AWS_ACCESS_KEY_ID=<..>
+export AWS_SECRET_ACCESS_KEY="<..>"
+```
 
 ## Usage
 

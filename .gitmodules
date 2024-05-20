@@ -1,0 +1,3 @@
+[submodule "third_party/Megatron-LM"]
+	path = third_party/Megatron-LM
+	url = git@github.com:stanford-futuredata/Megatron-LM.git

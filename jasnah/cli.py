@@ -156,12 +156,19 @@ class RegistryCli:
         name: str,
         description: str,
         alias: Optional[str] = None,
+        show_entry: bool = True,
         **details,
     ):
         """Upload item to the registry"""
         author = CONFIG.get_user_name()
         self._registry.upload(
-            Path(path), name, author, description, alias, details, True
+            Path(path),
+            name,
+            author,
+            description,
+            alias,
+            details,
+            show_entry,
         )
 
     def download(self, name: str):

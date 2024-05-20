@@ -1,9 +1,10 @@
 TASK="LAMBADA"
 
-VALID_DATA=third_party/Megatron-LM/lambada_test.jsonl
+wget https://raw.githubusercontent.com/cybertronai/bflm/master/lambada_test.jsonl lambada_test.jsonl
+VALID_DATA=lambada_test.jsonl
 VOCAB_FILE=~/.jasnah/models/gpt2-vocab.json/gpt2-vocab.json
 MERGE_FILE=~/.jasnah/models/gpt2-merges.txt/gpt2-merges.txt
-CHECKPOINT_PATH=third_party/Megatron-LM/checkpoints/gpt2_345m
+CHECKPOINT_PATH=~/.jasnah/checkpoints/gpt2_345m
 
 COMMON_TASK_ARGS="--num-layers 24 \
                   --hidden-size 1024 \

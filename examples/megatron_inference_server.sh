@@ -8,8 +8,7 @@ DISTRIBUTED_ARGS="--nproc_per_node 1 \
                   --master_addr localhost \
                   --master_port 6000"
 
-# CHECKPOINT=~/.jasnah/checkpoints/gpt2_345m
-CHECKPOINT=third_party/Megatron-LM/checkpoints/gpt2_345m
+CHECKPOINT=~/.jasnah/checkpoints/gpt2_345m
 VOCAB_FILE=~/.jasnah/models/gpt2-vocab.json/gpt2-vocab.json
 MERGE_FILE=~/.jasnah/models/gpt2-merges.txt/gpt2-merges.txt
 

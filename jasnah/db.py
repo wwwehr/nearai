@@ -90,9 +90,14 @@ class RegistryEntry:
 
 class DB:
     def __init__(self, host, port, user, password, database):
-        self.connection = pymysql.connect(
+        self._connection = pymysql.connect(
             host=host, port=port, user=user, password=password, database=database
         )
+
+    @property
+    def connection(self):
+        self._connection.ping(reconnect=True)
+        return self._connection
 
     def close(self):
         self.connection.close()

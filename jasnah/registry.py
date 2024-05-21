@@ -3,26 +3,54 @@ from pathlib import Path
 from typing import List, Optional
 
 import boto3
+from tqdm import tqdm
 
 import jasnah
 from jasnah.config import CONFIG, DATA_FOLDER
 from jasnah.db import RegistryEntry, db
 
 
-def upload_file(client, path: Path, s3_path: str) -> None:
-    assert path.is_file()
-    assert path.exists()
+def upload_file(s3_client, s3_path: str, local_path: Path):
+    assert local_path.is_file()
+    assert local_path.exists()
 
-    print(f"Uploading {path} to s3://{CONFIG.s3_bucket}/{s3_path}")
-    client.upload_file(str(path), CONFIG.s3_bucket, s3_path)
+    statinfo = os.stat(local_path)
+    total_length = statinfo.st_size
+
+    with tqdm(
+        total=total_length,
+        desc=f"upload: {local_path}",
+        bar_format="{percentage:.1f}%|{bar:25} | {rate_fmt} | {desc}",
+        unit="B",
+        unit_scale=True,
+        unit_divisor=1024,
+    ) as pbar:
+        s3_client.upload_file(
+            str(local_path),
+            CONFIG.s3_bucket,
+            s3_path,
+            Callback=pbar.update,
+        )
 
 
 def download_file(s3_client, s3_path: str, local_path: Path):
     if not os.path.exists(os.path.dirname(local_path)):
         os.makedirs(os.path.dirname(local_path))
 
-    s3_client.download_file(CONFIG.s3_bucket, s3_path, local_path)
-    print(f"Downloaded s3://{CONFIG.s3_bucket}/{s3_path} to {local_path}")
+    meta_data = s3_client.head_object(Bucket=CONFIG.s3_bucket, Key=s3_path)
+    total_length = int(meta_data.get("ContentLength", 0))
+    with tqdm(
+        total=total_length,
+        desc=f"source: s3://{CONFIG.s3_bucket}/{s3_path}",
+        bar_format="{percentage:.1f}%|{bar:25} | {rate_fmt} | {desc}",
+        unit="B",
+        unit_scale=True,
+        unit_divisor=1024,
+    ) as pbar:
+        with open(local_path, "wb") as f:
+            s3_client.download_fileobj(
+                CONFIG.s3_bucket, s3_path, f, Callback=pbar.update
+            )
 
 
 def download_directory(s3_prefix, local_directory: Path):
@@ -133,7 +161,7 @@ class Registry:
         s3_client = boto3.client("s3")
 
         if path.is_file():
-            upload_file(s3_client, path, os.path.join(prefix, path.name))
+            upload_file(s3_client, os.path.join(prefix, path.name), path)
 
         elif path.is_dir():
             for root, _, files in os.walk(path):
@@ -145,7 +173,7 @@ class Registry:
                     relative_path = os.path.relpath(local_path, path)
                     s3_path = os.path.join(prefix, relative_path)
 
-                    upload_file(s3_client, Path(local_path), s3_path)
+                    upload_file(s3_client, s3_path, Path(local_path))
 
     def download(self, alias_or_name: str):
         entry = db.get_registry_entry_by_alias_or_name(alias_or_name)

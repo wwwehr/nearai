@@ -99,7 +99,7 @@ The `third_party/Megatron-LM/examples/pretrain_{bert,gpt,t5}_distributed.sh` scr
 
 ### Finetuning
 
-Finetuning in Megatron is the same process as pretraining. The `--finetune` arg is used to reset training parameters and start finetuning. [examples/gpt2_one_machine_finetune.sh](examples/gpt2_one_machine_finetune.sh) is an example script to start finetuning on one machine.
+Finetuning in Megatron is the same process as pretraining. The `--finetune` arg is used to reset training parameters and start finetuning. [gpt2_one_machine_finetune.sh](gpt2_one_machine_finetune.sh) is an example script to start finetuning on one machine.
 
 ### Change parameters of the model (for inference)
 

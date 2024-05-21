@@ -5,9 +5,10 @@
 First install jasnah-cli by running:
 
 ```
-git clone jasnah-cli
+git clone git@github.com:nearai/jasnah-cli.git
 cd jasnah-cli
 python3 -m pip install -e .
+pip install openai
 ```
 
 Check the installation worked with
@@ -27,7 +28,12 @@ jasnah-cli config set user_name <YOUR_NAME>
 The user name will be used to identify the author of the experiments.
 This configuration can be manually edited at `~/.jasnah/config.json`, or per project at `.jasnah/config.json` (relative to the current directory).
 
-To use the registry (for downloading and uploading models and datasets) you need to setup access to S3. Do it by installing [aws-cli](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html) and configuring it (`aws configure`).
+To use the registry (for downloading and uploading models and datasets) you need to setup access to S3. Do it by installing [aws-cli](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html) and configuring it:
+
+```
+export AWS_ACCESS_KEY_ID=<..>
+export AWS_SECRET_ACCESS_KEY="<..>"
+```
 
 ## Update
 
@@ -58,19 +64,17 @@ The current commit will be used for running the command so make sure it is alrea
 
 On each node the environment variable `ASSIGNED_SUPERVISORS` will be available with a comma separated list of supervisors that are running the experiment. The current supervisor can be accessed via `jasnah.CONFIG.supervisor_id`. See [examples/prepare_data.py](examples/prepare_data.py) for an example.
 
-
 ### Registry
 
-Upload a new dataset or model to the reigstry:
+Upload a new dataset or model to the registry:
 
 ```
-jasnah-cli model upload <PATH_TO_MODEL> <MODEL_NAME> <DESCRIPTION> [--alias <ALIAS>]
-jasnah-cli dataset upload <PATH_TO_DATASET> <DATASET_NAME> <DESCRIPTION> [--alias <ALIAS>]
+jasnah-cli models upload <PATH_TO_MODEL> <MODEL_NAME> <DESCRIPTION> [--alias <ALIAS>]
+jasnah-cli datasets upload <PATH_TO_DATASET> <DATASET_NAME> <DESCRIPTION> [--alias <ALIAS>]
 ```
 
 The path could be either to a file or a folder.
 The name is a unique identifier, and the alias is a human readable name that can be used to refer to the model or dataset.
-
 
 ### Library
 

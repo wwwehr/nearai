@@ -22,13 +22,11 @@ def main():
     python third_party/Megatron-LM/tools/preprocess_data.py
         --input {input}
         --output-prefix {output_prefix}
-        --vocab {vocab}
-        --dataset-impl mmap
+        --vocab-file {vocab}
         --tokenizer-type GPT2BPETokenizer
         --merge-file {merges}
         --append-eod
         --workers 1
-        --chunk-size 1000000000
     """
     # Split the command into a list
     process = subprocess.Popen(

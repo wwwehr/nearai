@@ -79,6 +79,8 @@ There is a Megatron fork not dependent on TransformerEngine: [Megatron for Megab
 
 ## Megatron functions
 
+Run from a project root.
+
 ### Data preparation
 
 The input training data should be in a loose json format, with one json containing a text sample per line in a 'text' field. All other fields are ignored.

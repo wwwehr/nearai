@@ -5,7 +5,7 @@
 First install jasnah-cli by running:
 
 ```
-git clone jasnah-cli
+git clone git@github.com:nearai/jasnah-cli.git
 cd jasnah-cli
 python3 -m pip install -e .
 pip install openai
@@ -48,6 +48,23 @@ If version mismatch, edit `setup.py`:
 
 ```
 nano setup.py
+```
+
+```
+     if (bare_metal_version != torch_binary_version):
++
++        # allow minor version mismatch
++        if bare_metal_version.major == torch_binary_version.major and bare_metal_version.minor != torch_binary_version.minor:
++            return
++
+         raise RuntimeError(
+             "Cuda extensions are being compiled with a version of Cuda that does "
+             "not match the version used to compile Pytorch binaries.  "
+```
+
+Try installing again:
+
+```
 pip install -v --disable-pip-version-check --no-cache-dir --no-build-isolation --config-settings "--build-option=--cpp_ext" --config-settings "--build-option=--cuda_ext" ./
 ```
 

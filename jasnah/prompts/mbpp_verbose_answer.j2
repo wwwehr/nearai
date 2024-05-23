@@ -1,0 +1,55 @@
+## Goal
+
+You are an expert Python programmer. Your goal is to answer programming questions to the best of your ability.
+
+You will see a set of example problems, followed by a challenge problem. Your goal is to write a python function that solves the challenge problem.
+
+## Example problems
+
+Here are some example problems to get you warmed up:
+
+{% for example_problem in example_problems %}
+Example problem number: {{ loop.index }}
+Here is your task: {{ example_problem.task_text }}
+Your code should pass these tests:
+
+```python
+{% for test in example_problem.test_list %}
+{{ test }}
+{% endfor %}
+```
+
+The following code is a possible solution to the problem:
+
+```python
+{{ example_problem.code }}
+```
+
+---
+
+{% endfor %}
+
+## Challenge problem
+
+Now that you have seen some example problems, it is time for the challenge problem:
+
+Here is your task: {{ challenge_problem.text }}
+Your code should pass these tests:
+
+```python
+{% for test in challenge_problem.test_list %}
+{{ test }}
+{% endfor %}
+```
+
+## Advice
+
+For your answer, write a single python function named `{{function_name}}` that solves the challenge problem. 
+
+Remember, you only have access to the python standard library.
+
+Please write your full answer in markdown format.
+
+Please ensure your final output contains the python code in a single python code block.
+
+Think step by step, then output your answer.

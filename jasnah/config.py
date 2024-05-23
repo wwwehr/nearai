@@ -46,8 +46,8 @@ class Config:
     s3_bucket: str = "kholinar-registry"
     s3_prefix: str = "registry"
     supervisors: List[str] = field(default_factory=list)
-    db_user: Optional[str] = "cmrfrd"
-    db_password: Optional[str] = "VE4xL2odfbyW"
+    db_user: Optional[str] = None
+    db_password: Optional[str] = None
     db_host: str = "35.87.119.37"
     db_port: int = 3306
     db_name: str = "jasnah"

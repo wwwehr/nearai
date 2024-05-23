@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 
 import datasets
-import numpy as np
 from PIL import Image
 from tqdm import tqdm
 
@@ -46,7 +45,6 @@ def main():
     for i, (image, content) in tqdm(enumerate(Reader(path / "ncimages" / "part1.txt"))):
         bytes = io.BytesIO(image)
         image = Image.open(bytes).convert("RGB")
-        image = np.array(image)
 
         kind = "leading" if "leading" in content else "description"
 
@@ -54,10 +52,7 @@ def main():
         ds["content"].append(content)
         ds["kind"].append(kind)
 
-        if i == 100:
-            break
-
-    datasets.Dataset.from_dict(ds).save_to_disk(str(path / "processed"))
+    datasets.Dataset.from_dict(ds).save_to_disk(str(path / "processed_tmp"))
 
 
 if __name__ == "__main__":

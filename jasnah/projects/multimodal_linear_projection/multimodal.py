@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Union
+from typing import List, Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -33,6 +33,7 @@ class LlamaMultimodalModel(LlamaForCausalLM):
         patches: torch.FloatTensor,
         tokens_pos: torch.LongTensor,
         patches_pos: torch.LongTensor,
+        attention_mask: Optional[torch.Tensor] = None,
     ):
         batch_size = tokens.shape[0]
 
@@ -56,22 +57,31 @@ class LlamaMultimodalModel(LlamaForCausalLM):
 
         embeds = embeds[:, :-1, :]
 
-        return super().forward(inputs_embeds=embeds)
+        return super().forward(inputs_embeds=embeds, attention_mask=attention_mask)
 
 
 @dataclass
 class ImageDescription:
-    file_path: str
+    file_path: Optional[str] = None
+    pil_image: Optional[Image.Image] = None
 
-    def load(self) -> Image:
-        return Image.open(self.file_path).convert("RGB")
+    def load(self) -> Image.Image:
+        if self.file_path is not None:
+            return Image.open(self.file_path).convert("RGB")
+        elif self.pil_image is not None:
+            return self.pil_image
+        else:
+            raise ValueError("No image source specified")
 
 
 class ImageTokenizer:
     def encode(self, image_d: ImageDescription) -> torch.FloatTensor:
-        image = torch.tensor(
-            np.array(image_d.load(), dtype=np.float32) / 255.0
-        ).permute(2, 0, 1)
+        pil_image = image_d.load()
+        pil_image = pil_image.resize((pil_image.width // 4, pil_image.height // 4))
+
+        image = torch.tensor(np.array(pil_image, dtype=np.float32) / 255.0).permute(
+            2, 0, 1
+        )
 
         C, H, W = image.shape
 
@@ -110,15 +120,30 @@ class MultimodalInput:
     tokens_pos: List[int] = field(default_factory=list)
     patches: List[torch.FloatTensor] = field(default_factory=list)
     patches_pos: List[int] = field(default_factory=list)
+    weight: List[float] = field(default_factory=list)
+    label: List[int] = field(default_factory=list)
+    eos_id: int = 0
 
-    def get_pos(self, size):
+    def _get_pos(self, size):
         pos = list(range(self.ctx, self.ctx + size))
         self.ctx += size
         return pos
 
-    def add_text(self, tokens: List[int]):
+    def _add_labels(self, labels: List[int], encode_only: bool):
+        assert isinstance(encode_only, bool)
+        weight = 0.0 if encode_only else 1.0
+
+        if self.label:
+            self.label[-1] = labels[0]
+            self.weight[-1] = weight
+
+        self.label += labels[1:] + [self.eos_id]
+        self.weight += [weight] * len(labels)
+
+    def add_text(self, tokens: List[int], encode_only: bool = False):
         self.tokens += tokens
-        self.tokens_pos += self.get_pos(len(tokens))
+        self.tokens_pos += self._get_pos(len(tokens))
+        self._add_labels(tokens, encode_only)
 
     def add_patches(self, patches: torch.FloatTensor, separator: List[int]):
         h, w, *_ = patches.shape
@@ -126,9 +151,14 @@ class MultimodalInput:
         self.patches.append(patches.view(h * w, -1))
         self.tokens += separator * h
 
+        before = self.ctx
+
         for _ in range(h):
-            self.patches_pos += self.get_pos(w)
-            self.tokens_pos += self.get_pos(len(separator))
+            self.patches_pos += self._get_pos(w)
+            self.tokens_pos += self._get_pos(len(separator))
+
+        new_tokens = self.ctx - before
+        self._add_labels([0] * new_tokens, encode_only=True)
 
     def get_tokens(self, size, n_ctx):
         assert len(self.tokens) == len(self.tokens_pos)
@@ -153,29 +183,78 @@ class MultimodalInput:
         patches = F.pad(patches, (0, 0, 0, size - patches.size(0)), value=0)
         return patches, patches_pos
 
+    def get_labels(self, size):
+        assert size >= len(self.label)
+        assert len(self.label) == len(self.weight)
+        label = torch.zeros(size, dtype=torch.long)
+        weight = torch.zeros(size, dtype=torch.float)
+        label[: len(self.label)] = torch.tensor(self.label)
+        weight[: len(self.weight)] = torch.tensor(self.weight)
+        return label, weight
+
+
+class EncodeOnly:
+    """
+    Objects wrapped in this class will be masked out during training.
+    Loss will not be computed against them.
+    """
+
+    def __init__(self, inner):
+        self.inner = inner
+
+
+def encode_only(inner):
+    return EncodeOnly(inner)
+
+
+ItemType = Union[str, ImageDescription, EncodeOnly]
+
 
 class MultimodalTokenizer:
     def __init__(
-        self, text_tokenizer: PreTrainedTokenizerBase, img_tokenizer: ImageTokenizer
+        self,
+        text_tokenizer: PreTrainedTokenizerBase,
+        img_tokenizer: ImageTokenizer,
+        eos_id: int = 0,
     ):
         self.text_tokenizer = text_tokenizer
         self.img_tokenizer = img_tokenizer
+        self.separator = self.text_tokenizer.encode("\n")
+        self.eos_id = eos_id
 
-    def encode(self, data: List[List[Union[str, ImageDescription]]]):
-        separator = self.text_tokenizer.encode("\n")
+    def get_item(self, item: ItemType):
+        if isinstance(item, EncodeOnly):
+            item, type_, kwargs = self.get_item(item.inner)
+            kwargs["encode_only"] = True
+            return item, type_, kwargs
+
+        if isinstance(item, str):
+            return self.text_tokenizer(item)["input_ids"], str, {}
+
+        if isinstance(item, ImageDescription):
+            return (
+                self.img_tokenizer.encode(item),
+                ImageDescription,
+                {"separator": self.separator},
+            )
+
+        raise ValueError(f"Unknown type: {type(item)}")
+
+    def encode(self, data: List[List[ItemType]], include_labels=False):
         inputs: List[MultimodalInput] = []
 
         for row in data:
-            input = MultimodalInput()
+            input = MultimodalInput(eos_id=self.eos_id)
 
             for item in row:
-                if isinstance(item, str):
-                    input.add_text(self.text_tokenizer.encode(item))
-                elif isinstance(item, ImageDescription):
-                    patches = self.img_tokenizer.encode(item)
-                    input.add_patches(patches, separator)
+                item, type_, kwargs = self.get_item(item)
+
+                if type_ is str:
+                    input.add_text(item, **kwargs)
+                elif type_ is ImageDescription:
+                    input.add_patches(item, **kwargs)
                 else:
-                    raise ValueError(f"Unknown type: {type(item)}")
+                    raise ValueError(f"Unknown type: {type_}")
 
             inputs.append(input)
 
@@ -188,22 +267,38 @@ class MultimodalTokenizer:
         tokens_pos = []
         patches = []
         patches_pos = []
+        labels = []
+        weights = []
 
         for i in inputs:
             i_tokens, i_tokens_pos = i.get_tokens(max_tokens, n_ctx)
-            i_patches, i_patches_pos = i.get_patches(max_patches, n_ctx)
             tokens.append(i_tokens)
             tokens_pos.append(i_tokens_pos)
+
+            i_patches, i_patches_pos = i.get_patches(max_patches, n_ctx)
             patches.append(i_patches)
             patches_pos.append(i_patches_pos)
 
-        return {
+            if include_labels:
+                i_label, i_weights = i.get_labels(n_ctx)
+                labels.append(i_label)
+                weights.append(i_weights)
+
+        return_dict = {
+            "n_ctx": n_ctx,
             "tokens": torch.stack(tokens),
             "patches": torch.stack(patches),
             "tokens_pos": torch.stack(tokens_pos),
             "patches_pos": torch.stack(patches_pos),
-            "n_ctx": n_ctx,
+            "labels": torch.stack(labels),
+            "weights": torch.stack(weights),
         }
+
+        if include_labels:
+            return_dict["labels"] = return_dict.pop("labels")
+            return_dict["weights"] = return_dict.pop("weights")
+
+        return return_dict
 
 
 def test_reconstruct_image():
@@ -256,15 +351,15 @@ def test_multimodal():
         [
             [
                 "Describe the following image:",
-                # ImageDescription("0.jpg"),
+                ImageDescription("0.jpg"),
                 "The image shows",
             ],
             [
                 "Describe the following image:",
-                # ImageDescription("1.jpg"),
+                ImageDescription("1.jpg"),
                 "The image shows",
             ],
-        ]
+        ],
     )
 
     print("context length:", model_input["n_ctx"])
@@ -291,6 +386,68 @@ def test_multimodal():
     # print(output.logits.shape)
 
 
+def test_include_labels():
+    text_tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
+    image_tokenizer = ImageTokenizer()
+    tokenizer = MultimodalTokenizer(text_tokenizer, image_tokenizer, eos_id=128001)
+
+    model_input = tokenizer.encode(
+        [
+            [
+                encode_only("Task description:"),
+                "You should add two numbers",
+                encode_only("Thinking step by step"),
+                "I add the numbers in python",
+            ],
+        ],
+        include_labels=True,
+    )
+
+    labels = model_input.pop("labels")
+    weights = model_input.pop("weights")
+
+    print(labels.shape)
+    print(weights.shape)
+
+    print(labels)
+    print(weights)
+
+
+def test_attention_mask():
+    model = LlamaForCausalLM.from_pretrained(MODEL_PATH)
+
+    tokens = torch.tensor([[0, 1, 2, 3], [0, 2, 1, 3]], dtype=torch.long)
+    attention_mask = torch.tensor(
+        [
+            [
+                [
+                    [1, 0, 0, 0],
+                    [1, 1, 1, 0],
+                    [1, 1, 1, 0],
+                    [1, 1, 1, 1],
+                ]
+            ],
+            [
+                [
+                    [1, 0, 0, 0],
+                    [1, 1, 1, 0],
+                    [1, 1, 1, 0],
+                    [1, 1, 1, 1],
+                ]
+            ],
+        ],
+        dtype=torch.float,
+    )
+    positions_ids = torch.tensor([[0, 1, 1, 2], [0, 1, 1, 2]], dtype=torch.long)
+
+    output = model.forward(
+        tokens, attention_mask=attention_mask, position_ids=positions_ids
+    )
+    print(output.logits)
+
+
 if __name__ == "__main__":
     # test_next_token()
-    test_multimodal()
+    # test_multimodal()
+    # test_attention_mask()
+    test_include_labels()

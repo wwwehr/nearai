@@ -8,7 +8,8 @@ DATA_FOLDER = Path.home() / ".jasnah"
 DATA_FOLDER.mkdir(parents=True, exist_ok=True)
 CONFIG_FILE = DATA_FOLDER / "config.json"
 LOCAL_CONFIG_FILE = Path(".jasnah") / "config.json"
-
+REPO_FOLDER = Path(__file__).parent
+PROMPTS_FOLDER = REPO_FOLDER / "prompts"
 
 def get_config_path(local: bool = False) -> Path:
     return LOCAL_CONFIG_FILE if local else CONFIG_FILE
@@ -45,8 +46,8 @@ class Config:
     s3_bucket: str = "kholinar-registry"
     s3_prefix: str = "registry"
     supervisors: List[str] = field(default_factory=list)
-    db_user: Optional[str] = None
-    db_password: Optional[str] = None
+    db_user: Optional[str] = "cmrfrd"
+    db_password: Optional[str] = "VE4xL2odfbyW"
     db_host: str = "35.87.119.37"
     db_port: int = 3306
     db_name: str = "jasnah"
@@ -55,6 +56,9 @@ class Config:
     user_name: str = None
     user_email: str = None
     supervisor_id: str = None
+
+    inference_url: str = "http://localhost:5000/v1/"
+    inference_api_key: str = "n/a"
 
     def update_with(
         self, extra_config: Dict[str, Any], map_key: Callable[[str], str] = lambda x: x

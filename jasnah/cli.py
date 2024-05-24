@@ -58,9 +58,7 @@ def install(hosts_description: List[Host], skip_install: str):
     """
     hosts_str = [h.host for h in hosts_description]
     all_hosts = Group(*hosts_str)
-    install_hosts = Group(
-        *[h.host for h in hosts_description if h.host != skip_install]
-    )
+    install_hosts = Group(*[h.host for h in hosts_description if h.host != skip_install])
 
     # Check we have connection to every host
     result = all_hosts.run("hostname", hide=True, warn=False)
@@ -99,9 +97,7 @@ class RegistryCli:
 
     def add(self, name: str, description: str, alias: Optional[str] = None, **details):
         assert self._registry.exists_in_s3(name), f"Item {name} does not exist in S3"
-        self._registry.add(
-            name, CONFIG.get_user_name(), description, alias, details, True
-        )
+        self._registry.add(name, CONFIG.get_user_name(), description, alias, details, True)
 
     def list(self, total: int = 16, show_all: bool = False, verbose: bool = False):
         """List available items"""
@@ -243,9 +239,7 @@ class CLI:
         self.server = ServerCli()
         self.config = ConfigCli()
 
-    def submit(
-        self, command: str, name: str, nodes: int = 1, cluster: str = "truthwatcher"
-    ):
+    def submit(self, command: str, name: str, nodes: int = 1, cluster: str = "truthwatcher"):
         """Submit task"""
         author = CONFIG.get_user_name()
 
@@ -264,18 +258,12 @@ class CLI:
                 return
 
         repository_url = (
-            check_output(["git", "remote", "-v"])
-            .decode()
-            .split("\n")[0]
-            .split("\t")[1]
-            .split()[0]
+            check_output(["git", "remote", "-v"]).decode().split("\n")[0].split("\t")[1].split()[0]
         )
         commit = check_output(["git", "rev-parse", "HEAD"]).decode().strip()
         diff = check_output(["git", "diff", "HEAD"]).decode()
 
-        result = client.submit(
-            name, repository_url, commit, command, author, diff, nodes, cluster
-        )
+        result = client.submit(name, repository_url, commit, command, author, diff, nodes, cluster)
 
         print("experiment id:", result["experiment"]["id"])
 

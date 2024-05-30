@@ -3,6 +3,7 @@ import os
 from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 DATA_FOLDER = Path.home() / ".jasnah"
 DATA_FOLDER.mkdir(parents=True, exist_ok=True)

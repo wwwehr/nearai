@@ -1,10 +1,10 @@
 Below is a sentence with many different completions.
 
 --- start of question ---
-Subject: {{ example_problem.activity_label }}
-Sentence: {{ example_problem.ctx }}
+Subject: {{ challenge_problem.activity_label }}
+Sentence: {{ challenge_problem.ctx }}
 Completions:
-{% for ending in example_problem.endings %}
+{% for ending in challenge_problem.endings %}
 {{ choices[loop.index0] }}. {{ choice }}
 {% endfor %}
 --- end of question ---

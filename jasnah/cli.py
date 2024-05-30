@@ -10,10 +10,14 @@ from fabric import ThreadingGroup as Group
 from tabulate import tabulate
 
 import jasnah
+from jasnah.benchmark import BenchmarkExecutor
+from jasnah.completion import create_completion_fn
 from jasnah.config import CONFIG, DATA_FOLDER, update_config
+from jasnah.dataset import load_dataset
 from jasnah.db import db
 from jasnah.registry import Registry, dataset, model
 from jasnah.server import ServerClient, run_server
+from jasnah.solvers import SolverStrategy, SolverStrategyRegistry
 from jasnah.supervisor import SupervisorClient, run_supervisor
 
 
@@ -231,6 +235,23 @@ class ConfigCli:
             print(f"{key}: {value}")
 
 
+class BenchmarkCli:
+    def __init__(self, datasets: RegistryCli, models: RegistryCli):
+        self.datasets = datasets
+        self.models = models
+    
+    def run(self, dataset: str, model: str, solver_strategy: str, subset: str = None):
+        name, subset, dataset = dataset, subset, load_dataset(dataset)
+        model_completion_fn = create_completion_fn(model)
+
+        solver_strategy: SolverStrategy | None = SolverStrategyRegistry.get(solver_strategy, None)
+        assert solver_strategy, f"Solver strategy {solver_strategy} not found. Available strategies: {list(SolverStrategyRegistry.keys())}"
+        solver_strategy = solver_strategy(model_completion_fn, dataset_ref=dataset)
+        assert name in solver_strategy.compadible_datasets(), f"Solver strategy {solver_strategy} is not compatible with dataset {name}"
+        
+        be = BenchmarkExecutor((name, subset, dataset), solver_strategy)
+        be.run()
+
 class CLI:
     def __init__(self):
         self.datasets = RegistryCli(dataset)
@@ -238,6 +259,7 @@ class CLI:
         self.supervisor = SupervisorCli()
         self.server = ServerCli()
         self.config = ConfigCli()
+        self.benchmark = BenchmarkCli(self.datasets, self.models)
 
     def submit(self, command: str, name: str, nodes: int = 1, cluster: str = "truthwatcher"):
         """Submit task"""
@@ -300,11 +322,3 @@ class CLI:
             experiment["diff_len"] = len(experiment.pop("diff", ""))
 
         print(json.dumps(status))
-
-
-def main():
-    fire.Fire(CLI)
-
-
-if __name__ == "__main__":
-    main()

@@ -1,17 +1,16 @@
 import ast
+from itertools import islice
 import re
 from abc import ABC, ABCMeta, abstractmethod
-from itertools import islice
 from textwrap import dedent
 from typing import Any, Callable, Dict, List
 
 from datasets import Dataset  # type: ignore
-from jinja2 import Template
 from openai.types.chat import ChatCompletion
 from pydantic import BaseModel
+from jinja2 import Template
 
 from .config import PROMPTS_FOLDER
-
 
 class SolverStrategyMeta(ABCMeta):
     """
@@ -107,7 +106,7 @@ class MBPPSolverStrategy(SolverStrategy):
             messages=[
                 {"role": "system", "content": base_prompt},
             ],
-            temperature=0.0,
+            temperature=0.,
         )
         response = str(completion_response.choices[0].message.content)
 
@@ -122,7 +121,7 @@ class MBPPSolverStrategy(SolverStrategy):
             messages=[
                 {"role": "system", "content": extract_answer_prompt},
             ],
-            temperature=0.0,
+            temperature=0.,
         )
         response = str(completion_response.choices[0].message.content)
 

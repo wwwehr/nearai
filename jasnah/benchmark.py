@@ -18,7 +18,9 @@ class BenchmarkExecutor:
         _, subset, dataset = self.dataset_info
         if subset is not None:
             dataset = dataset[subset]
-        assert isinstance(dataset, Dataset), f"Expected a Dataset, got {type(dataset)}"
+        assert isinstance(
+            dataset, Dataset
+        ), f"Expected a Dataset, got {type(dataset).__name__}, try using a subset. Available keys: {list(dataset.keys())}"
 
         correct = 0
         remaining = len(dataset)
@@ -41,7 +43,9 @@ class BenchmarkExecutor:
                     result = completed_future.result()
                     if result:
                         correct += 1
-                    bar.set_description(f"Correct/Seen - {correct}/{total - remaining} - {correct/(total - remaining):.2%}")
+                    bar.set_description(
+                        f"Correct/Seen - {correct}/{total - remaining} - {correct/(total - remaining):.2%}"
+                    )
 
                     try:
                         next_task = next(tasks)

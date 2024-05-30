@@ -198,5 +198,30 @@ class Registry:
         return db.list_registry_entries(self.category, total=total, show_all=show_all)
 
 
+    def delete(self, alias_or_name: str):
+        entry = db.get_registry_entry_by_alias_or_name(alias_or_name)
+
+        if entry is None:
+            raise ValueError(f"{alias_or_name} not found in the registry")
+
+        jasnah.log(target=f"Delete {self.category} from S3", name=alias_or_name)
+
+        name = entry.name
+        prefix = os.path.join(CONFIG.s3_prefix, self.category, name)
+        s3_client = boto3.client("s3")
+
+        for page in s3_client.get_paginator("list_objects_v2").paginate(
+            Bucket=CONFIG.s3_bucket, Prefix=prefix
+        ):
+            if "Contents" not in page:
+                continue
+
+            for s3_object in page["Contents"]:
+                s3_key = s3_object["Key"]
+                print(f"Deleting {s3_key}")
+                s3_client.delete_object(Bucket=CONFIG.s3_bucket, Key=s3_key)
+
+        db.delete_from_registry(entry.id)
+
 dataset = Registry("datasets")
 model = Registry("models")

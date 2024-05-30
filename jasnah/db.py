@@ -373,6 +373,11 @@ class DB:
             return by_alias
         return self.get_registry_entry_by_name(alias_or_name)
 
+    def delete_from_registry(self, id: int):
+        with self.connection.cursor() as cursor:
+            cursor.execute("DELETE FROM registry WHERE id=%s", (id,))
+        self.connection.commit()
+
     def _create(self):
         """Create tables if they don't exist"""
         with self.connection.cursor() as cursor:

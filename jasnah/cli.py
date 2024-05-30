@@ -99,6 +99,9 @@ class RegistryCli:
         assert self._registry.exists_in_s3(name), f"Item {name} does not exist in S3"
         self._registry.add(name, CONFIG.get_user_name(), description, alias, details, True)
 
+    def delete(self, name: str):
+        self._registry.delete(name)
+
     def list(self, total: int = 16, show_all: bool = False, verbose: bool = False):
         """List available items"""
         header = ["id", "name", "alias", "description"]

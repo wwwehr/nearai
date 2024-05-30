@@ -1,16 +1,17 @@
 import ast
-from itertools import islice
 import re
 from abc import ABC, ABCMeta, abstractmethod
+from itertools import islice
 from textwrap import dedent
 from typing import Any, Callable, Dict, List
 
 from datasets import Dataset  # type: ignore
+from jinja2 import Template
 from openai.types.chat import ChatCompletion
 from pydantic import BaseModel
-from jinja2 import Template
 
 from .config import PROMPTS_FOLDER
+
 
 class SolverStrategyMeta(ABCMeta):
     """
@@ -95,7 +96,9 @@ class MBPPSolverStrategy(SolverStrategy):
         ## Allow LLM to think "out loud" for it's answer
         function_name = get_function_name(datum["code"])
         example_problems = list(islice(self.dataset_ref["prompt"], self.SHOTS))
-        base_prompt = Template(open(PROMPTS_FOLDER / "mbpp_verbose_answer.j2").read(), trim_blocks=True).render(
+        base_prompt = Template(
+            open(PROMPTS_FOLDER / "mbpp_verbose_answer.j2").read(), trim_blocks=True
+        ).render(
             function_name=function_name,
             example_problems=example_problems,
             challenge_problem=datum,
@@ -104,12 +107,14 @@ class MBPPSolverStrategy(SolverStrategy):
             messages=[
                 {"role": "system", "content": base_prompt},
             ],
-            temperature=0.,
+            temperature=0.0,
         )
         response = str(completion_response.choices[0].message.content)
 
         ## Extract the answer from the response
-        extract_answer_prompt = Template(open(PROMPTS_FOLDER / "mbpp_extract_answer.j2").read(), trim_blocks=True).render(
+        extract_answer_prompt = Template(
+            open(PROMPTS_FOLDER / "mbpp_extract_answer.j2").read(), trim_blocks=True
+        ).render(
             function_name=function_name,
             answer_text=response,
         )
@@ -117,7 +122,7 @@ class MBPPSolverStrategy(SolverStrategy):
             messages=[
                 {"role": "system", "content": extract_answer_prompt},
             ],
-            temperature=0.,
+            temperature=0.0,
         )
         response = str(completion_response.choices[0].message.content)
 
@@ -136,4 +141,75 @@ class MBPPSolverStrategy(SolverStrategy):
                 exec(test_code)
             return True
         except:
+            return False
+
+
+class MMLUSolverStrategy(SolverStrategy):
+    """
+    Solver strategy for the MMLU dataset
+    """
+
+    SHOTS = 8
+
+    def __init__(self, completion_fn: Callable[[Any], ChatCompletion], dataset_ref: Dataset):
+        super().__init__(completion_fn)
+        self.dataset_ref = dataset_ref
+        self.completion_fn = completion_fn
+
+    def compadible_datasets(self) -> List[str]:
+        return ["mmlu"]
+
+    def solve(self, datum: dict) -> bool:
+        class MMLUDatum(BaseModel):
+            question: str
+            subject: str
+            choices: list[str]
+            answer: int
+
+        datum = MMLUDatum(**datum).model_dump()
+
+        choices = ["A", "B", "C", "D"]
+        example_problems_indices = list(range(0, 5 * self.SHOTS, 5))
+        example_problems = list(
+            map(
+                lambda d: MMLUDatum(**d).model_dump(),
+                [self.dataset_ref["dev"][i] for i in example_problems_indices],
+            )
+        )
+        base_prompt = Template(
+            open(PROMPTS_FOLDER / "mmlu_verbose_answer.j2").read(), trim_blocks=True
+        ).render(
+            example_problems=example_problems,
+            challenge_problem=datum,
+            choices=choices,
+        )
+        completion_response: ChatCompletion = self.completion_fn(  # type: ignore
+            messages=[
+                {"role": "system", "content": base_prompt},
+            ],
+            temperature=0.2,
+        )
+        response = str(completion_response.choices[0].message.content)
+
+        ## Extract the answer from the response
+        extract_answer_prompt = Template(
+            open(PROMPTS_FOLDER / "mmlu_extract_answer.j2").read(), trim_blocks=True
+        ).render(
+            challenge_problem=datum,
+            answer_text=response,
+            choices=choices,
+        )
+        completion_response = self.completion_fn(  # type: ignore
+            messages=[
+                {"role": "system", "content": extract_answer_prompt},
+            ],
+            temperature=0.0,
+        )
+        response = str(completion_response.choices[0].message.content)
+
+        try:
+            answer = choices.index(response)
+            return bool(answer == datum["answer"])
+        except:
+            print("Failed to parse answer")
             return False

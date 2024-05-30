@@ -284,7 +284,6 @@ class HellswagSolverStrategy(SolverStrategy):
         )
         response = str(completion_response.choices[0].message.content)
 
-        print(f"Response: {response}, Label: {datum}")
         try:
             answer = choices.index(response)
             return bool(answer == int(datum["label"]))

@@ -1,4 +1,5 @@
 import json
+import textwrap
 from dataclasses import asdict
 from pathlib import Path
 from subprocess import check_output, run
@@ -103,8 +104,7 @@ def parse_tags(tags) -> List[str]:
         return list(tags)
 
     elif isinstance(tags, str):
-        assert "," not in tags
-        return [tags]
+        return tags.split(",")
 
     else:
         raise ValueError(f"Invalid tags argument: {tags}")
@@ -140,7 +140,7 @@ class RegistryCli:
         """List available items"""
         tags = parse_tags(tags)
 
-        header = ["id", "path", "name", "description", "tags"]
+        header = ["id", "name", "description", "tags"]
 
         if verbose:
             header += ["author", "show_entry", "time"]
@@ -153,10 +153,9 @@ class RegistryCli:
 
             row = [
                 entry.id,
-                entry.path,
-                entry.name,
-                entry.description,
-                tags,
+                entry.name or entry.path,
+                textwrap.fill(entry.description, width=50),
+                textwrap.fill(tags, width=20),
             ]
 
             if verbose:
@@ -164,7 +163,7 @@ class RegistryCli:
 
             table.append(row)
 
-        print(tabulate(table, headers="firstrow"))
+        print(tabulate(table, headers="firstrow", tablefmt="simple_grid"))
 
     def update(
         self,

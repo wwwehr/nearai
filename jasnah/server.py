@@ -38,9 +38,7 @@ def submit():
     num_nodes = body["num_nodes"]
     cluster = body["cluster"]
 
-    experiment_id = db.add_experiment(
-        name, author, repository, commit, diff, command, num_nodes
-    )
+    experiment_id = db.add_experiment(name, author, repository, commit, diff, command, num_nodes)
 
     result = {}
 

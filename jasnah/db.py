@@ -1,13 +1,31 @@
 import json
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import backoff
 import fire
 import pymysql
 
 from jasnah.config import CONFIG
+
+# TODO: Once everyone is using the new version of jasnah-cli, we can rename this table to `registry`
+#       and rename the old `registry` table to `registry_old` (and later remove it).
+#       When the new table is renamed, users will be prompted to update the CLI automatically.
+REGISTRY_TABLE = "registry_v2"
+
+
+def check_renamed_table(fn):
+    def gn(*args, **kwargs):
+        try:
+            output = fn(*args, **kwargs)
+            return output
+        except pymysql.err.ProgrammingError as e:
+            if e.args[0] == 1146:
+                print(f"Table {REGISTRY_TABLE} not found. Please update the CLI to the latest version.")
+            raise
+
+    return gn
 
 
 def datetime_serializer(obj):
@@ -71,12 +89,11 @@ class Log:
 @dataclass
 class RegistryEntry:
     id: int
+    path: str
     name: str
-    category: str
     author: str
     time: datetime
     description: Optional[str]
-    alias: Optional[str]
     details: Optional[dict]
     show_entry: bool
 
@@ -85,14 +102,31 @@ class RegistryEntry:
         if row is None:
             return None
 
-        return RegistryEntry(*row)
+        entry = RegistryEntry(*row)
+
+        if entry.details is not None:
+            entry.details = json.loads(entry.details)
+
+        return entry
+
+
+@dataclass
+class Tag:
+    id: int
+    experiment_id: int
+    tag: str
+
+    @staticmethod
+    def from_db(row) -> Optional["Tag"]:
+        if row is None:
+            return None
+
+        return Tag(*row)
 
 
 class DB:
     def __init__(self, host, port, user, password, database):
-        self._connection = pymysql.connect(
-            host=host, port=port, user=user, password=password, database=database
-        )
+        self._connection = pymysql.connect(host=host, port=port, user=user, password=password, database=database)
 
     @property
     def connection(self):
@@ -140,9 +174,7 @@ class DB:
 
     def get_experiment(self, experiment_id: int) -> Optional[Experiment]:
         with self.connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT * FROM experiments WHERE id=%s LIMIT 1", (experiment_id,)
-            )
+            cursor.execute("SELECT * FROM experiments WHERE id=%s LIMIT 1", (experiment_id,))
             return Experiment.from_db(cursor.fetchone())
 
     def get_assignment(self, supervisor_id: str) -> Optional[Experiment]:
@@ -158,31 +190,23 @@ class DB:
 
             experiment_id = row[0]
 
-            cursor.execute(
-                "SELECT * FROM experiments WHERE id=%s LIMIT 1", (experiment_id,)
-            )
+            cursor.execute("SELECT * FROM experiments WHERE id=%s LIMIT 1", (experiment_id,))
 
             return Experiment.from_db(cursor.fetchone())
 
     def last_experiments(self, total: int) -> List[Experiment]:
         with self.connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT * FROM experiments ORDER BY id DESC LIMIT %s", (total,)
-            )
+            cursor.execute("SELECT * FROM experiments ORDER BY id DESC LIMIT %s", (total,))
             return [Experiment.from_db(row) for row in cursor.fetchall()]
 
     def available_supervisors(self, total: int = 1) -> List[Supervisor]:
         with self.connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT * FROM supervisors WHERE available=1 LIMIT %s", (total,)
-            )
+            cursor.execute("SELECT * FROM supervisors WHERE available=1 LIMIT %s", (total,))
             return [Supervisor.from_db(row) for row in cursor.fetchall()]
 
     def add_supervisors(self, supervisors: List[Supervisor]):
         with self.connection.cursor() as cursor:
-            supervisors_d = [
-                (s.id, s.endpoint, s.cluster, s.status) for s in supervisors
-            ]
+            supervisors_d = [(s.id, s.endpoint, s.cluster, s.status) for s in supervisors]
             cursor.executemany(
                 "INSERT IGNORE INTO supervisors (id, endpoint, cluster, status) VALUES (%s, %s, %s, %s)",
                 supervisors_d,
@@ -199,9 +223,7 @@ class DB:
 
     def set_experiment_status(self, experiment_id: str, status: str):
         with self.connection.cursor() as cursor:
-            cursor.execute(
-                "UPDATE experiments SET status=%s WHERE id=%s", (status, experiment_id)
-            )
+            cursor.execute("UPDATE experiments SET status=%s WHERE id=%s", (status, experiment_id))
         self.connection.commit()
 
     def set_supervisor_status(self, supervisor_id: str, status: str):
@@ -222,15 +244,11 @@ class DB:
 
     def set_all_supervisors_unavailable(self):
         with self.connection.cursor() as cursor:
-            cursor.execute(
-                "UPDATE supervisors SET status='unavailable' WHERE status='available'"
-            )
+            cursor.execute("UPDATE supervisors SET status='unavailable' WHERE status='available'")
         self.connection.commit()
 
     @backoff.on_predicate(backoff.expo, lambda x: x is None, max_tries=7)
-    def lock_supervisors(
-        self, experiment_id: int, total: int, cluster: str
-    ) -> Optional[List[Supervisor]]:
+    def lock_supervisors(self, experiment_id: int, total: int, cluster: str) -> Optional[List[Supervisor]]:
         with self.connection.cursor() as cursor:
             cursor.execute(
                 "SELECT id FROM supervisors WHERE status='available' AND cluster=%s ORDER BY id LIMIT %s OFFSET %s",
@@ -278,26 +296,29 @@ class DB:
                 self.connection.commit()
                 return None
 
-    def exists_in_registry(self, name: str, category: str) -> bool:
+    @check_renamed_table
+    def exists_in_registry(self, path: str) -> bool:
         with self.connection.cursor() as cursor:
             cursor.execute(
-                "SELECT * FROM registry WHERE name=%s AND category=%s", (name, category)
+                f"SELECT * FROM {REGISTRY_TABLE} WHERE path=%s",
+                (path,),
             )
             return cursor.fetchone() is not None
 
+    @check_renamed_table
     def update_registry_entry(
         self,
         id: int,
         author: Optional[str] = None,
         description: Optional[str] = None,
-        alias: Optional[str] = None,
+        name: Optional[str] = None,
         details: Optional[dict] = None,
         show_entry: Optional[bool] = None,
     ):
         new_values = dict(
             author=author,
             description=description,
-            alias=alias,
+            name=name,
             details=details,
             show_entry=show_entry,
         )
@@ -310,68 +331,106 @@ class DB:
                 if key == "details":
                     value = json.dumps(value)
 
-                cursor.execute(f"UPDATE registry SET {key}=%s WHERE id=%s", (value, id))
+                cursor.execute(f"UPDATE {REGISTRY_TABLE} SET {key}=%s WHERE id=%s", (value, id))
 
             self.connection.commit()
 
+    @check_renamed_table
     def add_to_registry(
         self,
+        path: str,
         name: str,
-        category: str,
         author: str,
         description: Optional[str] = None,
-        alias: Optional[str] = None,
         details: Optional[dict] = None,
         show_entry: bool = True,
+        tags: List[str] = [],
     ):
         with self.connection.cursor() as cursor:
             details = details or {}
             cursor.execute(
-                "INSERT INTO registry (name, category, author, description, alias, details, show_entry) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                f"INSERT INTO {REGISTRY_TABLE} (path, name, author, description, details, show_entry) VALUES (%s, %s, %s, %s, %s, %s)",
                 (
+                    path,
                     name,
-                    category,
                     author,
                     description,
-                    alias,
                     json.dumps(details),
                     show_entry,
                 ),
             )
+
+            registry_id = cursor.lastrowid
+
         self.connection.commit()
 
-    def list_registry_entries(self, category: str, *, total: int, show_all: bool):
+        for tag in tags:
+            self.add_tag(registry_id, tag)
+
+    @check_renamed_table
+    def list_registry_entries(self, *,  total: int, show_all: bool) -> List[RegistryEntry]:
         with self.connection.cursor() as cursor:
             show_all = 1 - int(show_all)
             cursor.execute(
-                "SELECT * FROM registry WHERE category=%s AND show_entry>=%s ORDER BY id DESC LIMIT %s",
-                (category, show_all, total),
+                f"SELECT * FROM {REGISTRY_TABLE} WHERE show_entry>=%s ORDER BY id DESC LIMIT %s",
+                (show_all, total),
             )
             return [RegistryEntry.from_db(row) for row in cursor.fetchall()]
 
+    @check_renamed_table
+    def get_registry_entry_by_path(self, path: str) -> Optional[RegistryEntry]:
+        with self.connection.cursor() as cursor:
+            cursor.execute(f"SELECT * FROM {REGISTRY_TABLE} WHERE path=%s LIMIT 1", (path,))
+            result = cursor.fetchone()
+            if not result:
+                return None
+            return RegistryEntry.from_db(result)
+
     def get_registry_entry_by_name(self, name: str) -> Optional[RegistryEntry]:
         with self.connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM registry WHERE name=%s LIMIT 1", (name,))
+            cursor.execute(f"SELECT * FROM {REGISTRY_TABLE} WHERE name=%s LIMIT 1", (name,))
             result = cursor.fetchone()
             if not result:
                 return None
             return RegistryEntry.from_db(result)
 
-    def get_registry_entry_by_alias(self, alias: str) -> Optional[RegistryEntry]:
+    def get_registry_entry_by_id(self, id: int) -> Optional[RegistryEntry]:
         with self.connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM registry WHERE alias=%s LIMIT 1", (alias,))
+            cursor.execute(f"SELECT * FROM {REGISTRY_TABLE} WHERE id=%s LIMIT 1", (id,))
             result = cursor.fetchone()
             if not result:
                 return None
             return RegistryEntry.from_db(result)
 
-    def get_registry_entry_by_alias_or_name(
-        self, alias_or_name: str
+    def get_registry_entry_by_identifier(
+        self, identifier: Union[str, int], fail_if_not_found=True
     ) -> Optional[RegistryEntry]:
-        by_alias = self.get_registry_entry_by_alias(alias_or_name)
-        if by_alias:
-            return by_alias
-        return self.get_registry_entry_by_name(alias_or_name)
+        for fn in [
+            self.get_registry_entry_by_name,
+            self.get_registry_entry_by_path,
+            self.get_registry_entry_by_id,
+        ]:
+            result = fn(identifier)
+            if result is not None:
+                return result
+
+        if fail_if_not_found:
+            raise ValueError(f"{identifier} not found in the registry")
+
+    def add_tag(self, registry_id: int, tag: str):
+        with self.connection.cursor() as cursor:
+            cursor.execute("INSERT INTO tags (registry_id, tag) VALUES (%s, %s)", (registry_id, tag))
+        self.connection.commit()
+
+    def remove_tag(self, registry_id: int, tag: str):
+        with self.connection.cursor() as cursor:
+            cursor.execute("DELETE FROM tags WHERE registry_id=%s AND tag=%s", (registry_id, tag))
+        self.connection.commit()
+
+    def get_tags(self, registry_id: int) -> List[str]:
+        with self.connection.cursor() as cursor:
+            cursor.execute("SELECT tag FROM tags WHERE registry_id=%s", (registry_id,))
+            return [row[0] for row in cursor.fetchall()]
 
     def _create(self):
         """Create tables if they don't exist"""
@@ -425,6 +484,28 @@ class DB:
                         )"""
             )
 
+            cursor.execute(
+                """CREATE TABLE IF NOT EXISTS registry_v2(
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    path VARCHAR(255) NOT NULL,
+                    name VARCHAR(255),
+                    author VARCHAR(255) NOT NULL,
+                    time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    description TEXT,
+                    details JSON,
+                    show_entry BOOLEAN NOT NULL DEFAULT TRUE
+                )
+                """
+            )
+
+            cursor.execute(
+                """CREATE TABLE IF NOT EXISTS tags(
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        registry_id INT NOT NULL,
+                        tag VARCHAR(255) NOT NULL
+                        )"""
+            )
+
         self.connection.commit()
 
     def _check_all(self):
@@ -468,6 +549,11 @@ except Exception as e:
 class CLI:
     def create(self):
         db._create()
+
+    def test(self):
+        with db.connection.cursor() as cursor:
+            cursor.execute("SELECT * from asdf")
+            print(cursor.fetchone())
 
 
 if __name__ == "__main__":

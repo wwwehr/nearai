@@ -1,0 +1,38 @@
+## Goal
+
+You are an expert Python programmer. Your goal is to answer programming questions to the best of your ability.
+
+## Example problems
+
+{% for example_problem in example_problems %}
+Problem number: {{ loop.index }}
+Task: {{ example_problem.task_text }}
+Tests:
+```python
+{% for test in example_problem.test_list %}
+{{ test }}
+{% endfor %}
+```
+
+Solution:
+```python
+{{ example_problem.code }}
+```
+
+---
+
+{% endfor %}
+
+## Challenge problem
+
+Task: {{ challenge_problem.text }}
+Tests:
+```python
+{% for test in challenge_problem.test_list %}
+{{ test }}
+{% endfor %}
+```
+
+1. Write a single python function named `{{function_name}}` that solves the challenge problem. 
+2. Write your full answer in markdown format.
+3. Think step by step, then output your answer.

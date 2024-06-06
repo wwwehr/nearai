@@ -11,6 +11,12 @@ python3 -m pip install -e .
 pip install openai
 ```
 
+To install to a virtual environment, use the following command:
+
+```bash
+python3 -m poetry install --no-root --with dev
+```
+
 Check the installation worked with
 
 ```

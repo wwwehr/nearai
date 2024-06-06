@@ -1,31 +1,42 @@
 import concurrent.futures
+from dataclasses import dataclass
 from itertools import islice
-from typing import Tuple
+from typing import Optional
 
-from datasets import Dataset
+from datasets import Dataset, DatasetDict
 from tqdm import tqdm
 
 from .solvers import SolverStrategy
 
 
+@dataclass
+class DatasetInfo:
+    name: str
+    subset: Optional[str]
+    dataset: Dataset | DatasetDict
+
+    def get_dataset(self) -> Dataset:
+        if isinstance(self.dataset, DatasetDict):
+            assert self.subset is not None
+            return self.dataset[self.subset]
+        elif isinstance(self.dataset, Dataset):
+            return self.dataset
+        else:
+            raise ValueError(f"Expected a Dataset or DatasetDict, got {type(self.dataset)}")
+
+
 class BenchmarkExecutor:
-    def __init__(self, dataset_info: Tuple[str, str, Dataset], solver_strategy: SolverStrategy):
+    def __init__(self, dataset_info: DatasetInfo, solver_strategy: SolverStrategy):
         self.dataset_info = dataset_info
         self.solver_strategy = solver_strategy
 
     def run(self, progress: bool = True, max_concurrent: int = 32) -> None:
-
-        _, subset, dataset = self.dataset_info
-        if subset is not None:
-            dataset = dataset[subset]
-        assert isinstance(dataset, Dataset), f"Expected a Dataset, got {type(dataset)}"
+        dataset = self.dataset_info.get_dataset()
 
         correct = 0
         remaining = len(dataset)
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            tasks = iter(
-                executor.submit(self.solver_strategy.solve, datum=datum) for datum in dataset
-            )
+            tasks = iter(executor.submit(self.solver_strategy.solve, datum=datum) for datum in dataset)
             total = len(dataset)
             bar = tqdm(total=total, disable=not progress)
             futures = list(islice(tasks, max_concurrent))
@@ -41,7 +52,9 @@ class BenchmarkExecutor:
                     result = completed_future.result()
                     if result:
                         correct += 1
-                    bar.set_description(f"Correct/Seen - {correct}/{total - remaining} - {correct/(total - remaining):.2%}")
+                    bar.set_description(
+                        f"Correct/Seen - {correct}/{total - remaining} - {correct/(total - remaining):.2%}"
+                    )
 
                     try:
                         next_task = next(tasks)

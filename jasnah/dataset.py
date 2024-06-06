@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from datasets import Dataset, concatenate_datasets, load_from_disk
+from datasets import Dataset, DatasetDict, load_from_disk
 
 from jasnah.registry import dataset
 
@@ -15,6 +15,6 @@ def get_dataset(alias_or_name: str) -> Path:
     return dataset.download(alias_or_name)
 
 
-def load_dataset(alias_or_name: str) -> Dataset:
+def load_dataset(alias_or_name: str) -> Dataset | DatasetDict:
     path = get_dataset(alias_or_name)
     return load_from_disk(path.as_posix())

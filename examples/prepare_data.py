@@ -60,13 +60,14 @@ def main():
         ds.save_to_disk(str(processed_dataset))
 
     dataset.upload(
-        processed_dataset,
-        name="school_math_ru/transformed/v0",
+        path=processed_dataset,
+        s3_path="school_math_ru/transformed/v0",
         author="prepare_data.py",
         description="School math exercises in Russian. Transformed into a Dataset format.",
-        alias="school_math_ru",
+        name="school_math_ru",
         details=None,
         show_entry=True,
+        tags=[],
     )
 
 

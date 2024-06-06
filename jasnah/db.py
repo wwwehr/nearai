@@ -48,11 +48,14 @@ class Experiment:
     status: str = "pending"
 
     @staticmethod
-    def from_db(row) -> Optional["Experiment"]:
+    def from_db(row) -> "Experiment":
+        return Experiment(*row)
+
+    @staticmethod
+    def try_from_db(row) -> Optional["Experiment"]:
         if row is None:
             return None
-
-        return Experiment(*row)
+        return Experiment.from_db(row)
 
 
 @dataclass
@@ -64,11 +67,14 @@ class Supervisor:
     status: str
 
     @staticmethod
-    def from_db(row) -> Optional["Supervisor"]:
+    def from_db(row) -> "Supervisor":
+        return Supervisor(*row)
+
+    @staticmethod
+    def try_from_db(row) -> Optional["Supervisor"]:
         if row is None:
             return None
-
-        return Supervisor(*row)
+        return Supervisor.from_db(row)
 
 
 @dataclass
@@ -79,11 +85,14 @@ class Log:
     content: str
 
     @staticmethod
-    def from_db(row) -> Optional["Log"]:
+    def from_db(row) -> "Log":
+        return Log(*row)
+
+    @staticmethod
+    def try_from_db(row) -> Optional["Log"]:
         if row is None:
             return None
-
-        return Log(*row)
+        return Log.from_db(row)
 
 
 @dataclass
@@ -105,7 +114,7 @@ class RegistryEntry:
         entry = RegistryEntry(*row)
 
         if entry.details is not None:
-            entry.details = json.loads(entry.details)
+            entry.details = json.loads(str(entry.details))
 
         return entry
 
@@ -121,7 +130,7 @@ class DisplayRegistry:
     tags: List[str]
 
     @staticmethod
-    def prepare_display_registry_entries_from_db(rows: List[Tuple[Any, ...]]) -> List["DisplayRegistry"]:
+    def prepare_display_registry_entries_from_db(rows: Tuple[Tuple[Any, ...], ...]) -> List["DisplayRegistry"]:
         entries: Dict[int, DisplayRegistry] = {}
         for id, path, name, author, time, description, tag in rows:
             if not id in entries:
@@ -156,12 +165,12 @@ class DB:
     def close(self):
         self.connection.close()
 
-    def log(self, *, origin: str, target: str, content: dict):
-        content = json.dumps(content, default=datetime_serializer)
+    def log(self, *, origin: str, target: str, content: Dict[Any, Any]):
+        content_str = json.dumps(content, default=datetime_serializer)
         with self.connection.cursor() as cursor:
             cursor.execute(
                 "INSERT INTO logs (origin, target, content) VALUES (%s, %s, %s)",
-                (origin, target, content),
+                (origin, target, content_str),
             )
         self.connection.commit()
 
@@ -240,11 +249,13 @@ class DB:
                 "SELECT num_nodes FROM experiments WHERE id=%s LIMIT 1",
                 (experiment_id,),
             )
-            return cursor.fetchone()[0]
+            row = cursor.fetchone()
+            assert row is not None
+            return row[0]
 
-    def set_experiment_status(self, *, experiment_id: str, status: str):
+    def set_experiment_status(self, *, experiment_id: Union[str, int], status: str):
         with self.connection.cursor() as cursor:
-            cursor.execute("UPDATE experiments SET status=%s WHERE id=%s", (status, experiment_id))
+            cursor.execute("UPDATE experiments SET status=%s WHERE id=%s", (status, str(experiment_id)))
         self.connection.commit()
 
     def set_supervisor_status(self, *, supervisor_id: str, status: str):
@@ -361,7 +372,7 @@ class DB:
     def add_to_registry(
         self,
         *,
-        path: str,
+        s3_path: str,
         name: str,
         author: str,
         description: Optional[str] = None,
@@ -374,7 +385,7 @@ class DB:
             cursor.execute(
                 f"INSERT INTO {REGISTRY_TABLE} (path, name, author, description, details, show_entry) VALUES (%s, %s, %s, %s, %s, %s)",
                 (
-                    path,
+                    s3_path,
                     name,
                     author,
                     description,
@@ -388,12 +399,12 @@ class DB:
         self.connection.commit()
 
         for tag in tags:
-            self.add_tag(registry_id, tag)
+            self.add_tag(registry_id=registry_id, tag=tag)
 
     @check_renamed_table
     def list_registry_entries(self, *, total: int, show_all: bool, tags: List[str]) -> List[DisplayRegistry]:
         with self.connection.cursor() as cursor:
-            show_all = 1 - int(show_all)
+            show_all_int = 1 - int(show_all)
 
             if len(tags) == 0:
                 cursor.execute(
@@ -408,7 +419,7 @@ class DB:
                     JOIN tags ON registry.id = tags.registry_id
                     ORDER BY registry.id DESC
                 """,
-                    (show_all, total),
+                    (show_all_int, total),
                 )
             else:
                 cursor.execute(
@@ -606,6 +617,7 @@ except Exception as e:
 
 class CLI:
     def create(self):
+        assert db is not None
         db._create()
 
     def test(self):
@@ -613,6 +625,7 @@ class CLI:
         total = 5
         tags = ("datasets",)
 
+        assert db is not None
         with db.connection.cursor() as cursor:
             show_all = 1 - int(show_all)
 

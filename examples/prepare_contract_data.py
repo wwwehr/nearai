@@ -28,12 +28,13 @@ COLUMNS = [
 tools_dir = DATA_FOLDER / "tools"
 analyzer_name = "rust-code-analysis-cli"
 analyzer = tools_dir / analyzer_name / analyzer_name
-analyzer_url = \
+analyzer_url = (
     "https://github.com/mozilla/rust-code-analysis/releases/download/v0.0.25/rust-code-analysis-linux-cli-x86_64.tar.gz"
+)
 
 
 def extract_code_element(code, code_element):
-    lines = code.split('\n')
+    lines = code.split("\n")
     items = ""
 
     type_expr = r".*\s*" + re.escape(code_element) + r"\s+\w+"
@@ -58,7 +59,7 @@ def main():
     processed_dataset = dataset_base_dir / "processed"
 
     if not uncompressed.exists():
-        with zipfile.ZipFile(str(dataset_path) + f"/{dataset_name}.zip", 'r') as zip_ref:
+        with zipfile.ZipFile(str(dataset_path) + f"/{dataset_name}.zip", "r") as zip_ref:
             zip_ref.extractall(uncompressed)
 
     if not os.path.exists(tools_dir):
@@ -69,7 +70,7 @@ def main():
         urllib.request.urlretrieve(analyzer_url, tools_dir / archive)
         with tarfile.open(tools_dir / archive) as f:
             f.extractall(tools_dir / analyzer_name)
-        subprocess.check_call(['chmod', '+x', analyzer])
+        subprocess.check_call(["chmod", "+x", analyzer])
 
     if not processed_dataset.exists():
         ds = {col: [] for col in COLUMNS}
@@ -114,16 +115,16 @@ def main():
         print(f"Encountered {empty} empty files and {errors} errors")
         ds = Dataset.from_dict(ds)
         ds.save_to_disk(str(processed_dataset))
-        # ds.to_csv(str(processed_dataset) + f"/{dataset_name}.csv") # for local conversion
 
     dataset.upload(
-        processed_dataset,
-        name=f"{dataset_name}/transformed/v0",
+        path=processed_dataset,
+        s3_path=f"{dataset_name}/transformed/v0",
         author="prepare_contract_data.py",
         description="NEAR Protocol contracts dataset with code metrics, function and struct names.",
-        alias="rust_contracts",
+        name="rust_contracts",
         details=None,
         show_entry=True,
+        tags=["dataset", "contracts", "near", "rust"],
     )
 
 

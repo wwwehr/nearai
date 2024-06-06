@@ -58,7 +58,7 @@ def migrate():
 
             last_row_id = cursor.lastrowid
 
-        db.add_tag(last_row_id, category)
+        db.add_tag(registry_id=last_row_id, tag=category)
 
     db.connection.commit()
 

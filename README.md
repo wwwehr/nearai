@@ -119,6 +119,18 @@ Note: If you start downloading and item, and cancel the download midway, you sho
 jasnah-cli registry download quine.py
 ```
 
+Add one or more tags to an item using:
+
+```
+jasnah-cli registry add_tags test/quine/v3 code,multiple,tags
+```
+
+Removing tags must be done one by one:
+
+```
+jasnah-cli registry remove_tag test/quine/v3 code
+```
+
 ### Library
 
 You can import `jasnah` as a library in your python code. The main features are:

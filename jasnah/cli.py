@@ -131,10 +131,10 @@ class RegistryCli:
     def add_tags(self, identifier: int, tags: str):
         """Add tags to an item in the registry"""
         tags = parse_tags(tags)
-        self._registry.add_tags(identifier, tags)
+        self._registry.add_tags(identifier=identifier, tags=tags)
 
     def remove_tag(self, identifier: int, tag: str):
-        self._registry.remove_tag(identifier, tag)
+        self._registry.remove_tag(identifier=identifier, tag=tag)
 
     def list(self, total: int = 16, show_all: bool = False, verbose: bool = False, tags: str = ""):
         """List available items"""
@@ -143,23 +143,22 @@ class RegistryCli:
         header = ["id", "name", "description", "tags"]
 
         if verbose:
-            header += ["author", "show_entry", "time"]
+            header += ["author", "date", "path"]
 
         table = [header]
 
-        for entry_with_tags in self._registry.list(tags=tags, total=total, show_all=show_all):
-            entry = entry_with_tags.entry
-            tags = ", ".join(entry_with_tags.tags)
+        for entry in self._registry.list(tags=tags, total=total, show_all=show_all):
+            tags = ", ".join(entry.tags)
 
             row = [
                 entry.id,
-                entry.name or entry.path,
+                (entry.name or entry.path) if not verbose else entry.name,
                 textwrap.fill(entry.description, width=50),
                 textwrap.fill(tags, width=20),
             ]
 
             if verbose:
-                row += [entry.author, entry.show_entry, entry.time]
+                row += [entry.author, entry.time.strftime("%Y-%m-%d"), entry.path]
 
             table.append(row)
 

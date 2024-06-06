@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import backoff
 import fire
@@ -111,9 +111,29 @@ class RegistryEntry:
 
 
 @dataclass
+class DisplayRegistry:
+    id: int
+    path: str
+    name: str
+    author: str
+    time: datetime
+    description: Optional[str]
+    tags: List[str]
+
+    @staticmethod
+    def prepare_display_registry_entries_from_db(rows: List[Tuple[Any, ...]]) -> List["DisplayRegistry"]:
+        entries: Dict[int, DisplayRegistry] = {}
+        for id, path, name, author, time, description, tag in rows:
+            if not id in entries:
+                entries[id] = DisplayRegistry(id, path, name, author, time, description, [])
+            entries[id].tags.append(tag)
+        return sorted(entries.values(), key=lambda x: -x.id)
+
+
+@dataclass
 class Tag:
     id: int
-    experiment_id: int
+    registry_id: int
     tag: str
 
     @staticmethod
@@ -125,7 +145,7 @@ class Tag:
 
 
 class DB:
-    def __init__(self, host, port, user, password, database):
+    def __init__(self, *, host, port, user, password, database):
         self._connection = pymysql.connect(host=host, port=port, user=user, password=password, database=database)
 
     @property
@@ -136,7 +156,7 @@ class DB:
     def close(self):
         self.connection.close()
 
-    def log(self, origin: str, target: str, content: dict):
+    def log(self, *, origin: str, target: str, content: dict):
         content = json.dumps(content, default=datetime_serializer)
         with self.connection.cursor() as cursor:
             cursor.execute(
@@ -147,6 +167,7 @@ class DB:
 
     def add_experiment(
         self,
+        *,
         name: str,
         author: str,
         repository: str,
@@ -221,12 +242,12 @@ class DB:
             )
             return cursor.fetchone()[0]
 
-    def set_experiment_status(self, experiment_id: str, status: str):
+    def set_experiment_status(self, *, experiment_id: str, status: str):
         with self.connection.cursor() as cursor:
             cursor.execute("UPDATE experiments SET status=%s WHERE id=%s", (status, experiment_id))
         self.connection.commit()
 
-    def set_supervisor_status(self, supervisor_id: str, status: str):
+    def set_supervisor_status(self, *, supervisor_id: str, status: str):
         with self.connection.cursor() as cursor:
             cursor.execute(
                 "UPDATE supervisors SET status=%s WHERE id=%s",
@@ -248,7 +269,7 @@ class DB:
         self.connection.commit()
 
     @backoff.on_predicate(backoff.expo, lambda x: x is None, max_tries=7)
-    def lock_supervisors(self, experiment_id: int, total: int, cluster: str) -> Optional[List[Supervisor]]:
+    def lock_supervisors(self, *, experiment_id: int, total: int, cluster: str) -> Optional[List[Supervisor]]:
         with self.connection.cursor() as cursor:
             cursor.execute(
                 "SELECT id FROM supervisors WHERE status='available' AND cluster=%s ORDER BY id LIMIT %s OFFSET %s",
@@ -308,6 +329,7 @@ class DB:
     @check_renamed_table
     def update_registry_entry(
         self,
+        *,
         id: int,
         author: Optional[str] = None,
         description: Optional[str] = None,
@@ -338,6 +360,7 @@ class DB:
     @check_renamed_table
     def add_to_registry(
         self,
+        *,
         path: str,
         name: str,
         author: str,
@@ -368,14 +391,49 @@ class DB:
             self.add_tag(registry_id, tag)
 
     @check_renamed_table
-    def list_registry_entries(self, *,  total: int, show_all: bool) -> List[RegistryEntry]:
+    def list_registry_entries(self, *, total: int, show_all: bool, tags: List[str]) -> List[DisplayRegistry]:
         with self.connection.cursor() as cursor:
             show_all = 1 - int(show_all)
-            cursor.execute(
-                f"SELECT * FROM {REGISTRY_TABLE} WHERE show_entry>=%s ORDER BY id DESC LIMIT %s",
-                (show_all, total),
-            )
-            return [RegistryEntry.from_db(row) for row in cursor.fetchall()]
+
+            if len(tags) == 0:
+                cursor.execute(
+                    f"""WITH FilteredRegistry AS (
+                    SELECT registry.id FROM {REGISTRY_TABLE} registry
+                    WHERE show_entry >= %s
+                    ORDER BY registry.id DESC
+                    LIMIT %s)
+
+                    SELECT registry.id, registry.path, registry.name, registry.author, registry.time, registry.description, tags.tag FROM FilteredRegistry filtered
+                    JOIN {REGISTRY_TABLE} registry ON filtered.id = registry.id
+                    JOIN tags ON registry.id = tags.registry_id
+                    ORDER BY registry.id DESC
+                """,
+                    (show_all, total),
+                )
+            else:
+                cursor.execute(
+                    f"""WITH FilteredRegistry AS (
+                    SELECT registry.id FROM {REGISTRY_TABLE} registry
+                    JOIN tags ON registry.id = tags.registry_id
+                    WHERE show_entry >= %s AND tags.tag IN ({','.join(['%s']*len(tags))})
+                    GROUP BY registry.id
+                    HAVING COUNT(DISTINCT tags.tag) = {len(tags)}
+                    ),
+                    RankedRegistry AS (
+                        SELECT id, ROW_NUMBER() OVER (ORDER BY id DESC) AS rank
+                        FROM FilteredRegistry
+                    )
+
+                    SELECT registry.id, registry.path, registry.name, registry.author, registry.time, registry.description, tags.tag FROM RankedRegistry ranked
+                    JOIN {REGISTRY_TABLE} registry ON ranked.id = registry.id
+                    JOIN tags ON registry.id = tags.registry_id
+                    WHERE ranked.rank <= %s
+                    ORDER BY registry.id DESC
+                """,
+                    (show_all, *tags, total),
+                )
+
+            return DisplayRegistry.prepare_display_registry_entries_from_db(cursor.fetchall())
 
     @check_renamed_table
     def get_registry_entry_by_path(self, path: str) -> Optional[RegistryEntry]:
@@ -405,24 +463,24 @@ class DB:
     def get_registry_entry_by_identifier(
         self, identifier: Union[str, int], fail_if_not_found=True
     ) -> Optional[RegistryEntry]:
-        for fn in [
-            self.get_registry_entry_by_name,
-            self.get_registry_entry_by_path,
-            self.get_registry_entry_by_id,
-        ]:
-            result = fn(identifier)
-            if result is not None:
-                return result
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+                f"SELECT * FROM {REGISTRY_TABLE} WHERE id=%s OR name=%s OR path=%s LIMIT 1",
+                (identifier, identifier, identifier),
+            )
+            result = cursor.fetchone()
+            if not result:
+                if fail_if_not_found:
+                    raise ValueError(f"{identifier} not found in the registry")
+                return None
+            return RegistryEntry.from_db(result)
 
-        if fail_if_not_found:
-            raise ValueError(f"{identifier} not found in the registry")
-
-    def add_tag(self, registry_id: int, tag: str):
+    def add_tag(self, *, registry_id: int, tag: str):
         with self.connection.cursor() as cursor:
             cursor.execute("INSERT INTO tags (registry_id, tag) VALUES (%s, %s)", (registry_id, tag))
         self.connection.commit()
 
-    def remove_tag(self, registry_id: int, tag: str):
+    def remove_tag(self, *, registry_id: int, tag: str):
         with self.connection.cursor() as cursor:
             cursor.execute("DELETE FROM tags WHERE registry_id=%s AND tag=%s", (registry_id, tag))
         self.connection.commit()
@@ -530,11 +588,11 @@ class DB:
 
 def connect() -> "DB":
     return DB(
-        CONFIG.db_host,
-        CONFIG.db_port,
-        CONFIG.db_user,
-        CONFIG.db_password,
-        CONFIG.db_name,
+        host=CONFIG.db_host,
+        port=CONFIG.db_port,
+        user=CONFIG.db_user,
+        password=CONFIG.db_password,
+        database=CONFIG.db_name,
     )
 
 
@@ -551,9 +609,37 @@ class CLI:
         db._create()
 
     def test(self):
+        show_all = True
+        total = 5
+        tags = ("datasets",)
+
         with db.connection.cursor() as cursor:
-            cursor.execute("SELECT * from asdf")
-            print(cursor.fetchone())
+            show_all = 1 - int(show_all)
+
+            cursor.execute(
+                f"""WITH FilteredRegistry AS (
+                    SELECT registry.id FROM {REGISTRY_TABLE} registry
+                    JOIN tags ON registry.id = tags.registry_id
+                    WHERE show_entry >= %s AND tags.tag IN ({','.join(['%s']*len(tags))})
+                    GROUP BY registry.id
+                    HAVING COUNT(DISTINCT tags.tag) = {len(tags)}
+                    ),
+                    RankedRegistry AS (
+                        SELECT id, ROW_NUMBER() OVER (ORDER BY id DESC) AS rank
+                        FROM FilteredRegistry
+                    )
+
+                    SELECT registry.id, registry.path, registry.name, registry.author, registry.time, registry.description, tags.tag FROM RankedRegistry ranked
+                    JOIN {REGISTRY_TABLE} registry ON ranked.id = registry.id
+                    JOIN tags ON registry.id = tags.registry_id
+                    WHERE ranked.rank <= %s
+                    ORDER BY registry.id DESC
+                """,
+                (show_all, *tags, total),
+            )
+
+            for x in cursor.fetchall():
+                print(x)
 
 
 if __name__ == "__main__":

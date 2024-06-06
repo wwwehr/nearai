@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 import jasnah
 from jasnah.config import CONFIG, DATA_FOLDER
-from jasnah.db import RegistryEntry, db
+from jasnah.db import DisplayRegistry, db
 
 
 def upload_file(s3_client, s3_path: str, local_path: Path):
@@ -81,12 +81,6 @@ def exists_directory_in_s3(s3_path: str) -> bool:
     return "Contents" in response or "CommonPrefixes" in response
 
 
-@dataclass
-class RegistryEntryWithTags:
-    entry: RegistryEntry
-    tags: List[str]
-
-
 class Registry:
     def __init__(self, tags: List[str]):
         self.tags = tags
@@ -149,10 +143,9 @@ class Registry:
         )
         jasnah.log(target=f"Add to registry", name=name, author=author)
 
-    def add_tags(self, identifier: str, tags: List[str]):
+    def add_tags(self, *, identifier: str, tags: List[str]):
         entry = db.get_registry_entry_by_identifier(identifier)
 
-        print(f"Adding tags: {tags} to {entry}")
         current_tags = db.get_tags(entry.id)
 
         all_tags = list(set(current_tags + tags))
@@ -160,19 +153,20 @@ class Registry:
             raise ValueError(f"Some tags are already present. New tags: {tags} Current tags: {current_tags}")
 
         for tag in tags:
-            db.add_tag(entry.id, tag)
+            db.add_tag(registry_id=entry.id, tag=tag)
 
-    def remove_tag(self, identifier: str, tag: str):
+    def remove_tag(self, *, identifier: str, tag: str):
         entry = db.get_registry_entry_by_identifier(identifier)
         current_tags = db.get_tags(entry.id)
 
         if tag not in current_tags:
             raise ValueError(f"Tag {tag} is not present in {identifier}")
 
-        db.remove_tag(entry.id, tag)
+        db.remove_tag(registry_id=entry.id, tag=tag)
 
     def upload(
         self,
+        *,
         path: Path,
         s3_path: str,
         author: str,
@@ -209,7 +203,7 @@ class Registry:
 
                     upload_file(s3_client, s3_path, Path(local_path))
 
-    def download(self, identifier: str):
+    def download(self, *, identifier: str):
         entry = db.get_registry_entry_by_identifier(identifier)
 
         path = entry.path
@@ -224,17 +218,9 @@ class Registry:
 
         return target
 
-    def list(self, tags: List[str], total: int, show_all: bool) -> List[RegistryEntryWithTags]:
+    def list(self, *, tags: List[str], total: int, show_all: bool) -> List[DisplayRegistry]:
         tags = self._all_tags(tags)
-        entries = db.list_registry_entries(total=total, show_all=show_all)
-
-        result = []
-        for entry in entries:
-            entry_tags = db.get_tags(entry.id)
-            if all(tag in entry_tags for tag in tags):
-                result.append(RegistryEntryWithTags(entry, entry_tags))
-
-        return result
+        return db.list_registry_entries(total=total, show_all=show_all, tags=tags)
 
 
 dataset = Registry(["dataset"])

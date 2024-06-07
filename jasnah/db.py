@@ -441,7 +441,7 @@ class DB:
                     WHERE ranked.rank <= %s
                     ORDER BY registry.id DESC
                 """,
-                    (show_all, *tags, total),
+                    (show_all_int, *tags, total),
                 )
 
             return DisplayRegistry.prepare_display_registry_entries_from_db(cursor.fetchall())

@@ -72,15 +72,64 @@ On each node the environment variable `ASSIGNED_SUPERVISORS` will be available w
 
 ### Registry
 
-Upload a new dataset or model to the registry:
+Upload an element to the registry using:
 
 ```
-jasnah-cli models upload <PATH_TO_MODEL> <MODEL_NAME> <DESCRIPTION> [--alias <ALIAS>]
-jasnah-cli datasets upload <PATH_TO_DATASET> <DATASET_NAME> <DESCRIPTION> [--alias <ALIAS>]
+jasnah-cli registry upload <ITEM_LOCAL_PATH> <ITEM_S3_PATH> <DESCRIPTION> [--name <NAME>] [--tags <TAGS>]
 ```
 
-The path could be either to a file or a folder.
-The name is a unique identifier, and the alias is a human readable name that can be used to refer to the model or dataset.
+- The local path could be either to a file or a folder.
+- The S3 path should be a non-existent folder in the registry.
+- Tags is a comma separated list of tags to add to the item. This allows filtering relevant items.
+
+There are two shortcuts to upload models and datasets. The following commands behave in the same way as `registry upload` but it adds by default the tags `model` and `dataset` respectively.
+
+```
+jasnah-cli models upload <ITEM_LOCAL_PATH> <ITEM_S3_PATH> <DESCRIPTION> [--name <NAME>] [--tags <TAGS>]
+jasnah-cli datasets upload <ITEM_LOCAL_PATH> <ITEM_S3_PATH> <DESCRIPTION> [--name <NAME>] [--tags <TAGS>]
+```
+
+We recommend as a good practice to use as s3_path `@namespace/@name/@version`, but it is not mandatory.
+
+**Examples:**
+
+Upload an item to the registry with name quine.py and tags `quine` and `python`
+
+```
+jasnah-cli registry upload ~/quine.py test/quine/v3 "Test registry upload" quine.py --tags quine,python
+```
+
+Check the item is available by listing all elements in the registry:
+
+```
+jasnah-cli registry list
+```
+
+Show only items with the tag `quine` and `python`:
+
+```
+jasnah-cli registry list --tags quine,python
+```
+
+Download this element locally. To download you can refer to the item either by name or by s3_path. Trying to download an item that was previously downloaded is a no-op.
+
+Note: If you start downloading and item, and cancel the download midway, you shold delete the folder at `~/.jasnah/registry/` to trigger a new download.
+
+```
+jasnah-cli registry download quine.py
+```
+
+Add one or more tags to an item using:
+
+```
+jasnah-cli registry add_tags test/quine/v3 code,multiple,tags
+```
+
+Removing tags must be done one by one:
+
+```
+jasnah-cli registry remove_tag test/quine/v3 code
+```
 
 ### Library
 

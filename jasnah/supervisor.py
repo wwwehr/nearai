@@ -58,10 +58,11 @@ def run_experiment_inner(experiment: Experiment, supervisors: List[Supervisor]):
 
 
 def run_experiment(experiment: Experiment):
+    assert SUPERVISOR_ID is not None
     supervisors = db.get_assigned_supervisors(experiment.id)
 
     if SUPERVISOR_ID == supervisors[0].id:
-        db.set_experiment_status(experiment.id, "running")
+        db.set_experiment_status(experiment_id=experiment.id, status="running")
 
     jasnah.log(
         target="start experiment",
@@ -72,8 +73,8 @@ def run_experiment(experiment: Experiment):
 
     run_experiment_inner(experiment, supervisors)
 
-    db.set_experiment_status(experiment.id, "done")
-    db.set_supervisor_status(SUPERVISOR_ID, "available")
+    db.set_experiment_status(experiment_id=experiment.id, status="done")
+    db.set_supervisor_status(supervisor_id=SUPERVISOR_ID, status="available")
 
     LOCK.acquire()
     global EXPERIMENT
@@ -83,22 +84,28 @@ def run_experiment(experiment: Experiment):
 
 @app.post("/init")
 def init():
+    assert SUPERVISOR_ID is not None
     # TODO: Move to create_app method
     CONFIG.origin = SUPERVISOR_ID
+
+    assert request.json is not None
 
     cluster = request.json["cluster"]
     endpoint = request.json["endpoint"]
 
-    supervisor = Supervisor(SUPERVISOR_ID, None, cluster, endpoint, "available")
+    supervisor = Supervisor(SUPERVISOR_ID, -1, cluster, endpoint, "available")
 
     db.add_supervisors([supervisor])
-    db.set_supervisor_status(SUPERVISOR_ID, "available")
+
+    db.set_supervisor_status(supervisor_id=SUPERVISOR_ID, status="available")
 
     return asdict(supervisor)
 
 
 @app.route("/update")
 def update():
+    assert SUPERVISOR_ID is not None
+
     # TODO: Move to create_app method
     CONFIG.origin = SUPERVISOR_ID
 
@@ -120,7 +127,8 @@ def update():
         LOCK.release()
 
     if experiment is None:
-        db.set_supervisor_status(SUPERVISOR_ID, "available")
+
+        db.set_supervisor_status(supervisor_id=SUPERVISOR_ID, status="available")
         return {"status": "ok", "info": "No assigned experiments"}
 
     threading.Thread(target=run_experiment, args=(experiment,)).start()
@@ -142,9 +150,7 @@ class SupervisorClient:
         self.conn = requests.Session()
 
     def init(self, cluster, endpoint):
-        result = self.conn.post(
-            self.url + "/init", json={"cluster": cluster, "endpoint": endpoint}
-        )
+        result = self.conn.post(self.url + "/init", json={"cluster": cluster, "endpoint": endpoint})
         return result.json()
 
     def status(self):
@@ -154,12 +160,3 @@ class SupervisorClient:
     def update(self):
         result = self.conn.get(self.url + "/update")
         return result.json()
-
-
-if __name__ == "__main__":
-    experiment = db.get_experiment(8)
-    run_experiment_inner(experiment, [])
-    # client = SupervisorClient("http://10.141.0.11:8000")
-    # print(client.init("cluster", "http://10.141.0.11:8000"))
-    # print(client.status())
-    # print(client.update())

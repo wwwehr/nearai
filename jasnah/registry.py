@@ -1,4 +1,5 @@
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
@@ -7,7 +8,7 @@ from tqdm import tqdm
 
 import jasnah
 from jasnah.config import CONFIG, DATA_FOLDER
-from jasnah.db import RegistryEntry, db
+from jasnah.db import DisplayRegistry, db
 
 
 def upload_file(s3_client, s3_path: str, local_path: Path):
@@ -48,9 +49,7 @@ def download_file(s3_client, s3_path: str, local_path: Path):
         unit_divisor=1024,
     ) as pbar:
         with open(local_path, "wb") as f:
-            s3_client.download_fileobj(
-                CONFIG.s3_bucket, s3_path, f, Callback=pbar.update
-            )
+            s3_client.download_fileobj(CONFIG.s3_bucket, s3_path, f, Callback=pbar.update)
 
 
 def download_directory(s3_prefix, local_directory: Path):
@@ -78,85 +77,132 @@ def download_directory(s3_prefix, local_directory: Path):
 
 def exists_directory_in_s3(s3_path: str) -> bool:
     s3_client = boto3.client("s3")
-    response = s3_client.list_objects(
-        Bucket=CONFIG.s3_bucket, Prefix=s3_path, Delimiter="/", MaxKeys=1
-    )
+    response = s3_client.list_objects(Bucket=CONFIG.s3_bucket, Prefix=s3_path, Delimiter="/", MaxKeys=1)
     return "Contents" in response or "CommonPrefixes" in response
 
 
 class Registry:
-    def __init__(self, category: str):
-        assert category in ["datasets", "models"]
-
-        self.category = category
-        self.download_folder = DATA_FOLDER / category
+    def __init__(self, tags: List[str]):
+        self.tags = tags
+        self.download_folder = DATA_FOLDER / "registry"
 
         if not self.download_folder.exists():
             self.download_folder.mkdir(parents=True, exist_ok=True)
 
+    def _all_tags(self, tags: List[str]) -> List[str]:
+        return list(set(self.tags + tags))
+
     def update(
         self,
-        id: int,
+        identifier: str | int,
         *,
         author: Optional[str] = None,
         description: Optional[str] = None,
-        alias: Optional[str] = None,
+        name: Optional[str] = None,
         details: Optional[dict] = None,
         show_entry: Optional[bool] = None,
     ):
-        db.update_registry_entry(id, author, description, alias, details, show_entry)
+        entry = db.get_registry_entry_by_identifier(identifier)
+        assert entry is not None
+
+        db.update_registry_entry(
+            id=entry.id, author=author, description=description, name=name, details=details, show_entry=show_entry
+        )
 
         update = dict(
             author=author,
             description=description,
-            alias=alias,
+            name=name,
             details=details,
             show_entry=show_entry,
         )
         update = {k: v for k, v in update.items() if v is not None}
-        jasnah.log(target=f"Update {self.category} in registry", id=id, **update)
+        jasnah.log(target=f"Update in registry", id=id, **update)
 
     def exists_in_s3(self, name: str) -> bool:
-        prefix = os.path.join(CONFIG.s3_prefix, self.category, name)
+        prefix = os.path.join(CONFIG.s3_prefix, name)
         return exists_directory_in_s3(prefix)
 
     def add(
         self,
-        name: str,
+        *,
+        s3_path: str,
+        name: Optional[str],
         author: str,
         description: Optional[str],
-        alias: Optional[str],
         details: Optional[dict],
         show_entry: bool,
+        tags: List[str],
     ):
-        if db.exists_in_registry(name, self.category):
-            raise ValueError(f"{name} already exists in the registry")
+        if db.exists_in_registry(s3_path):
+            raise ValueError(f"{s3_path} already exists in the registry")
 
         db.add_to_registry(
-            name, self.category, author, description, alias, details, show_entry
+            s3_path=s3_path,
+            name=name or "",
+            author=author,
+            description=description,
+            details=details,
+            show_entry=show_entry,
+            tags=self._all_tags(tags),
         )
 
-        jasnah.log(target=f"Add {self.category} to registry", name=name, author=author)
+        jasnah.log(target=f"Add to registry", name=name, author=author)
+
+    def add_tags(self, *, identifier: str | int, tags: List[str]):
+        entry = db.get_registry_entry_by_identifier(identifier)
+        assert entry is not None
+
+        current_tags = db.get_tags(entry.id)
+
+        all_tags = list(set(current_tags + tags))
+        if len(all_tags) != len(current_tags) + len(tags):
+            raise ValueError(f"Some tags are already present. New tags: {tags} Current tags: {current_tags}")
+
+        for tag in tags:
+            db.add_tag(registry_id=entry.id, tag=tag)
+
+    def remove_tag(self, *, identifier: str | int, tag: str):
+        entry = db.get_registry_entry_by_identifier(identifier)
+        assert entry is not None
+
+        current_tags = db.get_tags(entry.id)
+
+        if tag not in current_tags:
+            raise ValueError(f"Tag {tag} is not present in {identifier}")
+
+        db.remove_tag(registry_id=entry.id, tag=tag)
 
     def upload(
         self,
+        *,
         path: Path,
-        name: str,
+        s3_path: str,
         author: str,
         description: Optional[str],
-        alias: Optional[str],
+        name: Optional[str],
         details: Optional[dict],
         show_entry: bool,
+        tags: List[str],
     ):
         assert path.exists(), "Path does not exist"
 
-        prefix = os.path.join(CONFIG.s3_prefix, self.category, name)
+        prefix = os.path.join(CONFIG.s3_prefix, s3_path)
 
-        if self.exists_in_s3(name):
+        if self.exists_in_s3(s3_path):
             raise ValueError(f"{prefix} already exists in S3")
 
-        self.add(name, author, description, alias, details, show_entry)
-        jasnah.log(target=f"Upload {self.category} to S3", name=name, author=author)
+        self.add(
+            s3_path=s3_path,
+            name=name,
+            author=author,
+            description=description,
+            details=details,
+            show_entry=show_entry,
+            tags=tags,
+        )
+
+        jasnah.log(target=f"Upload to S3", path=s3_path, author=author)
 
         s3_client = boto3.client("s3")
 
@@ -175,28 +221,27 @@ class Registry:
 
                     upload_file(s3_client, s3_path, Path(local_path))
 
-    def download(self, alias_or_name: str):
-        entry = db.get_registry_entry_by_alias_or_name(alias_or_name)
+    def download(self, identifier: str):
+        entry = db.get_registry_entry_by_identifier(identifier)
+        assert entry is not None
 
-        if entry is None:
-            raise ValueError(f"{alias_or_name} not found in the registry")
-
-        jasnah.log(target=f"Download {self.category} from S3", name=alias_or_name)
-
-        name = entry.name
-        target = self.download_folder / entry.name
+        path = entry.path
+        target = self.download_folder / entry.path
 
         if not target.exists():
-            prefix = os.path.join(CONFIG.s3_prefix, self.category, name)
+            prefix = os.path.join(CONFIG.s3_prefix, path)
             source = f"s3://{CONFIG.s3_bucket}/{prefix}"
-            print(f"Downloading {name} from {source} to {target}")
+            print(f"Downloading {path} from {source} to {target}")
+            jasnah.log(target=f"Download from S3", name=identifier)
             download_directory(prefix, target)
 
         return target
 
-    def list(self, total: int, show_all: bool) -> List[RegistryEntry]:
-        return db.list_registry_entries(self.category, total=total, show_all=show_all)
+    def list(self, *, tags: List[str], total: int, show_all: bool) -> List[DisplayRegistry]:
+        tags = self._all_tags(tags)
+        return db.list_registry_entries(total=total, show_all=show_all, tags=tags)
 
 
-dataset = Registry("datasets")
-model = Registry("models")
+dataset = Registry(["dataset"])
+model = Registry(["model"])
+registry = Registry([])

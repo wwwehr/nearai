@@ -12,6 +12,7 @@ LOCAL_CONFIG_FILE = Path(".jasnah") / "config.json"
 REPO_FOLDER = Path(__file__).parent
 PROMPTS_FOLDER = REPO_FOLDER / "prompts"
 
+
 def get_config_path(local: bool = False) -> Path:
     return LOCAL_CONFIG_FILE if local else CONFIG_FILE
 
@@ -53,17 +54,15 @@ class Config:
     db_port: int = 3306
     db_name: str = "jasnah"
     server_url: str = "http://ai.nearspace.info/cluster"
-    origin: str = None
-    user_name: str = None
-    user_email: str = None
-    supervisor_id: str = None
+    origin: Optional[str] = None
+    user_name: Optional[str] = None
+    user_email: Optional[str] = None
+    supervisor_id: Optional[str] = None
 
     inference_url: str = "http://localhost:5000/v1/"
     inference_api_key: str = "n/a"
 
-    def update_with(
-        self, extra_config: Dict[str, Any], map_key: Callable[[str], str] = lambda x: x
-    ) -> None:
+    def update_with(self, extra_config: Dict[str, Any], map_key: Callable[[str], str] = lambda x: x) -> None:
         keys = [f.name for f in fields(self)]
         for key in map(map_key, keys):
             value = extra_config.get(key, None)

@@ -1,8 +1,9 @@
 import json
+import textwrap
 from dataclasses import asdict
 from pathlib import Path
 from subprocess import check_output, run
-from typing import List, Optional
+from typing import List, Optional, Tuple, Union
 
 import fire
 import pkg_resources
@@ -10,14 +11,14 @@ from fabric import ThreadingGroup as Group
 from tabulate import tabulate
 
 import jasnah
-from jasnah.benchmark import BenchmarkExecutor
+from jasnah.benchmark import BenchmarkExecutor, DatasetInfo
 from jasnah.completion import create_completion_fn
 from jasnah.config import CONFIG, DATA_FOLDER, update_config
 from jasnah.dataset import load_dataset
 from jasnah.db import db
-from jasnah.registry import Registry, dataset, model
+from jasnah.registry import Registry, dataset, model, registry
 from jasnah.server import ServerClient, run_server
-from jasnah.solvers import SolverStrategy, SolverStrategyRegistry
+from jasnah.solvers import SolverStrategyRegistry
 from jasnah.supervisor import SupervisorClient, run_supervisor
 
 
@@ -95,53 +96,90 @@ def install(hosts_description: List[Host], skip_install: str):
     run_bash_script("setup_supervisor.sh")
 
 
+def parse_tags(tags: Union[str, Tuple[str, ...]]) -> List[str]:
+    if not tags:
+        return []
+
+    elif isinstance(tags, tuple):
+        return list(tags)
+
+    elif isinstance(tags, str):
+        return tags.split(",")
+
+    else:
+        raise ValueError(f"Invalid tags argument: {tags}")
+
+
 class RegistryCli:
     def __init__(self, registry: Registry):
         self._registry = registry
 
-    def add(self, name: str, description: str, alias: Optional[str] = None, **details):
-        assert self._registry.exists_in_s3(name), f"Item {name} does not exist in S3"
-        self._registry.add(name, CONFIG.get_user_name(), description, alias, details, True)
+    def add(self, s3_path: str, description: str, name: Optional[str] = None, tags: str = "", **details):
+        """Add an item to the registry that was previously uploaded to S3"""
+        tags_l = parse_tags(tags)
+        assert self._registry.exists_in_s3(s3_path), f"Item {s3_path} does not exist in S3"
+        self._registry.add(
+            s3_path=s3_path,
+            author=CONFIG.get_user_name(),
+            description=description,
+            name=name,
+            show_entry=True,
+            tags=tags_l,
+            details=details,
+        )
 
-    def list(self, total: int = 16, show_all: bool = False, verbose: bool = False):
+    def add_tags(self, identifier: int, tags: str):
+        """Add tags to an item in the registry"""
+        tags_l = parse_tags(tags)
+        self._registry.add_tags(identifier=identifier, tags=tags_l)
+
+    def remove_tag(self, identifier: int, tag: str):
+        self._registry.remove_tag(identifier=identifier, tag=tag)
+
+    def list(self, total: int = 16, show_all: bool = False, verbose: bool = False, tags: str = ""):
         """List available items"""
-        header = ["id", "name", "alias", "description"]
+        tags_l = parse_tags(tags)
+
+        header = ["id", "name", "description", "tags"]
 
         if verbose:
-            header += ["author", "show_entry", "time"]
+            header += ["author", "date", "path"]
 
         table = [header]
 
-        for entry in self._registry.list(total, show_all):
+        for entry in self._registry.list(tags=tags_l, total=total, show_all=show_all):
+            tags = ", ".join(entry.tags)
+
             row = [
                 entry.id,
-                entry.name,
-                entry.alias,
-                entry.description,
+                (entry.name or entry.path) if not verbose else entry.name,
+                textwrap.fill(entry.description or "", width=50),
+                textwrap.fill(tags, width=20),
             ]
 
             if verbose:
-                row += [entry.author, entry.show_entry, entry.time]
+                row += [entry.author, entry.time.strftime("%Y-%m-%d"), entry.path]
 
             table.append(row)
 
-        print(tabulate(table, headers="firstrow"))
+        print(tabulate(table, headers="firstrow", tablefmt="simple_grid"))
 
     def update(
         self,
-        id: int,
+        identifier: int,
         *,
         author: Optional[str] = None,
         description: Optional[str] = None,
-        alias: Optional[str] = None,
+        name: Optional[str] = None,
         details: Optional[dict] = None,
         show_entry: Optional[bool] = None,
     ):
+        """Update item in the registry"""
         self._registry.update(
-            id,
+            identifier=identifier,
             author=author,
             description=description,
-            alias=alias,
+            name=name,
             details=details,
             show_entry=show_entry,
         )
@@ -153,22 +191,26 @@ class RegistryCli:
     def upload(
         self,
         path: str,
-        name: str,
+        s3_path: str,
         description: str,
-        alias: Optional[str] = None,
+        name: Optional[str] = None,
         show_entry: bool = True,
+        tags: str = "",
         **details,
     ):
         """Upload item to the registry"""
+        tags_l = parse_tags(tags)
+
         author = CONFIG.get_user_name()
         self._registry.upload(
-            Path(path),
-            name,
-            author,
-            description,
-            alias,
-            details,
-            show_entry,
+            path=Path(path),
+            s3_path=s3_path,
+            author=author,
+            description=description,
+            name=name,
+            details=details,
+            show_entry=show_entry,
+            tags=tags_l,
         )
 
     def download(self, name: str):
@@ -196,11 +238,11 @@ class SupervisorCli:
 class ServerCli:
     def install_supervisors(self, hosts: str, skip: str = ""):
         """Install and start supervisor in every host machine"""
-        hosts = parse_hosts(hosts)
-        install(hosts, skip)
+        hosts_l = parse_hosts(Path(hosts))
+        install(hosts_l, skip)
 
     def start(self, hosts: str):
-        parsed_hosts = parse_hosts(hosts)
+        parsed_hosts = parse_hosts(Path(hosts))
         update_config("supervisors", [h.endpoint for h in parsed_hosts])
 
         db.set_all_supervisors_unavailable()
@@ -239,23 +281,31 @@ class BenchmarkCli:
     def __init__(self, datasets: RegistryCli, models: RegistryCli):
         self.datasets = datasets
         self.models = models
-    
-    def run(self, dataset: str, model: str, solver_strategy: str, subset: str = None):
-        name, subset, dataset = dataset, subset, load_dataset(dataset)
+
+    def run(self, dataset: str, model: str, solver_strategy: str, subset: Optional[str] = None):
+        name, subset, dataset_d = dataset, subset, load_dataset(dataset)
         model_completion_fn = create_completion_fn(model)
 
-        solver_strategy: SolverStrategy | None = SolverStrategyRegistry.get(solver_strategy, None)
-        assert solver_strategy, f"Solver strategy {solver_strategy} not found. Available strategies: {list(SolverStrategyRegistry.keys())}"
-        solver_strategy = solver_strategy(model_completion_fn, dataset_ref=dataset)
-        assert name in solver_strategy.compadible_datasets(), f"Solver strategy {solver_strategy} is not compatible with dataset {name}"
-        
-        be = BenchmarkExecutor((name, subset, dataset), solver_strategy)
+        solver_strategy_cls = SolverStrategyRegistry.get(solver_strategy, None)
+        assert (
+            solver_strategy_cls is not None
+        ), f"Solver strategy {solver_strategy} not found. Available strategies: {list(SolverStrategyRegistry.keys())}"
+
+        solver_strategy_ = solver_strategy_cls(model_completion_fn, dataset_ref=dataset_d)
+        assert (
+            name in solver_strategy_.compatible_datasets()
+        ), f"Solver strategy {solver_strategy_} is not compatible with dataset {name}"
+
+        be = BenchmarkExecutor(DatasetInfo(name, subset, dataset_d), solver_strategy_)
         be.run()
+
 
 class CLI:
     def __init__(self):
+        self.registry = RegistryCli(registry)
         self.datasets = RegistryCli(dataset)
         self.models = RegistryCli(model)
+
         self.supervisor = SupervisorCli()
         self.server = ServerCli()
         self.config = ConfigCli()
@@ -279,9 +329,7 @@ class CLI:
                 print(f"Detected in-progress git operation: {op}")
                 return
 
-        repository_url = (
-            check_output(["git", "remote", "-v"]).decode().split("\n")[0].split("\t")[1].split()[0]
-        )
+        repository_url = check_output(["git", "remote", "-v"]).decode().split("\n")[0].split("\t")[1].split()[0]
         commit = check_output(["git", "rev-parse", "HEAD"]).decode().strip()
         diff = check_output(["git", "diff", "HEAD"]).decode()
 
@@ -297,7 +345,7 @@ class CLI:
         print(jasnah.cli_path())
 
     def version(self):
-        # TODO: Show current commit
+        # TODO: Show current commit or tag
         print(pkg_resources.get_distribution("jasnah").version)
 
     def update(self):
@@ -322,3 +370,7 @@ class CLI:
             experiment["diff_len"] = len(experiment.pop("diff", ""))
 
         print(json.dumps(status))
+
+
+def main():
+    fire.Fire(CLI)

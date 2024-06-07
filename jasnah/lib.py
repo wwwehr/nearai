@@ -31,4 +31,4 @@ def get_origin():
 
 def log(*, target: str, **content):
     origin = get_origin()
-    db.log(origin, target, content)
+    db.log(origin=origin, target=target, content=content)

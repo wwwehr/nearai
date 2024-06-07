@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 import jasnah
 from jasnah.config import CONFIG, DATA_FOLDER
-from jasnah.db import RegistryEntry, db
+from jasnah.db import DisplayRegistry, db
 
 
 def upload_file(s3_client, s3_path: str, local_path: Path):
@@ -81,12 +81,6 @@ def exists_directory_in_s3(s3_path: str) -> bool:
     return "Contents" in response or "CommonPrefixes" in response
 
 
-@dataclass
-class RegistryEntryWithTags:
-    entry: RegistryEntry
-    tags: List[str]
-
-
 class Registry:
     def __init__(self, tags: List[str]):
         self.tags = tags
@@ -100,7 +94,7 @@ class Registry:
 
     def update(
         self,
-        identifier: str,
+        identifier: str | int,
         *,
         author: Optional[str] = None,
         description: Optional[str] = None,
@@ -109,8 +103,12 @@ class Registry:
         show_entry: Optional[bool] = None,
     ):
         entry = db.get_registry_entry_by_identifier(identifier)
+        assert entry is not None
 
-        db.update_registry_entry(entry.id, author, description, name, details, show_entry)
+        db.update_registry_entry(
+            id=entry.id, author=author, description=description, name=name, details=details, show_entry=show_entry
+        )
+
         update = dict(
             author=author,
             description=description,
@@ -127,8 +125,9 @@ class Registry:
 
     def add(
         self,
+        *,
         s3_path: str,
-        name: str,
+        name: Optional[str],
         author: str,
         description: Optional[str],
         details: Optional[dict],
@@ -139,20 +138,21 @@ class Registry:
             raise ValueError(f"{s3_path} already exists in the registry")
 
         db.add_to_registry(
-            s3_path,
-            name,
-            author,
-            description,
-            details,
-            show_entry,
-            self._all_tags(tags),
+            s3_path=s3_path,
+            name=name or "",
+            author=author,
+            description=description,
+            details=details,
+            show_entry=show_entry,
+            tags=self._all_tags(tags),
         )
+
         jasnah.log(target=f"Add to registry", name=name, author=author)
 
-    def add_tags(self, identifier: str, tags: List[str]):
+    def add_tags(self, *, identifier: str | int, tags: List[str]):
         entry = db.get_registry_entry_by_identifier(identifier)
+        assert entry is not None
 
-        print(f"Adding tags: {tags} to {entry}")
         current_tags = db.get_tags(entry.id)
 
         all_tags = list(set(current_tags + tags))
@@ -160,19 +160,22 @@ class Registry:
             raise ValueError(f"Some tags are already present. New tags: {tags} Current tags: {current_tags}")
 
         for tag in tags:
-            db.add_tag(entry.id, tag)
+            db.add_tag(registry_id=entry.id, tag=tag)
 
-    def remove_tag(self, identifier: str, tag: str):
+    def remove_tag(self, *, identifier: str | int, tag: str):
         entry = db.get_registry_entry_by_identifier(identifier)
+        assert entry is not None
+
         current_tags = db.get_tags(entry.id)
 
         if tag not in current_tags:
             raise ValueError(f"Tag {tag} is not present in {identifier}")
 
-        db.remove_tag(entry.id, tag)
+        db.remove_tag(registry_id=entry.id, tag=tag)
 
     def upload(
         self,
+        *,
         path: Path,
         s3_path: str,
         author: str,
@@ -189,7 +192,16 @@ class Registry:
         if self.exists_in_s3(s3_path):
             raise ValueError(f"{prefix} already exists in S3")
 
-        self.add(s3_path, name, author, description, details, show_entry, tags)
+        self.add(
+            s3_path=s3_path,
+            name=name,
+            author=author,
+            description=description,
+            details=details,
+            show_entry=show_entry,
+            tags=tags,
+        )
+
         jasnah.log(target=f"Upload to S3", path=s3_path, author=author)
 
         s3_client = boto3.client("s3")
@@ -211,6 +223,7 @@ class Registry:
 
     def download(self, identifier: str):
         entry = db.get_registry_entry_by_identifier(identifier)
+        assert entry is not None
 
         path = entry.path
         target = self.download_folder / entry.path
@@ -224,17 +237,9 @@ class Registry:
 
         return target
 
-    def list(self, tags: List[str], total: int, show_all: bool) -> List[RegistryEntryWithTags]:
+    def list(self, *, tags: List[str], total: int, show_all: bool) -> List[DisplayRegistry]:
         tags = self._all_tags(tags)
-        entries = db.list_registry_entries(total=total, show_all=show_all)
-
-        result = []
-        for entry in entries:
-            entry_tags = db.get_tags(entry.id)
-            if all(tag in entry_tags for tag in tags):
-                result.append(RegistryEntryWithTags(entry, entry_tags))
-
-        return result
+        return db.list_registry_entries(total=total, show_all=show_all, tags=tags)
 
 
 dataset = Registry(["dataset"])

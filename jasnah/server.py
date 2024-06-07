@@ -27,6 +27,7 @@ def submit():
     # TODO: Move to create_app method
     CONFIG.origin = "server"
 
+    assert request.json is not None
     body: Dict[str, Any] = request.json
 
     name = body["name"]
@@ -38,14 +39,16 @@ def submit():
     num_nodes = body["num_nodes"]
     cluster = body["cluster"]
 
-    experiment_id = db.add_experiment(name, author, repository, commit, diff, command, num_nodes)
+    experiment_id = db.add_experiment(
+        name=name, author=author, repository=repository, commit=commit, diff=diff, command=command, num_nodes=num_nodes
+    )
 
     result = {}
 
-    supervisors = db.lock_supervisors(experiment_id, num_nodes, cluster)
+    supervisors = db.lock_supervisors(experiment_id=experiment_id, total=num_nodes, cluster=cluster)
 
     if not supervisors:
-        db.set_experiment_status(experiment_id, "ignored")
+        db.set_experiment_status(experiment_id=experiment_id, status="ignored")
 
         if supervisors is None:
             result["error"] = f"Failed to lock {num_nodes} supervisors"
@@ -53,13 +56,15 @@ def submit():
             result["error"] = "No available supervisors"
 
     else:
-        db.set_experiment_status(experiment_id, "assigned")
+        db.set_experiment_status(experiment_id=experiment_id, status="assigned")
         clients = [SupervisorClient(supervisor.endpoint) for supervisor in supervisors]
         results = [client.update() for client in clients]
         result["clients"] = [asdict(s) for s in supervisors]
         result["client_responses"] = results
 
-    result["experiment"] = asdict(db.get_experiment(experiment_id))
+    experiment = db.get_experiment(experiment_id)
+    assert experiment is not None
+    result["experiment"] = asdict(experiment)
 
     jasnah.log(target="launch experiment", **result)
 
@@ -105,22 +110,3 @@ class ServerClient:
             ),
         )
         return result.json()
-
-
-if __name__ == "__main__":
-    client = ServerClient("http://127.0.0.1:8100")
-    # print(client.status())
-    import json
-
-    print(
-        json.dumps(
-            client.submit(
-                "test_experiment",
-                "git@github.com:nearai/jasnah-cli.git",
-                "b0dfca8637522eae9d20c5a7c2a843816b86ed87",
-                "python3 examples/simple_task.py",
-                "test_author",
-                num_nodes=2,
-            )
-        )
-    )

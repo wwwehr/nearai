@@ -58,13 +58,10 @@ warn_return_any = true
 warn_redundant_casts = true
 strict_equality = true
 warn_unused_configs = true
-no-any-return = false
 
 [[tool.mypy.overrides]]
-module = [
-  'datasets.*',
-  'fire.*',
-]
+module = ['datasets.*', 'fire.*']
+ignore_missing_imports = true
 
 [tool.black]
 line-length = 100

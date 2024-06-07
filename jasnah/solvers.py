@@ -1,16 +1,16 @@
 import ast
-from itertools import islice
 import re
 from abc import ABC, ABCMeta, abstractmethod
-from textwrap import dedent
-from typing import Any, Callable, Dict, List
+from itertools import islice
+from typing import Any, Callable, Dict, List, Type
 
-from datasets import Dataset  # type: ignore
+from datasets import Dataset, DatasetDict
+from jinja2 import Template
 from openai.types.chat import ChatCompletion
 from pydantic import BaseModel
-from jinja2 import Template
 
 from .config import PROMPTS_FOLDER
+
 
 class SolverStrategyMeta(ABCMeta):
     """
@@ -29,7 +29,7 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
     Abstract class for solver strategies.
     """
 
-    def __init__(self, completion_fn: Callable[[Any], ChatCompletion]):
+    def __init__(self, completion_fn: Callable[[Any], ChatCompletion], dataset_ref: Dataset | DatasetDict):
         self.completion_fn = completion_fn
 
     @property
@@ -37,15 +37,13 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
         return type(self).__name__
 
     @abstractmethod
-    def compadible_datasets(self) -> List[str]:
-        ...
+    def compatible_datasets(self) -> List[str]: ...
 
     @abstractmethod
-    def solve(self, datum: dict) -> bool:
-        ...
+    def solve(self, datum: dict) -> bool: ...
 
 
-SolverStrategyRegistry: Dict[str, SolverStrategy] = {}
+SolverStrategyRegistry: Dict[str, Type[SolverStrategy]] = {}
 
 
 class MBPPSolverStrategy(SolverStrategy):
@@ -55,12 +53,12 @@ class MBPPSolverStrategy(SolverStrategy):
 
     SHOTS = 3
 
-    def __init__(self, completion_fn: Callable[[Any], ChatCompletion], dataset_ref: Dataset):
+    def __init__(self, completion_fn: Callable[[Any], ChatCompletion], dataset_ref: Dataset | DatasetDict):
         super().__init__(completion_fn)
         self.dataset_ref = dataset_ref
         self.completion_fn = completion_fn
 
-    def compadible_datasets(self) -> List[str]:
+    def compatible_datasets(self) -> List[str]:
         return ["mbpp"]
 
     def solve(self, datum: dict) -> bool:
@@ -104,12 +102,14 @@ class MBPPSolverStrategy(SolverStrategy):
             messages=[
                 {"role": "system", "content": base_prompt},
             ],
-            temperature=0.,
+            temperature=0.0,
         )
         response = str(completion_response.choices[0].message.content)
 
         ## Extract the answer from the response
-        extract_answer_prompt = Template(open(PROMPTS_FOLDER / "mbpp_extract_answer.j2").read(), trim_blocks=True).render(
+        extract_answer_prompt = Template(
+            open(PROMPTS_FOLDER / "mbpp_extract_answer.j2").read(), trim_blocks=True
+        ).render(
             function_name=function_name,
             answer_text=response,
         )
@@ -117,7 +117,7 @@ class MBPPSolverStrategy(SolverStrategy):
             messages=[
                 {"role": "system", "content": extract_answer_prompt},
             ],
-            temperature=0.,
+            temperature=0.0,
         )
         response = str(completion_response.choices[0].message.content)
 

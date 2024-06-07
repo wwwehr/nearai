@@ -1,7 +1,6 @@
 import os
-from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import boto3
 from tqdm import tqdm
@@ -94,7 +93,7 @@ class Registry:
 
     def update(
         self,
-        identifier: str | int,
+        identifier: Union[str, int],
         *,
         author: Optional[str] = None,
         description: Optional[str] = None,
@@ -149,7 +148,7 @@ class Registry:
 
         jasnah.log(target=f"Add to registry", name=name, author=author)
 
-    def add_tags(self, *, identifier: str | int, tags: List[str]):
+    def add_tags(self, *, identifier: Union[str, int], tags: List[str]):
         entry = db.get_registry_entry_by_identifier(identifier)
         assert entry is not None
 
@@ -162,7 +161,7 @@ class Registry:
         for tag in tags:
             db.add_tag(registry_id=entry.id, tag=tag)
 
-    def remove_tag(self, *, identifier: str | int, tag: str):
+    def remove_tag(self, *, identifier: Union[str, int], tag: str):
         entry = db.get_registry_entry_by_identifier(identifier)
         assert entry is not None
 

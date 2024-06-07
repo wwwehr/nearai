@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Union
 
 from datasets import Dataset, DatasetDict, load_from_disk
 
@@ -15,6 +16,6 @@ def get_dataset(alias_or_name: str) -> Path:
     return dataset.download(alias_or_name)
 
 
-def load_dataset(alias_or_name: str) -> Dataset | DatasetDict:
+def load_dataset(alias_or_name: str) -> Union[Dataset, DatasetDict]:
     path = get_dataset(alias_or_name)
     return load_from_disk(path.as_posix())

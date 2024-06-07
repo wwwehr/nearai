@@ -1,7 +1,7 @@
 import concurrent.futures
 from dataclasses import dataclass
 from itertools import islice
-from typing import Optional
+from typing import Optional, Union
 
 from datasets import Dataset, DatasetDict
 from tqdm import tqdm
@@ -13,7 +13,7 @@ from .solvers import SolverStrategy
 class DatasetInfo:
     name: str
     subset: Optional[str]
-    dataset: Dataset | DatasetDict
+    dataset: Union[Dataset, DatasetDict]
 
     def get_dataset(self) -> Dataset:
         if isinstance(self.dataset, DatasetDict):

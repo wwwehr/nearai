@@ -2,7 +2,7 @@ import ast
 import re
 from abc import ABC, ABCMeta, abstractmethod
 from itertools import islice
-from typing import Any, Callable, Dict, List, Type
+from typing import Any, Callable, Dict, List, Type, Union
 
 from datasets import Dataset, DatasetDict
 from jinja2 import Template
@@ -29,7 +29,7 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
     Abstract class for solver strategies.
     """
 
-    def __init__(self, completion_fn: Callable[[Any], ChatCompletion], dataset_ref: Dataset | DatasetDict):
+    def __init__(self, completion_fn: Callable[[Any], ChatCompletion], dataset_ref: Union[Dataset, DatasetDict]):
         self.completion_fn = completion_fn
 
     @property
@@ -53,7 +53,7 @@ class MBPPSolverStrategy(SolverStrategy):
 
     SHOTS = 3
 
-    def __init__(self, completion_fn: Callable[[Any], ChatCompletion], dataset_ref: Dataset | DatasetDict):
+    def __init__(self, completion_fn: Callable[[Any], ChatCompletion], dataset_ref: Union[Dataset, DatasetDict]):
         super().__init__(completion_fn)
         self.dataset_ref = dataset_ref
         self.completion_fn = completion_fn

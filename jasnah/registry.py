@@ -11,6 +11,9 @@ from jasnah.db import DisplayRegistry, db
 
 
 def upload_file(s3_client, s3_path: str, local_path: Path):
+    if not s3_path.endswith("/"):
+        s3_path += "/"
+
     assert local_path.is_file()
     assert local_path.exists()
 
@@ -51,7 +54,10 @@ def download_file(s3_client, s3_path: str, local_path: Path):
             s3_client.download_fileobj(CONFIG.s3_bucket, s3_path, f, Callback=pbar.update)
 
 
-def download_directory(s3_prefix, local_directory: Path):
+def download_directory(s3_prefix: str, local_directory: Path):
+    if not s3_prefix.endswith("/"):
+        s3_prefix += "/"
+
     s3_client = boto3.client("s3")
     paginator = s3_client.get_paginator("list_objects_v2")
 

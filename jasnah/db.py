@@ -474,17 +474,19 @@ class DB:
     def get_registry_entry_by_identifier(
         self, identifier: Union[str, int], fail_if_not_found=True
     ) -> Optional[RegistryEntry]:
-        with self.connection.cursor() as cursor:
-            cursor.execute(
-                f"SELECT * FROM {REGISTRY_TABLE} WHERE id=%s OR name=%s OR path=%s LIMIT 1",
-                (identifier, identifier, identifier),
-            )
-            result = cursor.fetchone()
-            if not result:
-                if fail_if_not_found:
-                    raise ValueError(f"{identifier} not found in the registry")
-                return None
-            return RegistryEntry.from_db(result)
+        try:
+            identifier = int(identifier)
+            entry = self.get_registry_entry_by_id(identifier)
+        except ValueError:
+            for get_fn in (self.get_registry_entry_by_name, self.get_registry_entry_by_path):
+                entry = get_fn(identifier)
+                if entry:
+                    break
+
+        if entry is None and fail_if_not_found:
+            raise ValueError(f"{identifier} not found in the registry")
+
+        return entry
 
     def add_tag(self, *, registry_id: int, tag: str):
         with self.connection.cursor() as cursor:

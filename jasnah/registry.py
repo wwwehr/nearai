@@ -1,7 +1,6 @@
 import os
-from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import boto3
 from tqdm import tqdm
@@ -12,6 +11,9 @@ from jasnah.db import DisplayRegistry, db
 
 
 def upload_file(s3_client, s3_path: str, local_path: Path):
+    if not s3_path.endswith("/"):
+        s3_path += "/"
+
     assert local_path.is_file()
     assert local_path.exists()
 
@@ -52,7 +54,10 @@ def download_file(s3_client, s3_path: str, local_path: Path):
             s3_client.download_fileobj(CONFIG.s3_bucket, s3_path, f, Callback=pbar.update)
 
 
-def download_directory(s3_prefix, local_directory: Path):
+def download_directory(s3_prefix: str, local_directory: Path):
+    if not s3_prefix.endswith("/"):
+        s3_prefix += "/"
+
     s3_client = boto3.client("s3")
     paginator = s3_client.get_paginator("list_objects_v2")
 
@@ -94,7 +99,7 @@ class Registry:
 
     def update(
         self,
-        identifier: str | int,
+        identifier: Union[str, int],
         *,
         author: Optional[str] = None,
         description: Optional[str] = None,
@@ -149,7 +154,7 @@ class Registry:
 
         jasnah.log(target=f"Add to registry", name=name, author=author)
 
-    def add_tags(self, *, identifier: str | int, tags: List[str]):
+    def add_tags(self, *, identifier: Union[str, int], tags: List[str]):
         entry = db.get_registry_entry_by_identifier(identifier)
         assert entry is not None
 
@@ -162,7 +167,7 @@ class Registry:
         for tag in tags:
             db.add_tag(registry_id=entry.id, tag=tag)
 
-    def remove_tag(self, *, identifier: str | int, tag: str):
+    def remove_tag(self, *, identifier: Union[str, int], tag: str):
         entry = db.get_registry_entry_by_identifier(identifier)
         assert entry is not None
 

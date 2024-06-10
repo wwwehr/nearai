@@ -19,6 +19,7 @@ from transformers.models.llama import LlamaConfig, LlamaForCausalLM
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
 warnings.filterwarnings("ignore")
+torch.set_default_device("cuda")
 
 clip_vision_model = CLIPVisionModel.from_pretrained("openai/clip-vit-base-patch32")
 clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
@@ -32,6 +33,7 @@ clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
 
 PATCH_SIZE = 32
 CHANNELS = 3
+PROJECTION_FILEPATH = "image_projection_weights.pth"
 
 
 class LlamaMultimodalModel(LlamaForCausalLM):
@@ -42,6 +44,20 @@ class LlamaMultimodalModel(LlamaForCausalLM):
         self.image_projection = torch.nn.Linear(
             clip_vision_model.config.hidden_size, config.hidden_size
         )
+
+    def freeze_lang_model(self):
+        for param in self.model.parameters():
+            param.requires_grad = False
+        for param in self.lm_head.parameters():
+            param.requires_grad = False
+
+    def save_projection(self, path=PROJECTION_FILEPATH):
+        # Assuming 'model' is an instance of LlamaMultimodalModel
+        torch.save(self.image_projection.state_dict(), path)
+
+    def load_projection(self, path=PROJECTION_FILEPATH):
+        # Assuming 'model' is an instance of LlamaMultimodalModel
+        self.image_projection.load_state_dict(torch.load(path))
 
     def super_forward(self, input_ids):
         return super().forward(input_ids=input_ids)
@@ -63,14 +79,24 @@ class LlamaMultimodalModel(LlamaForCausalLM):
             token_embeds: torch.FloatTensor = self.model.embed_tokens(tokens)
             embeds.scatter_add_(
                 1,
-                tokens_pos.unsqueeze(-1).expand(-1, -1, token_embeds.shape[-1]),
+                tokens_pos.unsqueeze(-1).expand(-1, -1, token_embeds.shape[-1]).to(tokens.device),
                 token_embeds,
             )
 
         if patches_pos.numel() != 0:
-            # (2, 1, 7, 7, 3, 32, 32)
+            # print(f"patches: {patches.shape}")
+
+            ## one image
+            # patches: torch.Size([1, 1, 7, 7, 3, 32, 32])
+            # image: torch.Size([1, 3, 224, 224])
+
+            ## two images
+            # patches: torch.Size([1, 2, 7, 7, 3, 32, 32])
+            # image: torch.Size([1, 7, 6, 224, 32])
+
+            # (1, 2, 7, 7, 3, 32, 32)
             # (2, 7, 7, 3, 32, 32)
-            image = patches.squeeze(1)
+            image = patches.squeeze(0)
             # (2, 7, 3, 224, 32)
             image = torch.cat(
                 list(map(lambda t: t.squeeze(1), torch.split(image, 1, dim=1))), dim=3
@@ -86,11 +112,16 @@ class LlamaMultimodalModel(LlamaForCausalLM):
             # print(last_hidden_state.shape)
 
             # image = torch.zeros(size=image.shape)[1:]
-            # print("image: ", image.shape)
+            # print(f"image: {image.shape}")
             embed = clip_vision_model.vision_model(pixel_values=image)
             embed = embed.last_hidden_state[:, :-1, :]
 
             patch_embeds: torch.FloatTensor = self.image_projection(embed)
+            patch_embeds = patch_embeds.reshape(-1, patch_embeds.shape[-1]).unsqueeze(0)
+
+            # print("embeds", embeds.shape)
+            # print("ppp", patches_pos.unsqueeze(-1).expand(-1, -1, patch_embeds.shape[-1]).shape)
+
             embeds.scatter_add_(
                 1,
                 patches_pos.unsqueeze(-1).expand(-1, -1, patch_embeds.shape[-1]),
@@ -432,14 +463,14 @@ def test_multimodal():
                 "Describe the following image:",
                 ImageDescription("0.jpg"),
                 "The image shows",
-            ],
-            [
                 "Describe the following image:",
-                ImageDescription("1.jpg"),
+                ImageDescription("0.jpg"),
                 "The image shows",
             ],
         ],
     )
+    ## [1, 7, 6, 224, 32]
+    ## image: torch.Size([1, 3, 224, 224])
 
     print("context length:", model_input["n_ctx"])
 
@@ -524,7 +555,7 @@ def test_attention_mask():
 
 
 if __name__ == "__main__":
-    test_next_token()
+    # test_next_token()
     test_multimodal()
-    test_attention_mask()
-    test_include_labels()
+    # test_attention_mask()
+    # test_include_labels()

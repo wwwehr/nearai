@@ -19,12 +19,13 @@ class LlamaMultimodalModel(LlamaForCausalLM):
 
     def __init__(self, config: LlamaConfig):
         super().__init__(config)
-        self.image_projection = torch.nn.Linear(
-            CHANNELS * PATCH_SIZE**2, config.hidden_size
-        )
+        self.image_projection = torch.nn.Linear(CHANNELS * PATCH_SIZE**2, config.hidden_size)
 
-    def super_forward(self, input_ids):
-        return super().forward(input_ids=input_ids)
+    def freeze_lang_model(self):
+        for param in self.model.parameters():
+            param.requires_grad = False
+        for param in self.lm_head.parameters():
+            param.requires_grad = False
 
     def forward(
         self,
@@ -37,7 +38,7 @@ class LlamaMultimodalModel(LlamaForCausalLM):
     ):
         batch_size = tokens.shape[0]
 
-        embeds = torch.zeros((batch_size, n_ctx + 1, self.config.hidden_size))
+        embeds = torch.zeros((batch_size, n_ctx + 1, self.config.hidden_size), device=self.device)
 
         if tokens_pos.numel() != 0:
             token_embeds: torch.FloatTensor = self.model.embed_tokens(tokens)
@@ -79,9 +80,16 @@ class ImageTokenizer:
         pil_image = image_d.load()
         pil_image = pil_image.resize((pil_image.width // 4, pil_image.height // 4))
 
-        image = torch.tensor(np.array(pil_image, dtype=np.float32) / 255.0).permute(
-            2, 0, 1
-        )
+        image = torch.tensor(np.array(pil_image, dtype=np.float32) / 255.0)
+
+        if len(image.shape) == 2:
+            image = image.unsqueeze(2).expand(-1, -1, 3)
+
+        image = image.permute(2, 0, 1)
+
+        if image.shape[0] == 4:
+            # TODO: Make sure we are removing the alpha channel correctly
+            image = image[:3]
 
         C, H, W = image.shape
 
@@ -240,7 +248,7 @@ class MultimodalTokenizer:
 
         raise ValueError(f"Unknown type: {type(item)}")
 
-    def encode(self, data: List[List[ItemType]], include_labels=False):
+    def encode(self, data: List[List[ItemType]], include_labels=False, context_size=None):
         inputs: List[MultimodalInput] = []
 
         for row in data:
@@ -260,6 +268,11 @@ class MultimodalTokenizer:
 
         # Prepare the input tensors
         n_ctx = max(i.ctx for i in inputs)
+
+        if isinstance(context_size, int):
+            assert context_size >= n_ctx
+            n_ctx = context_size
+
         max_tokens = max(len(i.tokens) for i in inputs)
         max_patches = max(sum(p.size(0) for p in i.patches) for i in inputs)
 
@@ -327,9 +340,9 @@ def test_next_token():
     tokens = tokenizer.encode("The name of the wizard is Harry", return_tensors="pt")
     print(tokens)
 
-    model = LlamaMultimodalModel.from_pretrained(MODEL_PATH)
+    model: LlamaMultimodalModel = LlamaMultimodalModel.from_pretrained(MODEL_PATH)
 
-    output = model.super_forward(tokens)
+    output = super(LlamaMultimodalModel, model).forward(tokens)
     print(output.loss)
     print(output.logits.shape)
 
@@ -440,9 +453,7 @@ def test_attention_mask():
     )
     positions_ids = torch.tensor([[0, 1, 1, 2], [0, 1, 1, 2]], dtype=torch.long)
 
-    output = model.forward(
-        tokens, attention_mask=attention_mask, position_ids=positions_ids
-    )
+    output = model.forward(tokens, attention_mask=attention_mask, position_ids=positions_ids)
     print(output.logits)
 
 

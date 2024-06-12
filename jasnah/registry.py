@@ -11,9 +11,6 @@ from jasnah.db import DisplayRegistry, db
 
 
 def upload_file(s3_client, s3_path: str, local_path: Path):
-    if not s3_path.endswith("/"):
-        s3_path += "/"
-
     assert local_path.is_file()
     assert local_path.exists()
 
@@ -68,7 +65,7 @@ def download_directory(s3_prefix: str, local_directory: Path):
             continue
 
         for s3_object in page["Contents"]:
-            s3_key = s3_object["Key"]
+            s3_key: str = s3_object["Key"]
             relative_path = os.path.relpath(s3_key, s3_prefix)
             local_path = local_directory / relative_path
 

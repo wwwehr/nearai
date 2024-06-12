@@ -14,15 +14,14 @@ from transformers import (
     AutoTokenizer,
     CLIPProcessor,
     CLIPVisionModel,
+    CLIPVisionConfig,
 )
 from transformers.models.llama import LlamaConfig, LlamaForCausalLM
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
 warnings.filterwarnings("ignore")
-torch.set_default_device("cuda")
 
-clip_vision_model = CLIPVisionModel.from_pretrained("openai/clip-vit-base-patch32")
-clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+## Test CLIP on ingle image
 # url = "http://images.cocodataset.org/val2017/000000039769.jpg"
 # image = Image.open(requests.get(url, stream=True).raw)
 # images = processor(images=[image], return_tensors="pt")
@@ -35,20 +34,27 @@ PATCH_SIZE = 32
 CHANNELS = 3
 PROJECTION_FILEPATH = "image_projection_weights.pth"
 
+clip_config = CLIPVisionConfig.from_pretrained("openai/clip-vit-base-patch32")
 
 class LlamaMultimodalModel(LlamaForCausalLM):
     config: LlamaConfig
 
     def __init__(self, config: LlamaConfig):
         super().__init__(config)
+        
+        self.clip_vision_model = CLIPVisionModel.from_pretrained("openai/clip-vit-base-patch32")
+        self.clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+
         self.image_projection = torch.nn.Linear(
-            clip_vision_model.config.hidden_size, config.hidden_size
+            self.clip_vision_model.config.hidden_size, config.hidden_size
         )
 
     def freeze_lang_model(self):
         for param in self.model.parameters():
             param.requires_grad = False
         for param in self.lm_head.parameters():
+            param.requires_grad = False
+        for param in self.clip_vision_model.parameters():
             param.requires_grad = False
 
     def save_projection(self, path=PROJECTION_FILEPATH):
@@ -73,13 +79,17 @@ class LlamaMultimodalModel(LlamaForCausalLM):
     ):
         batch_size = tokens.shape[0]
 
-        embeds = torch.zeros((batch_size, n_ctx + 1, self.config.hidden_size))
+        tokens = tokens.to(self.device)
+        patches = patches.to(self.device)
+        tokens_pos = tokens_pos.to(self.device)
+        patches_pos = patches_pos.to(self.device)
+        embeds = torch.zeros((batch_size, n_ctx + 1, self.config.hidden_size), device=self.device)
 
         if tokens_pos.numel() != 0:
-            token_embeds: torch.FloatTensor = self.model.embed_tokens(tokens)
+            token_embeds: torch.FloatTensor = self.model.embed_tokens(tokens.to(self.device))
             embeds.scatter_add_(
                 1,
-                tokens_pos.unsqueeze(-1).expand(-1, -1, token_embeds.shape[-1]).to(tokens.device),
+                tokens_pos.unsqueeze(-1).expand(-1, -1, token_embeds.shape[-1]).to(self.device),
                 token_embeds,
             )
 
@@ -96,15 +106,23 @@ class LlamaMultimodalModel(LlamaForCausalLM):
 
             # (1, 2, 7, 7, 3, 32, 32)
             # (2, 7, 7, 3, 32, 32)
-            image = patches.squeeze(0)
+            # print(f"image: {patches.shape}")
+            # image = patches.squeeze(0) # for prompts with many images
+            image = patches.squeeze(1) # for "batches" of prompts
             # (2, 7, 3, 224, 32)
+            # print(f"image: {image.shape}")
             image = torch.cat(
                 list(map(lambda t: t.squeeze(1), torch.split(image, 1, dim=1))), dim=3
             )
+            # print(f"image: {image.shape}")
             # (2, 3, 224, 224)
             image = torch.cat(
                 list(map(lambda t: t.squeeze(1), torch.split(image, 1, dim=1))), dim=3
             )
+            # print(f"image: {image.shape}")
+            # image = torch.cat(
+            #     list(map(lambda t: t.squeeze(1), torch.split(image, 1, dim=1))), dim=3
+            # )
 
             # print(images.pixel_values.shape)
             # outputs = model.vision_model(**images)
@@ -112,14 +130,15 @@ class LlamaMultimodalModel(LlamaForCausalLM):
             # print(last_hidden_state.shape)
 
             # image = torch.zeros(size=image.shape)[1:]
-            # print(f"image: {image.shape}")
-            embed = clip_vision_model.vision_model(pixel_values=image)
+            embed = self.clip_vision_model.vision_model(pixel_values=image)
             embed = embed.last_hidden_state[:, :-1, :]
+            # print("embeds", embeds.shape)
 
             patch_embeds: torch.FloatTensor = self.image_projection(embed)
-            patch_embeds = patch_embeds.reshape(-1, patch_embeds.shape[-1]).unsqueeze(0)
+            # print("patch embeds: ", patch_embeds.shape)
+            # patch_embeds = patch_embeds.reshape(-1, patch_embeds.shape[-1]).unsqueeze(0)
 
-            # print("embeds", embeds.shape)
+            # print("patch embeds: ", patch_embeds.shape)
             # print("ppp", patches_pos.unsqueeze(-1).expand(-1, -1, patch_embeds.shape[-1]).shape)
 
             embeds.scatter_add_(
@@ -165,8 +184,6 @@ class ImageTokenizer:
         ).pixel_values.squeeze(0)
         # print("clip_processed_img: ", clip_processed_img.shape)
         # print("clip_processed_img: ", clip_processed_img[:3, :3, :3])
-
-        # torch.Size([2, 49, 3072])
 
         C, H, W = image.shape
 
@@ -331,7 +348,7 @@ class MultimodalTokenizer:
 
         raise ValueError(f"Unknown type: {type(item)}")
 
-    def encode(self, data: List[List[ItemType]], include_labels=False):
+    def encode(self, data: List[List[ItemType]], include_labels=False, context_size=None):
         inputs: List[MultimodalInput] = []
 
         for row in data:
@@ -351,12 +368,15 @@ class MultimodalTokenizer:
 
         # Prepare the input tensors
         n_ctx = max(i.ctx for i in inputs)
+        if isinstance(context_size, int):
+            assert context_size >= n_ctx
+            n_ctx = context_size
         max_tokens = max(len(i.tokens) for i in inputs)
         # print((clip_vision_model.config.image_size / clip_vision_model.config.patch_size) ** 2)
         max_patches = max(
             sum(
                 int(
-                    (clip_vision_model.config.image_size / clip_vision_model.config.patch_size) ** 2
+                    (clip_config.image_size / clip_config.patch_size) ** 2
                 )
                 for p in i.patches
             )

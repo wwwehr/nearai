@@ -9,6 +9,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from tqdm import tqdm
 
 import jasnah
+import jasnah.dataset
 import jasnah.model
 
 from .multimodal import AutoTokenizer, ImageDescription, ImageTokenizer, LlamaMultimodalModel, MultimodalTokenizer
@@ -87,7 +88,7 @@ def main():
     image_tokenizer = ImageTokenizer()
     tokenizer = MultimodalTokenizer(text_tokenizer, image_tokenizer)
 
-    dataset_path = "/home/setup/.jasnah/registry/datasets/ncimages_ru/raw/v0/processed/descriptions"
+    dataset_path = jasnah.dataset.get_dataset("ncimages_ru")
     ds = datasets.Dataset.load_from_disk(dataset_path)
 
     split = ds.train_test_split(test_size=0.1, seed=SEED)

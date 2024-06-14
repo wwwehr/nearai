@@ -16,13 +16,14 @@ from .multimodal import AutoTokenizer, ImageDescription, ImageTokenizer, LlamaMu
 
 TOTAL_RANKS = int(os.getenv("WORLD_SIZE"))
 LOCAL_RANK = int(os.getenv("LOCAL_RANK"))
+RANK = int(os.getenv("RANK"))
 
 CHECKPOINT_START = 1000
 CHECKPOINT_INC = 2
 CHECKPOINT_TOP = 180000
 STATS_EVERY = 500
 
-if LOCAL_RANK == 0:
+if RANK == 0:
     timestamp = jasnah.timestamp()
     writer = SummaryWriter(f"logdir/{timestamp}")
 
@@ -30,7 +31,7 @@ SEED = 42
 
 
 def log(name, value, step):
-    if LOCAL_RANK == 0:
+    if RANK == 0:
         # print(f"{step}: {name} = {value}")
         writer.add_scalar(name, value, step)
 
@@ -60,7 +61,7 @@ def summary(model: torch.nn.Module, print_params=True):
 
 
 def checkpoint(model: LlamaMultimodalModel, samples: int):
-    if LOCAL_RANK != 0:
+    if RANK != 0:
         return
 
     folder = Path("checkpoints") / timestamp
@@ -70,7 +71,6 @@ def checkpoint(model: LlamaMultimodalModel, samples: int):
 
 
 def main():
-
     device = torch.device("cuda", LOCAL_RANK)
 
     model_path = jasnah.model.get_model("llama-3-8b-instruct")
@@ -88,16 +88,15 @@ def main():
     image_tokenizer = ImageTokenizer()
     tokenizer = MultimodalTokenizer(text_tokenizer, image_tokenizer)
 
-    dataset_path = jasnah.dataset.get_dataset("ncimages_ru") / 'descriptions'
+    dataset_path = jasnah.dataset.get_dataset("ncimages_ru") / "descriptions"
     ds = datasets.DatasetDict.load_from_disk(str(dataset_path))
-    train_ds = ds['train']
+    train_ds = ds["train"]
 
     EPOCHS = 1
-    BATCH_SIZE = 8 * 4
 
-    assert BATCH_SIZE % TOTAL_RANKS == 0
+    BATCH_SIZE_PER_RANK = 4
+    BATCH_SIZE = BATCH_SIZE_PER_RANK * TOTAL_RANKS
 
-    BATCH_SIZE_PER_RANK = BATCH_SIZE // TOTAL_RANKS
     pbar = tqdm(total=len(train_ds) * EPOCHS)
 
     n = len(train_ds)
@@ -108,7 +107,7 @@ def main():
 
     for epoch in range(EPOCHS):
         for batch_id in range(0, n, BATCH_SIZE):
-            batch_from = batch_id + BATCH_SIZE_PER_RANK * LOCAL_RANK
+            batch_from = batch_id + BATCH_SIZE_PER_RANK * RANK
             batch_to = batch_from + BATCH_SIZE_PER_RANK
 
             sequences = []

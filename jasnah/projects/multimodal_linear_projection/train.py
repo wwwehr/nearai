@@ -88,12 +88,9 @@ def main():
     image_tokenizer = ImageTokenizer()
     tokenizer = MultimodalTokenizer(text_tokenizer, image_tokenizer)
 
-    dataset_path = jasnah.dataset.get_dataset("ncimages_ru")
-    ds = datasets.Dataset.load_from_disk(dataset_path)
-
-    split = ds.train_test_split(test_size=0.1, seed=SEED)
-    train_ds = split["train"]
-    test_ds = split["test"]
+    dataset_path = jasnah.dataset.get_dataset("ncimages_ru") / 'descriptions'
+    ds = datasets.DatasetDict.load_from_disk(str(dataset_path))
+    train_ds = ds['train']
 
     EPOCHS = 1
     BATCH_SIZE = 8 * 4

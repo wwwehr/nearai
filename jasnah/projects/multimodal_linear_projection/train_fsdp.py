@@ -31,7 +31,7 @@ CHECKPOINT_INC = 2
 CHECKPOINT_TOP = 180000
 STATS_EVERY = 500
 
-if RANK == 0:
+if LOCAL_RANK == 0:
     timestamp = jasnah.timestamp()
     writer = SummaryWriter(f"logdir/{timestamp}")
 

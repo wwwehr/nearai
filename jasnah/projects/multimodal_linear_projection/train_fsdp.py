@@ -13,7 +13,7 @@ from torch.distributed.fsdp import ShardingStrategy
 from torch.distributed.fsdp.wrap import size_based_auto_wrap_policy, transformer_auto_wrap_policy
 from torch.nn.parallel import DistributedDataParallel as DDP
 from tqdm import tqdm
-from transformers.models.llama.modeling_llama import LlamaDecoderLayer
+from transformers.models.llama.modeling_llama import LlamaConfig, LlamaDecoderLayer
 
 import jasnah
 import jasnah.dataset
@@ -40,6 +40,9 @@ SEED = 42
 
 def log(name, value, step):
     if RANK == 0:
+        if isinstance(value, torch.Tensor) and value.dtype == torch.bfloat16:
+            value = value.to(torch.float32)
+
         # print(f"{step}: {name} = {value}")
         writer.add_scalar(name, value, step)
 
@@ -114,9 +117,17 @@ def main():
     assert TOTAL_RANKS % LOCAL_WORLD_SIZE == 0
     device_mesh = init_device_mesh("cuda", (TOTAL_RANKS // LOCAL_WORLD_SIZE, LOCAL_WORLD_SIZE))
 
-    model_path = jasnah.model.get_model("llama-3-8b-instruct")
-    model = LlamaMultimodalModel.from_pretrained(model_path)
+    model_path = jasnah.model.get_model("llama-3-70b-instruct")
 
+    if LOCAL_RANK == 0:
+        model = LlamaMultimodalModel.from_pretrained(model_path)
+    else:
+        llama_config = LlamaConfig.from_pretrained(model_path)
+        llama_config.use_cache = False
+        with torch.device("meta"):
+            model = LlamaMultimodalModel(llama_config)
+
+    model.to(torch.bfloat16)
     model.train()
     model.freeze_lang_model()
 
@@ -125,6 +136,10 @@ def main():
         print("Number of parameters (before FSDP)")
         summary(model, print_params=False)
 
+    else:
+        model.image_projection.to_empty(device=device)
+        model.image_projection.reset_parameters()
+
     model = FSDP(
         model,
         auto_wrap_policy=my_policy(),
@@ -132,9 +147,12 @@ def main():
         sharding_strategy=ShardingStrategy.HYBRID_SHARD,
         device_id=LOCAL_RANK,
         device_mesh=device_mesh,
+        sync_module_states=True,
+        param_init_fn=lambda module: module.to_empty(device=device, recurse=False) if LOCAL_RANK != 0 else None,
     )
 
-    model.to(device)
+    if LOCAL_RANK == 0:
+        model.to(device)
 
     if LOCAL_RANK == 0:
         print()
@@ -187,6 +205,7 @@ def main():
                 continue
 
             # TODO: Can we avoid reallocating input tensors every time?
+            model_input["patches"] = model_input["patches"].to(torch.bfloat16)
             model_input = {key: value.to(device) if key != "n_ctx" else value for key, value in model_input.items()}
 
             labels: torch.Tensor = model_input.pop("labels")

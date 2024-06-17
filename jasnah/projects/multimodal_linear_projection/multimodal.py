@@ -38,7 +38,7 @@ class LlamaMultimodalModel(LlamaForCausalLM):
     ):
         batch_size = tokens.shape[0]
 
-        embeds = torch.zeros((batch_size, n_ctx + 1, self.config.hidden_size), device=self.device)
+        embeds = torch.zeros((batch_size, n_ctx + 1, self.config.hidden_size), device=self.device, dtype=torch.bfloat16)
 
         if tokens_pos.numel() != 0:
             token_embeds: torch.FloatTensor = self.model.embed_tokens(tokens)

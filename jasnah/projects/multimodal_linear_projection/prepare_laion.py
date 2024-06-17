@@ -9,12 +9,15 @@ from pathlib import Path
 from typing import Iterator, List, Tuple
 
 import httpx
-from PIL import Image
+from PIL import Image, PngImagePlugin
 from tqdm import tqdm
 
 import datasets
 import jasnah
 import jasnah.dataset
+
+LARGE_ENOUGH_NUMBER = 100
+PngImagePlugin.MAX_TEXT_CHUNK = LARGE_ENOUGH_NUMBER * (1024**2)
 
 warnings.filterwarnings("ignore")
 
@@ -29,13 +32,23 @@ headers = {
 def fetch_image(datum):
     try:
         with httpx.Client() as client:
-            response = client.get(datum["URL"], timeout=3, headers=headers, follow_redirects=True)
+            response = client.get(datum["URL"], timeout=5, headers=headers, follow_redirects=True)
             response.raise_for_status()
             image = Image.open(io.BytesIO(response.content)).convert("RGB")
-            ## sanity checks on size
+
+            ## sanity checks on size / format
+            assert image.mode == "RGB"
             assert image.height > 10
             assert image.width > 10
-            return (image, datum)
+            assert image.height < 4096
+            assert image.width < 4096
+
+            ## Catch any zip bombs
+            img_bytes = io.BytesIO()
+            image.save(img_bytes, format="PNG")
+            loaded_image = Image.open(img_bytes)
+
+            return (loaded_image, datum)
     except Exception as e:
         return None
 
@@ -91,7 +104,7 @@ def chunkify(n, num_chunks):
 def main():
     SUFFIX = ""
 
-    n = 1_000_000
+    n = 3_000_000
     path = jasnah.dataset.get_dataset("laion400m_metadata")
     ds = jasnah.dataset.load_dataset("laion400m_metadata")
 

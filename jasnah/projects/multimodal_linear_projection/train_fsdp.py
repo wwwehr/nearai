@@ -113,6 +113,7 @@ def my_policy():
 
 def main():
     device = torch.device("cuda", LOCAL_RANK)
+    torch.cuda.set_device(device)
 
     assert TOTAL_RANKS % LOCAL_WORLD_SIZE == 0
     device_mesh = init_device_mesh("cuda", (TOTAL_RANKS // LOCAL_WORLD_SIZE, LOCAL_WORLD_SIZE))
@@ -140,10 +141,14 @@ def main():
 
     else:
         model.image_projection.to_empty(device=device)
-        model.image_projection.reset_parameters()
+
+    model.image_projection.reset_parameters()
 
     dist.all_reduce(model.image_projection.weight.data, op=dist.ReduceOp.AVG)
     dist.all_reduce(model.image_projection.bias.data, op=dist.ReduceOp.AVG)
+
+    if LOCAL_RANK == 0:
+        print("Image projection weights and biases synchronized")
 
     model = FSDP(
         model,

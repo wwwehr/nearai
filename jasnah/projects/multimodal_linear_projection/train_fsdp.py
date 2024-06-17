@@ -39,7 +39,7 @@ SEED = 42
 
 
 def log(name, value, step):
-    if RANK == 0:
+    if LOCAL_RANK == 0:
         if isinstance(value, torch.Tensor) and value.dtype == torch.bfloat16:
             value = value.to(torch.float32)
 
@@ -118,7 +118,7 @@ def main():
     assert TOTAL_RANKS % LOCAL_WORLD_SIZE == 0
     device_mesh = init_device_mesh("cuda", (TOTAL_RANKS // LOCAL_WORLD_SIZE, LOCAL_WORLD_SIZE))
 
-    model_path = jasnah.model.get_model("llama-3-70b-instruct")
+    model_path = jasnah.model.get_model("llama-3-8b-instruct")
 
     if LOCAL_RANK == 0:
         model = LlamaMultimodalModel.from_pretrained(model_path)
@@ -233,9 +233,9 @@ def main():
             log("loss", loss.item(), batch_id)
             pbar.update(BATCH_SIZE)
 
-            if batch_id > next_stat:
-                print_stats(model.module, batch_id)
-                next_stat = batch_id + STATS_EVERY
+            # if batch_id > next_stat:
+            #     print_stats(model.module, batch_id)
+            #     next_stat = batch_id + STATS_EVERY
 
             if batch_id > next_checkpoint:
                 checkpoint(model.module, batch_id)

@@ -1,6 +1,7 @@
 import functools
 import os
 import subprocess as sp
+from functools import partial
 from pathlib import Path
 
 import datasets
@@ -111,6 +112,19 @@ def my_policy():
     )
 
 
+def my_policy_2(module: torch.nn.Module, recurse: bool, nonwrapped_numel: int, transformer_module):
+    if recurse:
+        return True
+
+    if isinstance(module, LlamaDecoderLayer):
+        return True
+
+    if module == transformer_module:
+        return True
+
+    return False
+
+
 def main():
     device = torch.device("cuda", LOCAL_RANK)
     torch.cuda.set_device(device)
@@ -152,7 +166,7 @@ def main():
 
     model = FSDP(
         model,
-        auto_wrap_policy=my_policy(),
+        auto_wrap_policy=partial(my_policy_2, transformer_module=model.image_projection),
         ignored_modules=[model.image_projection],
         sharding_strategy=ShardingStrategy.HYBRID_SHARD,
         device_id=LOCAL_RANK,

@@ -136,9 +136,14 @@ def main():
         print("Number of parameters (before FSDP)")
         summary(model, print_params=False)
 
+        model.image_projection.to(device)
+
     else:
         model.image_projection.to_empty(device=device)
         model.image_projection.reset_parameters()
+
+    dist.all_reduce(model.image_projection.weight.data, op=dist.ReduceOp.AVG)
+    dist.all_reduce(model.image_projection.bias.data, op=dist.ReduceOp.AVG)
 
     model = FSDP(
         model,
@@ -150,9 +155,6 @@ def main():
         sync_module_states=True,
         param_init_fn=lambda module: module.to_empty(device=device, recurse=False) if LOCAL_RANK != 0 else None,
     )
-
-    if LOCAL_RANK == 0:
-        model.to(device)
 
     if LOCAL_RANK == 0:
         print()

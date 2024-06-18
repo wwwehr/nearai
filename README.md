@@ -5,7 +5,7 @@
 First install jasnah-cli by running:
 
 ```
-git clone git@github.com:nearai/jasnah-cli.git
+git clone --recurse-submodules git@github.com:nearai/jasnah-cli.git
 cd jasnah-cli
 python3 -m pip install -e .
 pip install openai

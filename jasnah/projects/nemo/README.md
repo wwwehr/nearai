@@ -2,17 +2,7 @@
 
 ## Setup
 
-It is recommended to use a Docker container `nvcr.io/nvidia/nemo:24.05`
-
-### Download Apex for use in Docker
-
-```
-mkdir ~/.jasnah/nemo_dependencies
-cd ~/.jasnah/nemo_dependencies
-git clone https://github.com/NVIDIA/apex
-cd apex
-git checkout $810ffae374a2b9cb4b5c5e28eaeca7d7998fca0c
-```
+It is recommended to use a Docker container `nvcr.io/nvidia/nemo:24.05` which comes with all the setup environment.
 
 ### Troubleshooting
 
@@ -21,6 +11,33 @@ git checkout $810ffae374a2b9cb4b5c5e28eaeca7d7998fca0c
 ```
 git submodule init
 git submodule update
+```
+
+#### Apex errors
+
+https://github.com/NVIDIA/apex/issues/1803
+
+Download Apex for use in Docker
+```
+mkdir ~/.jasnah/nemo_dependencies
+cd ~/.jasnah/nemo_dependencies
+sudo git clone https://github.com/NVIDIA/apex
+cd apex
+sudo git checkout 810ffae374a2b9cb4b5c5e28eaeca7d7998fca0c
+```
+
+Add Apex installation to docker runs:
+```
+APEX_INSTALL="cd /root/.jasnah/nemo_dependencies/apex && pip install . -v --no-build-isolation --disable-pip-version-check --no-cache-dir --config-settings \"--build-option=--cpp_ext --cuda_ext --fast_layer_norm --distributed_adam --deprecated_fused_adam --group_norm\""
+
+sudo docker run --gpus all --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 --rm -it \
+    -v $(pwd)/third_party/NeMo:/NeMo \
+    -v ~/.jasnah/checkpoints:/root/.jasnah/checkpoints \
+    -v ~/.jasnah/registry/models:/root/.jasnah/registry/models \
+    -v ~/.jasnah/registry/datasets:/root/.jasnah/registry/datasets \
+    -v ~/.jasnah/nemo_dependencies:/root/.jasnah/nemo_dependencies \
+    nvcr.io/nvidia/nemo:24.05 \
+    /bin/bash -c "$APEX_INSTALL && $CMD"
 ```
 
 ## NeMo functions
@@ -35,37 +52,12 @@ The expected format is a JSONL file with {‘input’: ‘xxx’, ‘output’: 
 
 ### Convert model to .nemo
 
-[convert_llama_to_nemo.sh] converts llama huggingface models to `.nemo` models.
+[convert_llama_to_nemo.sh](convert_llama_to_nemo.sh) converts llama huggingface models to `.nemo` models.
 
 ### Training / Finetuning
 
-[gpt2_one_machine_train.sh](gpt2_one_machine_train.sh) is an example script to start or continue training on one machine.
+[llama_one_machine_finetune.sh](llama_one_machine_finetune.sh) is an example script to start or continue training on one machine.
 
-The `third_party/Megatron-LM/examples/pretrain_{bert,gpt,t5}_distributed.sh` scripts use the PyTorch distributed launcher for distributed training.
+### Evaluation
 
-`third_party/Megatron-LM/examples/pretrain_gpt3_175B.sh` is an example of how to configure Megatron to run GPT-3 with 175 billion parameters on 1024 GPUs.
-
-### Finetuning
-
-Finetuning in Megatron is the same process as pretraining. The `--finetune` arg is used to reset training parameters and start finetuning. [gpt2_one_machine_finetune.sh](gpt2_one_machine_finetune.sh) is an example script to start finetuning on one machine.
-
-### Change parameters of the model (for inference)
-
-To change parameters of the model:
-
-```
-python tools/checkpoint/convert.py \
-        --model-type GPT \
-        --load-dir checkpoints/gpt3_tp4_pp4 \
-        --save-dir checkpoints/gpt3_tp2_pp2 \
-        --target-tensor-parallel-size 2 \
-        --target-pipeline-parallel-size 2
-```
-
-### Megatron Inference Server
-
-[inference_server.sh](inference_server.sh) contains a script to run a server using a model in checkpoints folder, and an example prompt.
-
-### Megatron Evaluation Scripts
-
-[lambada_evaluation.sh](lambada_evaluation.sh)
+TODO

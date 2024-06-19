@@ -11,9 +11,6 @@ from jasnah.db import DisplayRegistry, db
 
 
 def upload_file(s3_client, s3_path: str, local_path: Path):
-    if not s3_path.endswith("/"):
-        s3_path += "/"
-
     assert local_path.is_file()
     assert local_path.exists()
 

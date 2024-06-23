@@ -14,7 +14,7 @@ from multimodal_clip import (
     LlamaMultimodalModel,
     MultimodalTokenizer,
 )
-from PIL import Image
+from PIL import Image, PngImagePlugin
 from tensorboardX import SummaryWriter
 from torch.nn.parallel import DistributedDataParallel as DDP
 from tqdm import tqdm
@@ -23,21 +23,19 @@ import datasets
 import jasnah
 import jasnah.model
 
-client = httpx.Client(follow_redirects=True)
-
-
+PngImagePlugin.MAX_TEXT_CHUNK = 100 * (1024**2)
 TOTAL_RANKS = int(os.getenv("WORLD_SIZE"))
 LOCAL_RANK = int(os.getenv("LOCAL_RANK"))
-print(f"LOCAL_RANK: {LOCAL_RANK}, TOTAL_RANKS: {TOTAL_RANKS}")
+print(f"LOCAL_RANK: {LOCAL_RANK} / {TOTAL_RANKS}")
 
 CHECKPOINT_START = 1000
 CHECKPOINT_INC = 2
 CHECKPOINT_TOP = 180000
 CHECKPOINT_EVERY = 2000
-STATS_EVERY = 100
+STATS_EVERY = 500
 
 timestamp = jasnah.timestamp()
-writer_path = f"logdir/devrun_2"
+writer_path = f"logdir/devrun_1_russian"
 if LOCAL_RANK == 0:
     writer = SummaryWriter(writer_path)
 
@@ -46,6 +44,9 @@ SEED = 42
 
 def log(name, value, step):
     if LOCAL_RANK == 0:
+        if isinstance(value, torch.Tensor) and value.dtype == torch.bfloat16:
+            value = value.to(torch.float32)
+
         # print(f"{step}: {name} = {value}")
         writer.add_scalar(name, value, step)
 
@@ -90,24 +91,14 @@ def load_checkpoint(model: LlamaMultimodalModel):
     checkpoints = folder.glob("model_*.pt")
     checkpoints = sorted(checkpoints, key=lambda x: int(x.stem.split("_")[1]))
     latest_checkpoint = checkpoints[-1] if checkpoints else None
-    assert latest_checkpoint, "No checkpoints found"
+    try:
+        assert latest_checkpoint, "No checkpoints found"
+    except AssertionError as e:
+        print(e)
+        return 0
     model.load_projection(latest_checkpoint)
     print("Loaded checkpoint", latest_checkpoint)
     return int(latest_checkpoint.stem.split("_")[1])
-
-
-def get_image(datum):
-    try:
-        response = client.get(datum["URL"], timeout=3)
-        response.raise_for_status()
-        image = Image.open(io.BytesIO(response.content)).convert("RGB")
-        ## sanity checks on size
-        assert image.height > 10
-        assert image.width > 10
-        return image
-    except Exception as e:
-        print(f"Failed to download image {datum['URL']}: {e}")
-        return None
 
 
 def main():
@@ -116,10 +107,11 @@ def main():
 
     model_path = jasnah.model.get_model("llama-3-8b-instruct")
     model = LlamaMultimodalModel.from_pretrained(model_path).to(device)
+    model.init_clip(device)
 
     init_batch = load_checkpoint(model)
-    # init_batches = 0
 
+    model.to(torch.bfloat16)
     model.train()
     model.freeze_lang_model()
     summary(model)
@@ -132,20 +124,18 @@ def main():
     image_tokenizer = ImageTokenizer()
     tokenizer = MultimodalTokenizer(text_tokenizer, image_tokenizer)
 
-    # dataset_path = "/home/setup/.jasnah/registry/datasets/ncimages_ru/raw/v0/processed/descriptions"
+    dataset_path = "/home/user/.jasnah/datasets/ncimages_ru/raw/v0/processed/descriptions"
+    ds = datasets.Dataset.load_from_disk(dataset_path)
+    # dataset_path = "~/.jasnah/datasets/laion400m_metadata/processed/descriptions"
     # ds = datasets.Dataset.load_from_disk(dataset_path)
-    df = pd.read_parquet(
-        "/workspace/laion400m-meta/part-00000-5b54c5d5-bbcf-484d-a2ce-0d6f73df1a36-c000.snappy.parquet"
-    )
-    ds = datasets.Dataset.from_pandas(df)
 
-    split = ds.train_test_split(test_size=0.1, seed=SEED)
+    split = ds.train_test_split(test_size=0.01, seed=SEED)
     train_ds = split["train"]
     test_ds = split["test"]
 
     EPOCHS = 1
-    BATCH_SIZE = 4 * 6
-
+    BATCH_SIZE_PER_RANK = 4
+    BATCH_SIZE = BATCH_SIZE_PER_RANK * TOTAL_RANKS
     assert BATCH_SIZE % TOTAL_RANKS == 0
 
     BATCH_SIZE_PER_RANK = BATCH_SIZE // TOTAL_RANKS
@@ -157,44 +147,32 @@ def main():
     next_checkpoint = init_batch
     next_stat = 0
 
+    print("Starting training from batch ", init_batch)
     for epoch in range(EPOCHS):
         for batch_id in range(init_batch, n, BATCH_SIZE):
             batch_from = batch_id + BATCH_SIZE_PER_RANK * LOCAL_RANK
             batch_to = batch_from + BATCH_SIZE_PER_RANK
 
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                # run get_image in a separate thread for batch
-                futures = [
-                    executor.submit(get_image, train_ds[batch_id + i])
-                    for i in range(batch_from, batch_to)
-                ]
-                images = [future.result() for future in futures]
-
             sequences = []
             # TODO: Can we implement prefetching?
-            for i, img in zip(range(batch_from, batch_to), images):
+            for i in range(batch_from, batch_to):
                 x = train_ds[batch_id + i]
-                if img is None or x["TEXT"] is None or x["TEXT"] == "":
-                    continue
                 sequences.append(
                     [
-                        "Please describe the following image:\n\n",
-                        ImageDescription(pil_image=img),
-                        x["TEXT"],
+                        "Опишите следующую картинку",
+                        ImageDescription(pil_image=x["image"].convert("RGB")),
+                        x["description"],
                     ]
                 )
-            if not sequences:
-                continue
 
             # sequences = []
-            # # TODO: Can we implement prefetching?
             # for i in range(batch_from, batch_to):
             #     x = train_ds[batch_id + i]
             #     sequences.append(
             #         [
-            #             "Опишите следующую картинку",
-            #             ImageDescription(pil_image=x["image"]),
-            #             x["description"],
+            #             "Please describe the following image:\n\n",
+            #             ImageDescription(pil_image=x["image"].convert("RGB")),
+            #             str(x["description"]),
             #         ]
             #     )
 
@@ -205,6 +183,7 @@ def main():
                 continue
 
             # TODO: Can we avoid reallocating input tensors every time?
+            model_input["patches"] = model_input["patches"].to(torch.bfloat16)
             model_input = {
                 key: value.to(device) if key != "n_ctx" else value
                 for key, value in model_input.items()

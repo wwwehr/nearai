@@ -78,7 +78,12 @@ class ImageDescription:
 class ImageTokenizer:
     def encode(self, image_d: ImageDescription) -> torch.FloatTensor:
         pil_image = image_d.load()
-        pil_image = pil_image.resize((pil_image.width // 4, pil_image.height // 4))
+
+        if pil_image.width > 256 or pil_image.height > 256:
+            factor = 256 / max(pil_image.width, pil_image.height)
+            n_width = min(max(int(pil_image.width * factor), 1), 256)
+            n_height = min(max(int(pil_image.height * factor), 1), 256)
+            pil_image = pil_image.resize((n_width, n_height))
 
         image = torch.tensor(np.array(pil_image, dtype=np.float32) / 255.0)
 
@@ -93,12 +98,13 @@ class ImageTokenizer:
 
         C, H, W = image.shape
 
+        assert C == 3
+
         # Calculate required padding
         pad_height = (PATCH_SIZE - H % PATCH_SIZE) % PATCH_SIZE
         pad_width = (PATCH_SIZE - W % PATCH_SIZE) % PATCH_SIZE
 
-        # Pad the image
-        # Here padding is applied symmetrically, but you can adjust it as needed
+        # Pad the image symmetrically
         padded_image = F.pad(
             image,
             (

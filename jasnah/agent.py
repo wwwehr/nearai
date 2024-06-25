@@ -16,7 +16,7 @@ class Agent(object):
 
     def from_disk(path: str) -> 'Agent':
         """Path must contain alias and version.
-        
+
         .../agents/<alias>/<version>/agent.py
         """
         parts = path.split('/')
@@ -32,7 +32,7 @@ class Agent(object):
         def print_messages(last_message_idx):
             messages = env.list_messages()
             for item in messages[last_message_idx:]:
-                print(f'[{item['role']}]: {item['content']}')
+                print(f"[{item['role']}]: {item['content']}")
             return len(messages)
         last_message_idx = print_messages(last_message_idx)
         while True:

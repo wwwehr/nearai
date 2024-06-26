@@ -51,7 +51,10 @@ def run_experiment_inner(experiment: Experiment, supervisors: List[Supervisor]):
 
     assigned_supervisors = ",".join(s.id for s in supervisors)
     env = os.environ.copy()
+
     env["ASSIGNED_SUPERVISORS"] = assigned_supervisors
+    env["SUPERVISOR_ID"] = SUPERVISOR_ID
+    env["EXPERIMENT_ID"] = experiment.id
 
     command = shlex.split(experiment.command)
     run(command, cwd=repository_path, env=env)

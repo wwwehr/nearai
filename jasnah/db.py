@@ -448,7 +448,7 @@ class DB:
 
     @check_renamed_table
     def get_registry_entry_by_path(self, path: str, version = None) -> Optional[RegistryEntry]:
-        assert version != None, "Can not select version when path provided"
+        assert version == None, "Can not select version when path provided"
         with self.connection.cursor() as cursor:
             cursor.execute(f"SELECT * FROM {REGISTRY_TABLE} WHERE path=%s ORDER BY {REGISTRY_TABLE}.id DESC LIMIT 1", (path,))
             result = cursor.fetchone()

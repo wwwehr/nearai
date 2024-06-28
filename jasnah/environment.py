@@ -104,7 +104,7 @@ class Environment(object):
         def print_messages(last_message_idx):
             messages = self.list_messages()
             for item in messages[last_message_idx:]:
-                print(f'[{item['role']}]: {item['content']}')
+                print(f"[{item['role']}]: {item['content']}")
             return len(messages)
         last_message_idx = print_messages(last_message_idx)
         while True:

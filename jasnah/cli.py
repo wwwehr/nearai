@@ -319,11 +319,11 @@ class EnvironmentCli:
         env = Environment(path, _agents, CONFIG.llm_config)
         env.run_task(task)
 
-    def run(self, agents: str):
+    def run(self, agents: str, task: str, path: str):
         """Runs agent in the current environment."""
         _agents = [load_agent(agent) for agent in agents.split(',')]
-        # TODO: Setup server that 
-        
+        env = Environment(path, [], CONFIG.llm_config)
+        # TODO: Setup server that will allow to interact with agents and environment
 
 
 class CLI:

@@ -147,8 +147,8 @@ class Environment(object):
             with open(next_action_fn) as f:
                 next_action = f.read().strip(' \n')
         else:
-            # By default the agent starts the conversation. To introduce itself.
-            next_action = 'agent'
+            # By default the user starts the conversation.
+            next_action = 'user'
 
         start_on_user = next_action == 'user'
 

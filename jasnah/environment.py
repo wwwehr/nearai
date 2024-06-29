@@ -160,7 +160,6 @@ class Environment(object):
         # we store in workspace/.next_action which one should start next between user and agent.
         while True:
             if not start_on_user:
-                start_on_user = False
                 with open(next_action_fn, 'w') as f:
                     f.write('agent')
 
@@ -169,6 +168,7 @@ class Environment(object):
                 last_message_idx = print_messages(last_message_idx)
                 if self.is_done(): break
 
+            start_on_user = False
             with open(next_action_fn, 'w') as f:
                 f.write('user')
 

@@ -28,12 +28,12 @@ class InferenceRouter(object):
             assert 'providers' in self._config and provider_name in self._config['providers'], f'Provider {provider_name} not found in config.'
             provider_config = self._config['providers'][provider_name]
             self._endpoints[provider_name] = lambda model, messages, stream: litellm_completion(
-                model, messages, stream=stream, 
+                model, messages, stream=stream,
                 # TODO: move this to config
                 custom_llm_provider='antropic' if 'antropic' in provider_config['base_url'] else 'openai',
                 input_cost_per_token=0,
                 output_cost_per_token=0,
-                base_url=provider_config['base_url'], 
+                base_url=provider_config['base_url'],
                 api_key=provider_config['api_key'] if provider_config['api_key'] else 'not-needed')
         return self._endpoints[provider_name](model=model_path, messages=messages, stream=stream)
 
@@ -103,7 +103,7 @@ class Environment(object):
             return ''
         with open(os.path.join(self._path, filename), 'r') as f:
             return f.read()
-        
+
     def write_file(self, filename: str, content: str):
         with open(os.path.join(self._path, filename), 'w') as f:
             f.write(content)

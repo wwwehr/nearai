@@ -90,6 +90,7 @@ class Environment(object):
             process.kill()
 
         timer = threading.Timer(2, on_timeout, (process, ))
+        timer.start()
         process.wait()
         timer.cancel()
 
@@ -176,7 +177,7 @@ class Environment(object):
             if new_message == 'exit': break
             self.add_message('user', new_message)
 
-    def run_task(self, task: str, max_iterations: int = 10):
+    def run_task(self, task: str, max_iterations: int = 1):
         """Runs a task within the given environment."""
         iteration = 0
         self.add_message('user', task)

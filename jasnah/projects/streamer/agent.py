@@ -2,7 +2,7 @@ import litellm
 
 class StreamerAgent(object):
 
-    def run_agent(env, task):
+    def run(self, env, task):
         print(f"Running task: {task}")
 
         history = []

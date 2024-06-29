@@ -26,12 +26,13 @@ class Agent(object):
             return Agent(parts[-2], parts[-1], f.read())
 
     def run(self, env: Environment, task: Optional[str] = None):
-        exec(self.code, globals(), {"env": env, "agent": self, "task": task})
+        d = {"env": env, "agent": self, "task": task}
+        exec(self.code, d, d)
 
 
 def load_agent(alias_or_name: str) -> Agent:
     if alias_or_name == 'streamer':
-        from jasnah.projects.streamer.agent import Agent as StreamerAgent
+        from jasnah.projects.streamer.agent import StreamerAgent
         return StreamerAgent()
     path = agent.download(alias_or_name)
     return Agent.from_disk(path.as_posix())

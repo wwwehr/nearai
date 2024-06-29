@@ -5,7 +5,7 @@ import sys
 import select
 import threading
 
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from litellm import completion as litellm_completion
 
@@ -71,7 +71,7 @@ class Environment(object):
         with open(os.path.join(self._path, filename), 'w') as f:
             f.write(content)
 
-    def exec_command(self, command: str) -> str:
+    def exec_command(self, command: str) -> Dict[str, str]:
         """Executes a command in the environment and logs the output."""
         if self._config.get('confirm_commands', True):
             yes_no = input('> Do you want to run the following command? (Y/n): ' + command)
@@ -79,14 +79,16 @@ class Environment(object):
                 return {'command': command, 'returncode': 999, 'stdout': '', 'stderr': 'declined by user'}
 
         process = subprocess.Popen(command.split(' '), stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0, universal_newlines=True)
-        stdout = ''
-        for line in iter(lambda: process.stdout.read(1), b''):
-            if process.poll() is not None:
-                break
-            print(line, end="")
-            stdout += line
-        process.stdout.close()
-        result = {'command': command, 'stdout': stdout, 'stderr': process.stderr.read(), 'returncode': process.returncode}
+
+        def on_timeout(process):
+            """Kill process on timeout and note as status_dict['timeout']=True"""
+            process.kill()
+
+        timer = threading.Timer(2, on_timeout, (process, ))
+        process.wait()
+        timer.cancel()
+
+        result = {'command': command, 'stdout': process.stdout.read(), 'stderr': process.stderr.read(), 'returncode': process.returncode}
         with open(os.path.join(self._path, TERMINAL_FILENAME), 'a') as f:
             f.write(json.dumps(result) + DELIMITER)
         return result

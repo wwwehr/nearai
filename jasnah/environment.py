@@ -7,7 +7,9 @@ import tarfile
 import tempfile
 import threading
 from pathlib import Path
-from typing import Dict, List
+import uuid
+import datetime
+from typing import List, Optional, Dict
 
 import psutil
 
@@ -20,15 +22,21 @@ TERMINAL_FILENAME = 'terminal.txt'
 
 class Environment(object):
 
-    def __init__(self, path: str, agents: List['Agent'], config):
+    def __init__(self, path: str, agents: List['Agent'], config, registry, user_name):
         self._path = path
         self._agents = agents
         self._done = False
         self._config = config
         self._inference = InferenceRouter(config)
+        self._registry = registry
+        self._user_name = user_name
         os.makedirs(self._path, exist_ok=True)
         os.chdir(self._path)
         open(os.path.join(self._path, CHAT_FILENAME), 'a').close()
+
+    @staticmethod
+    def _generate_run_id():
+        return uuid.uuid4().hex
 
     def add_message(self, role: str, message: str, filename: str=CHAT_FILENAME):
         with open(os.path.join(self._path, filename), 'a') as f:
@@ -116,8 +124,8 @@ class Environment(object):
     def mark_done(self):
         self._done = True
 
-    def save(self):
-        """Save Environment to Registry."""
+    def create_snapshot(self):
+        """Create an in memory snapshot"""
         with tempfile.NamedTemporaryFile( suffix='.tar.gz') as f:
             with tarfile.open(fileobj=f, mode='w:gz') as tar:
                 tar.add(self._path, arcname='.')
@@ -126,8 +134,47 @@ class Environment(object):
             snapshot = f.read()
         return snapshot
 
-    def load(self, snapshot: bytes):
-        """Load Environment from Registry."""
+    def save_to_registry(self, run_type: str, run_id: str, base_id: Optional[str|int] = None):
+        """Save Environment to Registry."""
+        agent_name = self._agents[0].name
+
+        with tempfile.NamedTemporaryFile( suffix='.tar.gz') as f:
+            with tarfile.open(fileobj=f, mode='w:gz') as tar:
+                tar.add(self._path, arcname='.')
+            f.flush()
+            f.seek(0)
+            snapshot = f.read()
+            tar_filename = f.name
+
+            author = self._user_name
+            s3_path = f"environments/{run_id}"
+            timestamp = datetime.datetime.now(datetime.UTC).isoformat()
+            name = f"environment_run_{agent_name}_{run_id}"
+            description = f"Agent {run_type} run {agent_name} {run_id} {timestamp}"
+            details={
+                "base_id": base_id,
+                "timestamp": timestamp,
+                "agents": [agent.name for agent in self._agents],
+                "run_id": run_id,
+                "run_type": run_type,
+                "filename": tar_filename,
+            },
+            tags_l = ['environment']
+            registry_id = self._registry.upload(
+                path=Path(tar_filename),
+                s3_path=s3_path,
+                author=author,
+                description=description,
+                name=name,
+                details=details,
+                show_entry=True,
+                tags=tags_l,
+            )
+            print(f'Saved environment {registry_id} to registry. To load use flag `--load-env={registry_id}`. ')
+            return snapshot
+
+    def load_snapshot(self, snapshot: bytes):
+        """Load Environment from Snapshot."""
         shutil.rmtree(self._path, ignore_errors=True)
 
         with tempfile.NamedTemporaryFile(suffix='.tar.gz') as f:
@@ -137,6 +184,16 @@ class Environment(object):
 
             with tarfile.open(fileobj=f, mode='r:gz') as tar:
                 tar.extractall(self._path)
+
+    def load_from_registry(self, load_env):
+        print(f"Loading environment from {load_env} {type(load_env)} to {self._path}")
+        directory = self._registry.download(load_env)
+        files = os.listdir(directory)
+        tarfile_file = next(f for f in files if f.endswith(".tar.gz"))
+
+        with tarfile.open(directory / tarfile_file, 'r') as tar:
+            tar.extractall(self._path)
+        return directory.name
 
     def __str__(self):
         return f'Environment({self._path})'
@@ -150,9 +207,15 @@ class Environment(object):
         with open(next_action_fn, 'w') as f:
             f.write(who)
 
-    def run_interactive(self):
+    def run_interactive(self, record_run: str, load_env: str):
         """Run an interactive session within the given environment."""
+        run_id = self._generate_run_id()
+        if load_env:
+            base_id = self.load_from_registry(load_env)
+        else:
+            base_id = None
         last_message_idx = 0
+
         def print_messages(last_message_idx):
             messages = self.list_messages()
             for item in messages[last_message_idx:]:
@@ -188,10 +251,24 @@ class Environment(object):
 
                 self.set_next_actor('agent')
 
-    def run_task(self, task: str, max_iterations: int = 1):
+        if record_run:
+            self.save_to_registry('interactive', run_id, base_id)
+
+    def run_task(self, task: str, record_run: str, load_env: str, max_iterations: int = 10,):
         """Runs a task within the given environment."""
+        run_id = self._generate_run_id()
+        if load_env:
+            base_id = self.load_from_registry(load_env)
+        else:
+            base_id = None
         iteration = 0
-        self.add_message('user', task)
+
+        if task:
+            self.add_message('user', task)
+
         while iteration < max_iterations and not self.is_done():
             iteration += 1
             self._agents[0].run(self, task=task)
+
+        if record_run:
+            self.save_to_registry('task', run_id, base_id)

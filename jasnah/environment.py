@@ -1,3 +1,4 @@
+import datetime
 import json
 import os
 import shutil
@@ -5,14 +6,15 @@ import subprocess
 import tarfile
 import tempfile
 import threading
-from pathlib import Path
 import uuid
-import datetime
-from typing import List, Optional, Dict
+from pathlib import Path
+from typing import Dict, List, Optional
 
 import psutil
 
 from jasnah.completion import InferenceRouter
+from jasnah.config import CONFIG
+from jasnah.registry import registry
 
 DELIMITER = '\n'
 CHAT_FILENAME = 'chat.txt'
@@ -21,14 +23,13 @@ TERMINAL_FILENAME = 'terminal.txt'
 
 class Environment(object):
 
-    def __init__(self, path: str, agents: List['Agent'], config, registry, user_name: Optional[str] = None):
+    def __init__(self, path: str, agents: List['Agent'], config):
         self._path = path
         self._agents = agents
         self._done = False
         self._config = config
         self._inference = InferenceRouter(config)
-        self._registry = registry
-        self._user_name = user_name
+        self._user_name = CONFIG.user_name
         os.makedirs(self._path, exist_ok=True)
         os.chdir(self._path)
         open(os.path.join(self._path, CHAT_FILENAME), 'a').close()
@@ -164,7 +165,7 @@ class Environment(object):
                 "filename": tar_filename,
             },
             tags_l = ['environment']
-            registry_id = self._registry.upload(
+            registry_id = registry.upload(
                 path=Path(tar_filename),
                 s3_path=s3_path,
                 author=author,
@@ -191,7 +192,7 @@ class Environment(object):
 
     def load_from_registry(self, load_env):
         print(f"Loading environment from {load_env} {type(load_env)} to {self._path}")
-        directory = self._registry.download(load_env)
+        directory = registry.download(load_env)
         files = os.listdir(directory)
         tarfile_file = next(f for f in files if f.endswith(".tar.gz"))
 

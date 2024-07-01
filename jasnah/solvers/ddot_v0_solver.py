@@ -1,4 +1,5 @@
 import asyncio
+import random
 import enum
 from copy import deepcopy
 from datetime import datetime
@@ -127,11 +128,16 @@ class DDOTSV0Solver(SolverStrategy):
     The agent should call env.submit_python(code) to submit the code to the DDOTS server.
 
     """
-    def __init__(self, dataset_ref: Dataset, agents: str, max_iterations: int):
+    def __init__(self, dataset_ref: Dataset, agents: str, max_iterations: int, save_snapshots: bool = False):
         self.agents = [load_agent(agent) for agent in agents.split(",")]
         self.max_iterations = max_iterations
-        self._saved_trajectories = DATA_FOLDER / 'data' / 'ddots_v0_trajectories' / datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+        date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        rnd_id = random.randint(10**8, 10**9-1)
+        self._saved_trajectories = DATA_FOLDER / 'data' / 'ddots_v0_trajectories' / f'{date}_{rnd_id}'
         self._saved_trajectories.mkdir(parents=True, exist_ok=True)
+
+        self.save_snapshots = save_snapshots
         print("Saving trajectories to", self._saved_trajectories)
 
     def compatible_datasets(self) -> List[str]:
@@ -153,8 +159,9 @@ class DDOTSV0Solver(SolverStrategy):
             print(f"Error running task: {e}")
 
         finally:
-            snapshot = env.save()
-            with open(self._saved_trajectories / f'{problem_id}.tar.gz', 'wb') as f:
-                f.write(snapshot)
+            if self.save_snapshots:
+                snapshot = env.save()
+                with open(self._saved_trajectories / f'{problem_id}.tar.gz', 'wb') as f:
+                    f.write(snapshot)
 
         return env.solved

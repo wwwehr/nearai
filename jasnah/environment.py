@@ -75,7 +75,10 @@ class Environment(object):
             if yes_no != '' and yes_no.lower() != 'y':
                 return {'command': command, 'returncode': 999, 'stdout': '', 'stderr': 'declined by user'}
 
-        process = subprocess.Popen(command.split(' '), stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0, universal_newlines=True)
+        try:
+            process = subprocess.Popen(command.split(' '), stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0, universal_newlines=True)
+        except Exception as e:
+            return {'command': command, 'returncode': 999, 'stdout': '', 'stderr': 'Failed to execute: ' + str(e)}
 
         msg = ""
 
@@ -203,6 +206,16 @@ class Environment(object):
         with open(next_action_fn, 'w') as f:
             f.write(who)
 
+    def get_next_actor(self):
+        next_action_fn = os.path.join(self._path, '.next_action')
+
+        if os.path.exists(next_action_fn):
+            with open(next_action_fn) as f:
+                return f.read().strip(' \n')
+        else:
+            # By default the user starts the conversation.
+            return 'user'
+
     def run_interactive(self, record_run: str, load_env: str):
         """Run an interactive session within the given environment."""
         run_id = self._generate_run_id()
@@ -221,17 +234,7 @@ class Environment(object):
         last_message_idx = print_messages(last_message_idx)
 
         while True:
-            next_action_fn = os.path.join(self._path, '.next_action')
-            if os.path.exists(next_action_fn):
-                with open(next_action_fn) as f:
-                    next_action = f.read().strip(' \n')
-            else:
-                # By default the user starts the conversation.
-                next_action = 'user'
-
-            next_is_user = next_action == 'user'
-
-            if not next_is_user:
+            if self.get_next_actor() != 'user':
                 messages = self.list_messages()
                 new_message = None if not messages else messages[-1]['content']
 

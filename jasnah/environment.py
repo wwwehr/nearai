@@ -222,7 +222,7 @@ class Environment(object):
             # By default the user starts the conversation.
             return 'user'
 
-    def run_interactive(self, record_run: str, load_env: str):
+    def run_interactive(self, record_run: bool = False, load_env: str=''):
         """Run an interactive session within the given environment."""
         run_id = self._generate_run_id()
         if load_env:
@@ -259,7 +259,7 @@ class Environment(object):
         if record_run:
             self.save_to_registry('interactive', run_id, base_id)
 
-    def run_task(self, task: str, record_run: str, load_env: str, max_iterations: int = 10,):
+    def run_task(self, task: str, record_run: bool = False, load_env: str = '', max_iterations: int = 10,):
         """Runs a task within the given environment."""
         run_id = self._generate_run_id()
         if load_env:

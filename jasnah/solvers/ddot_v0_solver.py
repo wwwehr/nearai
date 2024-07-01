@@ -151,16 +151,18 @@ class DDOTSV0Solver(SolverStrategy):
         config['confirm_commands'] = False
 
         env = DDOTSEnvironment(self.agents, problem_id, description, config)
+        env.write_file(".solved", str(False))
 
         try:
             env.run_task('', max_iterations=self.max_iterations)
+            env.write_file(".solved", str(env.solved))
 
         except Exception as e:
             print(f"Error running task: {e}")
 
         finally:
             if self.save_snapshots:
-                snapshot = env.save()
+                snapshot = env.create_snapshot()
                 with open(self._saved_trajectories / f'{problem_id}.tar.gz', 'wb') as f:
                     f.write(snapshot)
 

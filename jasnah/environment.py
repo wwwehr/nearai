@@ -22,7 +22,7 @@ TERMINAL_FILENAME = 'terminal.txt'
 
 class Environment(object):
 
-    def __init__(self, path: str, agents: List['Agent'], config, registry, user_name):
+    def __init__(self, path: str, agents: List['Agent'], config, registry=None, user_name=None):
         self._path = path
         self._agents = agents
         self._done = False
@@ -60,8 +60,11 @@ class Environment(object):
     def read_file(self, filename: str) -> str:
         if not os.path.exists(os.path.join(self._path, filename)):
             return ''
-        with open(os.path.join(self._path, filename), 'r') as f:
-            return f.read()
+        try:
+            with open(os.path.join(self._path, filename), 'r') as f:
+                return f.read()
+        except Exception as e:
+            return f'failed to read file: {e}'
 
     def write_file(self, filename: str, content: str):
         path = Path(self._path) / filename
@@ -254,7 +257,7 @@ class Environment(object):
         if record_run:
             self.save_to_registry('interactive', run_id, base_id)
 
-    def run_task(self, task: str, record_run: str, load_env: str, max_iterations: int = 10,):
+    def run_task(self, task: str, record_run: str = None, load_env: str = None, max_iterations: int = 10,):
         """Runs a task within the given environment."""
         run_id = self._generate_run_id()
         if load_env:

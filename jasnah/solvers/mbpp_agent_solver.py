@@ -7,9 +7,10 @@ from datasets import Dataset, DatasetDict
 
 from jasnah.config import CONFIG
 from jasnah.solvers import SolverStrategy
-from jasnah.solvers.mbpp_solver import MBPPDatum
 from jasnah.agent import load_agent
 from jasnah.environment import Environment
+
+from jasnah.solvers.mbpp_solver import MBPPDatum, get_function_name
 
 
 class MBPPSolverAgent(SolverStrategy):
@@ -30,13 +31,16 @@ class MBPPSolverAgent(SolverStrategy):
     def solve(self, datum: dict) -> bool:
         print(datum)
         datum = MBPPDatum(**datum)
+        function_name = get_function_name(datum.code)
 
         path = os.path.join('/tmp', str(int(time.time() * 1000)), str(random.randint(0, 1000)), 'mbpp', str(datum.task_id))
         CONFIG.llm_config['confirm_commands'] = False
         env = Environment(path, [self.agent], CONFIG.llm_config)
 
         new_line = '\n'
-        task = f"{datum.text}\nIt should pass next tests:\n```python\n{new_line.join(datum.test_list)}\n```"
+        task = f"""{datum.text}
+Write a single file with python function named `{function_name}` that solves the above problem and satisfied the following tests:
+```python\n{new_line.join(datum.test_list)}\n```"""
         if self.verbose:
             print(task)
             print(path)

@@ -30,7 +30,7 @@ class BenchmarkExecutor:
         self.dataset_info = dataset_info
         self.solver_strategy = solver_strategy
 
-    def run(self, progress: bool = True, max_concurrent: int = 1) -> None:
+    def run(self, progress: bool = True, max_concurrent: int = 32) -> None:
         dataset = self.dataset_info.get_dataset()
 
         correct = 0

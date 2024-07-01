@@ -2,6 +2,7 @@ import json
 import os
 import shutil
 import subprocess
+import shlex
 import tarfile
 import tempfile
 import threading
@@ -67,25 +68,28 @@ class Environment(object):
             if yes_no != '' and yes_no.lower() != 'y':
                 return {'command': command, 'returncode': 999, 'stdout': '', 'stderr': 'declined by user'}
 
-        process = subprocess.Popen(command.split(' '), stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0, universal_newlines=True)
+        try:
+            process = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0, universal_newlines=True)
 
-        msg = ""
+            msg = ""
 
-        def kill_process_tree(p):
-            nonlocal msg
-            msg = "Killing process due to timeout"
+            def kill_process_tree(p):
+                nonlocal msg
+                msg = "Killing process due to timeout"
 
-            process = psutil.Process(p.pid)
-            for proc in process.children(recursive=True):
-                proc.kill()
-            process.kill()
+                process = psutil.Process(p.pid)
+                for proc in process.children(recursive=True):
+                    proc.kill()
+                process.kill()
 
-        timer = threading.Timer(2, kill_process_tree, (process, ))
-        timer.start()
-        process.wait()
-        timer.cancel()
+            timer = threading.Timer(2, kill_process_tree, (process, ))
+            timer.start()
+            process.wait()
+            timer.cancel()
 
-        result = {'command': command, 'stdout': process.stdout.read(), 'stderr': process.stderr.read(), 'returncode': process.returncode, 'msg': msg}
+            result = {'command': command, 'stdout': process.stdout.read(), 'stderr': process.stderr.read(), 'returncode': process.returncode, 'msg': msg}
+        except Exception as e:
+            result = {'command': command, 'returncode': 999, 'stdout': '', 'stderr': f'failed to execute command: {e}'}
         with open(os.path.join(self._path, TERMINAL_FILENAME), 'a') as f:
             f.write(json.dumps(result) + DELIMITER)
         return result

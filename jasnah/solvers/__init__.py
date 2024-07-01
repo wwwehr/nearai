@@ -46,3 +46,4 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
 SolverStrategyRegistry: Dict[str, Type[SolverStrategy]] = {}
 
 from jasnah.solvers.mbpp_solver import MBPPSolverStrategy
+from jasnah.solvers.mbpp_agent_solver import MBPPSolverAgent

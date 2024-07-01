@@ -21,7 +21,7 @@ TERMINAL_FILENAME = 'terminal.txt'
 
 class Environment(object):
 
-    def __init__(self, path: str, agents: List['Agent'], config, registry, user_name):
+    def __init__(self, path: str, agents: List['Agent'], config, registry, user_name: Optional[str] = None):
         self._path = path
         self._agents = agents
         self._done = False
@@ -135,6 +135,12 @@ class Environment(object):
 
     def save_to_registry(self, run_type: str, run_id: str, base_id: Optional[str|int] = None):
         """Save Environment to Registry."""
+        author = self._user_name
+        if not author:
+            print("Warning: No author specified in config. Run not saved to registry."
+                  " To set an author run `jasnah-cli config set user_name <YOUR_NAME>`")
+            return
+
         agent_name = self._agents[0].name
 
         with tempfile.NamedTemporaryFile( suffix='.tar.gz') as f:
@@ -145,7 +151,6 @@ class Environment(object):
             snapshot = f.read()
             tar_filename = f.name
 
-            author = self._user_name
             s3_path = f"environments/{run_id}"
             timestamp = datetime.datetime.now(datetime.UTC).isoformat()
             name = f"environment_run_{agent_name}_{run_id}"

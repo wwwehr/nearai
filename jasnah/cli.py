@@ -19,6 +19,7 @@ from jasnah.config import CONFIG, DATA_FOLDER, update_config
 from jasnah.dataset import load_dataset
 from jasnah.db import db
 from jasnah.environment import Environment
+from jasnah.finetune import FinetuneCli
 from jasnah.registry import Registry, agent, dataset, model, registry
 from jasnah.server import ServerClient, run_server
 from jasnah.solvers import SolverStrategy, SolverStrategyRegistry
@@ -341,6 +342,7 @@ class CLI:
         self.config = ConfigCli()
         self.benchmark = BenchmarkCli(self.datasets, self.models)
         self.environment = EnvironmentCli()
+        self.finetune = FinetuneCli()
 
     def submit(self, command: str, name: str, nodes: int = 1, cluster: str = "truthwatcher"):
         """Submit task"""

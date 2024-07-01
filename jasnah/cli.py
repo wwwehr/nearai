@@ -1,4 +1,5 @@
 import json
+import os
 import textwrap
 from dataclasses import asdict
 from pathlib import Path
@@ -284,7 +285,7 @@ class BenchmarkCli:
         self.datasets = datasets
         self.models = models
 
-    def run(self, dataset: str,  solver_strategy: str, subset: str = None, **solver_kwargs):
+    def run(self, dataset: str,  solver_strategy: str, max_concurrent: int = -1, subset: str = None, **solver_kwargs):
         name, subset, dataset = dataset, subset, load_dataset(dataset)
 
         solver_strategy: SolverStrategy | None = SolverStrategyRegistry.get(solver_strategy, None)
@@ -293,7 +294,9 @@ class BenchmarkCli:
         assert name in solver_strategy.compatible_datasets(), f"Solver strategy {solver_strategy} is not compatible with dataset {name}"
 
         be = BenchmarkExecutor(DatasetInfo(name, subset, dataset), solver_strategy)
-        be.run()
+
+        max_concurrent = os.cpu_count() if max_concurrent < 0 else max_concurrent
+        be.run(max_concurrent=max_concurrent)
 
 
 class EnvironmentCli:

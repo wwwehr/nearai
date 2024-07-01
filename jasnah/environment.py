@@ -187,7 +187,10 @@ class Environment(object):
     def run_task(self, task: str, max_iterations: int = 1):
         """Runs a task within the given environment."""
         iteration = 0
-        self.add_message('user', task)
+
+        if task:
+            self.add_message('user', task)
+
         while iteration < max_iterations and not self.is_done():
             iteration += 1
             self._agents[0].run(self, task=task)

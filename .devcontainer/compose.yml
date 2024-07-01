@@ -1,11 +1,20 @@
-version: '3'
 services:
   jasnah_dev:
     build:
       context: ..
-      dockerfile: .devcontainer/Dockerfile.dev
+      dockerfile: .devcontainer/Dockerfile.gpu.dev
     network_mode: host
     volumes:
       - ..:/workspace:Z
+      - ~/.jasnah:/home/user/.jasnah
     command: "sleep infinity"
     platform: linux/amd64
+
+    ## Comment out to remove gpu devices
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 8
+              capabilities: [gpu]

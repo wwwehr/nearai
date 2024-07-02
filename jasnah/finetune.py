@@ -2,6 +2,8 @@ import os
 import os.path
 import threading
 import time
+import numpy as np
+
 from collections import defaultdict
 from pathlib import Path
 from random import randint
@@ -11,6 +13,9 @@ from typing import Any, Dict, List, Mapping, Optional
 from datasets import load_from_disk
 from torch.utils.data import Dataset
 from torchtune.modules.tokenizers import Tokenizer
+from torchtune.data import (
+    CROSS_ENTROPY_IGNORE_IDX,
+)
 
 import jasnah
 from jasnah import timestamp
@@ -271,6 +276,38 @@ def text_completion_dataset(
         **load_from_disk_kwargs,
     )
     return ds
+
+
+class MessagesDataset(TextCompletionDataset):
+
+    def __init__(self,
+        tokenizer: Tokenizer,
+        source: str,
+        split: Optional[str] = None,
+        max_seq_len: Optional[int] = None,
+        **load_dataset_kwargs: Dict[str, Any]
+    ) -> 'MessagesDataset':
+        self._tokenizer = tokenizer
+        self._data = load_from_disk(source, **load_dataset_kwargs)
+        if split is not None:
+            self._data = self._data[split]
+        self.max_seq_len = max_seq_len
+
+    def _prepare_sample(self, sample: Mapping[str, Any]) -> Dict[str, List[int]]:
+        tokens, mask = self._tokenizer.tokenize_messages(sample['messages'], max_seq_len=self.max_seq_len)
+        labels = list(np.where(mask, CROSS_ENTROPY_IGNORE_IDX, tokens))
+        assert len(tokens) == len(labels)
+        return {"tokens": tokens, "labels": labels}
+
+
+def messages_dataset(
+    tokenizer: Tokenizer,
+    source: str,
+    split: str = "train",
+    max_seq_len: Optional[int] = None,
+    **load_from_disk_kwargs: Dict[str, Any],
+) -> MessagesDataset:
+    return MessagesDataset(tokenizer=tokenizer, source=source, split=split, max_seq_len=max_seq_len, **load_from_disk_kwargs)
 
 
 read_logs = defaultdict(int)

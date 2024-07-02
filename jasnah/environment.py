@@ -42,6 +42,9 @@ class Environment(object):
         with open(os.path.join(self._path, filename), 'a') as f:
             f.write(json.dumps({'role': role, 'content': message}) + DELIMITER)
 
+    def list_terminal_commands(self, filename: str=TERMINAL_FILENAME):
+        return self.list_messages(filename)
+
     def list_messages(self, filename: str=CHAT_FILENAME):
         path = os.path.join(self._path, filename)
 

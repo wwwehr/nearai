@@ -54,7 +54,7 @@ Write a single file with python function named `{function_name}` that solves the
         try:
             for test in datum.test_list + datum.challenge_test_list:
                 test_code = code + "\n" + test
-                exec(test_code)
+                exec(test_code, {}, {})
             return True
         except Exception as e:
             if self.verbose:

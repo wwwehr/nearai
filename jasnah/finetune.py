@@ -165,7 +165,9 @@ class FinetuneCli:
                     num_nodes=num_nodes,
                     checkpoint=checkpoint,
                 ),
-                show_entry=True,
+                # By default the entry is not shown when using jasnah-cli registry list
+                # but the entry is still accessible.
+                show_entry=False,
                 tags=["finetune"],
             )
 

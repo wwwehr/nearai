@@ -55,15 +55,34 @@ class FinetuneCli:
         job_id: Optional[str] = None,
         checkpoint: Optional[str] = None,
     ):
-        """Start a finetuning job on the current node"""
+        """Start a finetuning job on the current node
+
+        Args:
+
+            model (str): Name of a model in the registry. Base model to finetune.
+            tokenizer (str): Name of a tokenizer in the registry. Using tokenizer.model format.
+            dataset (str): Name of a dataset in the registry.
+            column (str): Name of the column in the dataset to use as input
+            num_procs (int): Number of GPUs to use for training
+            format (str): Name of the configuration file to use. For example llama3-70b, llama3-8b. Valid options are in etc/finetune.
+            split (str): Name of the split to use from the dataset. Default is 'train'.
+            num_nodes (int): Number of nodes to use for training. Default is 1.
+            checkpoint (str): Name of the model checkpoint to start from. Default is None.
+        """
         if job_id is None:
             job_id = "job"
         job_id = f"{job_id}-{timestamp()}-{randint(10**8, 10**9 - 1)}"
         job_folder = DATA_FOLDER / "finetune" / job_id
         job_folder.mkdir(parents=True, exist_ok=True)
 
-        configs = Path(__file__).parent.parent / "etc" / "finetune"
-        config_path = configs / f"{format}.yml"
+        if Path(format).exists():
+            config_path = Path(format)
+        else:
+            configs = Path(__file__).parent.parent / "etc" / "finetune"
+            config_path = configs / f"{format}.yml"
+
+        if not config_path.exists():
+            raise FileNotFoundError(f"Config file not found: {config_path}")
 
         CONFIG_TEMPLATE = config_path.read_text()
         assert num_nodes >= 1

@@ -14,6 +14,7 @@ from datasets import load_from_disk
 from torch.utils.data import Dataset
 from torchtune.modules.tokenizers import Tokenizer
 from torchtune.data import (
+    Message,
     CROSS_ENTROPY_IGNORE_IDX,
 )
 
@@ -61,8 +62,9 @@ class FinetuneCli:
         column: str,
         num_procs: int,
         format: str,
+        dataset_component: str = "jasnah.finetune.text_completion_dataset",
         upload_checkpoint: bool = True,
-        split: str = "train",
+        split: Optional[str] = None,
         num_nodes: int = 1,
         job_id: Optional[str] = None,
         checkpoint: Optional[str] = None,
@@ -123,8 +125,9 @@ class FinetuneCli:
                     RESUME_FROM_CHECKPOINT=resume_checkpoint,
                     CHECKPOINT_OUTPUT_DIR=str(checkpoint_output_dir),
                     DATASET=dataset_path,
+                    DATASET_COMPONENT=dataset_component,
                     DATASET_COLUMN=column,
-                    DATASET_SPLIT=split,
+                    DATASET_SPLIT=split if split else "null",
                     LOGGING_OUTPUT_DIR=str(logging_output_dir),
                 )
             )
@@ -285,16 +288,20 @@ class MessagesDataset(TextCompletionDataset):
         source: str,
         split: Optional[str] = None,
         max_seq_len: Optional[int] = None,
-        **load_dataset_kwargs: Dict[str, Any]
     ) -> 'MessagesDataset':
         self._tokenizer = tokenizer
-        self._data = load_from_disk(source, **load_dataset_kwargs)
+        self._data = load_from_disk(source)
         if split is not None:
             self._data = self._data[split]
         self.max_seq_len = max_seq_len
 
     def _prepare_sample(self, sample: Mapping[str, Any]) -> Dict[str, List[int]]:
-        tokens, mask = self._tokenizer.tokenize_messages(sample['messages'], max_seq_len=self.max_seq_len)
+        messages = [Message(role=message['role'], content=message['content']) for message in sample['messages']]
+        tokens, mask = self._tokenizer.tokenize_messages(messages, max_seq_len=self.max_seq_len)
+
+        if self.max_seq_len is not None:
+            tokens = truncate(tokens, self.max_seq_len - 1)
+
         labels = list(np.where(mask, CROSS_ENTROPY_IGNORE_IDX, tokens))
         assert len(tokens) == len(labels)
         return {"tokens": tokens, "labels": labels}
@@ -303,11 +310,10 @@ class MessagesDataset(TextCompletionDataset):
 def messages_dataset(
     tokenizer: Tokenizer,
     source: str,
-    split: str = "train",
+    split: Optional[str] = None,
     max_seq_len: Optional[int] = None,
-    **load_from_disk_kwargs: Dict[str, Any],
 ) -> MessagesDataset:
-    return MessagesDataset(tokenizer=tokenizer, source=source, split=split, max_seq_len=max_seq_len, **load_from_disk_kwargs)
+    return MessagesDataset(tokenizer=tokenizer, source=source, split=split, max_seq_len=max_seq_len)
 
 
 read_logs = defaultdict(int)

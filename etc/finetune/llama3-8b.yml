@@ -32,7 +32,7 @@ model:
   lora_alpha: 16
 
 checkpointer:
-  _component_: torchtune.utils.FullModelMetaCheckpointer
+  _component_: torchtune.utils.FullModelHFCheckpointer
   checkpoint_dir: {MODEL}
   checkpoint_files: [
     model-00001-of-00004.safetensors,

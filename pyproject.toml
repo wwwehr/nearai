@@ -29,6 +29,7 @@ jinja2 = "^3.1.4"
 litellm = "^1.41.0"
 tenacity = "^8.2.3"
 torchtune = {git = "https://github.com/pytorch/torchtune.git"}
+tensorboardX = "^2.6.2.2"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22.10.0"

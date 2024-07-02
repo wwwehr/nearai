@@ -301,6 +301,7 @@ class MessagesDataset(TextCompletionDataset):
 
         if self.max_seq_len is not None:
             tokens = truncate(tokens, self.max_seq_len - 1)
+            mask = truncate(mask, self.max_seq_len - 1)
 
         labels = list(np.where(mask, CROSS_ENTROPY_IGNORE_IDX, tokens))
         assert len(tokens) == len(labels)

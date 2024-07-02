@@ -3,6 +3,7 @@ import json
 import os
 import shutil
 import subprocess
+import shlex
 import tarfile
 import tempfile
 import threading
@@ -64,8 +65,11 @@ class Environment(object):
     def read_file(self, filename: str) -> str:
         if not os.path.exists(os.path.join(self._path, filename)):
             return ''
-        with open(os.path.join(self._path, filename), 'r') as f:
-            return f.read()
+        try:
+            with open(os.path.join(self._path, filename), 'r') as f:
+                return f.read()
+        except Exception as e:
+            return f'failed to read file: {e}'
 
     def write_file(self, filename: str, content: str):
         path = Path(self._path) / filename
@@ -81,27 +85,29 @@ class Environment(object):
                 return {'command': command, 'returncode': 999, 'stdout': '', 'stderr': 'declined by user'}
 
         try:
-            process = subprocess.Popen(command.split(' '), stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0, universal_newlines=True)
+            process = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0, universal_newlines=True)
         except Exception as e:
             return {'command': command, 'returncode': 999, 'stdout': '', 'stderr': 'Failed to execute: ' + str(e)}
 
-        msg = ""
+            msg = ""
 
-        def kill_process_tree(p):
-            nonlocal msg
-            msg = "Killing process due to timeout"
+            def kill_process_tree(p):
+                nonlocal msg
+                msg = "Killing process due to timeout"
 
-            process = psutil.Process(p.pid)
-            for proc in process.children(recursive=True):
-                proc.kill()
-            process.kill()
+                process = psutil.Process(p.pid)
+                for proc in process.children(recursive=True):
+                    proc.kill()
+                process.kill()
 
-        timer = threading.Timer(2, kill_process_tree, (process, ))
-        timer.start()
-        process.wait()
-        timer.cancel()
+            timer = threading.Timer(2, kill_process_tree, (process, ))
+            timer.start()
+            process.wait()
+            timer.cancel()
 
-        result = {'command': command, 'stdout': process.stdout.read(), 'stderr': process.stderr.read(), 'returncode': process.returncode, 'msg': msg}
+            result = {'command': command, 'stdout': process.stdout.read(), 'stderr': process.stderr.read(), 'returncode': process.returncode, 'msg': msg}
+        except Exception as e:
+            result = {'command': command, 'returncode': 999, 'stdout': '', 'stderr': f'failed to execute command: {e}'}
         with open(os.path.join(self._path, TERMINAL_FILENAME), 'a') as f:
             f.write(json.dumps(result) + DELIMITER)
         return result

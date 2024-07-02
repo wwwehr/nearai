@@ -35,7 +35,10 @@ checkpointer:
   _component_: torchtune.utils.FullModelMetaCheckpointer
   checkpoint_dir: {MODEL}
   checkpoint_files: [
-    consolidated.00.pth
+    model-00001-of-00004.safetensors,
+    model-00002-of-00004.safetensors,
+    model-00003-of-00004.safetensors,
+    model-00004-of-00004.safetensors,
   ]
   recipe_checkpoint: {RECIPE_CHECKPOINT}
   output_dir: {CHECKPOINT_OUTPUT_DIR}
@@ -47,6 +50,7 @@ dataset:
   _component_: jasnah.finetune.text_completion_dataset
   column: {DATASET_COLUMN}
   source: {DATASET}
+  split: {DATASET_SPLIT}
 seed: null
 shuffle: True
 batch_size: 2

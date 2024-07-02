@@ -50,6 +50,7 @@ class FinetuneCli:
         column: str,
         num_procs: int,
         format: str,
+        split: str = 'train',
         num_nodes: int = 1,
         job_id: Optional[str] = None,
         checkpoint: Optional[str] = None,
@@ -86,6 +87,7 @@ class FinetuneCli:
                     CHECKPOINT_OUTPUT_DIR=str(job_folder / "checkpoint_output"),
                     DATASET=dataset_path,
                     DATASET_COLUMN=column,
+                    DATASET_SPLIT=split,
                     LOGGING_OUTPUT_DIR=str(job_folder / "logs"),
                 )
             )
@@ -159,11 +161,14 @@ class TextCompletionDataset(Dataset):
         tokenizer: Tokenizer,
         source: str,
         column: str = "text",
+        split: Optional[str] = None,
         max_seq_len: Optional[int] = None,
         **load_dataset_kwargs: Dict[str, Any],
     ) -> None:
         self._tokenizer = tokenizer
         self._data = load_from_disk(source, **load_dataset_kwargs)
+        if split is not None:
+            self._data = self._data[split]
         self.max_seq_len = max_seq_len
         self._column = column
 
@@ -191,7 +196,8 @@ class TextCompletionDataset(Dataset):
 def text_completion_dataset(
     tokenizer: Tokenizer,
     source: str,
-    column: Optional[str] = None,
+    column: str = 'text',
+    split: str = 'train',
     max_seq_len: Optional[int] = None,
     **load_from_disk_kwargs: Dict[str, Any],
 ) -> TextCompletionDataset:
@@ -199,6 +205,7 @@ def text_completion_dataset(
         tokenizer=tokenizer,
         source=source,
         column=column,
+        split=split,
         max_seq_len=max_seq_len,
         **load_from_disk_kwargs,
     )

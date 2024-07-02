@@ -1,60 +1,96 @@
-from pathlib import Path
+from random import randint
 from subprocess import run
-from tempfile import TemporaryDirectory
-from typing import Optional
+from typing import Any, Dict, List, Mapping, Optional
+from pathlib import Path
+
+from datasets import load_from_disk
+from torch.utils.data import Dataset
+from torchtune.modules.tokenizers import Tokenizer
 
 from jasnah import timestamp
-from jasnah.config import DATA_FOLDER
-from jasnah.dataset import get_dataset
+from jasnah.config import CONFIG, DATA_FOLDER
 from jasnah.model import get_model
-
-# TODO: What do we want to log
+from jasnah.registry import registry
+from jasnah.server import ServerClient
+from jasnah.dataset import get_dataset
 
 
 class FinetuneCli:
-    def submit(self):
+    def submit(
+        self,
+        model: str,
+        tokenizer: str,
+        dataset: str,
+        num_procs: int,
+        num_nodes: int = 1,
+        job_id: Optional[str] = None,
+        checkpoint: Optional[str] = None,
+        epochs: int = 1,
+    ):
         """Submit a finetuning job to the cluster"""
-        raise NotImplementedError()
+        client = ServerClient(CONFIG.server_url)
+
+        result = client.submit(
+            "finetune-task",
+            "https://github.com/nearai/jasnah-cli.git",
+            "main",
+            f"jasnah-cli finetune start --model {model} --tokenizer {tokenizer} --dataset {dataset} --num_procs {num_procs} --num_nodes {num_nodes} --job_id {job_id} --checkpoint {checkpoint} --epochs {epochs}",
+            CONFIG.db_user,
+            None,
+            num_nodes,
+        )
+
+        print(result)
 
     def start(
         self,
         model: str,
+        tokenizer: str,
         dataset: str,
+        column: str,
         num_procs: int,
-        num_nodes: int,
+        format: str,
+        num_nodes: int = 1,
         job_id: Optional[str] = None,
         checkpoint: Optional[str] = None,
-        epochs: int = 1,
-        rank: int = -1,
-        master_addr: Optional[str] = None,
     ):
         """Start a finetuning job on the current node"""
-
         if job_id is None:
-            job_id = timestamp()
+            job_id = "job"
+        job_id = f"{job_id}-{timestamp()}-{randint(10**8, 10**9 - 1)}"
+        job_folder = DATA_FOLDER / "finetune" / job_id
+        job_folder.mkdir(parents=True, exist_ok=True)
 
+        configs = Path(__file__).parent.parent / "etc" / "finetune"
+        config_path = configs / f"{format}.yml"
+
+        CONFIG_TEMPLATE = config_path.read_text()
         assert num_nodes >= 1
 
         model_path = get_model(model)
 
-        if checkpoint:
-            checkpoint_path = get_model(checkpoint)
-        else:
-            checkpoint_path = None
+        tokenizer_path = registry.download(tokenizer) / "tokenizer.model"
+        assert tokenizer_path.exists(), f"tokenizer.model not found in {tokenizer_path}"
+
+        checkpoint_path = get_model(checkpoint) if checkpoint else "null"
 
         dataset_path = get_dataset(dataset)
 
-        with TemporaryDirectory() as temp_dir:
-            config = Path(temp_dir) / "config.yaml"
-            with open(config, "w") as f:
-                f.write(
-                    CONFIG_TEMPLATE.format(
-                        MODEL=None,
-                        CHECKPOINT=None,
-                        CHECKPOINT_OUTPUT=None,
-                        LOGGING=None,
-                    )
+        config = job_folder / "config.yaml"
+        with open(config, "w") as f:
+            f.write(
+                CONFIG_TEMPLATE.format(
+                    TOKENIZER=str(tokenizer_path),
+                    MODEL=str(model_path),
+                    RECIPE_CHECKPOINT=checkpoint_path,
+                    CHECKPOINT_OUTPUT_DIR=str(job_folder / "checkpoint_output"),
+                    DATASET=dataset_path,
+                    DATASET_COLUMN=column,
+                    LOGGING_OUTPUT_DIR=str(job_folder / "logs"),
                 )
+            )
+
+        print("Starting job at", job_folder)
 
         if num_nodes == 1:
             run(
@@ -65,116 +101,105 @@ class FinetuneCli:
                     str(num_procs),
                     "lora_finetune_distributed",
                     "--config",
-                    str(config)
+                    str(config),
                 ]
             )
         else:
+            # Fetch rank and master addr from environment variables
             raise NotImplementedError()
 
     def inspect(self, job_id: str):
         raise NotImplementedError()
 
 
-# https://github.com/pytorch/torchtune/blob/main/recipes/configs/llama3/70B_lora.yaml
-CONFIG_TEMPLATE = """
-# Config for multi-device LoRA in lora_finetune_distributed.py
-# using a Llama3 70B model
-#
-# This config assumes that you've run the following command before launching
-# this run:
-#   tune download meta-llama/Meta-Llama-3-70B-Instruct --hf-token <TOKEN> --output-dir /tmp/Meta-Llama-3-70B-Instruct --ignore-patterns "original/consolidated*"
-#
-# This config needs 8 GPUs to run
-#   # tune run --nproc_per_node 8 lora_finetune_distributed --config llama3/70B_lora
-#
+def truncate(
+    tokens: List[Any],
+    max_seq_len: int,
+    eos_id: Optional[Any] = None,
+) -> List[Any]:
+    """
+    Truncate a list of tokens to a maximum length. If eos_id is provided, the last
+    token will be replaced with eos_id.
 
-# Model Arguments
-model:
-  _component_: torchtune.models.llama3.lora_llama3_70b
-  lora_attn_modules: ['q_proj', 'k_proj', 'v_proj']
-  apply_lora_to_mlp: False
-  apply_lora_to_output: False
-  lora_rank: 16
-  lora_alpha: 32
+    Args:
+        tokens (List[Any]): list of tokens to truncate
+        max_seq_len (int): maximum length of the list
+        eos_id (Optional[Any]): token to replace the last token with. If None, the
+            last token will not be replaced. Default is None.
 
-tokenizer:
-  _component_: torchtune.models.llama3.llama3_tokenizer
-  path: {MODEL}
+    Returns:
+        List[Any]: truncated list of tokens
+    """
+    tokens_truncated = tokens[:max_seq_len]
+    if eos_id is not None and tokens_truncated[-1] != eos_id:
+        tokens_truncated[-1] = eos_id
+    return tokens_truncated
 
-checkpointer:
-  _component_: torchtune.utils.FullModelHFCheckpointer
-  checkpoint_dir: {MODEL}
-  checkpoint_files: [
-    model-00001-of-00030.safetensors,
-    model-00002-of-00030.safetensors,
-    model-00003-of-00030.safetensors,
-    model-00004-of-00030.safetensors,
-    model-00005-of-00030.safetensors,
-    model-00006-of-00030.safetensors,
-    model-00007-of-00030.safetensors,
-    model-00008-of-00030.safetensors,
-    model-00009-of-00030.safetensors,
-    model-00010-of-00030.safetensors,
-    model-00011-of-00030.safetensors,
-    model-00012-of-00030.safetensors,
-    model-00013-of-00030.safetensors,
-    model-00014-of-00030.safetensors,
-    model-00015-of-00030.safetensors,
-    model-00016-of-00030.safetensors,
-    model-00017-of-00030.safetensors,
-    model-00018-of-00030.safetensors,
-    model-00019-of-00030.safetensors,
-    model-00020-of-00030.safetensors,
-    model-00021-of-00030.safetensors,
-    model-00022-of-00030.safetensors,
-    model-00023-of-00030.safetensors,
-    model-00024-of-00030.safetensors,
-    model-00025-of-00030.safetensors,
-    model-00026-of-00030.safetensors,
-    model-00027-of-00030.safetensors,
-    model-00028-of-00030.safetensors,
-    model-00029-of-00030.safetensors,
-    model-00030-of-00030.safetensors,
-  ]
-  recipe_checkpoint: {CHECKPOINT}
-  output_dir: {CHECKPOINT_OUTPUT}
-  model_type: LLAMA3
-resume_from_checkpoint: False
 
-# Dataset and Sampler
-dataset:
-  _component_: torchtune.datasets.alpaca_dataset
-seed: null
-shuffle: True
-batch_size: 2
+class TextCompletionDataset(Dataset):
+    """
+    Freeform dataset for any unstructured text corpus. Quickly load any dataset
+    from Hugging Face or local disk and tokenize it for your model.
 
-# Optimizer and Scheduler
-optimizer:
-  _component_: torch.optim.AdamW
-  weight_decay: 0.01
-  lr: 3e-4
-lr_scheduler:
-  _component_: torchtune.modules.get_cosine_schedule_with_warmup
-  num_warmup_steps: 100
+    Args:
+        tokenizer (Tokenizer): Tokenizer used to encode data. Tokenize must implement an ``encode`` and ``decode`` method.
+        source (str): path string of dataset, anything supported by Hugging Face's ``load_dataset``
+            (https://huggingface.co/docs/datasets/en/package_reference/loading_methods#datasets.load_dataset.path)
+        column (str): name of column in the sample that contains the text data. This is typically required
+            for Hugging Face datasets or tabular data. For local datasets with a single column, use the default "text",
+            which is what is assigned by Hugging Face datasets when loaded into memory. Default is "text".
+        max_seq_len (Optional[int]): Maximum number of tokens in the returned input and label token id lists.
+            Default is None, disabling truncation. We recommend setting this to the highest you can fit in memory
+            and is supported by the model. For example, llama2-7B supports up to 4096 for sequence length.
+        **load_dataset_kwargs (Dict[str, Any]): additional keyword arguments to pass to ``load_dataset``.
+    """
 
-loss:
-  _component_: torch.nn.CrossEntropyLoss
+    def __init__(
+        self,
+        tokenizer: Tokenizer,
+        source: str,
+        column: str = "text",
+        max_seq_len: Optional[int] = None,
+        **load_dataset_kwargs: Dict[str, Any],
+    ) -> None:
+        self._tokenizer = tokenizer
+        self._data = load_from_disk(source, **load_dataset_kwargs)
+        self.max_seq_len = max_seq_len
+        self._column = column
 
-# Training
-epochs: 1
-max_steps_per_epoch: null
-gradient_accumulation_steps: 1
+    def __len__(self):
+        return len(self._data)
 
-# Logging
-output_dir: {LOGGING}
-metric_logger:
-  _component_: torchtune.utils.metric_logging.DiskLogger
-  log_dir: ${{output_dir}}
-log_every_n_steps: 1
-log_peak_memory_stats: False
+    def __getitem__(self, index: int) -> Dict[str, List[int]]:
+        sample = self._data[index]
+        return self._prepare_sample(sample)
 
-# Environment
-device: cuda
-dtype: bf16
-enable_activation_checkpointing: True
-"""
+    def _prepare_sample(self, sample: Mapping[str, Any]) -> Dict[str, List[int]]:
+        prompt = sample[self._column]
+        tokens = self._tokenizer.encode(text=prompt, add_bos=True, add_eos=True)
+
+        # Truncate if needed, but don't coerce EOS id
+        if self.max_seq_len is not None:
+            tokens = truncate(tokens, self.max_seq_len - 1)
+
+        # No need to offset labels by 1 - happens in the recipe
+        labels = tokens.copy()
+
+        return {"tokens": tokens, "labels": labels}
+
+
+def text_completion_dataset(
+    tokenizer: Tokenizer,
+    source: str,
+    column: Optional[str] = None,
+    max_seq_len: Optional[int] = None,
+    **load_from_disk_kwargs: Dict[str, Any],
+) -> TextCompletionDataset:
+    ds = TextCompletionDataset(
+        tokenizer=tokenizer,
+        source=source,
+        column=column,
+        max_seq_len=max_seq_len,
+        **load_from_disk_kwargs,
+    )
+    return ds

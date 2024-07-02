@@ -52,9 +52,9 @@ class LLMProviderConfig(BaseModel):
 
 class LLMConfig(BaseModel):
     """LLM Config.
-    
+
     Providers: {"<provider_name>": {"base_url": "<url>", "api_key": "<api_key>"}}
-    
+
     Models: {"<model_name>": "<provider_name>:<model_path>"
     """
     providers: Dict[str, LLMProviderConfig]

@@ -312,7 +312,7 @@ class Environment(object):
                 self.set_next_actor("agent")
 
         if record_run:
-            run_name = record_run if record_run and record_run is not "true" else None
+            run_name = record_run if record_run and record_run != "true" else None
             self.save_to_registry("interactive", run_id, base_id, run_name)
 
     def run_task(
@@ -338,7 +338,7 @@ class Environment(object):
             self._agents[0].run(self, task=task)
 
         if record_run:
-            run_name = record_run if record_run and record_run is not "true" else None
+            run_name = record_run if record_run and record_run != "true" else None
             self.save_to_registry("task", run_id, base_id, run_name)
 
     def inspect(self):

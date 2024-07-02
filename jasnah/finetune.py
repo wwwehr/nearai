@@ -1,7 +1,7 @@
+from pathlib import Path
 from random import randint
 from subprocess import run
 from typing import Any, Dict, List, Mapping, Optional
-from pathlib import Path
 
 from datasets import load_from_disk
 from torch.utils.data import Dataset
@@ -9,10 +9,10 @@ from torchtune.modules.tokenizers import Tokenizer
 
 from jasnah import timestamp
 from jasnah.config import CONFIG, DATA_FOLDER
+from jasnah.dataset import get_dataset
 from jasnah.model import get_model
 from jasnah.registry import registry
 from jasnah.server import ServerClient
-from jasnah.dataset import get_dataset
 
 
 class FinetuneCli:
@@ -35,7 +35,7 @@ class FinetuneCli:
             "https://github.com/nearai/jasnah-cli.git",
             "main",
             f"jasnah-cli finetune start --model {model} --tokenizer {tokenizer} --dataset {dataset} --num_procs {num_procs} --num_nodes {num_nodes} --job_id {job_id} --checkpoint {checkpoint} --epochs {epochs}",
-            CONFIG.db_user,
+            CONFIG.user_name,
             None,
             num_nodes,
         )
@@ -50,7 +50,7 @@ class FinetuneCli:
         column: str,
         num_procs: int,
         format: str,
-        split: str = 'train',
+        split: str = "train",
         num_nodes: int = 1,
         job_id: Optional[str] = None,
         checkpoint: Optional[str] = None,
@@ -93,8 +93,10 @@ class FinetuneCli:
         assert tokenizer_path.exists(), f"tokenizer.model not found in {tokenizer_path}"
 
         checkpoint_path = get_model(checkpoint) if checkpoint else "null"
+        resume_checkpoint = checkpoint_path != "null"
 
         dataset_path = get_dataset(dataset)
+        checkpoint_output_dir = str(job_folder / "checkpoint_output")
 
         config = job_folder / "config.yaml"
         with open(config, "w") as f:
@@ -103,7 +105,8 @@ class FinetuneCli:
                     TOKENIZER=str(tokenizer_path),
                     MODEL=str(model_path),
                     RECIPE_CHECKPOINT=checkpoint_path,
-                    CHECKPOINT_OUTPUT_DIR=str(job_folder / "checkpoint_output"),
+                    RESUME_FROM_CHECKPOINT=resume_checkpoint,
+                    CHECKPOINT_OUTPUT_DIR=checkpoint_output_dir,
                     DATASET=dataset_path,
                     DATASET_COLUMN=column,
                     DATASET_SPLIT=split,
@@ -128,6 +131,27 @@ class FinetuneCli:
         else:
             # Fetch rank and master addr from environment variables
             raise NotImplementedError()
+
+        registry.upload(
+            path=job_folder,
+            s3_path=f"checkpoints/finetune/{job_id}",
+            author=CONFIG.user_name,
+            description="Finetuning checkpoint",
+            name=job_id,
+            details=dict(
+                model=model,
+                tokenizer=tokenizer,
+                dataset=dataset,
+                column=column,
+                num_procs=num_procs,
+                format=format,
+                split=split,
+                num_nodes=num_nodes,
+                checkpoint=checkpoint,
+            ),
+            show_entry=True,
+            tags=["finetune"],
+        )
 
     def inspect(self, job_id: str):
         raise NotImplementedError()
@@ -215,8 +239,8 @@ class TextCompletionDataset(Dataset):
 def text_completion_dataset(
     tokenizer: Tokenizer,
     source: str,
-    column: str = 'text',
-    split: str = 'train',
+    column: str = "text",
+    split: str = "train",
     max_seq_len: Optional[int] = None,
     **load_from_disk_kwargs: Dict[str, Any],
 ) -> TextCompletionDataset:

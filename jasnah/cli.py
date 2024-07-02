@@ -14,7 +14,6 @@ from tabulate import tabulate
 import jasnah
 from jasnah.agent import load_agent
 from jasnah.benchmark import BenchmarkExecutor, DatasetInfo
-from jasnah.completion import create_completion_fn
 from jasnah.config import CONFIG, DATA_FOLDER, update_config
 from jasnah.dataset import load_dataset
 from jasnah.db import db
@@ -24,6 +23,7 @@ from jasnah.registry import Registry, agent, dataset, model, registry
 from jasnah.server import ServerClient, run_server
 from jasnah.solvers import SolverStrategy, SolverStrategyRegistry
 from jasnah.supervisor import SupervisorClient, run_supervisor
+from jasnah.tensorboard_feed import TensorboardCli
 
 
 class Host:
@@ -286,7 +286,7 @@ class BenchmarkCli:
         self.datasets = datasets
         self.models = models
 
-    def run(self, dataset: str,  solver_strategy: str, max_concurrent: int = -1, subset: str = None, **solver_kwargs):
+    def run(self, dataset: str, solver_strategy: str, max_concurrent: int = -1, subset: str = None, **solver_kwargs):
         name, subset, dataset = dataset, subset, load_dataset(dataset)
 
         solver_strategy: SolverStrategy | None = SolverStrategyRegistry.get(solver_strategy, None)
@@ -312,19 +312,19 @@ class EnvironmentCli:
 
     def interactive(self, agents: str, path: str, record_run: str = "true", load_env: str = None):
         """Runs agent interactively with environment from given path."""
-        _agents = [load_agent(agent) for agent in agents.split(',')]
+        _agents = [load_agent(agent) for agent in agents.split(",")]
         env = Environment(path, _agents, CONFIG.llm_config, registry, CONFIG.get_user_name())
         env.run_interactive(record_run, load_env)
 
     def task(self, agents: str, task: str, path: str, max_iterations: int = 10, record_run: str = "true", load_env: str = None):
         """Runs agent non interactively with environment from given path."""
-        _agents = [load_agent(agent) for agent in agents.split(',')]
+        _agents = [load_agent(agent) for agent in agents.split(",")]
         env = Environment(path, _agents, CONFIG.llm_config, registry, CONFIG.get_user_name())
         env.run_task(task, record_run, load_env, max_iterations)
 
     def run(self, agents: str, task: str, path: str):
         """Runs agent in the current environment."""
-        _agents = [load_agent(agent) for agent in agents.split(',')]
+        _agents = [load_agent(agent) for agent in agents.split(",")]
         env = Environment(path, [], CONFIG.llm_config, registry, CONFIG.get_user_name())
         env.exec_command("sleep 10")
         # TODO: Setup server that will allow to interact with agents and environment
@@ -343,6 +343,7 @@ class CLI:
         self.benchmark = BenchmarkCli(self.datasets, self.models)
         self.environment = EnvironmentCli()
         self.finetune = FinetuneCli()
+        self.tensorboard = TensorboardCli()
 
     def submit(self, command: str, name: str, nodes: int = 1, cluster: str = "truthwatcher"):
         """Submit task"""

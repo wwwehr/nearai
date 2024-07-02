@@ -88,7 +88,6 @@ class Log:
 
     @staticmethod
     def from_db(row) -> "Log":
-        print(row)
         return Log(*row)
 
     @staticmethod

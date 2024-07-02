@@ -37,8 +37,6 @@ class TensorboardCli:
                 if experiment_id is None or step is None:
                     continue
 
-                print(content)
-
                 if experiment_id not in experiments:
                     experiments[experiment_id] = tensorboardX.SummaryWriter(logdir_path / experiment_id)
 
@@ -46,3 +44,9 @@ class TensorboardCli:
 
                 for key, value in content.items():
                     writer.add_scalar(key, value, step, walltime=when)
+
+                next_id = max(next_id, row.id + 1)
+
+            new_num_logs = len(result)
+            print(f"Downloaded {new_num_logs} new logs")
+            next_id_path.write_text(str(next_id))

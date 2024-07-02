@@ -1,3 +1,8 @@
+import os
+import os.path
+import threading
+import time
+from collections import defaultdict
 from pathlib import Path
 from random import randint
 from subprocess import run
@@ -7,6 +12,7 @@ from datasets import load_from_disk
 from torch.utils.data import Dataset
 from torchtune.modules.tokenizers import Tokenizer
 
+import jasnah
 from jasnah import timestamp
 from jasnah.config import CONFIG, DATA_FOLDER
 from jasnah.dataset import get_dataset
@@ -50,6 +56,7 @@ class FinetuneCli:
         column: str,
         num_procs: int,
         format: str,
+        upload_checkpoint: bool = True,
         split: str = "train",
         num_nodes: int = 1,
         job_id: Optional[str] = None,
@@ -96,7 +103,10 @@ class FinetuneCli:
         resume_checkpoint = checkpoint_path != "null"
 
         dataset_path = get_dataset(dataset)
-        checkpoint_output_dir = str(job_folder / "checkpoint_output")
+        checkpoint_output_dir = job_folder / "checkpoint_output"
+
+        logging_output_dir = job_folder / "logs"
+        logging_output_dir.mkdir(parents=True, exist_ok=True)
 
         config = job_folder / "config.yaml"
         with open(config, "w") as f:
@@ -106,15 +116,17 @@ class FinetuneCli:
                     MODEL=str(model_path),
                     RECIPE_CHECKPOINT=checkpoint_path,
                     RESUME_FROM_CHECKPOINT=resume_checkpoint,
-                    CHECKPOINT_OUTPUT_DIR=checkpoint_output_dir,
+                    CHECKPOINT_OUTPUT_DIR=str(checkpoint_output_dir),
                     DATASET=dataset_path,
                     DATASET_COLUMN=column,
                     DATASET_SPLIT=split,
-                    LOGGING_OUTPUT_DIR=str(job_folder / "logs"),
+                    LOGGING_OUTPUT_DIR=str(logging_output_dir),
                 )
             )
 
         print("Starting job at", job_folder)
+
+        threading.Thread(target=find_new_logs_background, args=(logging_output_dir, job_id)).start()
 
         if num_nodes == 1:
             run(
@@ -132,26 +144,30 @@ class FinetuneCli:
             # Fetch rank and master addr from environment variables
             raise NotImplementedError()
 
-        registry.upload(
-            path=job_folder,
-            s3_path=f"checkpoints/finetune/{job_id}",
-            author=CONFIG.user_name,
-            description="Finetuning checkpoint",
-            name=job_id,
-            details=dict(
-                model=model,
-                tokenizer=tokenizer,
-                dataset=dataset,
-                column=column,
-                num_procs=num_procs,
-                format=format,
-                split=split,
-                num_nodes=num_nodes,
-                checkpoint=checkpoint,
-            ),
-            show_entry=True,
-            tags=["finetune"],
-        )
+        global BACKGROUND_PROCESS
+        BACKGROUND_PROCESS = False
+
+        if upload_checkpoint:
+            registry.upload(
+                path=job_folder,
+                s3_path=f"checkpoints/finetune/{job_id}",
+                author=CONFIG.user_name,
+                description="Finetuning checkpoint",
+                name=job_id,
+                details=dict(
+                    model=model,
+                    tokenizer=tokenizer,
+                    dataset=dataset,
+                    column=column,
+                    num_procs=num_procs,
+                    format=format,
+                    split=split,
+                    num_nodes=num_nodes,
+                    checkpoint=checkpoint,
+                ),
+                show_entry=True,
+                tags=["finetune"],
+            )
 
     def inspect(self, job_id: str):
         raise NotImplementedError()
@@ -253,3 +269,55 @@ def text_completion_dataset(
         **load_from_disk_kwargs,
     )
     return ds
+
+
+read_logs = defaultdict(int)
+BACKGROUND_PROCESS = True
+
+
+def parse_line(line):
+    """
+    Example of line to be parsed
+
+    Step 33 | loss:1.5400923490524292 lr:9.9e-05 tokens_per_second_per_gpu:101.22285588141214
+    """
+    step, metrics = map(str.strip, line.strip(" \n").split("|"))
+    step = int(step.split(" ")[-1])
+    metrics = {metric[0]: float(metric[1]) for metric in map(lambda metric: metric.split(":"), metrics.split(" "))}
+    return step, metrics
+
+
+def find_new_logs(path: Path, experiment_id: str):
+    for file in os.listdir(path):
+        file_path = os.path.join(path, file)
+
+        if not os.path.isfile(file_path):
+            continue
+
+        if not file.endswith(".txt"):
+            continue
+
+        read_lines = read_logs[file]
+        num_lines = 0
+
+        with open(file_path) as f:
+            for line in f:
+                num_lines += 1
+                if num_lines <= read_lines:
+                    continue
+
+                try:
+                    line = line.strip(" \n")
+                    step, metrics = parse_line(line)
+                    jasnah.log(target="tensorboard", step=step, experiment_id=experiment_id, **metrics)
+                except:
+                    continue
+
+        read_logs[file] = num_lines
+
+
+def find_new_logs_background(path: Path, experiment_id: str):
+    while BACKGROUND_PROCESS:
+        find_new_logs(path, experiment_id)
+        time.sleep(1)
+    find_new_logs(path, experiment_id)

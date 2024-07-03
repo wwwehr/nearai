@@ -1,15 +1,13 @@
 import os
 import random
 import time
-
 from typing import List, Union
+
 from datasets import Dataset, DatasetDict
-
-from jasnah.config import CONFIG
-from jasnah.solvers import SolverStrategy
 from jasnah.agent import load_agent
+from jasnah.config import CONFIG
 from jasnah.environment import Environment
-
+from jasnah.solvers import SolverStrategy
 from jasnah.solvers.mbpp_solver import MBPPDatum, get_function_name
 
 
@@ -18,7 +16,9 @@ class MBPPSolverAgent(SolverStrategy):
     Solver strategy for the MBPP dataset
     """
 
-    def __init__(self, dataset_ref: Union[Dataset, DatasetDict], agent, num_iterations=16, verbose=False):
+    def __init__(
+        self, dataset_ref: Union[Dataset, DatasetDict], agent, num_iterations=16, verbose=False
+    ):
         super().__init__()
         self.dataset_ref = dataset_ref
         self.agent = load_agent(agent)
@@ -33,11 +33,17 @@ class MBPPSolverAgent(SolverStrategy):
         datum = MBPPDatum(**datum)
         function_name = get_function_name(datum.code)
 
-        path = os.path.join('/tmp', str(int(time.time() * 1000)), str(random.randint(0, 1000)), 'mbpp', str(datum.task_id))
-        CONFIG.llm_config['confirm_commands'] = False
+        path = os.path.join(
+            "/tmp",
+            "mbpp",
+            str(datum.task_id),
+            str(int(time.time() * 1000)),
+            str(random.randint(0, 1000)),
+        )
+        CONFIG.llm_config["confirm_commands"] = False
         env = Environment(path, [self.agent], CONFIG.llm_config)
 
-        new_line = '\n'
+        new_line = "\n"
         task = f"""{datum.text}
 Write a single file with python function named `{function_name}` that solves the above problem and satisfied the following tests:
 ```python\n{new_line.join(datum.test_list)}\n```"""
@@ -47,9 +53,9 @@ Write a single file with python function named `{function_name}` that solves the
         env.run_task(task, max_iterations=self.num_iterations)
 
         code = ""
-        for filename in env.list_files('.'):
-            if filename.endswith('.py'):
-                code += env.read_file(filename) + '\n'
+        for filename in env.list_files("."):
+            if filename.endswith(".py"):
+                code += env.read_file(filename) + "\n"
 
         try:
             for test in datum.test_list + datum.challenge_test_list:

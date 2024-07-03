@@ -55,8 +55,8 @@ class Environment(object):
         with open(path, "r") as f:
             return [json.loads(message) for message in f.read().split(DELIMITER) if message]
 
-    def list_files(self, path) -> List[str]:
-        return os.listdir(path)
+    def list_files(self, path: str) -> List[str]:
+        return os.listdir(os.path.join(self._path, path))
 
     def get_path(self) -> str:
         return self._path
@@ -95,6 +95,7 @@ class Environment(object):
                 stderr=subprocess.PIPE,
                 bufsize=0,
                 universal_newlines=True,
+                cwd=self._path,
             )
         except Exception as e:
             return {
@@ -131,9 +132,9 @@ class Environment(object):
             f.write(json.dumps(result) + DELIMITER)
         return result
 
-    def completions(self, model, messages, stream=False):
+    def completions(self, model, messages, stream=False, **kwargs):
         """Returns all completions for given messages using the given model."""
-        return self._inference.completions(model, messages, stream=stream)
+        return self._inference.completions(model, messages, stream=stream, **kwargs)
 
     def completion(self, model: str, messages) -> str:
         """Returns a completion for the given messages using the given model."""

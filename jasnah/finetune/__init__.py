@@ -1,25 +1,16 @@
 import os
-import os.path
 import threading
 import time
-import numpy as np
-
 from collections import defaultdict
+from copy import deepcopy
 from pathlib import Path
 from random import randint
 from subprocess import run
-from typing import Any, Dict, List, Mapping, Optional
-
-from datasets import load_from_disk
-from torch.utils.data import Dataset
-from torchtune.modules.tokenizers import Tokenizer
-from torchtune.data import (
-    CROSS_ENTROPY_IGNORE_IDX,
-)
+from typing import Optional
 
 import jasnah
 from jasnah import timestamp
-from jasnah.config import CONFIG, DATA_FOLDER
+from jasnah.config import CONFIG, DATA_FOLDER, ETC_FOLDER
 from jasnah.dataset import get_dataset
 from jasnah.model import get_model
 from jasnah.registry import registry
@@ -58,14 +49,13 @@ class FinetuneCli:
         model: str,
         tokenizer: str,
         dataset: str,
-        column: str,
         num_procs: int,
         format: str,
         upload_checkpoint: bool = True,
-        split: str = "train",
         num_nodes: int = 1,
         job_id: Optional[str] = None,
         checkpoint: Optional[str] = None,
+        **dataset_kwargs,
     ):
         """Start a finetuning job on the current node
 
@@ -74,44 +64,58 @@ class FinetuneCli:
             model (str): Name of a model in the registry. Base model to finetune.
             tokenizer (str): Name of a tokenizer in the registry. Using tokenizer.model format.
             dataset (str): Name of a dataset in the registry.
-            column (str): Name of the column in the dataset to use as input
             num_procs (int): Number of GPUs to use for training
             format (str): Name of the configuration file to use. For example llama3-70b, llama3-8b. Valid options are in etc/finetune.
-            split (str): Name of the split to use from the dataset. Default is 'train'.
             num_nodes (int): Number of nodes to use for training. Default is 1.
             checkpoint (str): Name of the model checkpoint to start from. Default is None.
+            dataset_kwargs (Dict[str, Any]): Additional keyword arguments to pass to the dataset constructor.
         """
+        assert num_nodes >= 1
+
+        # Prepare job id folder
         if job_id is None:
             job_id = "job"
         job_id = f"{job_id}-{timestamp()}-{randint(10**8, 10**9 - 1)}"
         job_folder = DATA_FOLDER / "finetune" / job_id
         job_folder.mkdir(parents=True, exist_ok=True)
 
+        # Either use the provided config file template or load one predefined one
         if Path(format).exists():
-            config_path = Path(format)
+            config_template_path = Path(format)
         else:
-            configs = Path(__file__).parent.parent / "etc" / "finetune"
-            config_path = configs / f"{format}.yml"
+            configs = ETC_FOLDER / "finetune"
+            config_template_path = configs / f"{format}.yml"
 
-        if not config_path.exists():
-            raise FileNotFoundError(f"Config file not found: {config_path}")
+        if not config_template_path.exists():
+            raise FileNotFoundError(f"Config file not found: {config_template_path}")
 
-        CONFIG_TEMPLATE = config_path.read_text()
-        assert num_nodes >= 1
+        CONFIG_TEMPLATE = config_template_path.read_text()
 
+        # Download model
         model_path = get_model(model)
 
+        # Download tokenizer
         tokenizer_path = registry.download(tokenizer) / "tokenizer.model"
         assert tokenizer_path.exists(), f"tokenizer.model not found in {tokenizer_path}"
 
+        # Download checkpoint if any
         checkpoint_path = get_model(checkpoint) if checkpoint else "null"
         resume_checkpoint = checkpoint_path != "null"
 
+        # Download dataset
         dataset_path = get_dataset(dataset)
-        checkpoint_output_dir = job_folder / "checkpoint_output"
 
+        # Set up output directories
+        checkpoint_output_dir = job_folder / "checkpoint_output"
         logging_output_dir = job_folder / "logs"
         logging_output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Prepare config file
+        dataset_args_dict = deepcopy(dataset_kwargs)
+
+        dataset_args_dict["_component_"] = dataset_args_dict.pop("method")
+        dataset_args_dict["source"] = str(dataset_path.absolute())
+        dataset_args = "\n".join(f"  {key}: {value}" for key, value in dataset_args_dict.items())
 
         config = job_folder / "config.yaml"
         with open(config, "w") as f:
@@ -122,17 +126,15 @@ class FinetuneCli:
                     RECIPE_CHECKPOINT=checkpoint_path,
                     RESUME_FROM_CHECKPOINT=resume_checkpoint,
                     CHECKPOINT_OUTPUT_DIR=str(checkpoint_output_dir),
-                    DATASET=dataset_path,
-                    DATASET_COLUMN=column,
-                    DATASET_SPLIT=split,
+                    DATASET_ARGS=dataset_args,
                     LOGGING_OUTPUT_DIR=str(logging_output_dir),
                 )
             )
 
-        print("Starting job at", job_folder)
-
+        # Spawn background thread to read logs and push to database
         threading.Thread(target=find_new_logs_background, args=(logging_output_dir, job_id)).start()
 
+        print("Starting job at", job_folder)
         if num_nodes == 1:
             run(
                 [
@@ -152,23 +154,24 @@ class FinetuneCli:
         global BACKGROUND_PROCESS
         BACKGROUND_PROCESS = False
 
+        description = f"Fintuned {model} on {dataset} using {tokenizer} GPUs"
+
         if upload_checkpoint:
             registry.upload(
                 path=job_folder,
                 s3_path=f"checkpoints/finetune/{job_id}",
                 author=CONFIG.user_name,
-                description="Finetuning checkpoint",
+                description=description,
                 name=job_id,
                 details=dict(
                     model=model,
                     tokenizer=tokenizer,
                     dataset=dataset,
-                    column=column,
                     num_procs=num_procs,
                     format=format,
-                    split=split,
                     num_nodes=num_nodes,
                     checkpoint=checkpoint,
+                    **dataset_kwargs,
                 ),
                 # By default the entry is not shown when using jasnah-cli registry list
                 # but the entry is still accessible.
@@ -178,136 +181,6 @@ class FinetuneCli:
 
     def inspect(self, job_id: str):
         raise NotImplementedError()
-
-
-def truncate(
-    tokens: List[Any],
-    max_seq_len: int,
-    eos_id: Optional[Any] = None,
-) -> List[Any]:
-    """
-    Truncate a list of tokens to a maximum length. If eos_id is provided, the last
-    token will be replaced with eos_id.
-
-    Args:
-        tokens (List[Any]): list of tokens to truncate
-        max_seq_len (int): maximum length of the list
-        eos_id (Optional[Any]): token to replace the last token with. If None, the
-            last token will not be replaced. Default is None.
-
-    Returns:
-        List[Any]: truncated list of tokens
-    """
-    tokens_truncated = tokens[:max_seq_len]
-    if eos_id is not None and tokens_truncated[-1] != eos_id:
-        tokens_truncated[-1] = eos_id
-    return tokens_truncated
-
-
-class TextCompletionDataset(Dataset):
-    """
-    Freeform dataset for any unstructured text corpus. Quickly load any dataset
-    from Hugging Face or local disk and tokenize it for your model.
-
-    Args:
-        tokenizer (Tokenizer): Tokenizer used to encode data. Tokenize must implement an ``encode`` and ``decode`` method.
-        source (str): path string of dataset, anything supported by Hugging Face's ``load_dataset``
-            (https://huggingface.co/docs/datasets/en/package_reference/loading_methods#datasets.load_dataset.path)
-        column (str): name of column in the sample that contains the text data. This is typically required
-            for Hugging Face datasets or tabular data. For local datasets with a single column, use the default "text",
-            which is what is assigned by Hugging Face datasets when loaded into memory. Default is "text".
-        max_seq_len (Optional[int]): Maximum number of tokens in the returned input and label token id lists.
-            Default is None, disabling truncation. We recommend setting this to the highest you can fit in memory
-            and is supported by the model. For example, llama2-7B supports up to 4096 for sequence length.
-        **load_dataset_kwargs (Dict[str, Any]): additional keyword arguments to pass to ``load_dataset``.
-    """
-
-    def __init__(
-        self,
-        tokenizer: Tokenizer,
-        source: str,
-        column: str = "text",
-        split: Optional[str] = None,
-        max_seq_len: Optional[int] = None,
-        **load_dataset_kwargs: Dict[str, Any],
-    ) -> None:
-        self._tokenizer = tokenizer
-        self._data = load_from_disk(source, **load_dataset_kwargs)
-        if split is not None:
-            self._data = self._data[split]
-        self.max_seq_len = max_seq_len
-        self._column = column
-
-    def __len__(self):
-        return len(self._data)
-
-    def __getitem__(self, index: int) -> Dict[str, List[int]]:
-        sample = self._data[index]
-        return self._prepare_sample(sample)
-
-    def _prepare_sample(self, sample: Mapping[str, Any]) -> Dict[str, List[int]]:
-        prompt = sample[self._column]
-        tokens = self._tokenizer.encode(text=prompt, add_bos=True, add_eos=True)
-
-        # Truncate if needed, but don't coerce EOS id
-        if self.max_seq_len is not None:
-            tokens = truncate(tokens, self.max_seq_len - 1)
-
-        # No need to offset labels by 1 - happens in the recipe
-        labels = tokens.copy()
-
-        return {"tokens": tokens, "labels": labels}
-
-
-def text_completion_dataset(
-    tokenizer: Tokenizer,
-    source: str,
-    column: str = "text",
-    split: str = "train",
-    max_seq_len: Optional[int] = None,
-    **load_from_disk_kwargs: Dict[str, Any],
-) -> TextCompletionDataset:
-    ds = TextCompletionDataset(
-        tokenizer=tokenizer,
-        source=source,
-        column=column,
-        split=split,
-        max_seq_len=max_seq_len,
-        **load_from_disk_kwargs,
-    )
-    return ds
-
-
-class MessagesDataset(TextCompletionDataset):
-
-    def __init__(self,
-        tokenizer: Tokenizer,
-        source: str,
-        split: Optional[str] = None,
-        max_seq_len: Optional[int] = None,
-        **load_dataset_kwargs: Dict[str, Any]
-    ) -> 'MessagesDataset':
-        self._tokenizer = tokenizer
-        self._data = load_from_disk(source, **load_dataset_kwargs)
-        if split is not None:
-            self._data = self._data[split]
-        self.max_seq_len = max_seq_len
-
-    def _prepare_sample(self, sample: Mapping[str, Any]) -> Dict[str, List[int]]:
-        tokens, mask = self._tokenizer.tokenize_messages(sample['messages'], max_seq_len=self.max_seq_len)
-        labels = list(np.where(mask, CROSS_ENTROPY_IGNORE_IDX, tokens))
-        assert len(tokens) == len(labels)
-        return {"tokens": tokens, "labels": labels}
-
-
-def messages_dataset(
-    tokenizer: Tokenizer,
-    source: str,
-    split: str = "train",
-    max_seq_len: Optional[int] = None,
-    **load_from_disk_kwargs: Dict[str, Any],
-) -> MessagesDataset:
-    return MessagesDataset(tokenizer=tokenizer, source=source, split=split, max_seq_len=max_seq_len, **load_from_disk_kwargs)
 
 
 read_logs = defaultdict(int)

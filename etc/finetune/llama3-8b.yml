@@ -48,10 +48,8 @@ resume_from_checkpoint: False
 
 # Dataset and Sampler
 dataset:
-  _component_: jasnah.finetune.text_completion_dataset
-  column: {DATASET_COLUMN}
-  source: {DATASET}
-  split: {DATASET_SPLIT}
+{DATASET_ARGS}
+
 seed: null
 shuffle: True
 batch_size: 2

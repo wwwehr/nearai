@@ -1,18 +1,18 @@
 import json
 import os
-
 from dataclasses import dataclass, field, fields
 from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
+
 from pydantic import BaseModel
-from typing import Any, Callable, Dict, List, Optional
-from typing import Any, Callable, Dict, List, Optional
 
 DATA_FOLDER = Path.home() / ".jasnah"
 DATA_FOLDER.mkdir(parents=True, exist_ok=True)
 CONFIG_FILE = DATA_FOLDER / "config.json"
 LOCAL_CONFIG_FILE = Path(".jasnah") / "config.json"
-REPO_FOLDER = Path(__file__).parent
-PROMPTS_FOLDER = REPO_FOLDER / "prompts"
+REPO_FOLDER = Path(__file__).parent.parent
+PROMPTS_FOLDER = REPO_FOLDER / "jasnah" / "prompts"
+ETC_FOLDER = REPO_FOLDER / "etc"
 
 
 def get_config_path(local: bool = False) -> Path:
@@ -57,6 +57,7 @@ class LLMConfig(BaseModel):
 
     Models: {"<model_name>": "<provider_name>:<model_path>"
     """
+
     providers: Dict[str, LLMProviderConfig]
     models: Dict[str, str]
 

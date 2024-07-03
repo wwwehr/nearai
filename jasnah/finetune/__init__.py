@@ -51,6 +51,7 @@ class FinetuneCli:
         dataset: str,
         num_procs: int,
         format: str,
+        dataset_component: str = "jasnah.finetune.text_completion_dataset",
         upload_checkpoint: bool = True,
         num_nodes: int = 1,
         job_id: Optional[str] = None,

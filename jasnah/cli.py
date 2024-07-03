@@ -1,5 +1,8 @@
+import asyncio
 import json
 import os
+import runpy
+import sys
 import textwrap
 from dataclasses import asdict
 from pathlib import Path
@@ -286,7 +289,14 @@ class BenchmarkCli:
         self.datasets = datasets
         self.models = models
 
-    def run(self, dataset: str, solver_strategy: str, max_concurrent: int = -1, subset: str = None, **solver_kwargs):
+    def run(
+        self,
+        dataset: str,
+        solver_strategy: str,
+        max_concurrent: int = -1,
+        subset: str = None,
+        **solver_kwargs,
+    ):
         name, subset, dataset = dataset, subset, load_dataset(dataset)
 
         solver_strategy: SolverStrategy | None = SolverStrategyRegistry.get(solver_strategy, None)
@@ -316,7 +326,15 @@ class EnvironmentCli:
         env = Environment(path, _agents, CONFIG.llm_config, registry, CONFIG.get_user_name())
         env.run_interactive(record_run, load_env)
 
-    def task(self, agents: str, task: str, path: str, max_iterations: int = 10, record_run: str = "true", load_env: str = None):
+    def task(
+        self,
+        agents: str,
+        task: str,
+        path: str,
+        max_iterations: int = 10,
+        record_run: str = "true",
+        load_env: str = None,
+    ):
         """Runs agent non interactively with environment from given path."""
         _agents = [load_agent(agent) for agent in agents.split(",")]
         env = Environment(path, _agents, CONFIG.llm_config, registry, CONFIG.get_user_name())
@@ -328,6 +346,22 @@ class EnvironmentCli:
         env = Environment(path, [], CONFIG.llm_config, registry, CONFIG.get_user_name())
         env.exec_command("sleep 10")
         # TODO: Setup server that will allow to interact with agents and environment
+
+
+class VllmCli:
+    def run(self, *args, **kwargs):
+        original_argv = sys.argv.copy()
+        sys.argv = [
+            sys.argv[0],
+        ]
+        for key, value in kwargs.items():
+            sys.argv.extend([f"--{key.replace('_', '-')}", str(value)])
+        print(sys.argv)
+
+        try:
+            runpy.run_module("vllm.entrypoints.openai.api_server", run_name="__main__", alter_sys=True)
+        finally:
+            sys.argv = original_argv
 
 
 class CLI:
@@ -344,6 +378,7 @@ class CLI:
         self.environment = EnvironmentCli()
         self.finetune = FinetuneCli()
         self.tensorboard = TensorboardCli()
+        self.vllm = VllmCli()
 
     def submit(self, command: str, name: str, nodes: int = 1, cluster: str = "truthwatcher"):
         """Submit task"""

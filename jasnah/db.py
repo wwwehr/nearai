@@ -462,7 +462,7 @@ class DB:
             return RegistryEntry.from_db(result)
 
     def get_registry_entry_by_name(self, name: str, version: Optional[str] = None) -> Optional[RegistryEntry]:
-        """Retrieves restriy item by name and version if provided."""
+        """Retrieves registry item by name and version if provided."""
         with self.connection.cursor() as cursor:
             if not version:
                 cursor.execute(

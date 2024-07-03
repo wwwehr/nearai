@@ -5,12 +5,43 @@ from itertools import islice
 from jinja2 import Template
 from openai.types.chat import ChatCompletion
 from pydantic import BaseModel
-from typing import Any, Callable, Dict, List, Type, Union
+from typing import List, Union
 from datasets import Dataset, DatasetDict
 
 from jasnah.solvers import SolverStrategy
 from jasnah.config import CONFIG, PROMPTS_FOLDER
 from jasnah.completion import InferenceRouter
+
+
+def get_function_name(code_str: str) -> str:
+    parsed = ast.parse(code_str)
+    function_name = None
+    for node in ast.walk(parsed):
+        if isinstance(node, ast.FunctionDef):
+            function_name = node.name
+            break
+    assert function_name is not None, "No function definition found in code string."
+    return function_name
+
+
+def parse_python_code_block(answer_text: str) -> list[str]:
+    pattern = r"```python\n(.*?)\n```"
+    code_blocks = re.findall(pattern, answer_text, re.DOTALL)
+    return code_blocks
+
+
+def parse_code_block(answer_text: str) -> list[str]:
+    pattern = r"```\n(.*?)\n```"
+    code_blocks = re.findall(pattern, answer_text, re.DOTALL)
+    return code_blocks
+
+
+class MBPPDatum(BaseModel):
+    task_id: int
+    text: str
+    code: str
+    test_list: List[str]
+    challenge_test_list: List[str]
 
 
 class MBPPSolverStrategy(SolverStrategy):
@@ -30,32 +61,6 @@ class MBPPSolverStrategy(SolverStrategy):
         return ["mbpp"]
 
     def solve(self, datum: dict) -> bool:
-        def get_function_name(code_str: str) -> str:
-            parsed = ast.parse(code_str)
-            function_name = None
-            for node in ast.walk(parsed):
-                if isinstance(node, ast.FunctionDef):
-                    function_name = node.name
-                    break
-            assert function_name is not None, "No function definition found in code string."
-            return function_name
-
-        def parse_python_code_block(answer_text: str) -> list[str]:
-            pattern = r"```python\n(.*?)\n```"
-            code_blocks = re.findall(pattern, answer_text, re.DOTALL)
-            return code_blocks
-
-        def parse_code_block(answer_text: str) -> list[str]:
-            pattern = r"```\n(.*?)\n```"
-            code_blocks = re.findall(pattern, answer_text, re.DOTALL)
-            return code_blocks
-
-        class MBPPDatum(BaseModel):
-            task_id: int
-            text: str
-            code: str
-            test_list: List[str]
-
         datum = MBPPDatum(**datum).model_dump()
 
         ## Allow LLM to think "out loud" for it's answer
@@ -101,7 +106,7 @@ class MBPPSolverStrategy(SolverStrategy):
 
         ## Evaluate the code
         try:
-            for test in datum["test_list"]:
+            for test in datum["test_list"] + datum["challenge_test_list"]:
                 test_code = code + "\n" + test
                 exec(test_code)
             return True

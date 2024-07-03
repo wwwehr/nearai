@@ -154,7 +154,7 @@ class DDOTSV0Solver(SolverStrategy):
         env.write_file(".solved", str(False))
 
         try:
-            env.run_task('', max_iterations=self.max_iterations)
+            env.run_task(description, max_iterations=self.max_iterations)
             env.write_file(".solved", str(env.solved))
 
         except Exception as e:

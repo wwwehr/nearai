@@ -83,6 +83,7 @@ class Log:
     id: int
     origin: str
     time: datetime
+    target: str
     content: str
 
     @staticmethod
@@ -449,10 +450,12 @@ class DB:
             return DisplayRegistry.prepare_display_registry_entries_from_db(cursor.fetchall())
 
     @check_renamed_table
-    def get_registry_entry_by_path(self, path: str, version = None) -> Optional[RegistryEntry]:
+    def get_registry_entry_by_path(self, path: str, version=None) -> Optional[RegistryEntry]:
         assert version == None, "Can not select version when path provided"
         with self.connection.cursor() as cursor:
-            cursor.execute(f"SELECT * FROM {REGISTRY_TABLE} WHERE path=%s ORDER BY {REGISTRY_TABLE}.id DESC LIMIT 1", (path,))
+            cursor.execute(
+                f"SELECT * FROM {REGISTRY_TABLE} WHERE path=%s ORDER BY {REGISTRY_TABLE}.id DESC LIMIT 1", (path,)
+            )
             result = cursor.fetchone()
             if not result:
                 return None
@@ -462,10 +465,18 @@ class DB:
         """Retrieves registry item by name and version if provided."""
         with self.connection.cursor() as cursor:
             if not version:
-                cursor.execute(f"SELECT * FROM {REGISTRY_TABLE} WHERE name=%s ORDER BY {REGISTRY_TABLE}.id DESC LIMIT 1", (name,))
+                cursor.execute(
+                    f"SELECT * FROM {REGISTRY_TABLE} WHERE name=%s ORDER BY {REGISTRY_TABLE}.id DESC LIMIT 1", (name,)
+                )
             else:
-                print("SELECT * FROM {REGISTRY_TABLE} WHERE name='%s' AND {REGISTRY_TABLE}.path LIKE '%%/v%s' ORDER BY {REGISTRY_TABLE}.id DESC LIMIT 1" % (name, version))
-                cursor.execute(f"SELECT * FROM {REGISTRY_TABLE} WHERE name=%s AND {REGISTRY_TABLE}.path LIKE '%%%s' ORDER BY {REGISTRY_TABLE}.id DESC LIMIT 1", (name, version))
+                print(
+                    "SELECT * FROM {REGISTRY_TABLE} WHERE name='%s' AND {REGISTRY_TABLE}.path LIKE '%%/v%s' ORDER BY {REGISTRY_TABLE}.id DESC LIMIT 1"
+                    % (name, version)
+                )
+                cursor.execute(
+                    f"SELECT * FROM {REGISTRY_TABLE} WHERE name=%s AND {REGISTRY_TABLE}.path LIKE '%%%s' ORDER BY {REGISTRY_TABLE}.id DESC LIMIT 1",
+                    (name, version),
+                )
             result = cursor.fetchone()
             if not result:
                 return None
@@ -510,6 +521,14 @@ class DB:
         with self.connection.cursor() as cursor:
             cursor.execute("SELECT tag FROM tags WHERE registry_id=%s", (registry_id,))
             return [row[0] for row in cursor.fetchall()]
+
+    def get_logs(self, target: str, start_id: int, limit: int):
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT * FROM logs WHERE target=%s AND id >= %s ORDER BY id ASC LIMIT %s",
+                (target, start_id, limit),
+            )
+            return [Log.from_db(row) for row in cursor.fetchall()]
 
     def _create(self):
         """Create tables if they don't exist"""
@@ -607,8 +626,6 @@ class DB:
             print()
 
 
-
-
 def connect() -> "DB":
     return DB(
         host=CONFIG.db_host,
@@ -617,6 +634,7 @@ def connect() -> "DB":
         password=CONFIG.db_password,
         database=CONFIG.db_name,
     )
+
 
 class LazyObject:
     def __init__(self, ctor, *args, **kwargs):
@@ -634,18 +652,18 @@ class LazyObject:
         self._init()
         return getattr(self._obj, name)
 
+
 db: DB = LazyObject(connect)
 
 
 class CLI:
     def ping(self):
-        db.log(origin='test', target='test', content={'content': 'this is a test'})
+        db.log(origin="test", target="test", content={"content": "this is a test"})
 
     def test(self):
         show_all = True
         total = 5
         tags = ("datasets",)
-
 
         with db.connection.cursor() as cursor:
             show_all = 1 - int(show_all)

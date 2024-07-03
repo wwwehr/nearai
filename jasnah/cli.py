@@ -17,15 +17,16 @@ from tabulate import tabulate
 import jasnah
 from jasnah.agent import load_agent
 from jasnah.benchmark import BenchmarkExecutor, DatasetInfo
-from jasnah.completion import create_completion_fn
 from jasnah.config import CONFIG, DATA_FOLDER, update_config
 from jasnah.dataset import load_dataset
 from jasnah.db import db
 from jasnah.environment import Environment
+from jasnah.finetune import FinetuneCli
 from jasnah.registry import Registry, agent, dataset, model, registry
 from jasnah.server import ServerClient, run_server
 from jasnah.solvers import SolverStrategy, SolverStrategyRegistry
 from jasnah.supervisor import SupervisorClient, run_supervisor
+from jasnah.tensorboard_feed import TensorboardCli
 
 
 class Host:
@@ -120,9 +121,7 @@ class RegistryCli:
     def __init__(self, registry: Registry):
         self._registry = registry
 
-    def add(
-        self, s3_path: str, description: str, name: Optional[str] = None, tags: str = "", **details
-    ):
+    def add(self, s3_path: str, description: str, name: Optional[str] = None, tags: str = "", **details):
         """Add an item to the registry that was previously uploaded to S3"""
         tags_l = parse_tags(tags)
         assert self._registry.exists_in_s3(s3_path), f"Item {s3_path} does not exist in S3"
@@ -301,13 +300,9 @@ class BenchmarkCli:
         name, subset, dataset = dataset, subset, load_dataset(dataset)
 
         solver_strategy: SolverStrategy | None = SolverStrategyRegistry.get(solver_strategy, None)
-        assert (
-            solver_strategy
-        ), f"Solver strategy {solver_strategy} not found. Available strategies: {list(SolverStrategyRegistry.keys())}"
+        assert solver_strategy, f"Solver strategy {solver_strategy} not found. Available strategies: {list(SolverStrategyRegistry.keys())}"
         solver_strategy = solver_strategy(dataset_ref=dataset, **solver_kwargs)
-        assert (
-            name in solver_strategy.compatible_datasets()
-        ), f"Solver strategy {solver_strategy} is not compatible with dataset {name}"
+        assert name in solver_strategy.compatible_datasets(), f"Solver strategy {solver_strategy} is not compatible with dataset {name}"
 
         be = BenchmarkExecutor(DatasetInfo(name, subset, dataset), solver_strategy)
 
@@ -328,7 +323,7 @@ class EnvironmentCli:
     def interactive(self, agents: str, path: str, record_run: str = "true", load_env: str = None):
         """Runs agent interactively with environment from given path."""
         _agents = [load_agent(agent) for agent in agents.split(",")]
-        env = Environment(path, _agents, CONFIG.llm_config)
+        env = Environment(path, _agents, CONFIG.llm_config, registry, CONFIG.get_user_name())
         env.run_interactive(record_run, load_env)
 
     def task(
@@ -342,13 +337,13 @@ class EnvironmentCli:
     ):
         """Runs agent non interactively with environment from given path."""
         _agents = [load_agent(agent) for agent in agents.split(",")]
-        env = Environment(path, _agents, CONFIG.llm_config)
+        env = Environment(path, _agents, CONFIG.llm_config, registry, CONFIG.get_user_name())
         env.run_task(task, record_run, load_env, max_iterations)
 
     def run(self, agents: str, task: str, path: str):
         """Runs agent in the current environment."""
         _agents = [load_agent(agent) for agent in agents.split(",")]
-        env = Environment(path, [], CONFIG.llm_config)
+        env = Environment(path, [], CONFIG.llm_config, registry, CONFIG.get_user_name())
         env.exec_command("sleep 10")
         # TODO: Setup server that will allow to interact with agents and environment
 
@@ -364,9 +359,7 @@ class VllmCli:
         print(sys.argv)
 
         try:
-            runpy.run_module(
-                "vllm.entrypoints.openai.api_server", run_name="__main__", alter_sys=True
-            )
+            runpy.run_module("vllm.entrypoints.openai.api_server", run_name="__main__", alter_sys=True)
         finally:
             sys.argv = original_argv
 
@@ -383,6 +376,8 @@ class CLI:
         self.config = ConfigCli()
         self.benchmark = BenchmarkCli(self.datasets, self.models)
         self.environment = EnvironmentCli()
+        self.finetune = FinetuneCli()
+        self.tensorboard = TensorboardCli()
         self.vllm = VllmCli()
 
     def submit(self, command: str, name: str, nodes: int = 1, cluster: str = "truthwatcher"):
@@ -403,9 +398,7 @@ class CLI:
                 print(f"Detected in-progress git operation: {op}")
                 return
 
-        repository_url = (
-            check_output(["git", "remote", "-v"]).decode().split("\n")[0].split("\t")[1].split()[0]
-        )
+        repository_url = check_output(["git", "remote", "-v"]).decode().split("\n")[0].split("\t")[1].split()[0]
         commit = check_output(["git", "rev-parse", "HEAD"]).decode().strip()
         diff = check_output(["git", "diff", "HEAD"]).decode()
 

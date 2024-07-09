@@ -24,13 +24,13 @@ def get_function_name(code_str: str) -> str:
     return function_name
 
 
-def parse_python_code_block(answer_text: str) -> list[str]:
+def parse_python_code_block(answer_text: str) -> List[str]:
     pattern = r"```python\n(.*?)\n```"
     code_blocks = re.findall(pattern, answer_text, re.DOTALL)
     return code_blocks
 
 
-def parse_code_block(answer_text: str) -> list[str]:
+def parse_code_block(answer_text: str) -> List[str]:
     pattern = r"```\n(.*?)\n```"
     code_blocks = re.findall(pattern, answer_text, re.DOTALL)
     return code_blocks
@@ -81,9 +81,7 @@ class MBPPSolverStrategy(SolverStrategy):
         response = str(completion_response.choices[0].message.content)
 
         ## Extract the answer from the response
-        extract_answer_prompt = Template(
-            open(PROMPTS_FOLDER / "mbpp_extract_answer.j2").read(), trim_blocks=True
-        ).render(
+        extract_answer_prompt = Template(open(PROMPTS_FOLDER / "mbpp_extract_answer.j2").read(), trim_blocks=True).render(
             function_name=function_name,
             answer_text=response,
         )

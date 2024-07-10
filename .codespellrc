@@ -1,0 +1,3 @@
+skip: .git,target,*.bpe,*.json,*.jsonl,*.txt
+ignore-words: codespell_ignore.txt
+builtin: clear,rare

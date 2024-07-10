@@ -380,7 +380,7 @@ class Environment(object):
             if not os.listdir(path):
                 raise ValueError(f"No files found in {path}")
         
-            self.save_to_registry(path, "folders" if temp_dir else "folder", self._generate_folder_hash_id(path), None, name)
+            self.save_to_registry(path, "folders" if temp_dir else "folder", self.generate_folder_hash_id(path), None, name)
         finally:
             if temp_dir:
                 shutil.rmtree(temp_dir)
@@ -413,12 +413,12 @@ class Environment(object):
             for path, info in relevant_paths.items():
                 dest = os.path.join(temp_dir, path.replace('/', '_').strip('_'))
                 shutil.copytree(path, dest)
-            self.save_to_registry(temp_dir, "folders", self._generate_folder_hash_id(temp_dir), None, name)
+            self.save_to_registry(temp_dir, "folders", self.generate_folder_hash_id(temp_dir), None, name)
 
         finally:
             shutil.rmtree(temp_dir)
 
-    def _generate_folder_hash_id(self, path):
+    def generate_folder_hash_id(self, path):
         # Returns id similar to _generate_run_id(), but based on files and their contents in path, including subfolders
         hash_obj = hashlib.md5()
 

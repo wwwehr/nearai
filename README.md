@@ -112,7 +112,7 @@ jasnah-cli registry list --tags quine,python
 
 Download this element locally. To download you can refer to the item either by name or by s3_path. Trying to download an item that was previously downloaded is a no-op.
 
-Note: If you start downloading and item, and cancel the download midway, you shold delete the folder at `~/.jasnah/registry/` to trigger a new download.
+Note: If you start downloading and item, and cancel the download midway, you should delete the folder at `~/.jasnah/registry/` to trigger a new download.
 
 ```
 jasnah-cli registry download quine.py

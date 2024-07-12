@@ -1,9 +1,9 @@
-import asyncio
 import json
 import os
 import runpy
 import sys
 import textwrap
+from collections import OrderedDict
 from dataclasses import asdict
 from pathlib import Path
 from subprocess import check_output, run
@@ -296,9 +296,18 @@ class BenchmarkCli:
         dataset: str,
         solver_strategy: str,
         max_concurrent: int = -1,
+        force: bool = False,
         subset: str = None,
         **solver_kwargs,
     ):
+        """
+        Run benchmark on a dataset with a solver strategy.
+
+        It will cache the results in the database and subsequent runs will pull the results from the cache.
+        If force is set to True, it will run the benchmark again and update the cache.
+        """
+        benchmark_id = db.get_benchmark_id(dataset, solver_strategy, force, subset=subset, **solver_kwargs)
+
         name, subset, dataset = dataset, subset, load_dataset(dataset)
 
         solver_strategy: SolverStrategy | None = SolverStrategyRegistry.get(solver_strategy, None)
@@ -310,7 +319,7 @@ class BenchmarkCli:
             name in solver_strategy.compatible_datasets()
         ), f"Solver strategy {solver_strategy} is not compatible with dataset {name}"
 
-        be = BenchmarkExecutor(DatasetInfo(name, subset, dataset), solver_strategy)
+        be = BenchmarkExecutor(DatasetInfo(name, subset, dataset), solver_strategy, benchmark_id=benchmark_id)
 
         max_concurrent = os.cpu_count() if max_concurrent < 0 else max_concurrent
         be.run(max_concurrent=max_concurrent)

@@ -387,7 +387,7 @@ class Environment(object):
 
     def save_from_history(self, lines, name: str = None):
         # Parse lines and extract relevant information
-        pattern = r'^\s*\d+\s+(\S+)\s+environment\s+interactive\s+(\S+)\s+(\S+)(.*?)$'
+        pattern = r'^\s*(?:\d+\s+)?(\S+)\s+environment\s+interactive\s+(\S+)\s+(\S+)(.*?)$'
         relevant_paths = {}
         for line in lines:
             match = re.match(pattern, line)

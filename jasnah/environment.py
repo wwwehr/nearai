@@ -393,6 +393,7 @@ class Environment(object):
             match = re.match(pattern, line)
             if match:
                 program_name, agents, path, other_args = match.groups()
+                path = path.strip('/')
                 if self.contains_non_empty_chat_txt(path):
                     timestamp = os.path.getmtime(path)
                     command = f"{program_name} environment interactive {agents} {path} {other_args}"

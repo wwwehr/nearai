@@ -4,7 +4,7 @@ import hashlib
 import base64
 import base58
 import requests
-from api.near.serializer import BinarySerializer
+from .serializer import BinarySerializer
 
 
 def verify_signed_message(account_id, public_key, signature, message, nonce, recipient, callback_url):

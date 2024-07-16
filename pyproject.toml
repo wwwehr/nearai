@@ -34,6 +34,9 @@ tensorboardX = "^2.6.2.2"
 vllm = "^0.5.0.post1"
 fastapi = "^0.111.0"
 fastapi-cli = "^0.0.4"
+python-dotenv = "^1.0.1"
+pydantic-core = "^2.18.4"
+base58 = "2.1.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22.10.0"

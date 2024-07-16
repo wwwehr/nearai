@@ -1,4 +1,4 @@
-import mysql.connector
+import pymysql
 from os import getenv
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -16,7 +16,7 @@ class Token(BaseModel):
 class SqlClient:
 
     def __init__(self):
-        self.db = mysql.connector.connect(
+        self.db = pymysql.connect(
             host=getenv("DATABASE_HOST"),
             user=getenv("DATABASE_USER"),
             password=getenv("DATABASE_PASSWORD"),

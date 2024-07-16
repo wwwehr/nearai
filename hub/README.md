@@ -1,12 +1,36 @@
-# Inference Router
+# NEAR.AI Hub
 
-Inference router allows you to run complex inference based on your request.
+NEAR.AI Hub allows you to run complex inference based on your needs.
 
-It supports multiple providers and can be easily extended to support more. Supported inference providers: [Link](https://github.com/nearai/inference-router/blob/2bd1ab88d52c345b9796813fe9f6dfcca43dbcd4/api/v1/completions.py#L12)
+It supports multiple providers and can be easily extended to support more. Supported inference providers: [Link](./api/v1/completions.py#L12)
 
-## Inference Router API setup
+## Server
 
+### Database setup
+
+- Make sure you've a MySql database running. Example using docker:
+
+```bash
+docker run --name mysql -d \
+    -p 3306:3306 \
+    -e MYSQL_ROOT_PASSWORD=change-me \
+    --restart unless-stopped \
+    mysql:latest
 ```
+
+- Apply migrations available here: [link](./migrations/20240604133844_init.sql).
+
+### Python server setup
+
+Copy example environment variables file and **make sure the values are correct**:
+
+```bash
+cp .env.example .env
+```
+
+Create venv and install the dependencies:
+
+```bash
 python -m venv venv
 source venv/bin/activate
 pip install -e .
@@ -26,19 +50,28 @@ fastapi run app.py --port 8081
 
 ## Frontend
 
+### Setup
+
+- Move to `demo` directory:
+
+```bash
+cd demo
 ```
-cd ./demo
+
+- Install the dependencies:
+
+```bash
 npm install
 ```
 
-Start dev frontend with:
+- Copy the `.env.example` file to `.env` and update the values as needed.
 
+```bash
+cp .env.example .env
 ```
+
+- Start the next app in development mode:
+
+```bash
 npm run dev
-```
-
-Start production frontend with:
-
-```
-npm run start
 ```

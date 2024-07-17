@@ -16,11 +16,9 @@ def verify_signed_message(account_id, public_key, signature, message, nonce, rec
             public_key, signature, Payload(message, nonce, recipient, None))
 
     if is_valid:
-        print("account_id %s: signature verified" % account_id)
         # verify is key belongs to `account_id`
         return verify_access_key_owner(public_key, account_id)
 
-    print("account_id %s: signature verification failed" % account_id)
     return False
 
 
@@ -31,8 +29,6 @@ def verify_access_key_owner(public_key, account_id):
         response.raise_for_status()
         content = response.json()
         account_ids = content.get("account_ids", [])
-        print("content", content)
-        print("account_ids", account_ids)
         return account_id in account_ids
     except requests.exceptions.HTTPError as http_err:
         print(f'HTTP error occurred: {http_err}')
@@ -80,8 +76,8 @@ def validate_signature(public_key: str, signature: str, payload: Payload):
 
     try:
         public_key.verify(to_sign, real_signature)
-        print("Signature is valid.")
+        # print("Signature is valid.")
         return True
     except nacl.exceptions.BadSignatureError:
-        print("Signature was forged or corrupt.")
+        # print("Signature was forged or corrupt.")
         return False

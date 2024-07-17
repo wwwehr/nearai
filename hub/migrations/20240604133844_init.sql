@@ -1,9 +1,10 @@
--- Add migration script here
-CREATE DATABASE IF NOT EXISTS router;
+CREATE DATABASE IF NOT EXISTS hub;
+
+USE hub;
 
 CREATE TABLE completions (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    account_id TEXT NOT NULL,
+    account_id VARCHAR(64) NOT NULL,
     query TEXT NOT NULL,
     response TEXT NOT NULL,
     model TEXT NOT NULL,
@@ -12,4 +13,4 @@ CREATE TABLE completions (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX completions_account_id_idx ON completions(account_id(255));
+CREATE INDEX completions_account_id_idx ON completions(account_id);

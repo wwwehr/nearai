@@ -8,7 +8,7 @@ It supports multiple providers and can be easily extended to support more. Suppo
 
 ### Database setup
 
-- Make sure you've a MySql database running. Example using docker:
+- Make sure you have a MySql database running. Example using docker:
 
 ```bash
 docker run --name mysql -d \
@@ -19,6 +19,7 @@ docker run --name mysql -d \
 ```
 
 - Apply migrations available here: [link](./migrations/20240604133844_init.sql).
+  - Apply migrations using: `make apply-migrations` or `make docker-apply-migrations`, depending on your setup.
 
 ### Python server setup
 

@@ -4,15 +4,14 @@ import hashlib
 import pytz
 import datetime
 
-MAX_EXPIRED_AT = '2038-01-19 03:14:07'
-
-cfg = None
 
 def now():
     return datetime.datetime.now(pytz.utc)
 
+
 def now_short_humanized():
     return datetime.datetime.now(pytz.utc).strftime("%H:%M:%S")
+
 
 def str_to_datetime(s):
     try:
@@ -47,7 +46,6 @@ def get_output_hash(module_id, output_name, inputs={}, params={}):
 
     # 3. Hashing inputs. We need to process them in a sorted order and decode from base58
     for input_name in sorted(inputs):
-        # TODO use input_name?
         h = combine_hash(h, base58.b58decode(inputs[input_name]))
 
     # 4. Hashing params. Make a sorted and as most compact JSON as possible

@@ -22,7 +22,7 @@ class HellaswagDatum(BaseModel):
     split_type: str
 
 
-class HellswagSolverStrategy(SolverStrategy):
+class HellaswagSolverStrategy(SolverStrategy):
     """
     Solver strategy for the MMLU dataset
     """
@@ -58,6 +58,7 @@ class HellswagSolverStrategy(SolverStrategy):
             choices=choices,
         )
         completion_response: ChatCompletion = self.completion_fn(  # type: ignore
+            self.model,
             messages=[
                 {"role": "system", "content": base_prompt},
             ],
@@ -75,6 +76,7 @@ class HellswagSolverStrategy(SolverStrategy):
             choices=choices,
         )
         completion_response = self.completion_fn(  # type: ignore
+            self.model,
             messages=[
                 {"role": "system", "content": extract_answer_prompt},
             ],

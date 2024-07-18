@@ -39,7 +39,7 @@ from jasnah.solvers.ddot_v0_solver import DDOTSV0Solver
 from jasnah.solvers.mbpp_solver import MBPPSolverStrategy
 from jasnah.solvers.mbpp_agent_solver import MBPPSolverAgent
 from jasnah.solvers.mmlu_solver import MMLUSolverStrategy
-from jasnah.solvers.hellaswag_solver import HellswagSolverStrategy
+from jasnah.solvers.hellaswag_solver import HellaswagSolverStrategy
 
 __all__ = [
     "SolverStrategyRegistry",
@@ -47,5 +47,5 @@ __all__ = [
     "MBPPSolverStrategy",
     "MBPPSolverAgent",
     "MMLUSolverStrategy",
-    "HellswagSolverStrategy",
+    "HellaswagSolverStrategy",
 ]

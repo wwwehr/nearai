@@ -42,7 +42,6 @@ base58 = "2.1.1"
 black = "^22.10.0"
 pylint = "^2.15.5"
 mypy = "^1.10.0"
-ipython = "^8.24.0"
 
 [tool.poetry.scripts]
 jasnah-cli = "jasnah.cli:main"

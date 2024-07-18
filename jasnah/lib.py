@@ -7,7 +7,7 @@ from jasnah.db import db
 
 
 def timestamp() -> str:
-    return dt.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
+    return dt.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
 
 
 def cli_path() -> Path:
@@ -31,4 +31,4 @@ def get_origin():
 
 def log(*, target: str, **content):
     origin = get_origin()
-    db.log(origin, target, content)
+    db.log(origin=origin, target=target, content=content)

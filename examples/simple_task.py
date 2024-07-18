@@ -22,13 +22,14 @@ def main():
             print("Hello, world!", file=f)
 
         jasnah.registry.dataset.upload(
-            path,
-            name=f"test/auto_simple_task/{timestamp}",
+            path=path,
+            s3_path=f"test/auto_simple_task/{timestamp}",
             author="simple_task.py",
             description="Example dataset generated automatically.",
-            alias=None,
+            name=None,
             details={"timestamp": timestamp},
             show_entry=False,
+            tags=['test']
         )
 
 

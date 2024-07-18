@@ -8,7 +8,6 @@ First install jasnah-cli by running:
 git clone git@github.com:nearai/jasnah-cli.git
 cd jasnah-cli
 python3 -m pip install -e .
-pip install openai
 ```
 
 To install to a virtual environment, use the following command:
@@ -72,15 +71,100 @@ On each node the environment variable `ASSIGNED_SUPERVISORS` will be available w
 
 ### Registry
 
-Upload a new dataset or model to the registry:
+Upload an element to the registry using:
 
 ```
-jasnah-cli models upload <PATH_TO_MODEL> <MODEL_NAME> <DESCRIPTION> [--alias <ALIAS>]
-jasnah-cli datasets upload <PATH_TO_DATASET> <DATASET_NAME> <DESCRIPTION> [--alias <ALIAS>]
+jasnah-cli registry upload <ITEM_LOCAL_PATH> <ITEM_S3_PATH> <DESCRIPTION> [--name <NAME>] [--tags <TAGS>]
 ```
 
-The path could be either to a file or a folder.
-The name is a unique identifier, and the alias is a human readable name that can be used to refer to the model or dataset.
+- The local path could be either to a file or a folder.
+- The S3 path should be a non-existent folder in the registry.
+- Tags is a comma separated list of tags to add to the item. This allows filtering relevant items.
+
+There are two shortcuts to upload models and datasets. The following commands behave in the same way as `registry upload` but it adds by default the tags `model` and `dataset` respectively.
+
+```
+jasnah-cli models upload <ITEM_LOCAL_PATH> <ITEM_S3_PATH> <DESCRIPTION> [--name <NAME>] [--tags <TAGS>]
+jasnah-cli datasets upload <ITEM_LOCAL_PATH> <ITEM_S3_PATH> <DESCRIPTION> [--name <NAME>] [--tags <TAGS>]
+```
+
+We recommend as a good practice to use as s3_path `@namespace/@name/@version`, but it is not mandatory.
+
+**Examples:**
+
+Upload an item to the registry with name quine.py and tags `quine` and `python`
+
+```
+jasnah-cli registry upload ~/quine.py test/quine/v3 "Test registry upload" quine.py --tags quine,python
+```
+
+Check the item is available by listing all elements in the registry:
+
+```
+jasnah-cli registry list
+```
+
+Show only items with the tag `quine` and `python`:
+
+```
+jasnah-cli registry list --tags quine,python
+```
+
+Download this element locally. To download you can refer to the item either by name or by s3_path. Trying to download an item that was previously downloaded is a no-op.
+
+Note: If you start downloading and item, and cancel the download midway, you should delete the folder at `~/.jasnah/registry/` to trigger a new download.
+
+```
+jasnah-cli registry download quine.py
+```
+
+Add one or more tags to an item using:
+
+```
+jasnah-cli registry add_tags test/quine/v3 code,multiple,tags
+```
+
+Removing tags must be done one by one:
+
+```
+jasnah-cli registry remove_tag test/quine/v3 code
+```
+
+### Agents
+Agents are a python file in the local registry. Existing agents can be fetched with the download command `jasnah-cli agents download <AGENT_NAME>`.
+Local agent files that have not yet been uploaded can also be run.
+When uploading an agent, multiple versions can be stored by appending a version to the s3 path. The `--name` flag allows the latest agent to be fetched that matches that name.
+
+Examples
+ * Downloading an agent `jasnah-cli agents download xela-agent`
+ * Uploading an agent `jasnah-cli j agents upload --name langgraph-min-example ~/.jasnah/registry/agents/langgraph-min-example/v1 agents/langgraph-min-example/v1 "A minimal example";`
+
+#### Running environment interactively
+
+You can run an agent (or a set of agents) inside a local environment that lives in a specific folder.
+
+Agents can be run interactively. The environment_path should be a folder where the agent chat record (chat.txt) and other files can be written, usually `~/tmp/test-agents/<AGENT_NAME>`.
+ * command `jasnah-cli environment interactive <AGENT> <ENVIRONMENT_PATH>`.
+ * Example for a local agent `jasnah-cli environment interactive agent/my-agent/v1 ~/tmp/test-agents/my-agent-v1`.
+ * Example for a downloaded agent `jasnah-cli environment interactive xela-agent ~/tmp/test-agents/xela-agent-v2`.
+
+#### Running environment task
+To run without user interaction pass the task input to the task
+ * command `jasnah-cli environment task <AGENT> <INPUT> <ENVIRONMENT_PATH>`.
+ * example `jasnah-cli environment task xela-agent "Build a command line chess engine" ~/tmp/test-agents/chess-engine`.
+
+#### Saving and loading environment runs
+By default each environment run is saved to the registry. You can disable this by adding the flag `--record_run=False`.
+
+An environment run can be loaded by using the `--load_env` flag and passing it a registry identifier `--load_env=61`.
+
+To list environment identifiers use the command `jasnah-cli registry list --tags=environment`.
+
+A run can be named by passing a name to the record_run flag `--record_run="my special run"`.
+
+Environment runs can be loaded by passing the name of a previous run to  the --load_env flag like `--load_env="my special run"`.
+
+```
 
 ### Library
 

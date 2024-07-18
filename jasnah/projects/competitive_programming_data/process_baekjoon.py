@@ -6,6 +6,7 @@ from torchtune.models.llama3 import llama3_tokenizer
 from tqdm import tqdm
 
 from jasnah.dataset import get_dataset
+from jasnah.registry import registry
 
 
 def prepare_system_prompt(item):
@@ -63,7 +64,8 @@ if __name__ == "__main__":
         "ntokens_llama3": [],
     }
 
-    tokenizer = llama3_tokenizer("/Users/mnaeraxr/.jasnah/registry/tokenizers/llama-3/tokenizer.model")
+    tokenizer_path = registry.download("tokenizers/llama-3") / "tokenizer.model"
+    tokenizer = llama3_tokenizer(tokenizer_path)
 
     max_len = 0
     num_large = 0
@@ -99,4 +101,4 @@ if __name__ == "__main__":
         pbar.set_description(f"max_len: {max_len}, num_large: {num_large} i={i}")
 
     ds = Dataset.from_dict(ds_dict)
-    ds.save_to_disk('baekjoon-trajectories-processed')
+    ds.save_to_disk("baekjoon-trajectories-processed")

@@ -173,3 +173,7 @@ You can import `jasnah` as a library in your python code. The main features are:
 - Download/upload models and datasets from the registry. See [examples/prepare_data.py](examples/prepare_data.py).
 - Store log events in the database. TODO Example.
 - Fetch information about running or past experiments. TODO Example.
+
+## Contributing
+
+To contribute to jasnah-cli, please follow the [CONTRIBUTING.md](CONTRIBUTING.md) guidelines.

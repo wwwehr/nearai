@@ -16,7 +16,7 @@ def verify_signed_message(account_id, public_key, signature, message, nonce, rec
             public_key, signature, Payload(message, nonce, recipient, None))
 
     if is_valid:
-        # verify is key belongs to `account_id`
+        # verify that key belongs to `account_id`
         return verify_access_key_owner(public_key, account_id)
 
     return False

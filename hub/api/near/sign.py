@@ -40,7 +40,7 @@ def verify_access_key_owner(public_key, account_id):
 
 class Payload:
     def __init__(self, message: str, nonce: bytes, recipient: str, callback_url: Optional[str] = None):
-        self.tag = 2147484061
+        self.tag = 2147484061 # constant from https://github.com/near/NEPs/blob/master/neps/nep-0413.md#example
         self.message = message
         self.nonce = nonce
         self.recipient = recipient

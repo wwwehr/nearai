@@ -3,3 +3,5 @@ dist/
 __pycache__/
 .jasnah/
 /jasnah/tests/test-agents/
+venv
+.env

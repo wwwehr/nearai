@@ -10,7 +10,6 @@ from jasnah.db import RegistryEntry, db
 
 
 def migrate():
-
     # Get all registry entries that are not hidden
     with db.connection.cursor() as cursor:
         cursor.execute(f"SELECT * FROM registry WHERE show_entry=1")

@@ -10,7 +10,7 @@ import httpx as hx
 import tenacity
 
 from jasnah.agent import load_agent
-from jasnah.config import CONFIG,DATA_FOLDER
+from jasnah.config import CONFIG, DATA_FOLDER
 from jasnah.dataset import Dataset
 from jasnah.environment import Environment
 
@@ -24,6 +24,7 @@ class Extensions(enum.Enum):
     CPP = "cpp"
     JAVA = "java"
     JAVASCRIPT = "js"
+
 
 @tenacity.retry(
     wait=tenacity.wait_fixed(1.0),
@@ -73,16 +74,22 @@ async def submit_problem(problem_id: str, code: str, extension: Extensions) -> s
 
 
 class DDOTSEnvironment(Environment):
-    def __init__(self, agents: List['Agent'],  problem_id: str, description: str, config):
+    def __init__(self, agents: List["Agent"], problem_id: str, description: str, config):
         self.tdir = TemporaryDirectory()
         super().__init__(self.tdir.name, agents, config)
 
         self.problem_id = problem_id
         self.solved = False
 
-        files = {'.id': problem_id, 'PROBLEM.txt': description, 'solution.py': '', 'test.in': '', 'test.sh': '#!/bin/bash\npython3 solution.py < test.in'}
+        files = {
+            ".id": problem_id,
+            "PROBLEM.txt": description,
+            "solution.py": "",
+            "test.in": "",
+            "test.sh": "#!/bin/bash\npython3 solution.py < test.in",
+        }
         for fname, content in files.items():
-            with open(self.tdir.name + '/' + fname, 'w') as f:
+            with open(self.tdir.name + "/" + fname, "w") as f:
                 f.write(content)
 
     async def async_submit(self, code):
@@ -93,14 +100,14 @@ class DDOTSEnvironment(Environment):
         except:
             print("WARNING: Submission took too long to execute on DDOTS")
             self.mark_done()
-            return False, 'Submission took too long to execute on the platform'
+            return False, "Submission took too long to execute on the platform"
 
         ok = await submission_accepted(submission_id)
 
         if ok:
             self.solved = True
             self.mark_done()
-            return True, ''
+            return True, ""
 
         output = await get_output(submission_id)
 
@@ -128,13 +135,14 @@ class DDOTSV0Solver(SolverStrategy):
     The agent should call env.submit_python(code) to submit the code to the DDOTS server.
 
     """
+
     def __init__(self, dataset_ref: Dataset, agents: str, max_iterations: int, save_snapshots: bool = False):
         self.agents = [load_agent(agent) for agent in agents.split(",")]
         self.max_iterations = max_iterations
 
         date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        rnd_id = random.randint(10**8, 10**9-1)
-        self._saved_trajectories = DATA_FOLDER / 'data' / 'ddots_v0_trajectories' / f'{date}_{rnd_id}'
+        rnd_id = random.randint(10**8, 10**9 - 1)
+        self._saved_trajectories = DATA_FOLDER / "data" / "ddots_v0_trajectories" / f"{date}_{rnd_id}"
         self._saved_trajectories.mkdir(parents=True, exist_ok=True)
 
         self.save_snapshots = save_snapshots
@@ -144,11 +152,11 @@ class DDOTSV0Solver(SolverStrategy):
         return ["ddots_codeforces_small/v0", "datasets/ddots_codeforces_medium_A_B/v0"]
 
     def solve(self, datum: dict) -> bool:
-        problem_id = datum['problem_id']
-        description = datum['description']
+        problem_id = datum["problem_id"]
+        description = datum["description"]
 
         config = deepcopy(CONFIG.llm_config)
-        config['confirm_commands'] = False
+        config["confirm_commands"] = False
 
         env = DDOTSEnvironment(self.agents, problem_id, description, config)
         env.write_file(".solved", str(False))
@@ -163,7 +171,7 @@ class DDOTSV0Solver(SolverStrategy):
         finally:
             if self.save_snapshots:
                 snapshot = env.create_snapshot()
-                with open(self._saved_trajectories / f'{problem_id}.tar.gz', 'wb') as f:
+                with open(self._saved_trajectories / f"{problem_id}.tar.gz", "wb") as f:
                     f.write(snapshot)
 
         return env.solved

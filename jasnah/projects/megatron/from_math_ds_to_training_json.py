@@ -31,16 +31,19 @@ def main():
 
     # Iterate through each record in the dataset
     for example in dataset:
-        formatted_text = EXAMPLE.format(problem=example['problem'], solution=example['solution'], answer=example['answer'])
+        formatted_text = EXAMPLE.format(
+            problem=example["problem"], solution=example["solution"], answer=example["answer"]
+        )
         # Create a JSON-like dictionary and add it to the list
         formatted_data.append(json.dumps({"text": formatted_text}))
 
     # Write the formatted data to a JSON file
     json_path = dataset_path / "training_data.json"
-    with open(json_path, 'w') as f:
+    with open(json_path, "w") as f:
         f.write("\n".join(formatted_data))
 
     print(f"Data saved to {json_path}")
+
 
 if __name__ == "__main__":
     main()

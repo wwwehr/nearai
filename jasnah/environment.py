@@ -379,40 +379,42 @@ class Environment(object):
         try:
             if not os.listdir(path):
                 raise ValueError(f"No files found in {path}")
-        
-            self.save_to_registry(path, "folders" if temp_dir else "folder", self.generate_folder_hash_id(path), None, name)
+
+            self.save_to_registry(
+                path, "folders" if temp_dir else "folder", self.generate_folder_hash_id(path), None, name
+            )
         finally:
             if temp_dir:
                 shutil.rmtree(temp_dir)
 
     def save_from_history(self, lines, name: str = None):
         # Parse lines and extract relevant information
-        pattern = r'^\s*(?:\d+\s+)?(\S+)\s+environment\s+interactive\s+(\S+)\s+(\S+)(.*?)$'
+        pattern = r"^\s*(?:\d+\s+)?(\S+)\s+environment\s+interactive\s+(\S+)\s+(\S+)(.*?)$"
         relevant_paths = {}
         for line in lines:
             match = re.match(pattern, line)
             if match:
                 program_name, agents, path, other_args = match.groups()
-                path = path.strip('/')
+                path = path.strip("/")
                 if self.contains_non_empty_chat_txt(path):
                     timestamp = os.path.getmtime(path)
                     command = f"{program_name} environment interactive {agents} {path} {other_args}"
-                    relevant_paths[path] = {'command': command.strip()}
+                    relevant_paths[path] = {"command": command.strip()}
 
         if not relevant_paths:
             raise ValueError("No relevant paths with non-empty chat.txt files found in history")
-        
+
         for path, info in relevant_paths.items():
             print(path)
             # Write start_command.log
-            with open(os.path.join(path, 'start_command.log'), 'w') as f:
-                f.write(info['command'])
+            with open(os.path.join(path, "start_command.log"), "w") as f:
+                f.write(info["command"])
 
         # Create temporary directory and copy relevant folders
         temp_dir = tempfile.mkdtemp()
         try:
             for path, info in relevant_paths.items():
-                dest = os.path.join(temp_dir, path.replace('/', '_').strip('_'))
+                dest = os.path.join(temp_dir, path.replace("/", "_").strip("_"))
                 shutil.copytree(path, dest)
             self.save_to_registry(temp_dir, "folders", self.generate_folder_hash_id(temp_dir), None, name)
 

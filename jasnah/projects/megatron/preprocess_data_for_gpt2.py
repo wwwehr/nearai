@@ -29,9 +29,7 @@ def main():
         --workers 1
     """
     # Split the command into a list
-    process = subprocess.Popen(
-        command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE
-    )
+    process = subprocess.Popen(command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     # Get output and errors, if any
     stdout, stderr = process.communicate()

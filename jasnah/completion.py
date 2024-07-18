@@ -24,25 +24,19 @@ class InferenceRouter(object):
 
     def completions(self, model, messages, stream=False, temperature=None, **kwargs):
         """Takes a model `provider:model_name` and a list of messages and returns all completions."""
-        assert (
-            "models" in self._config and model in self._config["models"]
-        ), f"Model {model} not found in config."
+        assert "models" in self._config and model in self._config["models"], f"Model {model} not found in config."
         provider_name, model_path = self._config["models"][model].split(":")
         if provider_name not in self._endpoints:
             assert (
                 "providers" in self._config and provider_name in self._config["providers"]
             ), f"Provider {provider_name} not found in config."
             provider_config = self._config["providers"][provider_name]
-            self._endpoints[
-                provider_name
-            ] = lambda model, messages, stream, temperature, **kwargs: litellm_completion(
+            self._endpoints[provider_name] = lambda model, messages, stream, temperature, **kwargs: litellm_completion(
                 model,
                 messages,
                 stream=stream,
                 # TODO: move this to config
-                custom_llm_provider="antropic"
-                if "antropic" in provider_config["base_url"]
-                else "openai",
+                custom_llm_provider="antropic" if "antropic" in provider_config["base_url"] else "openai",
                 input_cost_per_token=0,
                 output_cost_per_token=0,
                 temperature=temperature,

@@ -5,6 +5,7 @@ import sys
 
 import streamlit as st
 
+
 # Function to read file content
 def read_file(file_path):
     with open(file_path, "r") as file:
@@ -28,10 +29,11 @@ def fetch_folders(path):
             result += fetch_folders(f"{path}/{fdir}")
     return result
 
+
 # for fdir in os.listdir():
 #     if os.path.isdir(fdir) and os.path.exists(f"{fdir}/chat.txt"):
 #         dir_names.append(fdir)
-dir_names = fetch_folders('.')
+dir_names = fetch_folders(".")
 
 # List of directories to explore
 directories = {fdir: fdir for fdir in dir_names}

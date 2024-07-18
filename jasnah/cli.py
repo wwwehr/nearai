@@ -121,9 +121,7 @@ class RegistryCli:
     def __init__(self, registry: Registry):
         self._registry = registry
 
-    def add(
-        self, s3_path: str, description: str, name: Optional[str] = None, tags: str = "", **details
-    ):
+    def add(self, s3_path: str, description: str, name: Optional[str] = None, tags: str = "", **details):
         """Add an item to the registry that was previously uploaded to S3"""
         tags_l = parse_tags(tags)
         assert self._registry.exists_in_s3(s3_path), f"Item {s3_path} does not exist in S3"
@@ -398,9 +396,7 @@ class VllmCli:
         print(sys.argv)
 
         try:
-            runpy.run_module(
-                "vllm.entrypoints.openai.api_server", run_name="__main__", alter_sys=True
-            )
+            runpy.run_module("vllm.entrypoints.openai.api_server", run_name="__main__", alter_sys=True)
         finally:
             sys.argv = original_argv
 
@@ -439,9 +435,7 @@ class CLI:
                 print(f"Detected in-progress git operation: {op}")
                 return
 
-        repository_url = (
-            check_output(["git", "remote", "-v"]).decode().split("\n")[0].split("\t")[1].split()[0]
-        )
+        repository_url = check_output(["git", "remote", "-v"]).decode().split("\n")[0].split("\t")[1].split()[0]
         commit = check_output(["git", "rev-parse", "HEAD"]).decode().strip()
         diff = check_output(["git", "diff", "HEAD"]).decode()
 

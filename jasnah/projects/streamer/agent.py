@@ -1,7 +1,7 @@
 import litellm
 
-class StreamerAgent(object):
 
+class StreamerAgent(object):
     def run(self, env, task):
         print(f"Running task: {task}")
 
@@ -28,7 +28,7 @@ class StreamerAgent(object):
             messages = [{"role": "system", "content": PROMPT}]
             messages += history
             messages += [{"role": "user", "content": PROMPT2}]
-            stream = env.completions('llama-v3-70b-instruct', messages, stream=True)
+            stream = env.completions("llama-v3-70b-instruct", messages, stream=True)
 
             output = ""
 
@@ -41,36 +41,36 @@ class StreamerAgent(object):
             output = litellm.stream_chunk_builder(chunks, messages=messages).choices[0].message.content
             history.append({"role": "assistant", "content": output})
             env.add_message("assistant", output)
-            command = output.split('|||||', maxsplit=1)[1].strip()
+            command = output.split("|||||", maxsplit=1)[1].strip()
 
             print(f"Executing {command[:10]}")
             command_outcome = ""
             try:
-                if command.startswith('run'):
-                    command = command.split('run ')[1]
+                if command.startswith("run"):
+                    command = command.split("run ")[1]
                     result = env.exec_command(command)
                     print(result)
-                    if 'returncode' in result and result['returncode'] != 0:
+                    if "returncode" in result and result["returncode"] != 0:
                         command_outcome = f'Command {command} failed with error: {result["stderr"]}'
                     else:
                         command_outcome = result["stdout"]
-                elif command.startswith('write'):
-                    filename, content = command.split('write ')[1].split('\n', maxsplit=1)
+                elif command.startswith("write"):
+                    filename, content = command.split("write ")[1].split("\n", maxsplit=1)
                     filename = filename.strip()
-                    content = content.strip(' \n`')
+                    content = content.strip(" \n`")
                     env.write_file(filename, content)
                     command_outcome = "Done"
-                elif command.startswith('read'):
-                    filename = command.split('read ')[1]
+                elif command.startswith("read"):
+                    filename = command.split("read ")[1]
                     content = env.read_file(filename)
-                    command_outcome = f'Read file {filename} with content: {content}'
-                elif command.startswith('list'):
-                    path = command.split('list ')[1].strip()
+                    command_outcome = f"Read file {filename} with content: {content}"
+                elif command.startswith("list"):
+                    path = command.split("list ")[1].strip()
                     files = env.list_files(path)
-                    command_outcome = f'Listed files in path {path}: {files}'
+                    command_outcome = f"Listed files in path {path}: {files}"
             except Exception as e:
-                command_outcome = f'Error: {e}'
+                command_outcome = f"Error: {e}"
             history.append({"role": "user", "content": command_outcome})
             env.add_message("user", command_outcome)
             print(history[-1])
-            input(f'Press Enter to continue...')
+            input(f"Press Enter to continue...")

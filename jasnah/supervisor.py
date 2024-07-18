@@ -127,7 +127,6 @@ def update():
         LOCK.release()
 
     if experiment is None:
-
         db.set_supervisor_status(supervisor_id=SUPERVISOR_ID, status="available")
         return {"status": "ok", "info": "No assigned experiments"}
 

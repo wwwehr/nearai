@@ -95,7 +95,6 @@ class ServerClient:
         num_nodes=1,
         cluster="truthwatcher",
     ):
-
         result = self.conn.post(
             self.url + "/submit",
             json=dict(

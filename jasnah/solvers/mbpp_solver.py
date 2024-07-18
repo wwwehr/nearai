@@ -81,7 +81,9 @@ class MBPPSolverStrategy(SolverStrategy):
         response = str(completion_response.choices[0].message.content)
 
         ## Extract the answer from the response
-        extract_answer_prompt = Template(open(PROMPTS_FOLDER / "mbpp_extract_answer.j2").read(), trim_blocks=True).render(
+        extract_answer_prompt = Template(
+            open(PROMPTS_FOLDER / "mbpp_extract_answer.j2").read(), trim_blocks=True
+        ).render(
             function_name=function_name,
             answer_text=response,
         )

@@ -458,7 +458,9 @@ class DB:
     def get_registry_entry_by_path(self, path: str, version=None) -> Optional[RegistryEntry]:
         assert version == None, "Can not select version when path provided"
         with self.connection.cursor() as cursor:
-            cursor.execute(f"SELECT * FROM {REGISTRY_TABLE} WHERE path=%s ORDER BY {REGISTRY_TABLE}.id DESC LIMIT 1", (path,))
+            cursor.execute(
+                f"SELECT * FROM {REGISTRY_TABLE} WHERE path=%s ORDER BY {REGISTRY_TABLE}.id DESC LIMIT 1", (path,)
+            )
             result = cursor.fetchone()
             if not result:
                 return None
@@ -468,9 +470,14 @@ class DB:
         """Retrieves registry item by name and version if provided."""
         with self.connection.cursor() as cursor:
             if not version:
-                cursor.execute(f"SELECT * FROM {REGISTRY_TABLE} WHERE name=%s ORDER BY {REGISTRY_TABLE}.id DESC LIMIT 1", (name,))
+                cursor.execute(
+                    f"SELECT * FROM {REGISTRY_TABLE} WHERE name=%s ORDER BY {REGISTRY_TABLE}.id DESC LIMIT 1", (name,)
+                )
             else:
-                print("SELECT * FROM {REGISTRY_TABLE} WHERE name='%s' AND {REGISTRY_TABLE}.path LIKE '%%/v%s' ORDER BY {REGISTRY_TABLE}.id DESC LIMIT 1" % (name, version))
+                print(
+                    "SELECT * FROM {REGISTRY_TABLE} WHERE name='%s' AND {REGISTRY_TABLE}.path LIKE '%%/v%s' ORDER BY {REGISTRY_TABLE}.id DESC LIMIT 1"
+                    % (name, version)
+                )
                 cursor.execute(
                     f"SELECT * FROM {REGISTRY_TABLE} WHERE name=%s AND {REGISTRY_TABLE}.path LIKE '%%%s' ORDER BY {REGISTRY_TABLE}.id DESC LIMIT 1",
                     (name, version),
@@ -488,7 +495,9 @@ class DB:
                 return None
             return RegistryEntry.from_db(result)
 
-    def get_registry_entry_by_identifier(self, identifier: Union[str, int], version: Optional[str] = None, fail_if_not_found=True) -> Optional[RegistryEntry]:
+    def get_registry_entry_by_identifier(
+        self, identifier: Union[str, int], version: Optional[str] = None, fail_if_not_found=True
+    ) -> Optional[RegistryEntry]:
         try:
             identifier = int(identifier)
             entry = self.get_registry_entry_by_id(identifier)
@@ -510,7 +519,10 @@ class DB:
         # Check if exists
         if not force:
             with self.connection.cursor() as cursor:
-                cursor.execute("SELECT * FROM benchmark WHERE name=%s AND solver=%s AND args=%s ORDER BY id DESC LIMIT 1", (dataset, strategy, args))
+                cursor.execute(
+                    "SELECT * FROM benchmark WHERE name=%s AND solver=%s AND args=%s ORDER BY id DESC LIMIT 1",
+                    (dataset, strategy, args),
+                )
                 row = cursor.fetchone()
 
                 if row is not None:
@@ -522,7 +534,9 @@ class DB:
 
     def get_benchmark_results(self, benchmark_id: int) -> Dict[int, Tuple[bool, str]]:
         with self.connection.cursor() as cursor:
-            cursor.execute("SELECT dataset_index, result, info FROM benchmark_datum WHERE benchmark_id=%s", (benchmark_id,))
+            cursor.execute(
+                "SELECT dataset_index, result, info FROM benchmark_datum WHERE benchmark_id=%s", (benchmark_id,)
+            )
             return {index: (result, info) for index, result, info in cursor.fetchall()}
 
     def get_benchmark_status(self, benchmark_id: int) -> Dict[int, bool]:

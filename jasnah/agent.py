@@ -10,7 +10,6 @@ AGENT_FILENAME = "agent.py"
 
 
 class Agent(object):
-
     def __init__(self, name: str, path: str, code: str):
         self.name = name
         self.path = path
@@ -31,8 +30,9 @@ class Agent(object):
 
 
 def load_agent(alias_or_name: str) -> Agent:
-    if alias_or_name == 'streamer':
+    if alias_or_name == "streamer":
         from jasnah.projects.streamer.agent import StreamerAgent
+
         return StreamerAgent()
     path = agent.download(alias_or_name)
     return Agent.from_disk(path.as_posix())

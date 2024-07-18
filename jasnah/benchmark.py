@@ -42,14 +42,18 @@ class BenchmarkExecutor:
         correct = 0
         remaining = len(dataset)
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            task_ctor = partial(solve_task, benchmark_id=self.benchmark_id, cache=cache, solve_fn=self.solver_strategy.solve)
+            task_ctor = partial(
+                solve_task, benchmark_id=self.benchmark_id, cache=cache, solve_fn=self.solver_strategy.solve
+            )
             tasks = iter(executor.submit(task_ctor, index=index, datum=datum) for index, datum in enumerate(dataset))
 
             total = len(dataset)
             bar = tqdm(total=total, disable=not progress)
             futures = list(islice(tasks, max_concurrent))
             while futures:
-                completed, ongoing_futures = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
+                completed, ongoing_futures = concurrent.futures.wait(
+                    futures, return_when=concurrent.futures.FIRST_COMPLETED
+                )
                 futures = list(ongoing_futures)
                 for completed_future in completed:
                     bar.update(1)
@@ -58,7 +62,9 @@ class BenchmarkExecutor:
                     result = completed_future.result()
                     if result:
                         correct += 1
-                    bar.set_description(f"Correct/Seen - {correct}/{total - remaining} - {correct/(total - remaining):.2%}")
+                    bar.set_description(
+                        f"Correct/Seen - {correct}/{total - remaining} - {correct/(total - remaining):.2%}"
+                    )
 
                     try:
                         next_task = next(tasks)
@@ -69,7 +75,13 @@ class BenchmarkExecutor:
         print(f"Final score: {correct}/{total} - {correct/total:.2%}")
 
 
-def solve_task(benchmark_id: int, cache: Dict[int, bool], solve_fn: Callable[[Any], Union[bool, Tuple[bool, Any]]], index: int, datum: Any):
+def solve_task(
+    benchmark_id: int,
+    cache: Dict[int, bool],
+    solve_fn: Callable[[Any], Union[bool, Tuple[bool, Any]]],
+    index: int,
+    datum: Any,
+):
     if index in cache:
         return cache[index]
 

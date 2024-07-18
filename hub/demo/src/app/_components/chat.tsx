@@ -40,7 +40,7 @@ export function Chat() {
 
   const form = useZodForm(chatCompletionsModel);
   const chat = useSendCompletionsRequest();
-  const listModels = useListModels();
+  const listModels = useListModels(form.watch("provider"));
   const [conversation, setConversation] = useState<
     z.infer<typeof messageModel>[]
   >([]);

@@ -87,15 +87,15 @@ def install(hosts_description: List[Host], skip_install: str):
 
     run_bash_script("install_cli.sh")
 
-    nearai_cli_path = "/home/setup/.local/bin/nearai"
+    nearai_path = "/home/setup/.local/bin/nearai"
 
     for conn in all_hosts:
-        conn.run(f"{nearai_cli_path} config set supervisor_id {conn.host}")
+        conn.run(f"{nearai_path} config set supervisor_id {conn.host}")
 
-    all_hosts.run(f"{nearai_cli_path} config set db_user {CONFIG.db_user}")
-    all_hosts.run(f"{nearai_cli_path} config set db_password {CONFIG.db_password}")
+    all_hosts.run(f"{nearai_path} config set db_user {CONFIG.db_user}")
+    all_hosts.run(f"{nearai_path} config set db_password {CONFIG.db_password}")
 
-    result = all_hosts.run(f"{nearai_cli_path} config get supervisor_id")
+    result = all_hosts.run(f"{nearai_path} config get supervisor_id")
     for host, res in sorted(result.items()):
         stdout = res.stdout.strip(" \n")
         print(f"Host: {host}, supervisor_id: {stdout}")

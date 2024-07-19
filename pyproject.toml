@@ -44,7 +44,7 @@ pylint = "^2.15.5"
 mypy = "^1.10.0"
 
 [tool.poetry.scripts]
-nearai-cli = "nearai.cli:main"
+nearai = "nearai.cli:main"
 
 [build-system]
 requires = ["poetry-core"]

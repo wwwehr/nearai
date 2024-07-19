@@ -11,7 +11,7 @@ import pymysql
 
 from nearai.config import CONFIG
 
-# TODO: Once everyone is using the new version of nearai-cli, we can rename this table to `registry`
+# TODO: Once everyone is using the new version of nearai, we can rename this table to `registry`
 #       and rename the old `registry` table to `registry_old` (and later remove it).
 #       When the new table is renamed, users will be prompted to update the CLI automatically.
 REGISTRY_TABLE = "registry_v2"

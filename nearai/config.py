@@ -64,7 +64,7 @@ class LLMConfig(BaseModel):
 
 @dataclass
 class Config:
-    # TODO(#49): rename
+    # TODO(#49): move to configuration
     s3_bucket: str = "kholinar-registry"
     s3_prefix: str = "registry"
     supervisors: List[str] = field(default_factory=list)
@@ -72,7 +72,7 @@ class Config:
     db_password: Optional[str] = None
     db_host: str = "35.87.119.37"
     db_port: int = 3306
-    # TODO(#49): rename
+    # TODO(#49): move to configuration, rename
     db_name: str = "jasnah"
     server_url: str = "http://ai.nearspace.info/cluster"
     origin: Optional[str] = None

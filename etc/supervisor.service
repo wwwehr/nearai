@@ -6,9 +6,9 @@ After=network.target
 User=setup
 Type=simple
 Restart=no
-WorkingDirectory=/home/setup/.nearai/nearai-cli
-EnvironmentFile=/home/setup/.nearai/nearai-cli/etc/supervisor.env
-ExecStart=/home/setup/.nearai/nearai-cli/etc/start_supervisor.sh
+WorkingDirectory=/home/setup/.nearai/nearai
+EnvironmentFile=/home/setup/.nearai/nearai/etc/supervisor.env
+ExecStart=/home/setup/.nearai/nearai/etc/start_supervisor.sh
 LimitMEMLOCK=infinity
 LimitRSS=infinity
 

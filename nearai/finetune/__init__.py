@@ -34,10 +34,9 @@ class FinetuneCli:
 
         result = client.submit(
             "finetune-task",
-            # TODO(#49): rename repo
-            "https://github.com/nearai/jasnah-cli.git",
+            "https://github.com/nearai/nearai.git",
             "main",
-            f"nearai-cli finetune start --model {model} --tokenizer {tokenizer} --dataset {dataset} --num_procs {num_procs} --num_nodes {num_nodes} --job_id {job_id} --checkpoint {checkpoint} --epochs {epochs}",
+            f"nearai finetune start --model {model} --tokenizer {tokenizer} --dataset {dataset} --num_procs {num_procs} --num_nodes {num_nodes} --job_id {job_id} --checkpoint {checkpoint} --epochs {epochs}",
             CONFIG.user_name,
             None,
             num_nodes,
@@ -175,7 +174,7 @@ class FinetuneCli:
                     checkpoint=checkpoint,
                     **dataset_kwargs,
                 ),
-                # By default the entry is not shown when using nearai-cli registry list
+                # By default the entry is not shown when using nearai registry list
                 # but the entry is still accessible.
                 show_entry=False,
                 tags=["finetune"],

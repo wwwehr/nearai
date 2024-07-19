@@ -2,11 +2,11 @@
 
 ## Setup
 
-First install nearai by running (TODO(#49): rename repo):
+First install nearai by running:
 
 ```
-git clone git@github.com:nearai/jasnah-cli.git
-cd jasnah-cli
+git clone git@github.com:nearai/nearai.git
+cd nearai
 python3 -m pip install -e .
 ```
 
@@ -19,15 +19,15 @@ python3 -m poetry install --no-root --with dev
 Check the installation worked with
 
 ```
-nearai-cli version
+nearai version
 ```
 
 Setup basic configuration
 
 ```
-nearai-cli config set db_user <DB_USERNAME>
-nearai-cli config set db_password <DB_PASSWORD>
-nearai-cli config set user_name <YOUR_NAME>
+nearai config set db_user <DB_USERNAME>
+nearai config set db_password <DB_PASSWORD>
+nearai config set user_name <YOUR_NAME>
 ```
 
 The user name will be used to identify the author of the experiments.
@@ -61,10 +61,10 @@ python3 -m pip install -e .
 To submit a new experiment run:
 
 ```
-nearai-cli submit --command <COMMAND> --name <EXPERIMENT_NAME> [--nodes <NUMBER_OF_NODES>] [--cluster <CLUSTER>]
+nearai submit --command <COMMAND> --name <EXPERIMENT_NAME> [--nodes <NUMBER_OF_NODES>] [--cluster <CLUSTER>]
 ```
 
-This will submit a new experiment. The command must be executed from a folder that is a git repository (public github repositories, and private github repositories on the same organization as nearai-cli are supported).
+This will submit a new experiment. The command must be executed from a folder that is a git repository (public github repositories, and private github repositories on the same organization as nearai are supported).
 The current commit will be used for running the command so make sure it is already available online. The diff with respect to the current commit will be applied remotely (new files are not included in the diff).
 
 On each node the environment variable `ASSIGNED_SUPERVISORS` will be available with a comma separated list of supervisors that are running the experiment. The current supervisor can be accessed via `nearai.CONFIG.supervisor_id`. See [examples/prepare_data.py](examples/prepare_data.py) for an example.
@@ -74,7 +74,7 @@ On each node the environment variable `ASSIGNED_SUPERVISORS` will be available w
 Upload an element to the registry using:
 
 ```
-nearai-cli registry upload <ITEM_LOCAL_PATH> <ITEM_S3_PATH> <DESCRIPTION> [--name <NAME>] [--tags <TAGS>]
+nearai registry upload <ITEM_LOCAL_PATH> <ITEM_S3_PATH> <DESCRIPTION> [--name <NAME>] [--tags <TAGS>]
 ```
 
 - The local path could be either to a file or a folder.
@@ -84,8 +84,8 @@ nearai-cli registry upload <ITEM_LOCAL_PATH> <ITEM_S3_PATH> <DESCRIPTION> [--nam
 There are two shortcuts to upload models and datasets. The following commands behave in the same way as `registry upload` but it adds by default the tags `model` and `dataset` respectively.
 
 ```
-nearai-cli models upload <ITEM_LOCAL_PATH> <ITEM_S3_PATH> <DESCRIPTION> [--name <NAME>] [--tags <TAGS>]
-nearai-cli datasets upload <ITEM_LOCAL_PATH> <ITEM_S3_PATH> <DESCRIPTION> [--name <NAME>] [--tags <TAGS>]
+nearai models upload <ITEM_LOCAL_PATH> <ITEM_S3_PATH> <DESCRIPTION> [--name <NAME>] [--tags <TAGS>]
+nearai datasets upload <ITEM_LOCAL_PATH> <ITEM_S3_PATH> <DESCRIPTION> [--name <NAME>] [--tags <TAGS>]
 ```
 
 We recommend as a good practice to use as s3_path `@namespace/@name/@version`, but it is not mandatory.
@@ -95,19 +95,19 @@ We recommend as a good practice to use as s3_path `@namespace/@name/@version`, b
 Upload an item to the registry with name quine.py and tags `quine` and `python`
 
 ```
-nearai-cli registry upload ~/quine.py test/quine/v3 "Test registry upload" quine.py --tags quine,python
+nearai registry upload ~/quine.py test/quine/v3 "Test registry upload" quine.py --tags quine,python
 ```
 
 Check the item is available by listing all elements in the registry:
 
 ```
-nearai-cli registry list
+nearai registry list
 ```
 
 Show only items with the tag `quine` and `python`:
 
 ```
-nearai-cli registry list --tags quine,python
+nearai registry list --tags quine,python
 ```
 
 Download this element locally. To download you can refer to the item either by name or by s3_path. Trying to download an item that was previously downloaded is a no-op.
@@ -115,50 +115,50 @@ Download this element locally. To download you can refer to the item either by n
 Note: If you start downloading and item, and cancel the download midway, you should delete the folder at `~/.nearai/registry/` to trigger a new download.
 
 ```
-nearai-cli registry download quine.py
+nearai registry download quine.py
 ```
 
 Add one or more tags to an item using:
 
 ```
-nearai-cli registry add_tags test/quine/v3 code,multiple,tags
+nearai registry add_tags test/quine/v3 code,multiple,tags
 ```
 
 Removing tags must be done one by one:
 
 ```
-nearai-cli registry remove_tag test/quine/v3 code
+nearai registry remove_tag test/quine/v3 code
 ```
 
 ### Agents
-Agents are a python file in the local registry. Existing agents can be fetched with the download command `nearai-cli agents download <AGENT_NAME>`.
+Agents are a python file in the local registry. Existing agents can be fetched with the download command `nearai agents download <AGENT_NAME>`.
 Local agent files that have not yet been uploaded can also be run.
 When uploading an agent, multiple versions can be stored by appending a version to the s3 path. The `--name` flag allows the latest agent to be fetched that matches that name.
 
 Examples
- * Downloading an agent `nearai-cli agents download xela-agent`
- * Uploading an agent `nearai-cli j agents upload --name langgraph-min-example ~/.nearai/registry/agents/langgraph-min-example/v1 agents/langgraph-min-example/v1 "A minimal example";`
+ * Downloading an agent `nearai agents download xela-agent`
+ * Uploading an agent `nearai agents upload --name langgraph-min-example ~/.nearai/registry/agents/langgraph-min-example/v1 agents/langgraph-min-example/v1 "A minimal example";`
 
 #### Running environment interactively
 
 You can run an agent (or a set of agents) inside a local environment that lives in a specific folder.
 
 Agents can be run interactively. The environment_path should be a folder where the agent chat record (chat.txt) and other files can be written, usually `~/tmp/test-agents/<AGENT_NAME>`.
- * command `nearai-cli environment interactive <AGENT> <ENVIRONMENT_PATH>`.
- * Example for a local agent `nearai-cli environment interactive agent/my-agent/v1 ~/tmp/test-agents/my-agent-v1`.
- * Example for a downloaded agent `nearai-cli environment interactive xela-agent ~/tmp/test-agents/xela-agent-v2`.
+ * command `nearai environment interactive <AGENT> <ENVIRONMENT_PATH>`.
+ * Example for a local agent `nearai environment interactive agent/my-agent/v1 ~/tmp/test-agents/my-agent-v1`.
+ * Example for a downloaded agent `nearai environment interactive xela-agent ~/tmp/test-agents/xela-agent-v2`.
 
 #### Running environment task
 To run without user interaction pass the task input to the task
- * command `nearai-cli environment task <AGENT> <INPUT> <ENVIRONMENT_PATH>`.
- * example `nearai-cli environment task xela-agent "Build a command line chess engine" ~/tmp/test-agents/chess-engine`.
+ * command `nearai environment task <AGENT> <INPUT> <ENVIRONMENT_PATH>`.
+ * example `nearai environment task xela-agent "Build a command line chess engine" ~/tmp/test-agents/chess-engine`.
 
 #### Saving and loading environment runs
 By default each environment run is saved to the registry. You can disable this by adding the flag `--record_run=False`.
 
 An environment run can be loaded by using the `--load_env` flag and passing it a registry identifier `--load_env=61`.
 
-To list environment identifiers use the command `nearai-cli registry list --tags=environment`.
+To list environment identifiers use the command `nearai registry list --tags=environment`.
 
 A run can be named by passing a name to the record_run flag `--record_run="my special run"`.
 
@@ -166,7 +166,7 @@ Environment runs can be loaded by passing the name of a previous run to  the --l
 
 ### Library
 
-You can import `jasnah`(TODO(#49): rename repo) as a library in your python code. The main features are:
+You can import `nearai` as a library in your python code. The main features are:
 
 - Download/upload models and datasets from the registry. See [examples/prepare_data.py](examples/prepare_data.py).
 - Store log events in the database. TODO Example.

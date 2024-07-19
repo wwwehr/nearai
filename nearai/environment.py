@@ -180,7 +180,7 @@ class Environment(object):
         if not author:
             print(
                 "Warning: No author specified in config. Run not saved to registry."
-                " To set an author run `nearai-cli config set user_name <YOUR_NAME>`"
+                " To set an author run `nearai config set user_name <YOUR_NAME>`"
             )
             return
 

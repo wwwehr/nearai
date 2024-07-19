@@ -2,15 +2,14 @@
 set -e
 
 NEARAI_DATA=/home/setup/.nearai
-CLI_REPO="$NEARAI_DATA/nearai-cli"
-CLI_CMD="/home/setup/.local/bin/nearai-cli"
+CLI_REPO="$NEARAI_DATA/nearai"
+CLI_CMD="/home/setup/.local/bin/nearai"
 
 mkdir -p $NEARAI_DATA
 
-# Download jasnah-cli
-# TODO(#49): rename repo
+# Download nearai
 if [ ! -d "$CLI_REPO" ]; then
-    git clone git@github.com:nearai/jasnah-cli.git $CLI_REPO
+    git clone git@github.com:nearai/nearai.git $CLI_REPO
 fi
 
 # Update latest version

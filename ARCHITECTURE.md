@@ -3,7 +3,7 @@
 Manage dataset and model registry.
 Run and explore tasks on the experiment platform.
 
-All data created by `nearai-cli` is stored at `~/.nearai`
+All data created by `nearai` is stored at `~/.nearai`
 
 ## Experiment Platform
 
@@ -16,8 +16,8 @@ There are two components:
 
 1. Install `nearai` first. See [README.md](README.md).
 2. Create the host files with all hosts you want to use. See for example [etc/hosts_lambda.txt](etc/hosts_lambda.txt).
-3. Install the supervisor on every host by running: `nearai-cli server install_supervisors path/to/hosts.txt`. This command is idempotent, so it is ok if it is re-run multiple times.
-4. Start server by running: `nearai-cli server start path/to/hosts.txt`.
+3. Install the supervisor on every host by running: `nearai server install_supervisors path/to/hosts.txt`. This command is idempotent, so it is ok if it is re-run multiple times.
+4. Start server by running: `nearai server start path/to/hosts.txt`.
 
 ### Experiment flow
 

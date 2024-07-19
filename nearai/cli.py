@@ -66,7 +66,7 @@ def parse_hosts(hosts_path: Path) -> List[Host]:
 def install(hosts_description: List[Host], skip_install: str):
     """
     Install supervisor on every host.
-    Skip nearai-cli installation on the dev machine (skip_install)
+    Skip nearai installation on the dev machine (skip_install)
     """
     hosts_str = [h.host for h in hosts_description]
     all_hosts = Group(*hosts_str)
@@ -87,7 +87,7 @@ def install(hosts_description: List[Host], skip_install: str):
 
     run_bash_script("install_cli.sh")
 
-    nearai_cli_path = "/home/setup/.local/bin/nearai-cli"
+    nearai_cli_path = "/home/setup/.local/bin/nearai"
 
     for conn in all_hosts:
         conn.run(f"{nearai_cli_path} config set supervisor_id {conn.host}")
@@ -341,7 +341,7 @@ class EnvironmentCli:
         env.save_folder(name)
 
     def save_from_history(self, name: str = None):
-        """Reads piped history, finds agent task runs, writes start_command.log files, and saves to registry. For detailed usage, run: nearai-cli environment save_from_history --help
+        """Reads piped history, finds agent task runs, writes start_command.log files, and saves to registry. For detailed usage, run: nearai environment save_from_history --help
 
         This command:
         1. Finds agent task runs (must contain non-empty chat.txt)
@@ -352,7 +352,7 @@ class EnvironmentCli:
         Assumes format:
         ' <line_number>  <program_name> environment interactive <comma_separated_agents> <path> <other_args>'
         Run:
-        $ history | grep "environment interactive" | sed "s:~:$HOME:g" | nearai-cli environment save_from_history environment_interactive_runs_from_lambda_00
+        $ history | grep "environment interactive" | sed "s:~:$HOME:g" | nearai environment save_from_history environment_interactive_runs_from_lambda_00
         """
         env = Environment("/", [], CONFIG.llm_config, create_files=False)
         # Read from stdin (piped input)
@@ -461,13 +461,13 @@ class CLI:
         print(pkg_resources.get_distribution("nearai").version)
 
     def update(self):
-        """Update nearai-cli version"""
-        path = DATA_FOLDER / "nearai-cli"
+        """Update nearai version"""
+        path = DATA_FOLDER / "nearai"
 
         if path.absolute() != nearai.cli_path().absolute():
             print()
-            print(f"Updating nearai-cli version installed in {path}")
-            print(f"The invoked nearai-cli is in {nearai.cli_path()}")
+            print(f"Updating nearai version installed in {path}")
+            print(f"The invoked nearai is in {nearai.cli_path()}")
             print()
 
         if path.exists():

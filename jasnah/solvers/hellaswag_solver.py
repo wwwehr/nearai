@@ -14,7 +14,7 @@ class HellaswagDatum(BaseModel):
     ctx: str
     ctx_a: str
     ctx_b: str
-    endings: list[str]
+    endings: List[str]
     ind: int
     label: str
     source_id: str

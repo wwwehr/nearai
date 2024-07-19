@@ -12,7 +12,7 @@ from jasnah.completion import InferenceRouter
 class MMLUDatum(BaseModel):
     question: str
     subject: str
-    choices: list[str]
+    choices: List[str]
     answer: int
 
 

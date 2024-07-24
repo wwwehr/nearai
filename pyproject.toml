@@ -41,7 +41,7 @@ ruff = "^0.5.2"
 jasnah-cli = "jasnah.cli:main"
 
 [build-system]
-requires = ["poetry-core", "torch>=2.2.2"]
+requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
@@ -56,6 +56,7 @@ exclude = [
     "__pypackages__",
     "venv",
 ]
+extend-exclude = ["tests"]
 line-length = 120
 indent-width = 4
 
@@ -72,11 +73,14 @@ select = [
 ]
 ignore = [
     "C901",  # too complex
+    "C408",  # dict() constructor
+    "C417",  # enforce list comprehension
     "W191",  # indentation contains tabs
     "D401",  # imperative mood
     "D100",  # Missing docstring module
     "D101",  # Missing docstring in public class
     "D103",  # Missing docstring in public function
+    "D104",  # Missing docstring in public package
 ]
 
 [tool.ruff.format]

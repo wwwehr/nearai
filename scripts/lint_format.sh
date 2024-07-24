@@ -5,5 +5,5 @@
 # Usage: ./scripts/lint_format.sh
 
 set -e
-poetry run ruff check jasnah/
-poetry run ruff format --check --diff jasnah/
+poetry run ruff check nearai/
+poetry run ruff format --check --diff nearai/

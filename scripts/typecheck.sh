@@ -5,4 +5,4 @@
 # Usage: ./scripts/typecheck.sh
 
 set -e
-poetry run mypy jasnah/
+poetry run mypy nearai/

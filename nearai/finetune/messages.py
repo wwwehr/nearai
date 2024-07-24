@@ -1,11 +1,10 @@
-import os.path
 from typing import Any, Dict, List, Mapping, Optional
 
 import numpy as np
-from datasets import load_from_disk
 from torchtune.data import CROSS_ENTROPY_IGNORE_IDX, Message
 from torchtune.modules.tokenizers import Tokenizer
 
+from datasets import load_from_disk
 from nearai.finetune.text_completion import TextCompletionDataset, truncate
 
 

@@ -17,7 +17,7 @@ class StreamerAgent(object):
             - writing required code
             - testing that code works correctly
             """
-            PROMPT2 = f"""You should think about the next steps outloud and at the end output ||||| and one of the following commands:
+            PROMPT2 = """You should think about the next steps outloud and at the end output ||||| and one of the following commands:
             - run <command> to execute command in the terminal
             - list <path> to list files in the given path
             - write <filename> and from new line content of the file you want to write
@@ -73,4 +73,4 @@ class StreamerAgent(object):
             history.append({"role": "user", "content": command_outcome})
             env.add_message("user", command_outcome)
             print(history[-1])
-            input(f"Press Enter to continue...")
+            input("Press Enter to continue...")

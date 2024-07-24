@@ -1,16 +1,16 @@
 import ast
 import re
 from itertools import islice
+from typing import List, Union
 
 from jinja2 import Template
 from openai.types.chat import ChatCompletion
 from pydantic import BaseModel
-from typing import List, Union
-from datasets import Dataset, DatasetDict
 
-from nearai.solvers import SolverStrategy
-from nearai.config import CONFIG, PROMPTS_FOLDER
+from datasets import Dataset, DatasetDict
 from nearai.completion import InferenceRouter
+from nearai.config import CONFIG, PROMPTS_FOLDER
+from nearai.solvers import SolverStrategy
 
 
 def get_function_name(code_str: str) -> str:
@@ -45,9 +45,7 @@ class MBPPDatum(BaseModel):
 
 
 class MBPPSolverStrategy(SolverStrategy):
-    """
-    Solver strategy for the MBPP dataset
-    """
+    """Solver strategy for the MBPP dataset"""
 
     SHOTS = 3
 

@@ -1,12 +1,13 @@
+from typing import List, Union
+
 from jinja2 import Template
 from openai.types.chat import ChatCompletion
 from pydantic import BaseModel
-from typing import List, Union
-from datasets import Dataset, DatasetDict
 
-from nearai.solvers import SolverStrategy
-from nearai.config import CONFIG, PROMPTS_FOLDER
+from datasets import Dataset, DatasetDict
 from nearai.completion import InferenceRouter
+from nearai.config import CONFIG, PROMPTS_FOLDER
+from nearai.solvers import SolverStrategy
 
 
 class HellaswagDatum(BaseModel):
@@ -23,9 +24,7 @@ class HellaswagDatum(BaseModel):
 
 
 class HellaswagSolverStrategy(SolverStrategy):
-    """
-    Solver strategy for the MMLU dataset
-    """
+    """Solver strategy for the MMLU dataset"""
 
     SHOTS = 8
 

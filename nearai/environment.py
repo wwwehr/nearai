@@ -1,22 +1,24 @@
-from datetime import datetime, timezone
+import hashlib
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
 import tarfile
 import tempfile
 import threading
-import re
 import uuid
-import hashlib
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, Iterable, List, Optional, Union
 
-import psutil
+import psutil  # type: ignore
+from openai.types.chat import ChatCompletionMessageParam, ChatCompletion
 
+from nearai.agent import Agent
 from nearai.completion import InferenceRouter
-from nearai.config import CONFIG
+from nearai.config import CONFIG, Config, LLMConfig
 from nearai.db import db
 from nearai.registry import registry
 
@@ -26,7 +28,7 @@ TERMINAL_FILENAME = "terminal.txt"
 
 
 class Environment(object):
-    def __init__(self, path: str, agents: List["Agent"], config, create_files: bool = True):
+    def __init__(self, path: str, agents: List[Agent], config: LLMConfig, create_files: bool = True) -> None:  # noqa: D107
         self._path = path
         self._agents = agents
         self._done = False
@@ -39,17 +41,17 @@ class Environment(object):
         os.chdir(self._path)
 
     @staticmethod
-    def _generate_run_id():
+    def _generate_run_id() -> str:
         return uuid.uuid4().hex
 
-    def add_message(self, role: str, message: str, filename: str = CHAT_FILENAME):
+    def add_message(self, role: str, message: str, filename: str = CHAT_FILENAME) -> None:  # noqa: D102
         with open(os.path.join(self._path, filename), "a") as f:
             f.write(json.dumps({"role": role, "content": message}) + DELIMITER)
 
-    def list_terminal_commands(self, filename: str = TERMINAL_FILENAME):
+    def list_terminal_commands(self, filename: str = TERMINAL_FILENAME) -> List[Any]:  # noqa: D102
         return self.list_messages(filename)
 
-    def list_messages(self, filename: str = CHAT_FILENAME):
+    def list_messages(self, filename: str = CHAT_FILENAME) -> List[Any]:  # noqa: D102
         path = os.path.join(self._path, filename)
 
         if not os.path.exists(path):
@@ -58,13 +60,13 @@ class Environment(object):
         with open(path, "r") as f:
             return [json.loads(message) for message in f.read().split(DELIMITER) if message]
 
-    def list_files(self, path: str) -> List[str]:
+    def list_files(self, path: str) -> List[str]:  # noqa: D102
         return os.listdir(os.path.join(self._path, path))
 
-    def get_path(self) -> str:
+    def get_path(self) -> str:  # noqa: D102
         return self._path
 
-    def read_file(self, filename: str) -> str:
+    def read_file(self, filename: str) -> str:  # noqa: D102
         if not os.path.exists(os.path.join(self._path, filename)):
             return ""
         try:
@@ -73,23 +75,22 @@ class Environment(object):
         except Exception as e:
             return f"failed to read file: {e}"
 
-    def write_file(self, filename: str, content: str):
+    def write_file(self, filename: str, content: str) -> None:  # noqa: D102
         path = Path(self._path) / filename
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w") as f:
             f.write(content)
 
-    def exec_command(self, command: str) -> Dict[str, str]:
+    def exec_command(self, command: str) -> Dict[str, str | int]:
         """Executes a command in the environment and logs the output."""
-        if self._config.get("confirm_commands", True):
-            yes_no = input("> Do you want to run the following command? (Y/n): " + command)
-            if yes_no != "" and yes_no.lower() != "y":
-                return {
-                    "command": command,
-                    "returncode": 999,
-                    "stdout": "",
-                    "stderr": "declined by user",
-                }
+        yes_no = input("> Do you want to run the following command? (Y/n): " + command)
+        if yes_no != "" and yes_no.lower() != "y":
+            return {
+                "command": command,
+                "returncode": 999,
+                "stdout": "",
+                "stderr": "declined by user",
+            }
 
         try:
             process = subprocess.Popen(
@@ -110,7 +111,7 @@ class Environment(object):
 
         msg = ""
 
-        def kill_process_tree(p):
+        def kill_process_tree(p: Any) -> None:
             nonlocal msg
             msg = "Killing process due to timeout"
 
@@ -126,8 +127,8 @@ class Environment(object):
 
         result = {
             "command": command,
-            "stdout": process.stdout.read(),
-            "stderr": process.stderr.read(),
+            "stdout": process.stdout.read() if process.stdout and hasattr(process.stdout, "read") else "",
+            "stderr": process.stderr.read() if process.stderr and hasattr(process.stderr, "read") else "",
             "returncode": process.returncode,
             "msg": msg,
         }
@@ -135,15 +136,20 @@ class Environment(object):
             f.write(json.dumps(result) + DELIMITER)
         return result
 
-    def completions(self, model, messages, stream=False, **kwargs):
+    def completions(
+        self, model: str, messages: Iterable[ChatCompletionMessageParam], stream: bool = False, **kwargs: Any
+    ) -> ChatCompletion:
         """Returns all completions for given messages using the given model."""
         return self._inference.completions(model, messages, stream=stream, **kwargs)
 
-    def completion(self, model: str, messages) -> str:
+    def completion(self, model: str, messages: Iterable[ChatCompletionMessageParam]) -> str:
         """Returns a completion for the given messages using the given model."""
-        return self.completions(model, messages).choices[0].message.content
+        completions = self.completions(model, messages).choices
+        if completions:
+            return completions[0].message.content
+        raise ValueError("No completions found")
 
-    def call_agent(self, agent_path: str, task: str):
+    def call_agent(self, agent_path: str, task: str) -> None:
         """Calls agent with given task."""
         self._agents[agent_path].run(self, task=task)
 
@@ -151,7 +157,7 @@ class Environment(object):
         """Returns list of agents available in environment."""
         return self._agents
 
-    def is_done(self):
+    def is_done(self) -> bool:  # noqa: D102
         return self._done
 
     def mark_done(self):

@@ -1,12 +1,13 @@
+from typing import List, Union
+
 from jinja2 import Template
 from openai.types.chat import ChatCompletion
 from pydantic import BaseModel
-from typing import List, Union
-from datasets import Dataset, DatasetDict
 
-from nearai.solvers import SolverStrategy
-from nearai.config import CONFIG, PROMPTS_FOLDER
+from datasets import Dataset, DatasetDict
 from nearai.completion import InferenceRouter
+from nearai.config import CONFIG, PROMPTS_FOLDER
+from nearai.solvers import SolverStrategy
 
 
 class MMLUDatum(BaseModel):
@@ -17,9 +18,7 @@ class MMLUDatum(BaseModel):
 
 
 class MMLUSolverStrategy(SolverStrategy):
-    """
-    Solver strategy for the MMLU dataset
-    """
+    """Solver strategy for the MMLU dataset"""
 
     SHOTS = 8
 
@@ -43,9 +42,7 @@ class MMLUSolverStrategy(SolverStrategy):
                 [self.dataset_ref["dev"][i] for i in example_problems_indices],
             )
         )
-        base_prompt = Template(
-            open(PROMPTS_FOLDER / "mmlu_verbose_answer.j2").read(), trim_blocks=True
-        ).render(
+        base_prompt = Template(open(PROMPTS_FOLDER / "mmlu_verbose_answer.j2").read(), trim_blocks=True).render(
             example_problems=example_problems,
             challenge_problem=datum,
             choices=choices,

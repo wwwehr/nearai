@@ -1,13 +1,13 @@
 import json
 import os
 import tarfile
-import sys
+from typing import Any, List, Tuple
 
-import streamlit as st
+import streamlit as st  # type: ignore # TODO: Update pyproject to install streamlit
 
 
 # Function to read file content
-def read_file(file_path):
+def read_file(file_path: str) -> str:
     with open(file_path, "r") as file:
         return file.read()
 
@@ -20,7 +20,7 @@ for file in os.listdir():
             tarfile.open(file).extractall(fdir)
 
 
-def fetch_folders(path):
+def fetch_folders(path: str) -> List[str]:
     result = []
     for fdir in os.listdir(path):
         if os.path.isdir(f"{path}/{fdir}"):
@@ -40,7 +40,7 @@ directories = {fdir: fdir for fdir in dir_names}
 
 
 # Function to get boilerplate chat messages based on the selected directory
-def get_chat_messages(directory):
+def get_chat_messages(directory: str) -> List[Tuple[Any, Any]]:
     messages = []
 
     with open(f"{directory}/chat.txt", "r") as file:

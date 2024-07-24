@@ -10,7 +10,6 @@ python = ">=3.8.1,<4.0"
 fire = "^0.6.0"
 flask = "^3.0.3"
 boto3 = "^1.34.100"
-boto3-stubs = "^1.34.100"
 datasets = "^2.19.1"
 transformers = "^4.40.2"
 peft = "^0.10.0"
@@ -37,6 +36,9 @@ fastapi-cli = "^0.0.4"
 python-dotenv = "^1.0.1"
 pydantic-core = "^2.18.4"
 base58 = "2.1.1"
+mypy-boto3 = "^1.34.147"
+mypy-boto3-s3 = "^1.34.138"
+boto3-stubs = "^1.34.147"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.10.0"
@@ -61,6 +63,7 @@ exclude = [
     "__pypackages__",
     "venv",
 ]
+extend-exclude = ["tests"]
 line-length = 120
 indent-width = 4
 
@@ -77,11 +80,14 @@ select = [
 ]
 ignore = [
     "C901",  # too complex
+    "C408",  # dict() constructor
+    "C417",  # enforce list comprehension
     "W191",  # indentation contains tabs
     "D401",  # imperative mood
     "D100",  # Missing docstring module
     "D101",  # Missing docstring in public class
     "D103",  # Missing docstring in public function
+    "D104",  # Missing docstring in public package
 ]
 
 [tool.ruff.format]
@@ -111,5 +117,5 @@ strict_equality = true
 warn_unused_configs = true
 
 [[tool.mypy.overrides]]
-module = ['datasets.*', 'fire.*']
+module = ['datasets.*', 'fire.*', 'tqdm.*', 'fabric.*', 'tabulate.*', 'requests.*', 'tensorboardX.*', 'pymysql.*']
 ignore_missing_imports = true

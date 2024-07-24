@@ -5,9 +5,9 @@ from functools import partial
 from itertools import islice
 from typing import Any, Callable, Dict, Optional, Tuple, Union
 
-from datasets import Dataset, DatasetDict
 from tqdm import tqdm
 
+from datasets import Dataset, DatasetDict  # type: ignore
 from nearai.db import db
 from nearai.solvers import SolverStrategy
 
@@ -18,7 +18,7 @@ class DatasetInfo:
     subset: Optional[str]
     dataset: Union[Dataset, DatasetDict]
 
-    def get_dataset(self) -> Dataset:
+    def get_dataset(self) -> Dataset:  # noqa: D102
         if isinstance(self.dataset, DatasetDict):
             assert self.subset is not None, f"Subset must be: {', '.join(self.dataset.keys())}"
             return self.dataset[self.subset]
@@ -29,12 +29,12 @@ class DatasetInfo:
 
 
 class BenchmarkExecutor:
-    def __init__(self, dataset_info: DatasetInfo, solver_strategy: SolverStrategy, benchmark_id: int):
+    def __init__(self, dataset_info: DatasetInfo, solver_strategy: SolverStrategy, benchmark_id: int):  # noqa: D107
         self.dataset_info = dataset_info
         self.solver_strategy = solver_strategy
         self.benchmark_id = benchmark_id
 
-    def run(self, progress: bool = True, max_concurrent: int = 32) -> None:
+    def run(self, progress: bool = True, max_concurrent: int = 32) -> None:  # noqa: D102
         dataset = self.dataset_info.get_dataset()
 
         cache = db.get_benchmark_status(self.benchmark_id)
@@ -81,7 +81,7 @@ def solve_task(
     solve_fn: Callable[[Any], Union[bool, Tuple[bool, Any]]],
     index: int,
     datum: Any,
-):
+) -> Union[bool, Tuple[bool, Any]]:
     if index in cache:
         return cache[index]
 

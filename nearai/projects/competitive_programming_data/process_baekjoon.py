@@ -1,10 +1,10 @@
 import json
 
-from datasets import Dataset
 from torchtune.data import Message
 from torchtune.models.llama3 import llama3_tokenizer
 from tqdm import tqdm
 
+from datasets import Dataset
 from nearai.dataset import get_dataset
 from nearai.registry import registry
 
@@ -44,7 +44,6 @@ def process_trajectory(item):
             messages.append({"role": "assistant", "content": "!SUBMIT"})
             messages.append({"role": "system", "content": f"Result:\n{step['verdict']}"})
         else:
-
             raise ValueError(f"Unknown step kind: {step['kind']}")
 
     return messages

@@ -12,9 +12,7 @@ from nearai.solvers.mbpp_solver import MBPPDatum, get_function_name
 
 
 class MBPPSolverAgent(SolverStrategy):
-    """
-    Solver strategy for the MBPP dataset
-    """
+    """Solver strategy for the MBPP dataset"""
 
     def __init__(self, dataset_ref: Union[Dataset, DatasetDict], agent, num_iterations=16, verbose=False):
         super().__init__()

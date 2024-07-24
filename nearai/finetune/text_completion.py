@@ -1,9 +1,9 @@
-import os.path
 from typing import Any, Dict, List, Mapping, Optional
 
-from datasets import load_from_disk
 from torch.utils.data import Dataset
 from torchtune.modules.tokenizers import Tokenizer
+
+from datasets import load_from_disk
 
 
 def truncate(
@@ -11,18 +11,20 @@ def truncate(
     max_seq_len: int,
     eos_id: Optional[Any] = None,
 ) -> List[Any]:
-    """
-    Truncate a list of tokens to a maximum length. If eos_id is provided, the last
+    """Truncate a list of tokens to a maximum length. If eos_id is provided, the last
     token will be replaced with eos_id.
 
     Args:
+    ----
         tokens (List[Any]): list of tokens to truncate
         max_seq_len (int): maximum length of the list
         eos_id (Optional[Any]): token to replace the last token with. If None, the
             last token will not be replaced. Default is None.
 
     Returns:
+    -------
         List[Any]: truncated list of tokens
+
     """
     tokens_truncated = tokens[:max_seq_len]
     if eos_id is not None and tokens_truncated[-1] != eos_id:
@@ -31,11 +33,11 @@ def truncate(
 
 
 class TextCompletionDataset(Dataset):
-    """
-    Freeform dataset for any unstructured text corpus. Quickly load any dataset
+    """Freeform dataset for any unstructured text corpus. Quickly load any dataset
     from Hugging Face or local disk and tokenize it for your model.
 
     Args:
+    ----
         tokenizer (Tokenizer): Tokenizer used to encode data. Tokenize must implement an ``encode`` and ``decode`` method.
         source (str): path string of dataset, anything supported by Hugging Face's ``load_dataset``
             (https://huggingface.co/docs/datasets/en/package_reference/loading_methods#datasets.load_dataset.path)
@@ -46,6 +48,7 @@ class TextCompletionDataset(Dataset):
             Default is None, disabling truncation. We recommend setting this to the highest you can fit in memory
             and is supported by the model. For example, llama2-7B supports up to 4096 for sequence length.
         **load_dataset_kwargs (Dict[str, Any]): additional keyword arguments to pass to ``load_dataset``.
+
     """
 
     def __init__(

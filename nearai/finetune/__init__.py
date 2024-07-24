@@ -61,7 +61,7 @@ class FinetuneCli:
         """Start a finetuning job on the current node
 
         Args:
-
+        ----
             model (str): Name of a model in the registry. Base model to finetune.
             tokenizer (str): Name of a tokenizer in the registry. Using tokenizer.model format.
             dataset (str): Name of a dataset in the registry.
@@ -70,6 +70,7 @@ class FinetuneCli:
             num_nodes (int): Number of nodes to use for training. Default is 1.
             checkpoint (str): Name of the model checkpoint to start from. Default is None.
             dataset_kwargs (Dict[str, Any]): Additional keyword arguments to pass to the dataset constructor.
+
         """
         assert num_nodes >= 1
 
@@ -189,8 +190,7 @@ BACKGROUND_PROCESS = True
 
 
 def parse_line(line):
-    """
-    Example of line to be parsed
+    """Example of line to be parsed
 
     Step 33 | loss:1.5400923490524292 lr:9.9e-05 tokens_per_second_per_gpu:101.22285588141214
     """

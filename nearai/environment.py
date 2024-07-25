@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Union
 
-import psutil  # type: ignore
+import psutil
 from litellm import Choices, CustomStreamWrapper, ModelResponse
 from openai.types.chat import ChatCompletionMessageParam
 

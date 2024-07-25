@@ -37,8 +37,11 @@ jobs:
     - name: Install dependencies
       run: poetry install
 
-    - name: Lint & Format Check
-      run: ./scripts/lint_format.sh
+    - name: Lint Check
+      run: ./scripts/lint_check.sh
+
+    - name: Format Check
+      run: ./scripts/format_check.sh
 
     - name: Type Check
-      run: ./scripts/typecheck.sh
+      run: ./scripts/type_check.sh

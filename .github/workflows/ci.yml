@@ -10,18 +10,21 @@ on:
 jobs:
   pipeline:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
-
-    - name: Install poetry
-      run: pipx install poetry
 
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
         cache: "poetry"
-        python-version: '3.x'
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install poetry
+      run: pipx install poetry
 
     - name: Install Codespell
       run: pip install codespell

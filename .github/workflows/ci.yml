@@ -30,7 +30,7 @@ jobs:
       run: codespell --config .codespellrc
 
     - name: check lock file for inconsistencies
-      run: poetry lock --check
+      run: poetry check --lock
 
     - name: Install dependencies
       run: poetry install

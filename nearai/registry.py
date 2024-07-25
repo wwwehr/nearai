@@ -84,7 +84,7 @@ def exists_directory_in_s3(s3_path: str) -> bool:
 
 
 class Registry:
-    def __init__(self, tags: List[str]):
+    def __init__(self, tags: List[str]):  # noqa: D107
         self.tags = tags
         self.download_folder = DATA_FOLDER / "registry"
 

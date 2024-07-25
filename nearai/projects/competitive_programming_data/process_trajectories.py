@@ -1,10 +1,11 @@
 import json
+from typing import Any, Dict, Generator, List
 
-from datasets import Dataset
+from datasets import Dataset  # type: ignore
 from nearai.dataset import get_dataset
 
 
-def process_trajectory(item):
+def process_trajectory(item: Dict[str, Any]) -> List[Dict[str, Any]]:
     messages = []
     if item["type"] == "sequence":
         for c in item["children"]:
@@ -31,7 +32,7 @@ if __name__ == "__main__":
     content = json.load(open(path))
     item = content[0]
 
-    def gen():
+    def gen() -> Generator[Dict[str, Any], None, None]:
         for item in content:
             yield {"messages": process_trajectory(item)}
 

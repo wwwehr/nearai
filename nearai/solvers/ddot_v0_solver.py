@@ -9,8 +9,8 @@ from typing import List, Tuple
 import httpx as hx
 import tenacity
 
-from nearai.agent import load_agent
-from nearai.config import CONFIG, DATA_FOLDER
+from nearai.agent import Agent, load_agent
+from nearai.config import CONFIG, DATA_FOLDER, Config
 from nearai.dataset import Dataset
 from nearai.environment import Environment
 
@@ -74,7 +74,7 @@ async def submit_problem(problem_id: str, code: str, extension: Extensions) -> s
 
 
 class DDOTSEnvironment(Environment):
-    def __init__(self, agents: List["Agent"], problem_id: str, description: str, config):
+    def __init__(self, agents: List[Agent], problem_id: str, description: str, config: Config):  # noqa: D107
         self.tdir = TemporaryDirectory()
         super().__init__(self.tdir.name, agents, config)
 
@@ -92,12 +92,12 @@ class DDOTSEnvironment(Environment):
             with open(self.tdir.name + "/" + fname, "w") as f:
                 f.write(content)
 
-    async def async_submit(self, code):
+    async def async_submit(self, code: str) -> Tuple[bool, str]:  # noqa: D102
         submission_id = await submit_problem(self.problem_id, code, Extensions.PYTHON)
 
         try:
             await is_output_ready(submission_id)
-        except:
+        except Exception:
             print("WARNING: Submission took too long to execute on DDOTS")
             self.mark_done()
             return False, "Submission took too long to execute on the platform"
@@ -113,7 +113,7 @@ class DDOTSEnvironment(Environment):
 
         return False, output
 
-    def submit_python(self, code) -> Tuple[bool, str]:
+    def submit_python(self, code: str) -> Tuple[bool, str]:
         """Returns True if the submission was accepted, False otherwise.
 
         The second element of the tuple is the output of the checker if the submission was rejected.
@@ -134,7 +134,7 @@ class DDOTSV0Solver(SolverStrategy):
 
     """
 
-    def __init__(self, dataset_ref: Dataset, agents: str, max_iterations: int, save_snapshots: bool = False):
+    def __init__(self, dataset_ref: Dataset, agents: str, max_iterations: int, save_snapshots: bool = False):  # noqa: D107
         self.agents = [load_agent(agent) for agent in agents.split(",")]
         self.max_iterations = max_iterations
 
@@ -146,15 +146,15 @@ class DDOTSV0Solver(SolverStrategy):
         self.save_snapshots = save_snapshots
         print("Saving trajectories to", self._saved_trajectories)
 
-    def compatible_datasets(self) -> List[str]:
+    def compatible_datasets(self) -> List[str]:  # noqa: D102
         return ["ddots_codeforces_small/v0", "datasets/ddots_codeforces_medium_A_B/v0"]
 
-    def solve(self, datum: dict) -> bool:
+    def solve(self, datum: dict) -> bool:  # noqa: D102
         problem_id = datum["problem_id"]
         description = datum["description"]
 
-        config = deepcopy(CONFIG.llm_config)
-        config["confirm_commands"] = False
+        config = deepcopy(CONFIG)
+        config.confirm_commands = False
 
         env = DDOTSEnvironment(self.agents, problem_id, description, config)
         env.write_file(".solved", str(False))

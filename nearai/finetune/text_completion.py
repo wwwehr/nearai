@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Mapping, Optional
 from torch.utils.data import Dataset
 from torchtune.modules.tokenizers import Tokenizer
 
-from datasets import load_from_disk
+from datasets import load_from_disk  # type: ignore
 
 
 def truncate(
@@ -11,8 +11,7 @@ def truncate(
     max_seq_len: int,
     eos_id: Optional[Any] = None,
 ) -> List[Any]:
-    """Truncate a list of tokens to a maximum length. If eos_id is provided, the last
-    token will be replaced with eos_id.
+    """Truncate a list of tokens to a maximum length. If eos_id is provided, the last token will be replaced with eos_id.
 
     Args:
     ----
@@ -25,7 +24,7 @@ def truncate(
     -------
         List[Any]: truncated list of tokens
 
-    """
+    """  # noqa: E501
     tokens_truncated = tokens[:max_seq_len]
     if eos_id is not None and tokens_truncated[-1] != eos_id:
         tokens_truncated[-1] = eos_id
@@ -33,8 +32,7 @@ def truncate(
 
 
 class TextCompletionDataset(Dataset):
-    """Freeform dataset for any unstructured text corpus. Quickly load any dataset
-    from Hugging Face or local disk and tokenize it for your model.
+    """Freeform dataset for any unstructured text corpus. Quickly load any dataset from Hugging Face or local disk and tokenize it for your model.
 
     Args:
     ----
@@ -49,9 +47,9 @@ class TextCompletionDataset(Dataset):
             and is supported by the model. For example, llama2-7B supports up to 4096 for sequence length.
         **load_dataset_kwargs (Dict[str, Any]): additional keyword arguments to pass to ``load_dataset``.
 
-    """
+    """  # noqa: E501
 
-    def __init__(
+    def __init__(  # noqa: D107
         self,
         tokenizer: Tokenizer,
         source: str,
@@ -67,10 +65,10 @@ class TextCompletionDataset(Dataset):
         self.max_seq_len = max_seq_len
         self._column = column
 
-    def __len__(self):
+    def __len__(self) -> int:  # noqa: D105
         return len(self._data)
 
-    def __getitem__(self, index: int) -> Dict[str, List[int]]:
+    def __getitem__(self, index: int) -> Dict[str, List[int]]:  # noqa: D105
         sample = self._data[index]
         return self._prepare_sample(sample)
 

@@ -14,11 +14,12 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Union
 
 import psutil  # type: ignore
-from openai.types.chat import ChatCompletionMessageParam, ChatCompletion
+from litellm import Choices, CustomStreamWrapper, ModelResponse
+from openai.types.chat import ChatCompletionMessageParam
 
 from nearai.agent import Agent
 from nearai.completion import InferenceRouter
-from nearai.config import CONFIG, Config, LLMConfig
+from nearai.config import CONFIG, Config
 from nearai.db import db
 from nearai.registry import registry
 from nearai.tool_registry import ToolRegistry
@@ -29,12 +30,15 @@ TERMINAL_FILENAME = "terminal.txt"
 
 
 class Environment(object):
-    def __init__(self, path: str, agents: List[Agent], config: LLMConfig, create_files: bool = True) -> None:  # noqa: D107
+    def __init__(  # noqa: D107
+        self, path: str, agents: List[Agent], config: Config, create_files: bool = True
+    ) -> None:
         self._path = path
         self._agents = agents
         self._done = False
         self._config = config
-        self._inference = InferenceRouter(config)
+        assert config.llm_config is not None, "LLMConfig is not defined."
+        self._inference = InferenceRouter(config.llm_config)
         self._user_name = CONFIG.user_name
         self._tools = ToolRegistry()
         self.register_standard_tools()
@@ -47,10 +51,10 @@ class Environment(object):
     def _generate_run_id() -> str:
         return uuid.uuid4().hex
 
-    def get_tool_registry(self):
+    def get_tool_registry(self) -> ToolRegistry:  # noqa: D102
         return self._tools
 
-    def register_standard_tools(self):
+    def register_standard_tools(self) -> None:  # noqa: D102
         reg = self.get_tool_registry()
         reg.register_tool(self.exec_command)
         reg.register_tool(self.read_file)
@@ -58,7 +62,7 @@ class Environment(object):
         reg.register_tool(self.request_user_input)
         reg.register_tool(self.list_files)
 
-    def add_message(self, role: str, message: str, filename: str = CHAT_FILENAME, **kwargs):
+    def add_message(self, role: str, message: str, filename: str = CHAT_FILENAME, **kwargs: Any) -> None:  # noqa: D102
         with open(os.path.join(self._path, filename), "a") as f:
             f.write(json.dumps({"role": role, "content": message, **kwargs}) + DELIMITER)
 
@@ -75,8 +79,9 @@ class Environment(object):
             return [json.loads(message) for message in f.read().split(DELIMITER) if message]
 
     def list_files(self, path: str) -> List[str]:
-        """Lists files in the environment
-            path: The path to list files from.
+        """Lists files in the environment.
+
+        path: The path to list files from.
         """
         return os.listdir(os.path.join(self._path, path))
 
@@ -84,8 +89,9 @@ class Environment(object):
         return self._path
 
     def read_file(self, filename: str) -> str:
-        """Read a file from the environment
-            filename: The name of the file to read.
+        """Read a file from the environment.
+
+        filename: The name of the file to read.
         """
         if not os.path.exists(os.path.join(self._path, filename)):
             return ""
@@ -95,10 +101,11 @@ class Environment(object):
         except Exception as e:
             return f"failed to read file: {e}"
 
-    def write_file(self, filename: str, content: str):
+    def write_file(self, filename: str, content: str) -> str:
         """Writes a file to the environment.
-            filename: The name of the file to write to
-            content: The content to write to the file.
+
+        filename: The name of the file to write to
+        content: The content to write to the file.
         """
         path = Path(self._path) / filename
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -106,10 +113,12 @@ class Environment(object):
             f.write(content)
         return f"Successfully wrote {len(content) if content else 0} characters to {filename}"
 
-    def exec_command(self, command: str) -> Dict[str, str]:
-        """Executes a command in the environment and logs the output. The environment does not allow running interactive programs. It will run a program for 1 second then will interrupt it if it is still running or if it is waiting for user input.
-            command: The command to execute, like 'ls -l' or 'python3 tests.py'
-        """
+    def exec_command(self, command: str) -> Dict[str, Union[str, int]]:
+        """Executes a command in the environment and logs the output.
+
+        The environment does not allow running interactive programs. It will run a program for 1 second then will interrupt it if it is still running or if it is waiting for user input.
+        command: The command to execute, like 'ls -l' or 'python3 tests.py'
+        """  # noqa: E501
         if self._config.get("confirm_commands", True):
             yes_no = input("> Do you want to run the following command? (Y/n): " + command)
             if yes_no != "" and yes_no.lower() != "y":
@@ -166,52 +175,80 @@ class Environment(object):
 
     def completions(
         self, model: str, messages: Iterable[ChatCompletionMessageParam], stream: bool = False, **kwargs: Any
-    ) -> ChatCompletion:
+    ) -> Union[ModelResponse, CustomStreamWrapper]:
         """Returns all completions for given messages using the given model."""
         return self._inference.completions(model, messages, stream=stream, **kwargs)
 
-    def completions_and_run_tools(self, model, messages, stream=False, tools=None, **kwargs):
+    def completions_and_run_tools(
+        self,
+        model: str,
+        messages: Iterable[ChatCompletionMessageParam],
+        tools: Optional[List] = None,
+        **kwargs: Any,
+    ) -> ModelResponse:
         """Returns all completions for given messages using the given model and runs tools."""
-        response = self._inference.completions(
-            model, messages, stream=stream, tools=tools, **kwargs
-        )
-        response_message = response.choices[0].message
+        raw_response = self._inference.completions(model, messages, stream=False, tools=tools, **kwargs)
+        assert isinstance(raw_response, ModelResponse), "Expected ModelResponse"
+        response: ModelResponse = raw_response
+        assert all(map(lambda choice: isinstance(choice, Choices), response.choices)), "Expected Choices"
+        choices: List[Choices] = response.choices  # type: ignore
+        response_message = choices[0].message
         if hasattr(response_message, "tool_calls") and response_message.tool_calls:
             for tool_call in response_message.tool_calls:
                 function_name = tool_call.function.name
+                assert function_name, "Tool call must have a function name"
                 function_args = json.loads(tool_call.function.arguments)
                 function_response = self._tools.call_tool(function_name, **function_args)
 
                 if function_response:
                     function_response_json = json.dumps(function_response) if function_response else ""
-                    self.add_message("tool", function_response_json, tool_call_id=tool_call.id,
-                                     name=function_name)
+                    self.add_message("tool", function_response_json, tool_call_id=tool_call.id, name=function_name)
         return response
 
-    def completion(self, model: str, messages) -> str:
+    def completion(self, model: str, messages: Iterable[ChatCompletionMessageParam]) -> str:
         """Returns a completion for the given messages using the given model."""
-        return self.completions(model, messages).choices[0].message.content
+        raw_response = self.completions(model, messages)
+        assert isinstance(raw_response, ModelResponse), "Expected ModelResponse"
+        response: ModelResponse = raw_response
+        assert all(map(lambda choice: isinstance(choice, Choices), response.choices)), "Expected Choices"
+        choices: List[Choices] = response.choices  # type: ignore
+        response_message = choices[0].message.content
+        assert response_message, "No completions returned"
+        return response_message
 
-    def completion_and_run_tools(self, model: str, messages, stream=False, tools=None, **kwargs) -> str:
+    def completion_and_run_tools(
+        self,
+        model: str,
+        messages: Iterable[ChatCompletionMessageParam],
+        tools: Optional[List] = None,
+        **kwargs: Any,
+    ) -> str:
         """Returns a completion for the given messages using the given model and runs tools."""
-        return self.completions_and_run_tools(model, messages, stream, tools, **kwargs).choices[0].message.content
+        completion_tools_response = self.completions_and_run_tools(model, messages, tools, **kwargs)
+        assert all(
+            map(lambda choice: isinstance(choice, Choices), completion_tools_response.choices)
+        ), "Expected Choices"
+        choices: List[Choices] = completion_tools_response.choices  # type: ignore
+        response_message = choices[0].message.content
+        assert response_message, "No completions returned"
+        return response_message
 
-    def call_agent(self, agent_path: str, task: str):
+    def call_agent(self, agent_path: int, task: str) -> None:
         """Calls agent with given task."""
         self._agents[agent_path].run(self, task=task)
 
-    def get_agents(self) -> List["Agent"]:
+    def get_agents(self) -> List[Agent]:
         """Returns list of agents available in environment."""
         return self._agents
 
     def is_done(self) -> bool:  # noqa: D102
         return self._done
 
-    def mark_done(self):
+    def mark_done(self) -> None:  # noqa: D102
         self._done = True
 
-    def create_snapshot(self):
-        """Create an in memory snapshot"""
+    def create_snapshot(self) -> bytes:
+        """Create an in memory snapshot."""
         with tempfile.NamedTemporaryFile(suffix=".tar.gz") as f:
             with tarfile.open(fileobj=f, mode="w:gz") as tar:
                 tar.add(self._path, arcname=".")
@@ -227,7 +264,7 @@ class Environment(object):
         run_id: str,
         base_id: Optional[Union[str, int]] = None,
         run_name: Optional[str] = None,
-    ):
+    ) -> Optional[bytes]:
         """Save Environment to Registry."""
         author = self._user_name
         if not author:
@@ -235,7 +272,7 @@ class Environment(object):
                 "Warning: No author specified in config. Run not saved to registry."
                 " To set an author run `nearai config set user_name <YOUR_NAME>`"
             )
-            return
+            return None
 
         agent_name = self._agents[0].name if self._agents else "unknown"
         generated_name = f"environment_run_{agent_name}_{run_id}"
@@ -262,16 +299,14 @@ class Environment(object):
             s3_path = f"environments/{run_id}"
             timestamp = datetime.now(timezone.utc).isoformat()
             description = f"Agent {run_type} run {agent_name} {run_id} {timestamp}"
-            details = (
-                {
-                    "base_id": base_id,
-                    "timestamp": timestamp,
-                    "agents": [agent.name for agent in self._agents],
-                    "run_id": run_id,
-                    "run_type": run_type,
-                    "filename": tar_filename,
-                },
-            )
+            details = {
+                "base_id": base_id,
+                "timestamp": timestamp,
+                "agents": [agent.name for agent in self._agents],
+                "run_id": run_id,
+                "run_type": run_type,
+                "filename": tar_filename,
+            }
             tags_l = ["environment"]
             registry_id = registry.upload(
                 path=Path(tar_filename),
@@ -289,7 +324,7 @@ class Environment(object):
             )
             return snapshot
 
-    def load_snapshot(self, snapshot: bytes):
+    def load_snapshot(self, snapshot: bytes) -> None:
         """Load Environment from Snapshot."""
         shutil.rmtree(self._path, ignore_errors=True)
 
@@ -301,7 +336,7 @@ class Environment(object):
             with tarfile.open(fileobj=f, mode="r:gz") as tar:
                 tar.extractall(self._path)
 
-    def load_from_registry(self, load_env):
+    def load_from_registry(self, load_env: Union[str, int]) -> str:  # noqa: D102
         print(f"Loading environment from {load_env} {type(load_env)} to {self._path}")
         directory = registry.download(load_env)
         files = os.listdir(directory)
@@ -311,23 +346,23 @@ class Environment(object):
             tar.extractall(self._path)
         return directory.name
 
-    def __str__(self):
+    def __str__(self) -> str:  # noqa: D105
         return f"Environment({self._path})"
 
-    def run_agent(self, task):
+    def run_agent(self, task: Optional[str]) -> None:  # noqa: D102
         self._agents[0].run(self, task=task)
 
-    def request_user_input(self):
-        """This must be called to request input from the user."""
+    def request_user_input(self) -> None:
+        """Must be called to request input from the user."""
         self.set_next_actor("user")
 
-    def set_next_actor(self, who):
+    def set_next_actor(self, who: str) -> None:  # noqa: D102
         next_action_fn = os.path.join(self._path, ".next_action")
 
         with open(next_action_fn, "w") as f:
             f.write(who)
 
-    def get_next_actor(self):
+    def get_next_actor(self) -> str:  # noqa: D102
         next_action_fn = os.path.join(self._path, ".next_action")
 
         if os.path.exists(next_action_fn):
@@ -337,7 +372,7 @@ class Environment(object):
             # By default the user starts the conversation.
             return "user"
 
-    def run_interactive(self, record_run: str = "", load_env: str = ""):
+    def run_interactive(self, record_run: str = "", load_env: str = "") -> None:
         """Run an interactive session within the given environment."""
         run_id = self._generate_run_id()
         if load_env:
@@ -346,7 +381,7 @@ class Environment(object):
             base_id = None
         last_message_idx = 0
 
-        def print_messages(last_message_idx):
+        def print_messages(last_message_idx: int) -> int:
             messages = self.list_messages()
             for item in messages[last_message_idx:]:
                 print(f"[{item['role']}]: {item['content']}", flush=True)
@@ -385,7 +420,7 @@ class Environment(object):
         record_run: str = "",
         load_env: str = "",
         max_iterations: int = 10,
-    ):
+    ) -> None:
         """Runs a task within the given environment."""
         run_id = self._generate_run_id()
         if load_env:
@@ -405,19 +440,19 @@ class Environment(object):
             run_name = record_run if record_run and record_run != "true" else None
             self.save_to_registry(self._path, "task", run_id, base_id, run_name)
 
-    def inspect(self):
+    def inspect(self) -> None:  # noqa: D102
         filename = Path(os.path.abspath(__file__)).parent / "streamlit_inspect.py"
         subprocess.call(["streamlit", "run", filename, "--", self._path])
 
-    def contains_non_empty_chat_txt(self, directory):
+    def contains_non_empty_chat_txt(self, directory: str) -> bool:  # noqa: D102
         chat_txt_path = os.path.join(directory, "chat.txt")
         return os.path.isfile(chat_txt_path) and os.path.getsize(chat_txt_path) > 0
 
-    def save_folder(self, name: str = None):
+    def save_folder(self, name: Optional[str] = None) -> None:  # noqa: D102
         path = self._path
         temp_dir = None
 
-        def copy_relevant_folders(src, dest):
+        def copy_relevant_folders(src: str, dest: str) -> None:
             for item in os.listdir(src):
                 s = os.path.join(src, item)
                 d = os.path.join(dest, item)
@@ -446,7 +481,7 @@ class Environment(object):
             if temp_dir:
                 shutil.rmtree(temp_dir)
 
-    def save_from_history(self, lines, name: str = None):
+    def save_from_history(self, lines: List[str], name: Optional[str] = None) -> None:  # noqa: D102
         # Parse lines and extract relevant information
         pattern = r"^\s*(?:\d+\s+)?(\S+)\s+environment\s+interactive\s+(\S+)\s+(\S+)(.*?)$"
         relevant_paths = {}
@@ -456,7 +491,6 @@ class Environment(object):
                 program_name, agents, path, other_args = match.groups()
                 path = path.strip("/")
                 if self.contains_non_empty_chat_txt(path):
-                    timestamp = os.path.getmtime(path)
                     command = f"{program_name} environment interactive {agents} {path} {other_args}"
                     relevant_paths[path] = {"command": command.strip()}
 
@@ -472,7 +506,7 @@ class Environment(object):
         # Create temporary directory and copy relevant folders
         temp_dir = tempfile.mkdtemp()
         try:
-            for path, info in relevant_paths.items():
+            for path, _info in relevant_paths.items():
                 dest = os.path.join(temp_dir, path.replace("/", "_").strip("_"))
                 shutil.copytree(path, dest)
             self.save_to_registry(temp_dir, "folders", self.generate_folder_hash_id(temp_dir), None, name)
@@ -480,11 +514,11 @@ class Environment(object):
         finally:
             shutil.rmtree(temp_dir)
 
-    def generate_folder_hash_id(self, path):
-        # Returns id similar to _generate_run_id(), but based on files and their contents in path, including subfolders
+    def generate_folder_hash_id(self, path: str) -> str:
+        """Returns id similar to _generate_run_id(), but based on files and their contents in path, including subfolders."""  # noqa: E501
         hash_obj = hashlib.md5()
 
-        for root, dirs, files in os.walk(path):
+        for root, _dirs, files in os.walk(path):
             for file in sorted(files):
                 file_path = os.path.join(root, file)
                 with open(file_path, "rb") as f:

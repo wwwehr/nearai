@@ -1,10 +1,11 @@
-from typing import Any, Callable, Dict, Iterable, Optional
+from typing import Any, Callable, Iterable, Optional, Union
 
+from litellm import CustomStreamWrapper, ModelResponse
 from litellm import completion as litellm_completion
 from openai import OpenAI
 from openai.types.chat import ChatCompletion, ChatCompletionMessageParam
 
-from .config import CONFIG, Config, LLMConfig
+from .config import CONFIG, LLMConfig
 
 
 def create_completion_fn(model: str) -> Callable[..., ChatCompletion]:
@@ -29,7 +30,7 @@ class InferenceRouter(object):
         stream: bool = False,
         temperature: Optional[float] = None,
         **kwargs: Any,
-    ) -> ChatCompletion:
+    ) -> Union[ModelResponse, CustomStreamWrapper]:
         """Takes a model `provider:model_name` and a list of messages and returns all completions."""
         assert hasattr(self._config, "models") and model in self._config.models, f"Model {model} not found in config."
         provider_name: str
@@ -53,7 +54,7 @@ class InferenceRouter(object):
                 api_key=provider_config.api_key if provider_config.api_key else "not-needed",
                 **kwargs,
             )
-        result: ChatCompletion = self._endpoints[provider_name](
+        result: Union[ModelResponse, CustomStreamWrapper] = self._endpoints[provider_name](
             model=model_path, messages=messages, stream=stream, temperature=temperature, **kwargs
         )
         return result

@@ -1,5 +1,5 @@
 from abc import ABC, ABCMeta, abstractmethod
-from typing import Any, Dict, List, Tuple, Type, Union
+from typing import Any, Dict, List, Tuple, Union
 
 
 class SolverStrategyMeta(ABCMeta):
@@ -15,7 +15,7 @@ class SolverStrategyMeta(ABCMeta):
 class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
     """Abstract class for solver strategies."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     @property
@@ -29,13 +29,13 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
     def solve(self, datum: dict) -> Union[bool, Tuple[bool, Any]]: ...
 
 
-SolverStrategyRegistry: Dict[str, Type[SolverStrategy]] = {}
+SolverStrategyRegistry: Dict[str, SolverStrategy] = {}
 
-from nearai.solvers.ddot_v0_solver import DDOTSV0Solver
-from nearai.solvers.hellaswag_solver import HellaswagSolverStrategy
-from nearai.solvers.mbpp_agent_solver import MBPPSolverAgent
-from nearai.solvers.mbpp_solver import MBPPSolverStrategy
-from nearai.solvers.mmlu_solver import MMLUSolverStrategy
+from nearai.solvers.ddot_v0_solver import DDOTSV0Solver  # noqa: E402
+from nearai.solvers.hellaswag_solver import HellaswagSolverStrategy  # noqa: E402
+from nearai.solvers.mbpp_agent_solver import MBPPSolverAgent  # noqa: E402
+from nearai.solvers.mbpp_solver import MBPPSolverStrategy  # noqa: E402
+from nearai.solvers.mmlu_solver import MMLUSolverStrategy  # noqa: E402
 
 __all__ = [
     "SolverStrategyRegistry",

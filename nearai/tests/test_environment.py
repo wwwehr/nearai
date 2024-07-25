@@ -20,7 +20,7 @@ class TestEnvironment(unittest.TestCase):
         path = f"{test_dir}/test-agents/test"
         agent = Agent("test", path, "test")
         _agents = [agent]
-        env = Environment(path, _agents, CONFIG.llm_config)
+        env = Environment(path, _agents, CONFIG)
         run_id = env._generate_run_id()
 
         assert env.save_to_registry("test", run_id) is not None
@@ -30,7 +30,7 @@ class TestEnvironment(unittest.TestCase):
         path = f"{test_dir}/test-agents/test"
         agent = Agent("test", path, "test")
         _agents = [agent]
-        env = Environment(path, _agents, CONFIG.llm_config)
+        env = Environment(path, _agents, CONFIG)
         run_id = env._generate_run_id()
 
         assert env.save_to_registry("test", run_id, "unittest-save") is not None
@@ -44,7 +44,7 @@ class TestEnvironment(unittest.TestCase):
         path = f"{test_dir}/test-agents/test"
         agent = Agent("test", path, "test")
         _agents = [agent]
-        env = Environment(path, _agents, CONFIG.llm_config)
+        env = Environment(path, _agents, CONFIG)
         run_id = env._generate_run_id()
 
         assert env.save_to_registry("test", run_id, None, "unittest-base") is not None
@@ -59,7 +59,7 @@ class TestEnvironment(unittest.TestCase):
 
         agent = Agent("test", path, "test")
         _agents = [agent]
-        env = Environment(path, _agents, CONFIG.llm_config)
+        env = Environment(path, _agents, CONFIG)
         env.load_from_registry(str(SAVED_REGISTRY_ID))
 
         assert os.path.exists(f"{path}/chat.txt")

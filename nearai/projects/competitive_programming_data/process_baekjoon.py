@@ -1,15 +1,17 @@
 import json
+from typing import Any, Dict, Iterable, List
 
+from openai.types.chat import ChatCompletionMessageParam
 from torchtune.data import Message
 from torchtune.models.llama3 import llama3_tokenizer
 from tqdm import tqdm
 
-from datasets import Dataset
+from datasets import Dataset  # type: ignore
 from nearai.dataset import get_dataset
 from nearai.registry import registry
 
 
-def prepare_system_prompt(item):
+def prepare_system_prompt(item: Dict[str, Any]) -> str:
     statement = item["statement"]
     tests = []
 
@@ -23,10 +25,10 @@ def prepare_system_prompt(item):
     return f"{statement}\n\n{tests_str}"
 
 
-def process_trajectory(item):
+def process_trajectory(item: Dict[str, Any]) -> Iterable[ChatCompletionMessageParam]:
     system_prompt = prepare_system_prompt(item)
 
-    messages = []
+    messages: List[ChatCompletionMessageParam] = []
     messages.append({"role": "system", "content": system_prompt})
 
     for step in item["steps"]:
@@ -53,7 +55,7 @@ if __name__ == "__main__":
     path = get_dataset("baekjoon-trajectories-raw")
     file_path = path / "baekjoon_20240703.txt"
 
-    ds_dict = {
+    ds_dict: Dict[str, List] = {
         "problem_id": [],
         "statement_url": [],
         "statement": [],
@@ -78,7 +80,7 @@ if __name__ == "__main__":
 
         try:
             messages = process_trajectory(data)
-        except:
+        except Exception:
             print(f"ERROR BUILDING TRAJECTORY FOR SAMPLE: {i}")
             continue
 

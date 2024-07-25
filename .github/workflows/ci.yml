@@ -1,9 +1,9 @@
-name: Spell Check
+name: CI
 
 on: [push, pull_request]
 
 jobs:
-  codespell:
+  pipeline:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -20,9 +20,8 @@ jobs:
     - name: Run Codespell
       run: codespell --config .codespellrc
 
-    # TODO: Uncomment the following lines once the codebase is linted/formatted and typechecked
-    # - name: Lint & Format Check
-    #   run: ./scripts/lint_format.sh
+    - name: Lint & Format Check
+      run: ./scripts/lint_format.sh
 
-    # - name: Type Check
-    #   run: ./scripts/typecheck.sh
+    - name: Type Check
+      run: ./scripts/typecheck.sh

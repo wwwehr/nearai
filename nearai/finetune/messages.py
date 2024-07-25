@@ -4,12 +4,12 @@ import numpy as np
 from torchtune.data import CROSS_ENTROPY_IGNORE_IDX, Message
 from torchtune.modules.tokenizers import Tokenizer
 
-from datasets import load_from_disk
+from datasets import load_from_disk  # type: ignore
 from nearai.finetune.text_completion import TextCompletionDataset, truncate
 
 
 class MessagesDataset(TextCompletionDataset):
-    def __init__(self, tokenizer: Tokenizer, source: str, max_seq_len: Optional[int] = None) -> "MessagesDataset":
+    def __init__(self, tokenizer: Tokenizer, source: str, max_seq_len: Optional[int] = None) -> None:  # noqa: D107
         self._tokenizer = tokenizer
         self._data = load_from_disk(source)
         self.max_seq_len = max_seq_len

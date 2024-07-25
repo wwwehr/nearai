@@ -120,7 +120,7 @@ class RegistryCli:
     def __init__(self, registry: Registry):  # noqa: D107
         self._registry = registry
 
-    def add(self, s3_path: str, description: str, name: Optional[str] = None, tags: str = "", **details) -> None:
+    def add(self, s3_path: str, description: str, name: Optional[str] = None, tags: str = "", **details: Any) -> None:
         """Add an item to the registry that was previously uploaded to S3."""
         tags_l = parse_tags(tags)
         assert self._registry.exists_in_s3(s3_path), f"Item {s3_path} does not exist in S3"
@@ -202,7 +202,7 @@ class RegistryCli:
         name: Optional[str] = None,
         show_entry: bool = True,
         tags: str = "",
-        **details,
+        **details: Any,
     ) -> None:
         """Upload item to the registry."""
         tags_l = parse_tags(tags)
@@ -294,8 +294,8 @@ class BenchmarkCli:
         solver_strategy: str,
         max_concurrent: int = -1,
         force: bool = False,
-        subset: str = None,
-        **solver_kwargs,
+        subset: Optional[str] = None,
+        **solver_kwargs: Any,
     ) -> None:
         """Run benchmark on a dataset with a solver strategy.
 
@@ -306,18 +306,19 @@ class BenchmarkCli:
 
         name, subset, dataset = dataset, subset, load_dataset(dataset)
 
-        solver_strategy: SolverStrategy | None = SolverStrategyRegistry.get(solver_strategy, None)
+        solver_strategy_: SolverStrategy | None = SolverStrategyRegistry.get(solver_strategy, None)
         assert (
             solver_strategy
         ), f"Solver strategy {solver_strategy} not found. Available strategies: {list(SolverStrategyRegistry.keys())}"
-        solver_strategy = solver_strategy(dataset_ref=dataset, **solver_kwargs)
+        solver_strategy_obj: SolverStrategy = solver_strategy_(dataset_ref=dataset, **solver_kwargs)  # type: ignore
         assert (
-            name in solver_strategy.compatible_datasets()
+            name in solver_strategy_obj.compatible_datasets()
         ), f"Solver strategy {solver_strategy} is not compatible with dataset {name}"
 
-        be = BenchmarkExecutor(DatasetInfo(name, subset, dataset), solver_strategy, benchmark_id=benchmark_id)
+        be = BenchmarkExecutor(DatasetInfo(name, subset, dataset), solver_strategy_obj, benchmark_id=benchmark_id)
 
-        max_concurrent = os.cpu_count() if max_concurrent < 0 else max_concurrent
+        cpu_count = os.cpu_count()
+        max_concurrent = (cpu_count if cpu_count is not None else 1) if max_concurrent < 0 else max_concurrent
         be.run(max_concurrent=max_concurrent)
 
 
@@ -328,12 +329,12 @@ class EnvironmentCli:
 
     def inspect(self, path: str) -> None:
         """Inspect environment from given path."""
-        env = Environment(path, [], CONFIG.llm_config, create_files=False)
+        env = Environment(path, [], CONFIG, create_files=False)
         env.inspect()
 
-    def save_folder(self, path: str, name: str = None) -> None:
+    def save_folder(self, path: str, name: Optional[str] = None) -> None:
         """Saves all subfolders with agent task runs (must contain non-empty chat.txt)."""
-        env = Environment(path, [], CONFIG.llm_config, create_files=False)
+        env = Environment(path, [], CONFIG, create_files=False)
         env.save_folder(name)
 
     def save_from_history(self, name: Optional[str] = None) -> None:
@@ -350,15 +351,15 @@ class EnvironmentCli:
         Run:
         $ history | grep "environment interactive" | sed "s:~:$HOME:g" | nearai environment save_from_history environment_interactive_runs_from_lambda_00
         """  # noqa: E501
-        env = Environment("/", [], CONFIG.llm_config, create_files=False)
+        env = Environment("/", [], CONFIG, create_files=False)
         # Read from stdin (piped input)
         lines = sys.stdin.readlines()
         env.save_from_history(lines, name)
 
-    def interactive(self, agents: str, path: str, record_run: str = "true", load_env: str = None) -> None:
+    def interactive(self, agents: str, path: str, record_run: str = "true", load_env: str = "") -> None:
         """Runs agent interactively with environment from given path."""
         _agents = [load_agent(agent) for agent in agents.split(",")]
-        env = Environment(path, _agents, CONFIG.llm_config)
+        env = Environment(path, _agents, CONFIG)
         env.run_interactive(record_run, load_env)
 
     def task(
@@ -368,23 +369,23 @@ class EnvironmentCli:
         path: str,
         max_iterations: int = 10,
         record_run: str = "true",
-        load_env: Optional[str] = None,
+        load_env: str = "",
     ) -> None:
         """Runs agent non interactively with environment from given path."""
         _agents = [load_agent(agent) for agent in agents.split(",")]
-        env = Environment(path, _agents, CONFIG.llm_config)
+        env = Environment(path, _agents, CONFIG)
         env.run_task(task, record_run, load_env, max_iterations)
 
     def run(self, agents: str, task: str, path: str) -> None:
         """Runs agent in the current environment."""
         _agents = [load_agent(agent) for agent in agents.split(",")]
-        env = Environment(path, [], CONFIG.llm_config)
+        env = Environment(path, [], CONFIG)
         env.exec_command("sleep 10")
         # TODO: Setup server that will allow to interact with agents and environment
 
 
 class VllmCli:
-    def run(self, *args, **kwargs) -> None:  # noqa: D102
+    def run(self, *args: Any, **kwargs: Any) -> None:  # noqa: D102
         original_argv = sys.argv.copy()
         sys.argv = [
             sys.argv[0],
@@ -437,9 +438,9 @@ class CLI:
         commit = check_output(["git", "rev-parse", "HEAD"]).decode().strip()
         diff = check_output(["git", "diff", "HEAD"]).decode()
 
-        result = client.submit(name, repository_url, commit, command, author, diff, nodes, cluster)
+        submission_result = client.submit(name, repository_url, commit, command, author, diff, nodes, cluster)
 
-        print("experiment id:", result["experiment"]["id"])
+        print("experiment id:", submission_result["experiment"]["id"])
 
     def inference(self) -> None:
         """Submit inference task."""

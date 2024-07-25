@@ -1,11 +1,16 @@
+from typing import List, cast
+
 import litellm
+from openai.types.chat import ChatCompletionMessageParam
+
+from nearai.environment import Environment
 
 
 class StreamerAgent(object):
-    def run(self, env, task):
+    def run(self, env: Environment, task: str) -> None:  # noqa: D102
         print(f"Running task: {task}")
 
-        history = []
+        history: List[ChatCompletionMessageParam] = []
 
         while True:
             PROMPT = f"""You are an AGI agent working on the task: {task}
@@ -16,7 +21,7 @@ class StreamerAgent(object):
             - writing specification
             - writing required code
             - testing that code works correctly
-            """
+            """  # noqa: N806
             PROMPT2 = """You should think about the next steps outloud and at the end output ||||| and one of the following commands:
             - run <command> to execute command in the terminal
             - list <path> to list files in the given path
@@ -24,11 +29,13 @@ class StreamerAgent(object):
             - read <filename> to read a file named filename
 
             There should be nothing else after you output this command.
-            """
-            messages = [{"role": "system", "content": PROMPT}]
+            """  # noqa: E501, N806
+            messages: List[ChatCompletionMessageParam] = [{"role": "system", "content": PROMPT}]
             messages += history
             messages += [{"role": "user", "content": PROMPT2}]
-            stream = env.completions("llama-v3-70b-instruct", messages, stream=True)
+            raw_stream = env.completions("llama-v3-70b-instruct", messages, stream=True)
+            assert isinstance(raw_stream, litellm.CustomStreamWrapper), "Expected CustomStreamWrapper"
+            stream: litellm.CustomStreamWrapper = raw_stream
 
             output = ""
 
@@ -38,7 +45,11 @@ class StreamerAgent(object):
                 print(chunk.choices[0].delta.content or "", end="")
             print()
 
-            output = litellm.stream_chunk_builder(chunks, messages=messages).choices[0].message.content
+            output = str(
+                cast(List[litellm.Choices], litellm.stream_chunk_builder(chunks, messages=messages).choices)[
+                    0
+                ].message.content
+            )
             history.append({"role": "assistant", "content": output})
             env.add_message("assistant", output)
             command = output.split("|||||", maxsplit=1)[1].strip()
@@ -53,7 +64,7 @@ class StreamerAgent(object):
                     if "returncode" in result and result["returncode"] != 0:
                         command_outcome = f'Command {command} failed with error: {result["stderr"]}'
                     else:
-                        command_outcome = result["stdout"]
+                        command_outcome = str(result["stdout"])
                 elif command.startswith("write"):
                     filename, content = command.split("write ")[1].split("\n", maxsplit=1)
                     filename = filename.strip()

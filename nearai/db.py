@@ -194,7 +194,7 @@ class DB:
     ) -> int:
         with self.connection.cursor() as cursor:
             cursor.execute(
-                "INSERT INTO experiments (name, author, repository, commit, diff, command, num_nodes, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                "INSERT INTO experiments (name, author, repository, commit, diff, command, num_nodes, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",  # noqa: E501
                 (
                     name,
                     author,
@@ -302,7 +302,7 @@ class DB:
             supervisor_id = result[0]
 
             cursor.execute(
-                "UPDATE supervisors SET experiment_id=%s, status='preassigned' WHERE status='available' AND cluster=%s AND id <= %s",
+                "UPDATE supervisors SET experiment_id=%s, status='preassigned' WHERE status='available' AND cluster=%s AND id <= %s",  # noqa: E501
                 (
                     experiment_id,
                     cluster,
@@ -392,7 +392,7 @@ class DB:
         with self.connection.cursor() as cursor:
             details = details or {}
             cursor.execute(
-                f"INSERT INTO {REGISTRY_TABLE} (path, name, author, description, details, show_entry) VALUES (%s, %s, %s, %s, %s, %s)",
+                f"INSERT INTO {REGISTRY_TABLE} (path, name, author, description, details, show_entry) VALUES (%s, %s, %s, %s, %s, %s)",  # noqa: E501
                 (
                     s3_path,
                     name,
@@ -428,7 +428,7 @@ class DB:
                     JOIN {REGISTRY_TABLE} registry ON filtered.id = registry.id
                     JOIN tags ON registry.id = tags.registry_id
                     ORDER BY registry.id DESC
-                """,
+                """,  # noqa: E501
                     (show_all_int, total),
                 )
             else:
@@ -450,7 +450,7 @@ class DB:
                     JOIN tags ON registry.id = tags.registry_id
                     WHERE ranked.rank <= %s
                     ORDER BY registry.id DESC
-                """,
+                """,  # noqa: E501
                     (show_all_int, *tags, total),
                 )
 
@@ -476,11 +476,11 @@ class DB:
                 )
             else:
                 print(
-                    "SELECT * FROM {REGISTRY_TABLE} WHERE name='%s' AND {REGISTRY_TABLE}.path LIKE '%%/v%s' ORDER BY {REGISTRY_TABLE}.id DESC LIMIT 1"
+                    "SELECT * FROM {REGISTRY_TABLE} WHERE name='%s' AND {REGISTRY_TABLE}.path LIKE '%%/v%s' ORDER BY {REGISTRY_TABLE}.id DESC LIMIT 1"  # noqa: E501
                     % (name, version)
                 )
                 cursor.execute(
-                    f"SELECT * FROM {REGISTRY_TABLE} WHERE name=%s AND {REGISTRY_TABLE}.path LIKE '%%%s' ORDER BY {REGISTRY_TABLE}.id DESC LIMIT 1",
+                    f"SELECT * FROM {REGISTRY_TABLE} WHERE name=%s AND {REGISTRY_TABLE}.path LIKE '%%%s' ORDER BY {REGISTRY_TABLE}.id DESC LIMIT 1",  # noqa: E501
                     (name, version),
                 )
             result = cursor.fetchone()
@@ -504,7 +504,7 @@ class DB:
             entry = self.get_registry_entry_by_id(identifier)
         except ValueError:
             for get_fn in (self.get_registry_entry_by_name, self.get_registry_entry_by_path):
-                entry = get_fn(identifier, version=version)
+                entry = get_fn(str(identifier), version=version)
                 if entry:
                     break
 
@@ -758,7 +758,7 @@ class CLI:
                     JOIN tags ON registry.id = tags.registry_id
                     WHERE ranked.rank <= %s
                     ORDER BY registry.id DESC
-                """,
+                """,  # noqa: E501
                 (show_all_next, *tags, total),
             )
 

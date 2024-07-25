@@ -115,7 +115,18 @@ warn_return_any = true
 warn_redundant_casts = true
 strict_equality = true
 warn_unused_configs = true
+exclude = [
+    "tests",
+    "venv",
+    ".venv",
+    ".vscode",
+    ".git",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".ruff_cache",
+    "__pypackages__",
+]
 
 [[tool.mypy.overrides]]
-module = ['datasets.*', 'fire.*', 'tqdm.*', 'fabric.*', 'tabulate.*', 'requests.*', 'tensorboardX.*', 'pymysql.*']
+module = ['datasets.*', 'fire.*', 'tqdm.*', 'fabric.*', 'tabulate.*', 'requests.*', 'tensorboardX.*', 'pymysql.*', 'torchtune.*', 'torchao.*']
 ignore_missing_imports = true

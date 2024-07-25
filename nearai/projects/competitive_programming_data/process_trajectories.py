@@ -1,7 +1,7 @@
 import json
 from typing import Any, Dict, Generator, List
 
-from datasets import Dataset  # type: ignore
+from datasets import Dataset
 from nearai.dataset import get_dataset
 
 

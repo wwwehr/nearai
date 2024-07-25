@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Union
 
-from datasets import Dataset, DatasetDict, load_from_disk  # type: ignore
+from datasets import Dataset, DatasetDict, load_from_disk
 
 from nearai.registry import dataset
 

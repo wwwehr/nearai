@@ -139,5 +139,5 @@ exclude = [
 ]
 
 [[tool.mypy.overrides]]
-module = ['datasets.*', 'fire.*', 'tqdm.*', 'fabric.*', 'tabulate.*', 'requests.*', 'tensorboardX.*', 'pymysql.*', 'torchtune.*', 'torchao.*']
+module = ['fire.*', 'tqdm.*', 'fabric.*', 'tabulate.*', 'requests.*', 'tensorboardX.*', 'pymysql.*', 'torchtune.*', 'torchao.*']
 ignore_missing_imports = true

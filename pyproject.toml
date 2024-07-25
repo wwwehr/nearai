@@ -48,7 +48,7 @@ ruff = "^0.5.2"
 nearai = "nearai.cli:main"
 
 [build-system]
-requires = ["poetry-core", "torch>=2.2.2"]
+requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]

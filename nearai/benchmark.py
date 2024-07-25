@@ -5,9 +5,9 @@ from functools import partial
 from itertools import islice
 from typing import Any, Callable, Dict, Optional, Tuple, Union
 
+from datasets import Dataset, DatasetDict  # type: ignore
 from tqdm import tqdm
 
-from datasets import Dataset, DatasetDict  # type: ignore
 from nearai.db import db
 from nearai.solvers import SolverStrategy
 

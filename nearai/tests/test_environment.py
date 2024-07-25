@@ -2,10 +2,9 @@ import os
 import unittest
 
 from nearai.agent import Agent
-from nearai.environment import Environment
 from nearai.config import CONFIG
 from nearai.db import db
-
+from nearai.environment import Environment
 
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 SAVED_REGISTRY_ID = 81  # this is a valid registry id of a previous test run containing an empty chat.txt

@@ -1,14 +1,13 @@
 import json
 from typing import Any, Dict, Iterable, List
 
+from datasets import Dataset  # type: ignore
+from nearai.dataset import get_dataset
+from nearai.registry import registry
 from openai.types.chat import ChatCompletionMessageParam
 from torchtune.data import Message
 from torchtune.models.llama3 import llama3_tokenizer
 from tqdm import tqdm
-
-from datasets import Dataset  # type: ignore
-from nearai.dataset import get_dataset
-from nearai.registry import registry
 
 
 def prepare_system_prompt(item: Dict[str, Any]) -> str:

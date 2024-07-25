@@ -1,10 +1,10 @@
 from typing import List, Union, cast
 
+from datasets import Dataset, DatasetDict  # type: ignore
 from jinja2 import Template
 from litellm import Choices, ModelResponse
 from pydantic import BaseModel
 
-from datasets import Dataset, DatasetDict  # type: ignore
 from nearai.completion import InferenceRouter
 from nearai.config import CONFIG, PROMPTS_FOLDER
 from nearai.solvers import SolverStrategy

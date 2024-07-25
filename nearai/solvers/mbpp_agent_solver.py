@@ -4,6 +4,7 @@ import time
 from typing import List, Union
 
 from datasets import Dataset, DatasetDict  # type: ignore
+
 from nearai.agent import load_agent
 from nearai.config import CONFIG
 from nearai.environment import Environment

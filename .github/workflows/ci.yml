@@ -30,24 +30,18 @@ jobs:
 
     - name: Run Codespell
       run: codespell --config .codespellrc
-      working-directory: ${{ github.workspace }}
 
     - name: check lock file for inconsistencies
       run: poetry check --lock
-      working-directory: ${{ github.workspace }}
 
     - name: Install dependencies
       run: poetry install
-      working-directory: ${{ github.workspace }}
 
     - name: Lint Check
       run: ./scripts/lint_check.sh
-      working-directory: ${{ github.workspace }}
 
     - name: Format Check
       run: ./scripts/format_check.sh
-      working-directory: ${{ github.workspace }}
 
     - name: Type Check
       run: ./scripts/type_check.sh
-      working-directory: ${{ github.workspace }}

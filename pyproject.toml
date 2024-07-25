@@ -52,6 +52,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
+src = ["nearai"]
 exclude = [
     ".git",
     ".git-rewrite",
@@ -63,7 +64,7 @@ exclude = [
     "__pypackages__",
     "venv",
 ]
-extend-exclude = ["tests"]
+extend-exclude = ["tests", "hub", "projects", "examples"]
 line-length = 120
 indent-width = 4
 

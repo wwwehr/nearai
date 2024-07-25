@@ -37,6 +37,9 @@ jobs:
     - name: Install dependencies
       run: poetry install
 
+    - name: Print Ruff version
+      run: poetry run ruff --version
+
     - name: Lint Check
       run: ./scripts/lint_check.sh
 

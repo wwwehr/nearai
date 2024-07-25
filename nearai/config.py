@@ -27,7 +27,7 @@ def load_config_file(local: bool = False) -> Dict[str, Any]:
 
     with open(path) as f:
         config = json.load(f)
-    return config  # type: ignore
+    return config
 
 
 def save_config_file(config: Dict[str, Any], local: bool = False) -> None:

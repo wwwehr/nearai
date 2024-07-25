@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Mapping, Optional
 
-from datasets import load_from_disk
+from datasets import load_from_disk  # type: ignore
 from torch.utils.data import Dataset
 from torchtune.modules.tokenizers import Tokenizer
 

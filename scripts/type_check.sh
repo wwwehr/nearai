@@ -2,7 +2,7 @@
 #
 # Typechecks the codebase.
 #
-# Usage: ./scripts/typecheck.sh
+# Usage: ./scripts/type_check.sh
 
 set -e
-poetry run mypy nearai/
+poetry run mypy nearai

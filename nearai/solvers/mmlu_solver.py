@@ -1,6 +1,6 @@
 from typing import List, Union, cast
 
-from datasets import Dataset, DatasetDict
+from datasets import Dataset, DatasetDict  # type: ignore
 from jinja2 import Template
 from litellm import Choices, ModelResponse
 from pydantic import BaseModel

@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Mapping, Optional
 
 import numpy as np
-from datasets import load_from_disk
+from datasets import load_from_disk  # type: ignore
 from torchtune.data import CROSS_ENTROPY_IGNORE_IDX, Message
 from torchtune.modules.tokenizers import Tokenizer
 

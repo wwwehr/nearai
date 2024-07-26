@@ -8,7 +8,6 @@ from nearai.environment import Environment
 
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 SAVED_REGISTRY_ID = 81  # this is a valid registry id of a previous test run containing an empty chat.txt
-CONFIG.user = "unittest_user"
 
 
 class TestEnvironment(unittest.TestCase):

@@ -74,8 +74,8 @@ if __name__ == "__main__":
         if line == b"data" or not line:
             continue
 
-        line = line.decode("unicode_escape", errors="ignore")
-        data = json.loads(line)
+        line_decoded = line.decode("unicode_escape", errors="ignore")
+        data = json.loads(line_decoded)
 
         try:
             messages = process_trajectory(data)

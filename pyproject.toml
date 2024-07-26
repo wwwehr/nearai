@@ -108,7 +108,7 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [tool.mypy]
-warn_unused_ignores = true
+strict = false
 exclude = [
     "tests",
     "venv",

@@ -3,7 +3,7 @@ import random
 import time
 from typing import List, Union
 
-from datasets import Dataset, DatasetDict  # type: ignore
+from datasets import Dataset, DatasetDict  # type: ignore[attr-defined]
 
 from nearai.agent import load_agent
 from nearai.config import CONFIG

@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Mapping, Optional
 
 from datasets import load_from_disk  # type: ignore
 from torch.utils.data import Dataset
-from torchtune.modules.tokenizers import Tokenizer
+from torchtune.modules.tokenizers import BaseTokenizer
 
 
 def truncate(
@@ -35,7 +35,7 @@ class TextCompletionDataset(Dataset):
 
     Args:
     ----
-        tokenizer (Tokenizer): Tokenizer used to encode data. Tokenize must implement an ``encode`` and ``decode`` method.
+        tokenizer (BaseTokenizer): Tokenizer used to encode data. Tokenize must implement an ``encode`` and ``decode`` method.
         source (str): path string of dataset, anything supported by Hugging Face's ``load_dataset``
             (https://huggingface.co/docs/datasets/en/package_reference/loading_methods#datasets.load_dataset.path)
         column (str): name of column in the sample that contains the text data. This is typically required
@@ -50,7 +50,7 @@ class TextCompletionDataset(Dataset):
 
     def __init__(  # noqa: D107
         self,
-        tokenizer: Tokenizer,
+        tokenizer: BaseTokenizer,
         source: str,
         column: str = "text",
         split: Optional[str] = None,
@@ -86,7 +86,7 @@ class TextCompletionDataset(Dataset):
 
 
 def dataset(
-    tokenizer: Tokenizer,
+    tokenizer: BaseTokenizer,
     source: str,
     column: str = "text",
     split: str = "train",

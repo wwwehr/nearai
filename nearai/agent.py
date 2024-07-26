@@ -1,7 +1,6 @@
 import os
-from typing import Optional
+from typing import Any, Optional
 
-from nearai.environment import Environment
 from nearai.registry import agent
 
 AGENT_FILENAME = "agent.py"
@@ -23,7 +22,7 @@ class Agent(object):
         with open(os.path.join(path, AGENT_FILENAME)) as f:
             return Agent(parts[-2], parts[-1], f.read())
 
-    def run(self, env: Environment, task: Optional[str] = None) -> None:  # noqa: D102
+    def run(self, env: Any, task: Optional[str] = None) -> None:  # noqa: D102
         d = {"env": env, "agent": self, "task": task}
         exec(self.code, d, d)
 

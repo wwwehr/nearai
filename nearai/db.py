@@ -457,7 +457,7 @@ class DB:
             return DisplayRegistry.prepare_display_registry_entries_from_db(cursor.fetchall())
 
     @check_renamed_table
-    def get_registry_entry_by_path(self, path: str) -> Optional[RegistryEntry]:  # noqa: D102
+    def get_registry_entry_by_path(self, path: str, version: Optional[str] = None) -> Optional[RegistryEntry]:  # noqa: D102
         with self.connection.cursor() as cursor:
             cursor.execute(
                 f"SELECT * FROM {REGISTRY_TABLE} WHERE path=%s ORDER BY {REGISTRY_TABLE}.id DESC LIMIT 1", (path,)

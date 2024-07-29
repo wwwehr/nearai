@@ -19,7 +19,7 @@ from openai.types.chat import ChatCompletionMessageParam
 
 from nearai.agent import Agent
 from nearai.completion import InferenceRouter
-from nearai.config import CONFIG, Config
+from nearai.config import Config
 from nearai.db import db
 from nearai.registry import registry
 from nearai.tool_registry import ToolRegistry
@@ -39,7 +39,7 @@ class Environment(object):
         self._config = config
         assert config.llm_config is not None, "LLMConfig is not defined."
         self._inference = InferenceRouter(config.llm_config)
-        self._user_name = CONFIG.user_name
+        self._user_name = config.user_name
         self._tools = ToolRegistry()
         self.register_standard_tools()
         if create_files:

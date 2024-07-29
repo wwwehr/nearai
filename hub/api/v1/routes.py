@@ -5,10 +5,11 @@ from typing import Any, Dict, List, Optional, Union
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security import HTTPBearer
+from pydantic import BaseModel
+
 from hub.api.v1.auth import AuthToken, get_current_user
 from hub.api.v1.completions import Message, Provider, get_llm_ai, handle_stream
 from hub.api.v1.sql import SqlClient
-from pydantic import BaseModel
 
 v1_router = APIRouter()
 db = SqlClient()

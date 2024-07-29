@@ -1,8 +1,9 @@
-import pymysql
+from datetime import datetime
 from os import getenv
+
+import pymysql
 from dotenv import load_dotenv
 from pydantic import BaseModel
-from datetime import datetime
 
 load_dotenv()
 
@@ -14,13 +15,12 @@ class Token(BaseModel):
 
 
 class SqlClient:
-
     def __init__(self):
         self.db = pymysql.connect(
             host=getenv("DATABASE_HOST"),
             user=getenv("DATABASE_USER"),
             password=getenv("DATABASE_PASSWORD"),
-            database=getenv("DATABASE_NAME")
+            database=getenv("DATABASE_NAME"),
         )
 
     def __fetch_all(self, query: str):

@@ -1,13 +1,11 @@
+import os
+
 from dotenv import load_dotenv
 from openai import OpenAI
-import os
 
 load_dotenv()
 
-client = OpenAI(
-    base_url="http://127.0.0.1:8081/v1",
-    api_key=os.getenv("ROUTER_API_KEY")
-)
+client = OpenAI(base_url="http://127.0.0.1:8081/v1", api_key=os.getenv("ROUTER_API_KEY"))
 
 response = client.completions.create(
     max_tokens=32,

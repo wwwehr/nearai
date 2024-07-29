@@ -1,12 +1,12 @@
-from typing import List, Dict, Any
 from pydantic import BaseModel
-from typing import Optional, Union, List, Dict
+from typing import Optional, Union, List, Dict, Any
 from hub.api.v1.sql import SqlClient
 from hub.api.v1.completions import get_llm_ai, Message, handle_stream, Provider
-from hub.api.v1.auth import get_current_user, AuthToken
+from hub.api.v1.auth import get_auth, validate_auth, AuthToken
 
 import logging
 import json
+import uuid
 
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import JSONResponse
@@ -81,7 +81,7 @@ def convert_request(request: ChatCompletionsRequest | CompletionsRequest):
 
 
 @v1_router.post("/completions")
-def completions(request: CompletionsRequest = Depends(convert_request), auth: AuthToken = Depends(get_current_user)):
+def completions(request: CompletionsRequest = Depends(convert_request), auth: AuthToken = Depends(validate_auth)):
     logger.info(f"Received completions request: {request.model_dump()}")
 
     try:
@@ -109,7 +109,7 @@ def completions(request: CompletionsRequest = Depends(convert_request), auth: Au
 
 
 @v1_router.post("/chat/completions")
-async def chat_completions(request: ChatCompletionsRequest = Depends(convert_request), auth: AuthToken = Depends(get_current_user)):
+async def chat_completions(request: ChatCompletionsRequest = Depends(convert_request), auth: AuthToken = Depends(validate_auth)):
     logger.info(f"Received chat completions request: {request.model_dump()}")
 
     try:
@@ -157,3 +157,18 @@ async def get_models():
     }
 
     return JSONResponse(content=response)
+
+
+@v1_router.post("/challenge")
+async def gen_challenge():
+    """
+    Generate a challenge for the user. This challenge needs to be signed by the user and used in authorized requests.
+
+    TODO(https://github.com/nearai/nearai/issues/86): Implement rate limiting for this endpoint.
+    """
+    challenge_uuid = str(uuid.uuid4())
+    logging.info(
+        f"Generated challenge {challenge_uuid}")
+    db.add_challenge(challenge_uuid)
+
+    return JSONResponse(content={"challenge": challenge_uuid})

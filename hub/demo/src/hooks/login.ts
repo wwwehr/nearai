@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { parseHashParams, stringToUint8Array } from "~/hooks/misc";
 import { authorizationModel } from "~/lib/models";
-import { CALLBACK_URL, NONCE, PLAIN_MSG, RECIPIENT } from "./mutations";
+import { CALLBACK_URL, NONCE, RECIPIENT } from "./mutations";
 import usePersistingStore from "~/store/store";
 
 /**
@@ -19,7 +19,7 @@ export function useHandleLogin() {
         public_key: hashParams.publicKey,
         signature: hashParams.signature,
         callback_url: CALLBACK_URL,
-        plainMsg: PLAIN_MSG,
+        plainMsg: store.challenge,
         recipient: RECIPIENT,
         nonce: [...stringToUint8Array(NONCE)],
       });
@@ -32,5 +32,5 @@ export function useHandleLogin() {
         window.location.pathname + window.location.search,
       );
     }
-  }, [store]);
+  }, [store.challenge, store]);
 }

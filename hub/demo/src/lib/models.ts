@@ -7,7 +7,7 @@ export const authorizationModel = z.object({
   callback_url: z.string(),
   plainMsg: z.string(),
   recipient: z.string(),
-  nonce: z.array(z.number()).length(32) // Array of 32 numbers
+  nonce: z.array(z.number()).length(32), // Array of 32 numbers
 });
 
 export const messageModel = z.object({
@@ -66,4 +66,8 @@ export const oneModelModel = z.object({
 export const listModelsResponseModel = z.object({
   data: z.array(oneModelModel),
   object: z.string(),
+});
+
+export const challengeResponseModel = z.object({
+  challenge: z.string(),
 });

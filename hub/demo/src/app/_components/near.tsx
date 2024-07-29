@@ -1,10 +1,20 @@
 import { Button } from "~/components/ui/button";
-import { CALLBACK_URL, NONCE, PLAIN_MSG, RECIPIENT } from "~/hooks/mutations";
+import {
+  CALLBACK_URL,
+  NONCE,
+  RECIPIENT,
+  useChallengeRequest,
+} from "~/hooks/mutations";
 
 export function NearLogin() {
-  const requestSignature = () => {
+  const challengeMut = useChallengeRequest();
+
+  const requestSignature = async () => {
+    const challenge = await challengeMut.mutateAsync();
+    console.log("challenge", challenge);
+
     const urlParams = new URLSearchParams({
-      message: PLAIN_MSG,
+      message: challenge,
       recipient: RECIPIENT,
       nonce: NONCE,
       callbackUrl: CALLBACK_URL,
@@ -16,8 +26,8 @@ export function NearLogin() {
   return (
     <div>
       <Button
-        onClick={() => {
-          requestSignature();
+        onClick={async () => {
+          await requestSignature();
         }}
         className="w-full"
         type="button"

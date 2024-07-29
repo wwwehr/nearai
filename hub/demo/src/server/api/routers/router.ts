@@ -1,5 +1,6 @@
 import { env } from "~/env";
 import {
+  challengeResponseModel,
   chatCompletionsModel,
   chatResponseModel,
   listModelsResponseModel,
@@ -49,4 +50,24 @@ export const routerRouter = createTRPCRouter({
 
       return chatResponseModel.parse(resp);
     }),
+
+  challenge: publicProcedure.mutation(async () => {
+    const u = env.ROUTER_URL + "/challenge";
+
+    const response = await fetch(u, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      console.error("Failed to get challenge", response);
+      throw new Error("Failed to get challenge");
+    }
+
+    const resp: unknown = await response.json();
+
+    return challengeResponseModel.parse(resp);
+  }),
 });

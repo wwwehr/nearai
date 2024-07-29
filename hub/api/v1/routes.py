@@ -86,9 +86,10 @@ def completions(request: CompletionsRequest = Depends(convert_request), auth: Au
     logger.info(f"Received completions request: {request.model_dump()}")
 
     try:
+        assert request.provider is not None
         llm = get_llm_ai(request.provider)
     except NotImplementedError:
-        raise HTTPException(status_code=400, detail="Provider not supported")
+        raise HTTPException(status_code=400, detail="Provider not supported") from None
 
     resp = llm.completions.create(**request.model_dump(exclude={"provider", "response_format"}))
 
@@ -116,9 +117,10 @@ async def chat_completions(
     logger.info(f"Received chat completions request: {request.model_dump()}")
 
     try:
+        assert request.provider is not None
         llm = get_llm_ai(request.provider)
     except NotImplementedError:
-        raise HTTPException(status_code=400, detail="Provider not supported")
+        raise HTTPException(status_code=400, detail="Provider not supported") from None
 
     resp = llm.chat.completions.create(**request.model_dump(exclude={"provider"}))
 

@@ -17,7 +17,7 @@ def now_short_humanized():
 def str_to_datetime(s):
     try:
         dt = datetime.datetime.strptime(s, "%Y-%m-%d %H:%M:%S.%f+00:00")
-    except:
+    except:  # noqa: E722
         dt = datetime.datetime.strptime(s, "%Y-%m-%d %H:%M:%S+00:00")
     return pytz.timezone("UTC").localize(dt)
 
@@ -41,7 +41,12 @@ def combine_hash(hash1, hash2):
 # - output_name - str, taken as is
 # - inputs - dict of {input_name, base58-decoded input_hash}
 # - params - dict of {param_name, param_value}
-def get_output_hash(module_id, output_name, inputs={}, params={}):
+def get_output_hash(module_id, output_name, inputs=None, params=None):
+    if inputs is None:
+        inputs = {}
+    if params is None:
+        params = {}
+
     # 1. Hashing module_id
     h = hash(str(module_id))
 
@@ -60,7 +65,11 @@ def get_output_hash(module_id, output_name, inputs={}, params={}):
     return base58.b58encode(h).decode("utf-8")
 
 
-def get_unique_id(module_id, inputs={}, params={}):
+def get_unique_id(module_id, inputs=None, params=None):
+    if inputs is None:
+        inputs = {}
+    if params is None:
+        params = {}
     return get_output_hash(module_id, "", inputs, params)[:10]
 
 

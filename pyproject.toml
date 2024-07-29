@@ -74,7 +74,7 @@ exclude = [
     "__pypackages__",
     "venv",
 ]
-extend-exclude = ["tests", "hub", "projects", "examples"]
+extend-exclude = ["tests", "projects", "examples"]
 line-length = 120
 indent-width = 4
 
@@ -90,6 +90,7 @@ select = [
     "D"   # pydocstyle
 ]
 ignore = [
+    "B008",  # do not perform calls in argument defaults
     "C901",  # too complex
     "C408",  # dict() constructor
     "C417",  # enforce list comprehension

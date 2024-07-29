@@ -1,12 +1,12 @@
 import base64
 import hashlib
-from typing import Optional
+from typing import Any, Optional
 
 import base58
 import nacl.signing
 import requests
 
-from .serializer import BinarySerializer
+from hub.api.near.serializer import BinarySerializer
 
 
 def verify_signed_message(account_id, public_key, signature, message, nonce, recipient, callback_url):
@@ -39,7 +39,7 @@ def verify_access_key_owner(public_key, account_id):
 
 
 class Payload:
-    def __init__(self, message: str, nonce: bytes, recipient: str, callback_url: Optional[str] = None):
+    def __init__(self, message: str, nonce: bytes, recipient: str, callback_url: Optional[str] = None):  # noqa: D107
         self.tag = 2147484061  # constant from https://github.com/near/NEPs/blob/master/neps/nep-0413.md#example
         self.message = message
         self.nonce = nonce
@@ -48,7 +48,7 @@ class Payload:
 
 
 def validate_signature(public_key: str, signature: str, payload: Payload):
-    payload_schema = [
+    payload_schema: list[list[Any]] = [
         [
             Payload,
             {
@@ -69,16 +69,16 @@ def validate_signature(public_key: str, signature: str, payload: Payload):
             },
         ]
     ]
-    ED_PREFIX = "ed25519:"
+    ED_PREFIX = "ed25519:"  # noqa: N806
 
     borsh_payload = BinarySerializer(dict(payload_schema)).serialize(payload)
     to_sign = hashlib.sha256(borsh_payload).digest()
     real_signature = base64.b64decode(signature)
 
-    public_key = nacl.signing.VerifyKey(base58.b58decode(public_key[len(ED_PREFIX) :]))
+    verify_key: nacl.signing.VerifyKey = nacl.signing.VerifyKey(base58.b58decode(public_key[len(ED_PREFIX) :]))
 
     try:
-        public_key.verify(to_sign, real_signature)
+        verify_key.verify(to_sign, real_signature)
         # print("Signature is valid.")
         return True
     except nacl.exceptions.BadSignatureError:

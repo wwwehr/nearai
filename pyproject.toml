@@ -2,7 +2,16 @@
 name = "nearai"
 version = "0.1.0"
 description = ""
-authors = ["Marcelo Fornet <mfornet94@gmail.com>"]
+authors = [
+    "Marcelo Fornet <mfornet94@gmail.com>",
+    "Gabe Hamilton <gabe@near.org>",
+    "Alexander Comerford <alex@taoa.io>",
+    "zavodil <support@zavodil.ru>",
+    "arktoswb <arktoswb@users.noreply.github.com>",
+    "Pierre LE GUEN <26087574+PierreLeGuen@users.noreply.github.com>",
+    "Alex Skidanov <skidanov.alexander@gmail.com>",
+    "Illia Polosukhin <ilblackdragon@gmail.com>",
+]
 readme = "README.md"
 
 [tool.poetry.dependencies]
@@ -74,18 +83,18 @@ select = [
     "B",  # flake8-bugbear
     "C4", # flake8-comprehensions
     "N",  # PEP8 naming conventions
-    "D"   # pydocstyle
+    "D",  # pydocstyle
 ]
 ignore = [
-    "C901",  # too complex
-    "C408",  # dict() constructor
-    "C417",  # enforce list comprehension
-    "W191",  # indentation contains tabs
-    "D401",  # imperative mood
-    "D100",  # Missing docstring module
-    "D101",  # Missing docstring in public class
-    "D103",  # Missing docstring in public function
-    "D104",  # Missing docstring in public package
+    "C901", # too complex
+    "C408", # dict() constructor
+    "C417", # enforce list comprehension
+    "W191", # indentation contains tabs
+    "D401", # imperative mood
+    "D100", # Missing docstring module
+    "D101", # Missing docstring in public class
+    "D103", # Missing docstring in public function
+    "D104", # Missing docstring in public package
 ]
 
 [tool.ruff.format]

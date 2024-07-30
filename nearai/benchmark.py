@@ -20,16 +20,25 @@ class DatasetInfo:
 
     def get_dataset(self) -> Dataset:  # noqa: D102
         if isinstance(self.dataset, DatasetDict):
-            assert self.subset is not None, f"Subset must be: {', '.join(self.dataset.keys())}"
+            assert (
+                self.subset is not None
+            ), f"Subset must be: {', '.join(self.dataset.keys())}"
             return self.dataset[self.subset]
         elif isinstance(self.dataset, Dataset):
             return self.dataset
         else:
-            raise ValueError(f"Expected a Dataset or DatasetDict, got {type(self.dataset)}")
+            raise ValueError(
+                f"Expected a Dataset or DatasetDict, got {type(self.dataset)}"
+            )
 
 
 class BenchmarkExecutor:
-    def __init__(self, dataset_info: DatasetInfo, solver_strategy: SolverStrategy, benchmark_id: int):  # noqa: D107
+    def __init__(  # noqa: D107
+        self,
+        dataset_info: DatasetInfo,
+        solver_strategy: SolverStrategy,
+        benchmark_id: int,
+    ):
         self.dataset_info = dataset_info
         self.solver_strategy = solver_strategy
         self.benchmark_id = benchmark_id
@@ -42,8 +51,12 @@ class BenchmarkExecutor:
         )
 
         cache_map: Dict[SolverScoringMethod, Callable[[], Any]] = {
-            SolverScoringMethod.TrueOrFalseList: lambda: db.get_benchmark_status(self.benchmark_id),
-            SolverScoringMethod.Custom: lambda: db.get_benchmark_results(self.benchmark_id),
+            SolverScoringMethod.TrueOrFalseList: lambda: db.get_benchmark_status(
+                self.benchmark_id
+            ),
+            SolverScoringMethod.Custom: lambda: db.get_benchmark_results(
+                self.benchmark_id
+            ),
         }
 
         cache = cache_map[self.solver_strategy.scoring_method]()
@@ -81,9 +94,12 @@ class BenchmarkExecutor:
                         status, info = result
                     if status:
                         n_true_results += 1
-                    if self.solver_strategy.scoring_method == SolverScoringMethod.TrueOrFalseList:
+                    if (
+                        self.solver_strategy.scoring_method
+                        == SolverScoringMethod.TrueOrFalseList
+                    ):
                         bar.set_description(
-                            f"Correct/Seen - {n_true_results}/{total - remaining} - {n_true_results/(total - remaining):.2%}"
+                            f"Correct/Seen - {n_true_results}/{total - remaining} - {n_true_results/(total - remaining):.2%}"  # noqa: E501
                         )
                     elif info != "":
                         print(info)
@@ -115,6 +131,6 @@ def solve_task(
     if isinstance(result, tuple):
         status, info = result
 
-    # db.update_benchmark_result(benchmark_id, index, status, json.dumps(info))
+    db.update_benchmark_result(benchmark_id, index, status, json.dumps(info))
 
     return result

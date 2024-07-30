@@ -18,13 +18,13 @@ import nearai
 from nearai.agent import load_agent
 from nearai.benchmark import BenchmarkExecutor, DatasetInfo
 from nearai.config import CONFIG, DATA_FOLDER, update_config
-from nearai.dataset import load_dataset
+from nearai.dataset import get_dataset, load_dataset
 from nearai.db import db
 from nearai.environment import Environment
 from nearai.finetune import FinetuneCli
 from nearai.registry import Registry, agent, dataset, model, registry
 from nearai.server import ServerClient, run_server
-from nearai.solvers import SolverStrategy, SolverStrategyRegistry
+from nearai.solvers import SolverScoringMethod, SolverStrategy, SolverStrategyRegistry
 from nearai.supervisor import SupervisorClient, run_supervisor
 from nearai.tensorboard_feed import TensorboardCli
 
@@ -306,20 +306,29 @@ class BenchmarkCli:
         It will cache the results in the database and subsequent runs will pull the results from the cache.
         If force is set to True, it will run the benchmark again and update the cache.
         """
-        benchmark_id = db.get_benchmark_id(dataset, solver_strategy, force, subset=subset, **solver_kwargs)
-
-        name, subset, dataset = dataset, subset, load_dataset(dataset)
+        benchmark_id = db.get_benchmark_id(
+            dataset, solver_strategy, force, subset=subset, **solver_kwargs
+        )
 
         solver_strategy: SolverStrategy | None = SolverStrategyRegistry.get(solver_strategy, None)
         assert (
             solver_strategy
         ), f"Solver strategy {solver_strategy} not found. Available strategies: {list(SolverStrategyRegistry.keys())}"
+
+        name = dataset
+        if solver_strategy.scoring_method == SolverScoringMethod.Custom:
+            dataset = get_dataset(dataset)
+        else:
+            dataset = load_dataset(dataset)
+
         solver_strategy = solver_strategy(dataset_ref=dataset, **solver_kwargs)
         assert (
             name in solver_strategy.compatible_datasets()
         ), f"Solver strategy {solver_strategy} is not compatible with dataset {name}"
 
-        be = BenchmarkExecutor(DatasetInfo(name, subset, dataset), solver_strategy, benchmark_id=benchmark_id)
+        be = BenchmarkExecutor(
+            DatasetInfo(name, subset, dataset), solver_strategy, benchmark_id=benchmark_id
+        )
 
         max_concurrent = os.cpu_count() if max_concurrent < 0 else max_concurrent
         be.run(max_concurrent=max_concurrent)

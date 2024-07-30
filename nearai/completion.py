@@ -24,9 +24,10 @@ class InferenceRouter(object):
 
     def completions(self, model, messages, stream=False, temperature=None, **kwargs):
         """Takes a model `provider:model_name` and a list of messages and returns all completions."""
+        models = self._config["models"]
         assert (
-            "models" in self._config and model in self._config["models"]
-        ), f"Model {model} not found in config."
+            "models" in self._config and model in models
+        ), f"Model {model} not found in config {models}."
         provider_name, model_path = self._config["models"][model].split(":")
         if provider_name not in self._endpoints:
             assert (

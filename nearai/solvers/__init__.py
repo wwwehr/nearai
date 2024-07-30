@@ -1,6 +1,6 @@
 from abc import ABC, ABCMeta, abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Type, Union, Tuple, Any
+from typing import Any, Dict, List, Union, Tuple, Any
 
 class SolverScoringMethod(Enum):
     # Scores each question with 'True' or 'False'.
@@ -16,9 +16,7 @@ class classproperty:
         return self.fget(owner_cls)
 
 class SolverStrategyMeta(ABCMeta):
-    """
-    Metaclass that automatically registers subclasses in the SolverStrategyRegistry.
-    """
+    """Metaclass that automatically registers subclasses in the SolverStrategyRegistry."""
 
     def __new__(cls, name: str, bases: tuple, namespace: dict) -> Any:
         new_class = super().__new__(cls, name, bases, namespace)
@@ -28,11 +26,9 @@ class SolverStrategyMeta(ABCMeta):
 
 
 class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
-    """
-    Abstract class for solver strategies.
-    """
+    """Abstract class for solver strategies."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     @property
@@ -55,14 +51,14 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
         else:
             raise AttributeError("get_custom_tasks is only applicable for Custom scoring method")
 
-SolverStrategyRegistry: Dict[str, Type[SolverStrategy]] = {}
+SolverStrategyRegistry: Dict[str, SolverStrategy] = {}
 
-from nearai.solvers.ddot_v0_solver import DDOTSV0Solver
-from nearai.solvers.mbpp_solver import MBPPSolverStrategy
-from nearai.solvers.mbpp_agent_solver import MBPPSolverAgent
-from nearai.solvers.mmlu_solver import MMLUSolverStrategy
-from nearai.solvers.hellaswag_solver import HellaswagSolverStrategy
-from nearai.solvers.livebench_solver import LiveBenchSolverStrategy
+from nearai.solvers.ddot_v0_solver import DDOTSV0Solver  # noqa: E402
+from nearai.solvers.hellaswag_solver import HellaswagSolverStrategy  # noqa: E402
+from nearai.solvers.mbpp_agent_solver import MBPPSolverAgent  # noqa: E402
+from nearai.solvers.mbpp_solver import MBPPSolverStrategy  # noqa: E402
+from nearai.solvers.mmlu_solver import MMLUSolverStrategy  # noqa: E402
+from nearai.solvers.livebench_solver import LiveBenchSolverStrategy  # noqa: E402
 
 __all__ = [
     "SolverStrategyRegistry",

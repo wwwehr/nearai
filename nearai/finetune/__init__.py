@@ -14,7 +14,6 @@ from nearai.config import CONFIG, DATA_FOLDER, ETC_FOLDER
 from nearai.dataset import get_dataset
 from nearai.model import get_model
 from nearai.registry import registry
-from nearai.server import ServerClient
 
 
 class FinetuneCli:
@@ -30,6 +29,8 @@ class FinetuneCli:
         epochs: int = 1,
     ) -> None:
         """Submit a finetuning job to the cluster."""
+        from nearai.server import ServerClient
+
         client = ServerClient(CONFIG.server_url)
 
         assert CONFIG.user_name is not None, "Please set the user name in the config file."

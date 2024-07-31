@@ -3,6 +3,8 @@ import pymysql
 import pymysql.cursors
 import logging
 from os import getenv
+
+import pymysql
 from dotenv import load_dotenv
 from pydantic import BaseModel, RootModel
 from enum import Enum
@@ -33,8 +35,7 @@ class UserNonces(RootModel):
 
 
 class SqlClient:
-
-    def __init__(self):
+    def __init__(self):  # noqa: D107
         self.db = pymysql.connect(
             host=getenv("DATABASE_HOST"),
             user=getenv("DATABASE_USER"),
@@ -59,16 +60,16 @@ class SqlClient:
         cursor.execute(query)
         return cursor.fetchone()
 
-    def add_user_usage(self, account_id: str, query: str, response: str, model: str, provider: str, endpoint: str):
+    def add_user_usage(self, account_id: str, query: str, response: str, model: str, provider: str, endpoint: str):  # noqa: D102
         # Escape single quotes in query and response strings
         query = query.replace("'", "''")
         response = response.replace("'", "''")
 
-        query = f"INSERT INTO completions (account_id, query, response, model, provider, endpoint) VALUES ('{account_id}', '{query}', '{response}', '{model}', '{provider}', '{endpoint}')"
+        query = f"INSERT INTO completions (account_id, query, response, model, provider, endpoint) VALUES ('{account_id}', '{query}', '{response}', '{model}', '{provider}', '{endpoint}')"  # noqa: E501
         self.db.cursor().execute(query)
         self.db.commit()
 
-    def get_user_usage(self, account_id: str):
+    def get_user_usage(self, account_id: str):  # noqa: D102
         query = f"SELECT * FROM completions WHERE account_id = '{account_id}'"
         return self.__fetch_all(query)
 

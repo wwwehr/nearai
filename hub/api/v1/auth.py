@@ -1,10 +1,10 @@
-import json
 import logging
+from typing import Optional
 
-from typing import Optional, Union
 from fastapi import Depends, HTTPException
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, Field, field_validator
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import BaseModel, field_validator
+
 
 from hub.api.near.sign import verify_signed_message
 from hub.api.v1.sql import SqlClient
@@ -16,6 +16,7 @@ db = SqlClient()
 
 class AuthToken(BaseModel):
     """Model for auth callback."""
+
     account_id: str
     """The account ID."""
     public_key: str
@@ -26,7 +27,7 @@ class AuthToken(BaseModel):
     """The callback URL."""
     recipient: Optional[str] = "ai.near"
     """Message Recipient"""
-    nonce: bytes
+    nonce: Optional[bytes] = b"1" * 32
     """Nonce of the signed message, it must be 32 bytes long."""
     plainMsg: str
     """The plain message that was signed."""

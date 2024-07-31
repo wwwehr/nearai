@@ -20,16 +20,12 @@ class DatasetInfo:
 
     def get_dataset(self) -> Dataset:  # noqa: D102
         if isinstance(self.dataset, DatasetDict):
-            assert (
-                self.subset is not None
-            ), f"Subset must be: {', '.join(self.dataset.keys())}"
+            assert self.subset is not None, f"Subset must be: {', '.join(self.dataset.keys())}"
             return self.dataset[self.subset]
         elif isinstance(self.dataset, Dataset):
             return self.dataset
         else:
-            raise ValueError(
-                f"Expected a Dataset or DatasetDict, got {type(self.dataset)}"
-            )
+            raise ValueError(f"Expected a Dataset or DatasetDict, got {type(self.dataset)}")
 
 
 class BenchmarkExecutor:
@@ -51,12 +47,8 @@ class BenchmarkExecutor:
         )
 
         cache_map: Dict[SolverScoringMethod, Callable[[], Any]] = {
-            SolverScoringMethod.TrueOrFalseList: lambda: db.get_benchmark_status(
-                self.benchmark_id
-            ),
-            SolverScoringMethod.Custom: lambda: db.get_benchmark_results(
-                self.benchmark_id
-            ),
+            SolverScoringMethod.TrueOrFalseList: lambda: db.get_benchmark_status(self.benchmark_id),
+            SolverScoringMethod.Custom: lambda: db.get_benchmark_results(self.benchmark_id),
         }
 
         cache = cache_map[self.solver_strategy.scoring_method]()
@@ -70,10 +62,7 @@ class BenchmarkExecutor:
                 cache=cache,
                 solve_fn=self.solver_strategy.solve,
             )
-            tasks = iter(
-                executor.submit(task_ctor, index=index, datum=datum)
-                for index, datum in enumerate(data_tasks)
-            )
+            tasks = iter(executor.submit(task_ctor, index=index, datum=datum) for index, datum in enumerate(data_tasks))
 
             total = len(data_tasks)
             bar = tqdm(total=total, disable=not progress)
@@ -94,10 +83,7 @@ class BenchmarkExecutor:
                         status, info = result
                     if status:
                         n_true_results += 1
-                    if (
-                        self.solver_strategy.scoring_method
-                        == SolverScoringMethod.TrueOrFalseList
-                    ):
+                    if self.solver_strategy.scoring_method == SolverScoringMethod.TrueOrFalseList:
                         bar.set_description(
                             f"Correct/Seen - {n_true_results}/{total - remaining} - {n_true_results/(total - remaining):.2%}"  # noqa: E501
                         )

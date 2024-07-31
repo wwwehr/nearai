@@ -69,9 +69,7 @@ class LiveBenchSolverStrategy(SolverStrategy):
         print("")
         print("----------- Step gen_model_answer -----------")
         print("")
-        list_of_question_files = glob.glob(
-            f"{self.dataset_ref}/**/question.jsonl", recursive=True
-        )
+        list_of_question_files = glob.glob(f"{self.dataset_ref}/**/question.jsonl", recursive=True)
         for question_file in list_of_question_files:
             questions = load_questions_jsonl(question_file)
             bench_name = os.path.dirname(question_file).split(str(self.dataset_ref))[-1]
@@ -114,9 +112,7 @@ class LiveBenchSolverStrategy(SolverStrategy):
                     stop=["<|eot_id|>"],
                 ),
             )
-            output = str(
-                cast(List[Choices], completion_response.choices)[0].message.content
-            )
+            output = str(cast(List[Choices], completion_response.choices)[0].message.content)
 
             conv.append({"role": "assistant", "content": output})
             turns.append(output)
@@ -131,9 +127,7 @@ class LiveBenchSolverStrategy(SolverStrategy):
 
         try:
             # Run the script without capturing output
-            subprocess.run(
-                ["/bin/bash", script_path, self.model, self.dataset_ref], check=True
-            )
+            subprocess.run(["/bin/bash", script_path, self.model, self.dataset_ref], check=True)
             return True
 
         except subprocess.CalledProcessError as e:
@@ -161,17 +155,11 @@ class LiveBenchSolverStrategy(SolverStrategy):
         with open(file_path, "r") as f:
             reader = csv.DictReader(f)
             matching_rows = [row for row in reader if row["model"] == self.model]
-            return (
-                matching_rows[-1] if matching_rows else None
-            )  # Get the last matching row
+            return matching_rows[-1] if matching_rows else None  # Get the last matching row
 
     def create_result_dict(self) -> Tuple[bool, dict]:  # noqa: D102
-        tasks_data = self.read_csv_to_dict(
-            "~/.nearai/LiveBench/livebench/all_tasks.csv"
-        )
-        groups_data = self.read_csv_to_dict(
-            "~/.nearai/LiveBench/livebench/all_groups.csv"
-        )
+        tasks_data = self.read_csv_to_dict("~/.nearai/LiveBench/livebench/all_tasks.csv")
+        groups_data = self.read_csv_to_dict("~/.nearai/LiveBench/livebench/all_groups.csv")
 
         if not tasks_data or not groups_data:
             return False, None  # Return None if the model is not found in either file

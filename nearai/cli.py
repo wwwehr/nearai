@@ -307,9 +307,7 @@ class BenchmarkCli:
         It will cache the results in the database and subsequent runs will pull the results from the cache.
         If force is set to True, it will run the benchmark again and update the cache.
         """
-        benchmark_id = db.get_benchmark_id(
-            dataset, solver_strategy, force, subset=subset, **solver_kwargs
-        )
+        benchmark_id = db.get_benchmark_id(dataset, solver_strategy, force, subset=subset, **solver_kwargs)
 
         solver_strategy_class: SolverStrategy | None = SolverStrategyRegistry.get(solver_strategy, None)
         assert (

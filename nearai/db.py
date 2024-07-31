@@ -548,13 +548,13 @@ class DB:
     def update_benchmark_result(self, benchmark_id: int, index: int, result: bool, info: str) -> None:  # noqa: D102
         with self.connection.cursor() as cursor:
             cursor.execute(
-            """
+                """
             INSERT INTO benchmark_datum (benchmark_id, dataset_index, result, info)
             VALUES (%s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE result = VALUES(result), info = VALUES(info)
             """,
-            (benchmark_id, index, result, info),
-        )
+                (benchmark_id, index, result, info),
+            )
         self.connection.commit()
 
     def add_tag(self, *, registry_id: int, tag: str) -> None:  # noqa: D102

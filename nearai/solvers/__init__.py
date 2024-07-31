@@ -50,13 +50,9 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
 
     def get_custom_tasks(self) -> List[dict]:
         if self.scoring_method == SolverScoringMethod.Custom:
-            raise NotImplementedError(
-                "get_custom_tasks must be implemented for Custom scoring method"
-            )
+            raise NotImplementedError("get_custom_tasks must be implemented for Custom scoring method")
         else:
-            raise AttributeError(
-                "get_custom_tasks is only applicable for Custom scoring method"
-            )
+            raise AttributeError("get_custom_tasks is only applicable for Custom scoring method")
 
 
 SolverStrategyRegistry: Dict[str, SolverStrategy] = {}

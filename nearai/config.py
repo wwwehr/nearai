@@ -61,6 +61,12 @@ class LLMConfig(BaseModel):
     providers: Dict[str, LLMProviderConfig]
     models: Dict[str, str]
 
+    @classmethod
+    def from_dict(cls, data: Optional[Dict[str, Any]]) -> Optional["LLMConfig"]:  # noqa: D102
+        if data is None:
+            return None
+        return cls(providers={k: LLMProviderConfig(**v) for k, v in data["providers"].items()}, models=data["models"])
+
 
 @dataclass
 class Config:
@@ -83,18 +89,24 @@ class Config:
     inference_url: str = "http://localhost:5000/v1/"
     inference_api_key: str = "n/a"
 
-    llm_config: Optional[LLMConfig] = None
+    llm_config_dict: Optional[dict] = None
 
     confirm_commands: bool = True
 
-    def update_with(self, extra_config: Dict[str, Any], map_key: Callable[[str], str] = lambda x: x) -> None:  # noqa: D102
+    @property
+    def llm_config(self) -> Optional[LLMConfig]:  # noqa: D102
+        return LLMConfig.from_dict(self.llm_config_dict)
+
+    def update_with(  # noqa: D102
+        self, extra_config: Dict[str, Any], map_key: Callable[[str], str] = lambda x: x
+    ) -> None:
         keys = [f.name for f in fields(self)]
         for key in map(map_key, keys):
-            value = extra_config.get(key, None)
+            value = extra_config.get(key if key != "llm_config_dict" else "llm_config", None)
 
             if value:
                 # This will skip empty values, even if they are set in the `extra_config`
-                setattr(self, key, extra_config[key])
+                setattr(self, key, value)
 
     def get(self, key: str, default: Optional[Any] = None) -> Optional[Any]:  # noqa: D102
         return getattr(self, key, default)

@@ -32,33 +32,29 @@ class InferenceRouter(object):
         **kwargs: Any,
     ) -> Union[ModelResponse, CustomStreamWrapper]:
         """Takes a model `provider:model_name` and a list of messages and returns all completions."""
-        assert "models" in self._config and model in self._config["models"], f"Model {model} not found in config."
+        assert hasattr(self._config, "models"), "Config does not have models"
+        assert model in self._config.models, f"Model {model} not found in config."
         provider_name: str
         model_path: str
-        provider_name, model_path = self._config["models"][model].split(":")
+        provider_name, model_path = self._config.models[model].split(":")
         if provider_name not in self._endpoints:
-            assert (
-                "providers" in self._config and provider_name in self._config["providers"]
-            ), f"Provider {provider_name} not found in config."
-            provider_config = self._config["providers"][provider_name]
+            assert hasattr(self._config, "providers"), "Config does not have providers"
+            assert provider_name in self._config.providers, f"Provider {provider_name} not found in config."
+            provider_config = self._config.providers[provider_name]
             self._endpoints[provider_name] = lambda model, messages, stream, temperature, **kwargs: litellm_completion(
                 model,
                 messages,
                 stream=stream,
                 # TODO: move this to config
-                custom_llm_provider=("antropic" if "antropic" in provider_config["base_url"] else "openai"),
+                custom_llm_provider="antropic" if "antropic" in provider_config.base_url else "openai",
                 input_cost_per_token=0,
                 output_cost_per_token=0,
                 temperature=temperature,
-                base_url=provider_config["base_url"],
-                api_key=(provider_config["api_key"] if provider_config["api_key"] else "not-needed"),
+                base_url=provider_config.base_url,
+                api_key=provider_config.api_key if provider_config.api_key else "not-needed",
                 **kwargs,
             )
         result: Union[ModelResponse, CustomStreamWrapper] = self._endpoints[provider_name](
-            model=model_path,
-            messages=messages,
-            stream=stream,
-            temperature=temperature,
-            **kwargs,
+            model=model_path, messages=messages, stream=stream, temperature=temperature, **kwargs
         )
         return result

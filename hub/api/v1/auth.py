@@ -4,7 +4,7 @@ import logging
 from typing import Optional, Union
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from hub.api.near.sign import verify_signed_message
 from hub.api.v1.sql import SqlClient
@@ -26,41 +26,34 @@ class AuthToken(BaseModel):
     """The callback URL."""
     recipient: Optional[str] = "ai.near"
     """Message Recipient"""
-    nonce: bytes = Field(default=bytes("1", "utf-8") *
-                         32, min_length=32, max_length=32)
+    nonce: bytes
+    """Nonce of the signed message, it must be 32 bytes long."""
     plainMsg: str
     """The plain message that was signed."""
 
+    @field_validator('nonce')
     @classmethod
-    def validate_nonce(cls, value: Union[str, list[int]]):
-        if isinstance(value, str):
-            return bytes.fromhex(value)
-        elif isinstance(value, list):
-            return bytes(value)
-        else:
-            raise ValueError("Invalid nonce format")
-
-    @classmethod
-    def model_validate_json(cls, json_str: str):
-        data = json.loads(json_str)
-        if 'nonce' in data:
-            data['nonce'] = cls.validate_nonce(data['nonce'])
-        return cls(**data)
+    def validate_and_convert_nonce(cls, value: str):
+        if len(value) != 32:
+            raise ValueError("Invalid nonce, must of length 32")
+        return value
 
 
 async def get_auth(token: HTTPAuthorizationCredentials = Depends(bearer)):
     if token.credentials == "":
         raise HTTPException(status_code=401, detail="Invalid token")
     try:
+        logger.debug(f"Token: {token.credentials}")
         return AuthToken.model_validate_json(token.credentials)
     except Exception as e:
         logging.error(f"Error parsing token: {e}")
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
-async def validate_auth(auth: AuthToken = Depends(get_auth)):
-    is_valid = verify_signed_message(auth.account_id, auth.public_key, auth.signature, auth.plainMsg, auth.nonce,
-                                     auth.recipient, auth.callback_url)
+async def validate_signature(auth: AuthToken = Depends(get_auth)):
+    logging.debug(f"account_id {auth.account_id}: verifying signature")
+    is_valid = verify_signed_message(auth.account_id, auth.public_key, auth.signature,
+                                     auth.plainMsg, auth.nonce, auth.recipient, auth.callback_url)
     if not is_valid:
         logging.error(
             f"account_id {auth.account_id}: signature verification failed")
@@ -68,20 +61,20 @@ async def validate_auth(auth: AuthToken = Depends(get_auth)):
 
     logging.debug(f"account_id {auth.account_id}: signature verified")
 
-    challenge = db.get_challenge(auth.plainMsg)
+    return auth
 
-    if challenge is None:
-        logging.error(
-            f"account_id {auth.account_id}: challenge not found")
-        raise HTTPException(status_code=401, detail="Invalid challenge")
 
-    if challenge.is_pending():
-        logging.info(
-            f"account_id {auth.account_id}: challenge is pending, assigning")
-        db.assign_challenge(auth.plainMsg, auth.account_id)
-    elif not challenge.is_valid_auth(auth.account_id):
+async def revokable_auth(auth: AuthToken = Depends(validate_signature)):
+    logger.debug(f"Validating auth token: {auth}")
+
+    user_nonce = db.get_account_nonce(auth.account_id, auth.nonce)
+
+    if user_nonce and user_nonce.is_revoked():
         logging.error(
-            f"account_id {auth.account_id}: challenge is not a valid auth")
-        raise HTTPException(status_code=401, detail="Invalid challenge")
+            f"account_id {auth.account_id}: nonce is revoked")
+        raise HTTPException(status_code=401, detail="Revoked nonce")
+
+    if not user_nonce:
+        db.store_nonce(auth.account_id, auth.nonce)
 
     return auth

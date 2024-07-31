@@ -1,26 +1,15 @@
 import { Button } from "~/components/ui/button";
-import {
-  CALLBACK_URL,
-  NONCE,
-  RECIPIENT,
-  useChallengeRequest,
-} from "~/hooks/mutations";
+import { CALLBACK_URL, MESSAGE, RECIPIENT } from "~/hooks/mutations";
+import { generateNonce, redirectToAuthNearLink } from "~/lib/auth";
+import usePersistingStore from "~/store/store";
 
 export function NearLogin() {
-  const challengeMut = useChallengeRequest();
+  const store = usePersistingStore();
 
   const requestSignature = async () => {
-    const challenge = await challengeMut.mutateAsync();
-    console.log("challenge", challenge);
-
-    const urlParams = new URLSearchParams({
-      message: challenge,
-      recipient: RECIPIENT,
-      nonce: NONCE,
-      callbackUrl: CALLBACK_URL,
-    });
-
-    window.location.replace(`https://auth.near.ai/?${urlParams.toString()}`);
+    const nonce = generateNonce();
+    store.setCurrentNonce(nonce);
+    redirectToAuthNearLink(MESSAGE, RECIPIENT, nonce, CALLBACK_URL);
   };
 
   return (

@@ -1,8 +1,8 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional, Union, List, Dict, Any
 from hub.api.v1.sql import SqlClient
 from hub.api.v1.completions import get_llm_ai, Message, handle_stream, Provider
-from hub.api.v1.auth import get_auth, validate_auth, AuthToken
+from hub.api.v1.auth import get_auth, revokable_auth, AuthToken, validate_signature
 
 import logging
 import json
@@ -19,6 +19,8 @@ logger = logging.getLogger(__name__)
 security = HTTPBearer()
 
 PROVIDER_MODEL_SEP = "::"
+REVOKE_MESSAGE = "Are you sure? Revoking a nonce"
+REVOKE_ALL_MESSAGE = "Are you sure? Revoking all nonces"
 
 
 def get_provider_model(provider: Optional[str], model: str):
@@ -81,7 +83,7 @@ def convert_request(request: ChatCompletionsRequest | CompletionsRequest):
 
 
 @v1_router.post("/completions")
-def completions(request: CompletionsRequest = Depends(convert_request), auth: AuthToken = Depends(validate_auth)):
+def completions(request: CompletionsRequest = Depends(convert_request), auth: AuthToken = Depends(revokable_auth)):
     logger.info(f"Received completions request: {request.model_dump()}")
 
     try:
@@ -109,7 +111,7 @@ def completions(request: CompletionsRequest = Depends(convert_request), auth: Au
 
 
 @v1_router.post("/chat/completions")
-async def chat_completions(request: ChatCompletionsRequest = Depends(convert_request), auth: AuthToken = Depends(validate_auth)):
+async def chat_completions(request: ChatCompletionsRequest = Depends(convert_request), auth: AuthToken = Depends(revokable_auth)):
     logger.info(f"Received chat completions request: {request.model_dump()}")
 
     try:
@@ -159,16 +161,58 @@ async def get_models():
     return JSONResponse(content=response)
 
 
-@v1_router.post("/challenge")
-async def gen_challenge():
-    """
-    Generate a challenge for the user. This challenge needs to be signed by the user and used in authorized requests.
+class RevokeNonce(BaseModel):
+    nonce: bytes
+    """The nonce to revoke."""
 
-    TODO(https://github.com/nearai/nearai/issues/86): Implement rate limiting for this endpoint.
-    """
-    challenge_uuid = str(uuid.uuid4())
-    logging.info(
-        f"Generated challenge {challenge_uuid}")
-    db.add_challenge(challenge_uuid)
+    @field_validator('nonce')
+    @classmethod
+    def validate_and_convert_nonce(cls, value: str):
+        if len(value) != 32:
+            raise ValueError("Invalid nonce, must of length 32")
+        return value
 
-    return JSONResponse(content={"challenge": challenge_uuid})
+
+@v1_router.post("/nonce/revoke")
+async def revoke_nonce(nonce: RevokeNonce, auth: AuthToken = Depends(validate_signature)):
+    """
+    Revoke a nonce for the account.
+    """
+    logger.info(
+        f"Received request to revoke nonce {nonce} for account {auth.account_id}")
+    if auth.plainMsg != REVOKE_MESSAGE:
+        raise HTTPException(
+            status_code=401, detail="Invalid nonce revoke message")
+
+    # TODO: If signature is too old, request will be rejected
+
+    db.revoke_nonce(auth.account_id, nonce.nonce)
+    return JSONResponse(content={"message": f"Nonce {nonce} revoked"})
+
+
+@v1_router.post("/nonce/revoke/all")
+async def revoke_all_nonces(auth: AuthToken = Depends(validate_signature)):
+    """
+    Revoke all nonces for the account.
+    """
+    logger.info(
+        f"Received request to revoke all nonces for account {auth.account_id}")
+    if auth.plainMsg != REVOKE_ALL_MESSAGE:
+        raise HTTPException(
+            status_code=401, detail="Invalid nonce revoke message")
+
+    # TODO: If signature is too old, request will be rejected
+
+    db.revoke_all_nonces(auth.account_id)
+    return JSONResponse(content={"message": "All nonces revoked"})
+
+
+@v1_router.get("/nonce/list")
+async def list_nonces(auth: AuthToken = Depends(revokable_auth)):
+    """
+    List all nonces for the account.
+    """
+    nonces = db.get_account_nonces(auth.account_id)
+    res = nonces.model_dump_json()
+    logger.info(f"Listing nonces for account {auth.account_id}: {res}")
+    return JSONResponse(content=json.loads(res))

@@ -1,16 +1,21 @@
 import { env } from "~/env";
 import {
-  challengeResponseModel,
   chatCompletionsModel,
   chatResponseModel,
   listModelsResponseModel,
+  listNoncesModel,
+  revokeNonceModel,
 } from "~/lib/models";
+import { createZodFetcher } from "zod-fetch";
 
 import {
   createTRPCRouter,
   protectedProcedure,
   publicProcedure,
 } from "~/server/api/trpc";
+import { z } from "zod";
+
+const fetchWithZod = createZodFetcher();
 
 export const routerRouter = createTRPCRouter({
   listModels: publicProcedure.query(async () => {
@@ -51,23 +56,59 @@ export const routerRouter = createTRPCRouter({
       return chatResponseModel.parse(resp);
     }),
 
-  challenge: publicProcedure.mutation(async () => {
-    const u = env.ROUTER_URL + "/challenge";
+  listNonces: protectedProcedure.query(async ({ ctx }) => {
+    const u = env.ROUTER_URL + "/nonce/list";
 
-    const response = await fetch(u, {
-      method: "POST",
+    const resp = await fetchWithZod(listNoncesModel, u, {
       headers: {
-        "Content-Type": "application/json",
+        Authorization: ctx.Authorization!,
       },
     });
+    console.log(resp);
 
-    if (!response.ok) {
-      console.error("Failed to get challenge", response);
-      throw new Error("Failed to get challenge");
-    }
-
-    const resp: unknown = await response.json();
-
-    return challengeResponseModel.parse(resp);
+    return resp;
   }),
+
+  revokeNonce: protectedProcedure
+    .input(revokeNonceModel)
+    .mutation(async ({ input }) => {
+      const u = env.ROUTER_URL + "/nonce/revoke";
+
+      try {
+        // We can't use regular auth since we need to use the signed revoke message.
+        const resp = await fetch(u, {
+          headers: {
+            Authorization: input.auth,
+            "Content-Type": "application/json",
+          },
+          method: "POST",
+          body: JSON.stringify({ nonce: input.nonce }),
+        });
+        return resp;
+      } catch (e) {
+        console.log(e);
+        throw e;
+      }
+    }),
+
+  revokeAllNonces: protectedProcedure
+    .input(z.object({ auth: z.string() }))
+    .mutation(async ({ input }) => {
+      const u = env.ROUTER_URL + "/nonce/revoke/all";
+
+      try {
+        // We can't use regular auth since we need to use the signed revoke message.
+        const resp = await fetch(u, {
+          headers: {
+            Authorization: input.auth,
+            "Content-Type": "application/json",
+          },
+          method: "POST",
+        });
+        return resp;
+      } catch (e) {
+        console.log(e);
+        throw e;
+      }
+    }),
 });

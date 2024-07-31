@@ -3,14 +3,17 @@
 import { useMutation } from "@tanstack/react-query";
 import { type z } from "zod";
 import { env } from "~/env";
+import { createAuthNearLink } from "~/lib/auth";
 import { type chatCompletionsModel } from "~/lib/models";
-import usePersistingStore from "~/store/store";
 import { api } from "~/trpc/react";
 
 export const CONVERSATION_PATH = "current_conversation";
 export const CALLBACK_URL = env.NEXT_PUBLIC_BASE_URL;
 export const RECIPIENT = "ai.near";
-export const NONCE = "12345678901234567890123456789012";
+
+export const MESSAGE = "Welcome to NEAR AI Hub!";
+export const REVOKE_MESSAGE = "Are you sure? Revoking a nonce";
+export const REVOKE_ALL_MESSAGE = "Are you sure? Revoking all nonces";
 
 export function useSendCompletionsRequest() {
   const chatMut = api.router.chat.useMutation();
@@ -31,16 +34,11 @@ export function useSendCompletionsRequest() {
   });
 }
 
-export function useChallengeRequest() {
-  const challengeMut = api.router.challenge.useMutation();
-  const store = usePersistingStore();
+export function useRevokeNonce() {
   return useMutation({
     mutationFn: async () => {
-      const resp = await challengeMut.mutateAsync();
-
-      store.setChallenge(resp.challenge);
-
-      return resp.challenge;
+      const url = createAuthNearLink(MESSAGE, RECIPIENT, "11", CALLBACK_URL);
+      window.location.replace(url);
     },
   });
 }

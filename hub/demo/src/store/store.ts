@@ -7,13 +7,13 @@ export type IStore = AuthActions & AuthState;
 
 export interface AuthState {
   auth: z.infer<typeof authorizationModel> | null;
-  challenge: string | null;
+  current_nonce: string | null;
 }
 
 export interface AuthActions {
   setAuthValue: (authValue: z.infer<typeof authorizationModel>) => void;
   setAuthValueRaw: (authValue: string) => void;
-  setChallenge: (challenge: string) => void;
+  setCurrentNonce: (nonce: string) => void;
   isAuthenticated: () => boolean;
   clearAuth: () => void;
   toBearer: () => string;
@@ -26,7 +26,7 @@ export const createAuthStore: StateCreator<
   AuthState & AuthActions
 > = (set, get) => ({
   auth: null,
-  challenge: null,
+  current_nonce: null,
   setAuthValue: (auth: z.infer<typeof authorizationModel>) => {
     set({ auth: auth });
   },
@@ -41,7 +41,7 @@ export const createAuthStore: StateCreator<
     return !!get().auth;
   },
   clearAuth: () => {
-    set({ auth: null, challenge: null });
+    set({ auth: null, current_nonce: null });
   },
   toBearer: () => {
     if (!get().auth) {
@@ -49,8 +49,8 @@ export const createAuthStore: StateCreator<
     }
     return `Bearer ${JSON.stringify(get().auth)}`;
   },
-  setChallenge: (challenge: string) => {
-    set({ challenge: challenge });
+  setCurrentNonce: (nonce: string) => {
+    set({ current_nonce: nonce });
   },
 });
 

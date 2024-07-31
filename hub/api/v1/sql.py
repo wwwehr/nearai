@@ -1,39 +1,35 @@
+from typing import List
 import pymysql
 import pymysql.cursors
 import logging
 from os import getenv
 from dotenv import load_dotenv
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 from enum import Enum
+from datetime import datetime
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
 
-class ChallengeStatus(Enum):
+class NonceStatus(str, Enum):
     ACTIVE = "active"
-    INACTIVE = "inactive"
-    EXPIRED = "expired"
     REVOKED = "revoked"
-    PENDING = "pending"
 
 
-class UserChallenge(BaseModel):
-    id: str
-    account_id: str | None
-    challenge_status: ChallengeStatus
+class UserNonce(BaseModel):
+    nonce: str
+    account_id: str
+    nonce_status: NonceStatus
+    first_seen_at: datetime
 
-    def is_active(self):
-        return self.account_id != None and self.challenge_status == ChallengeStatus.ACTIVE
+    def is_revoked(self):
+        return self.nonce_status == NonceStatus.REVOKED
 
-    def is_pending(self):
-        return self.challenge_status == ChallengeStatus.PENDING
 
-    def is_valid_auth(self, account_id: str):
-        logging.info(
-            f"Checking if challenge {self} is valid for account {account_id}")
-        return self.is_active() and self.account_id == account_id
+class UserNonces(RootModel):
+    root: List[UserNonce]
 
 
 class SqlClient:
@@ -43,7 +39,8 @@ class SqlClient:
             host=getenv("DATABASE_HOST"),
             user=getenv("DATABASE_USER"),
             password=getenv("DATABASE_PASSWORD"),
-            database=getenv("DATABASE_NAME")
+            database=getenv("DATABASE_NAME"),
+            autocommit=True
         )
 
     def __fetch_all(self, query: str):
@@ -53,6 +50,14 @@ class SqlClient:
         cursor = self.db.cursor(pymysql.cursors.DictCursor)
         cursor.execute(query)
         return cursor.fetchall()
+
+    def __fetch_one(self, query: str):
+        """
+        Fetches one row from the database. Returns a dictionary, the dict can be used by Pydantic models.
+        """
+        cursor = self.db.cursor(pymysql.cursors.DictCursor)
+        cursor.execute(query)
+        return cursor.fetchone()
 
     def add_user_usage(self, account_id: str, query: str, response: str, model: str, provider: str, endpoint: str):
         # Escape single quotes in query and response strings
@@ -67,25 +72,33 @@ class SqlClient:
         query = f"SELECT * FROM completions WHERE account_id = '{account_id}'"
         return self.__fetch_all(query)
 
-    def add_challenge(self, challenge: str):
-        logging.debug(f"Adding challenge {challenge}")
-        query = f"INSERT INTO challenges (id) VALUES ('{challenge}')"
+    def store_nonce(self, account_id: str, nonce: bytes):
+        logging.info(f"Storing nonce {nonce} for account {account_id}")
+        query = f"INSERT INTO nonces (nonce, account_id, nonce_status) VALUES ('{nonce.decode()}', '{account_id}', 'active')"
         self.db.cursor().execute(query)
         self.db.commit()
 
-    def assign_challenge(self, challenge: str, account_id: str):
-        logging.debug(
-            f"Assigning challenge {challenge} to account {account_id}")
-        query = f"UPDATE challenges SET account_id = '{account_id}', challenge_status = 'active' WHERE id = '{challenge}'"
+    def get_account_nonces(self, account_id: str):
+        query = f"SELECT * FROM nonces WHERE account_id = '{account_id}'"
+        nonces = [UserNonce(**x) for x in self.__fetch_all(query)]
+        user_nonces = UserNonces(root=nonces) if nonces else None
+        return user_nonces
+
+    def get_account_nonce(self, account_id: str, nonce: bytes):
+        query = f"SELECT * FROM nonces WHERE account_id = '{account_id}' AND nonce = '{nonce.decode()}'"
+        res = self.__fetch_one(query)
+        user_nonce = UserNonce(**res) if res else None
+        return user_nonce
+
+    def revoke_nonce(self, account_id: str, nonce: bytes):
+        logging.info(f"Revoking nonce {nonce} for account {account_id}")
+        query = f"UPDATE nonces SET nonce_status = 'revoked' WHERE account_id = '{account_id}' AND nonce = '{nonce.decode()}'"
         self.db.cursor().execute(query)
         self.db.commit()
 
-    def get_challenge(self, challenge: str):
-        logging.debug(f"Getting challenge {challenge}")
-        query = f"SELECT * FROM challenges WHERE id = '{challenge}'"
-        res = [UserChallenge(**x) for x in self.__fetch_all(query)]
-        if len(res) == 0:
-            return None
-        if len(res) > 1:
-            raise ValueError("More than one challenge found")
-        return res[0]
+    def revoke_all_nonces(self, account_id):
+        logging.info(
+            f"Revoking all nonces  for account {account_id}")
+        query = f"UPDATE nonces SET nonce_status = 'revoked' WHERE account_id = '{account_id}'"
+        self.db.cursor().execute(query)
+        self.db.commit()

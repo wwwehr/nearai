@@ -4,10 +4,15 @@ import json
 import os
 import subprocess
 import time
-from typing import List, Tuple, cast
+from typing import Any, Dict, List, Tuple, Union, cast
 
-import shortuuid
+import shortuuid  # type: ignore
 from litellm import Choices, ModelResponse
+from openai.types.chat import (
+    ChatCompletionAssistantMessageParam,
+    ChatCompletionSystemMessageParam,
+    ChatCompletionUserMessageParam,
+)
 from tqdm import tqdm
 
 from nearai.completion import InferenceRouter
@@ -17,6 +22,26 @@ from nearai.solvers import (
     SolverStrategy,
     SolverStrategyClassProperty,
 )
+
+MessageType = Union[
+    ChatCompletionSystemMessageParam,
+    ChatCompletionUserMessageParam,
+    ChatCompletionAssistantMessageParam,
+]
+
+
+def convert_message(message: Dict[str, Any]) -> MessageType:
+    role = message["role"]
+    content = message["content"]
+
+    if role == "system":
+        return {"role": "system", "content": content}
+    elif role == "user":
+        return {"role": "user", "content": content}
+    elif role == "assistant":
+        return {"role": "assistant", "content": content}
+    else:
+        raise ValueError(f"Unexpected role: {role}")
 
 
 def load_questions_jsonl(question_file: str):
@@ -54,16 +79,17 @@ class LiveBenchSolverStrategy(SolverStrategy):
     def solve(self, _datum: dict) -> Tuple[bool, dict]:  # noqa: D102
         if self.step == "gen_model_answer":
             self.gen_model_answer()
-            return True, ""
+            return True, {}
         if self.step == "gen_ground_truth_judgement":
-            return self.gen_ground_truth_judgement(), ""
+            return self.gen_ground_truth_judgement(), {}
         if self.step == "show_livebench_results":
             return self.show_livebench_results()
         if self.step == "all":
             self.gen_model_answer()
             if not self.gen_ground_truth_judgement():
-                return False, None
+                return False, {}
             return self.show_livebench_results()
+        return False, {}
 
     def gen_model_answer(self) -> None:  # noqa: D102
         print("")
@@ -95,7 +121,7 @@ class LiveBenchSolverStrategy(SolverStrategy):
             with open(answer_file, "a") as fout:
                 fout.write(json.dumps(ans_json) + "\n")
 
-    def answer_question(self, question) -> dict:  # noqa: D102
+    def answer_question(self, question) -> List[dict]:  # noqa: D102
         conv = []
         # Append system prompt here if needed.
         turns = []
@@ -106,7 +132,7 @@ class LiveBenchSolverStrategy(SolverStrategy):
                 ModelResponse,
                 self.completion_fn(
                     self.model,
-                    conv,
+                    messages=[convert_message(msg) for msg in conv],
                     temperature=0.0,
                     n=1,
                     stop=["<|eot_id|>"],
@@ -146,7 +172,7 @@ class LiveBenchSolverStrategy(SolverStrategy):
 
         except subprocess.CalledProcessError as e:
             print(f"An error occurred while running the script: {e}")
-            return False, None
+            return False, {}
 
         return self.create_result_dict()
 
@@ -155,16 +181,16 @@ class LiveBenchSolverStrategy(SolverStrategy):
         with open(file_path, "r") as f:
             reader = csv.DictReader(f)
             matching_rows = [row for row in reader if row["model"] == self.model]
-            return matching_rows[-1] if matching_rows else None  # Get the last matching row
+            return matching_rows[-1] if matching_rows else {}  # Get the last matching row
 
     def create_result_dict(self) -> Tuple[bool, dict]:  # noqa: D102
         tasks_data = self.read_csv_to_dict("~/.nearai/LiveBench/livebench/all_tasks.csv")
         groups_data = self.read_csv_to_dict("~/.nearai/LiveBench/livebench/all_groups.csv")
 
         if not tasks_data or not groups_data:
-            return False, None  # Return None if the model is not found in either file
+            return False, {}  # Return None if the model is not found in either file
 
-        result = {"tasks": {}, "groups": {}}
+        result: dict = {"tasks": {}, "groups": {}}
 
         for key, value in tasks_data.items():
             if key != "model":

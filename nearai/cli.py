@@ -316,7 +316,7 @@ class BenchmarkCli:
 
         name = dataset
         if solver_strategy_class.scoring_method == SolverScoringMethod.Custom:
-            dataset = get_dataset(dataset)
+            dataset = str(get_dataset(dataset))
         else:
             dataset = load_dataset(dataset)
 

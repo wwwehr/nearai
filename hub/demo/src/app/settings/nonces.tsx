@@ -120,6 +120,9 @@ export default function ListNonces() {
           <TableRow>
             <TableHead>Nonce</TableHead>
             <TableHead>Account ID</TableHead>
+            <TableHead>Message</TableHead>
+            <TableHead>Recipient</TableHead>
+            <TableHead>Callback URL</TableHead>
             <TableHead>Nonce Status</TableHead>
             <TableHead>First Seen At</TableHead>
             <TableHead className="text-right">Action</TableHead>
@@ -130,6 +133,9 @@ export default function ListNonces() {
             <TableRow key={nonce.nonce}>
               <TableCell>{nonce.nonce}</TableCell>
               <TableCell>{nonce.account_id}</TableCell>
+              <TableCell>{nonce.message}</TableCell>
+              <TableCell>{nonce.recipient}</TableCell>
+              <TableCell>{nonce.callback_url}</TableCell>
               <TableCell>{nonce.nonce_status}</TableCell>
               <TableCell>{nonce.first_seen_at}</TableCell>
               <TableCell className="text-right">

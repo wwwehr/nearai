@@ -75,6 +75,9 @@ export const challengeResponseModel = z.object({
 export const nonceModel = z.object({
   nonce: z.string(),
   account_id: z.string(),
+  message: z.string(),
+  recipient: z.string(),
+  callback_url: z.string(),
   nonce_status: z.enum(["active", "revoked"]),
   first_seen_at: z.string(),
 });

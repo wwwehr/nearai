@@ -1,10 +1,10 @@
 import logging
+import time
 from typing import Optional
 
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, field_validator
-
 
 from hub.api.near.sign import verify_signed_message
 from hub.api.v1.sql import SqlClient
@@ -25,16 +25,16 @@ class AuthToken(BaseModel):
     """The signature."""
     callback_url: Optional[str] = None
     """The callback URL."""
-    recipient: Optional[str] = "ai.near"
+    recipient: str = "ai.near"
     """Message Recipient"""
-    nonce: Optional[bytes] = b"1" * 32
+    nonce: bytes = b"1" * 32
     """Nonce of the signed message, it must be 32 bytes long."""
-    plainMsg: str
+    plainMsg: str  # noqa: N815
     """The plain message that was signed."""
 
     @field_validator('nonce')
     @classmethod
-    def validate_and_convert_nonce(cls, value: str):
+    def validate_and_convert_nonce(cls, value: str):  # noqa: D102
         if len(value) != 32:
             raise ValueError("Invalid nonce, must of length 32")
         return value
@@ -48,7 +48,7 @@ async def get_auth(token: HTTPAuthorizationCredentials = Depends(bearer)):
         return AuthToken.model_validate_json(token.credentials)
     except Exception as e:
         logging.error(f"Error parsing token: {e}")
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(status_code=401, detail="Invalid token") from None
 
 
 async def validate_signature(auth: AuthToken = Depends(get_auth)):
@@ -61,6 +61,14 @@ async def validate_signature(auth: AuthToken = Depends(get_auth)):
         raise HTTPException(status_code=401, detail="Invalid signature")
 
     logging.debug(f"account_id {auth.account_id}: signature verified")
+
+    timestamp = int(auth.nonce)
+    if timestamp <= 0:
+        raise HTTPException(status_code=401, detail="Invalid nonce")
+    now = int(time.time() * 1000)
+    if timestamp > now:
+        logger.info(f"account_id {auth.account_id}: nonce is in the future")
+        raise HTTPException(status_code=401, detail="Invalid nonce")
 
     return auth
 
@@ -76,6 +84,7 @@ async def revokable_auth(auth: AuthToken = Depends(validate_signature)):
         raise HTTPException(status_code=401, detail="Revoked nonce")
 
     if not user_nonce:
-        db.store_nonce(auth.account_id, auth.nonce)
+        db.store_nonce(auth.account_id, auth.nonce, auth.plainMsg,
+                       auth.recipient, auth.callback_url)
 
     return auth

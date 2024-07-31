@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 from typing import Any, Dict, List, Optional, Union
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -187,7 +188,7 @@ class RevokeNonce(BaseModel):
 
     @field_validator('nonce')
     @classmethod
-    def validate_and_convert_nonce(cls, value: str):
+    def validate_and_convert_nonce(cls, value: str):  # noqa: D102
         if len(value) != 32:
             raise ValueError("Invalid nonce, must of length 32")
         return value
@@ -195,16 +196,19 @@ class RevokeNonce(BaseModel):
 
 @v1_router.post("/nonce/revoke")
 async def revoke_nonce(nonce: RevokeNonce, auth: AuthToken = Depends(validate_signature)):
-    """
-    Revoke a nonce for the account.
-    """
+    """Revoke a nonce for the account."""
     logger.info(
         f"Received request to revoke nonce {nonce} for account {auth.account_id}")
     if auth.plainMsg != REVOKE_MESSAGE:
         raise HTTPException(
             status_code=401, detail="Invalid nonce revoke message")
 
-    # TODO: If signature is too old, request will be rejected
+    # If signature is too old, request will be rejected
+    ts = int(auth.nonce)
+    now = int(time.time() * 1000)
+    if now - ts > 5 * 60 * 1000:
+        raise HTTPException(
+            status_code=401, detail="Invalid nonce")
 
     db.revoke_nonce(auth.account_id, nonce.nonce)
     return JSONResponse(content={"message": f"Nonce {nonce} revoked"})
@@ -212,16 +216,19 @@ async def revoke_nonce(nonce: RevokeNonce, auth: AuthToken = Depends(validate_si
 
 @v1_router.post("/nonce/revoke/all")
 async def revoke_all_nonces(auth: AuthToken = Depends(validate_signature)):
-    """
-    Revoke all nonces for the account.
-    """
+    """Revoke all nonces for the account."""
     logger.info(
         f"Received request to revoke all nonces for account {auth.account_id}")
     if auth.plainMsg != REVOKE_ALL_MESSAGE:
         raise HTTPException(
             status_code=401, detail="Invalid nonce revoke message")
 
-    # TODO: If signature is too old, request will be rejected
+    # If signature is too old, request will be rejected
+    ts = int(auth.nonce)
+    now = int(time.time() * 1000)
+    if now - ts > 5 * 60 * 1000:
+        raise HTTPException(
+            status_code=401, detail="Invalid nonce")
 
     db.revoke_all_nonces(auth.account_id)
     return JSONResponse(content={"message": "All nonces revoked"})
@@ -229,9 +236,7 @@ async def revoke_all_nonces(auth: AuthToken = Depends(validate_signature)):
 
 @v1_router.get("/nonce/list")
 async def list_nonces(auth: AuthToken = Depends(revokable_auth)):
-    """
-    List all nonces for the account.
-    """
+    """List all nonces for the account."""
     nonces = db.get_account_nonces(auth.account_id)
     res = nonces.model_dump_json()
     logger.info(f"Listing nonces for account {auth.account_id}: {res}")

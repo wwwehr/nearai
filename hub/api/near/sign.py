@@ -1,12 +1,31 @@
 import base64
 import hashlib
-from typing import Any, Optional
+from typing import Any, List, Optional, Union
 
 import base58
 import nacl.signing
 import requests
 
 from hub.api.near.serializer import BinarySerializer
+
+
+def validate_nonce(value: Union[str, bytes, list[int]]):  # noqa: D102
+    if isinstance(value, bytes):
+        return value
+    elif isinstance(value, str):
+        nonce_bytes = value.encode('utf-8')
+        if len(nonce_bytes) > 32:
+            raise ValueError("Invalid nonce length")
+        if len(nonce_bytes) < 32:
+            nonce_bytes = nonce_bytes.rjust(32, b'0')
+
+        return nonce_bytes
+    elif isinstance(value, list):
+        if len(value) != 32:
+            raise ValueError("Invalid nonce length")
+        return bytes(value)
+    else:
+        raise ValueError("Invalid nonce format")
 
 
 def verify_signed_message(account_id, public_key, signature, message, nonce, recipient, callback_url):
@@ -39,10 +58,10 @@ def verify_access_key_owner(public_key, account_id):
 
 
 class Payload:
-    def __init__(self, message: str, nonce: bytes, recipient: str, callback_url: Optional[str] = None):  # noqa: D107
+    def __init__(self, message: str, nonce: Union[bytes, str, List[int]], recipient: str, callback_url: Optional[str] = None):  # noqa: D107
         self.tag = 2147484061  # constant from https://github.com/near/NEPs/blob/master/neps/nep-0413.md#example
         self.message = message
-        self.nonce = nonce
+        self.nonce = validate_nonce(nonce)
         self.recipient = recipient
         self.callbackUrl = callback_url
 

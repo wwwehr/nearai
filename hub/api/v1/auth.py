@@ -1,12 +1,12 @@
 import json
 import logging
-from typing import Optional, Union
+from typing import Optional
 
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
-from hub.api.near.sign import verify_signed_message
+from hub.api.near.sign import validate_nonce, verify_signed_message
 
 bearer = HTTPBearer()
 logger = logging.getLogger(__name__)
@@ -30,19 +30,10 @@ class AuthToken(BaseModel):
     """The plain message that was signed."""
 
     @classmethod
-    def validate_nonce(cls, value: Union[str, list[int]]):  # noqa: D102
-        if isinstance(value, str):
-            return bytes.fromhex(value)
-        elif isinstance(value, list):
-            return bytes(value)
-        else:
-            raise ValueError("Invalid nonce format")
-
-    @classmethod
     def alt_model_validate_json(cls, json_str: str) -> "AuthToken":  # noqa: D102
         data = json.loads(json_str)
         if "nonce" in data:
-            data["nonce"] = cls.validate_nonce(data["nonce"])
+            data["nonce"] = validate_nonce(data["nonce"])
         return cls(**data)
 
 

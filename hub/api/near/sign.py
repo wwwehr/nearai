@@ -8,6 +8,46 @@ import requests
 
 from hub.api.near.serializer import BinarySerializer
 
+ED_PREFIX = "ed25519:"  # noqa: N806
+
+
+class Payload:
+    def __init__(  # noqa: D107
+            self,
+            message: str,
+            nonce: Union[bytes, str, List[int]],
+            recipient: str,
+            callback_url: Optional[str] = None
+    ):
+        self.tag = 2147484061
+        self.message = message
+        self.nonce = validate_nonce(nonce)
+        self.recipient = recipient
+        self.callbackUrl = callback_url
+
+
+PAYLOAD_SCHEMA: list[list[Any]] = [
+    [
+        Payload,
+        {
+            "kind": "struct",
+            "fields": [
+                ["tag", "u32"],
+                ["message", "string"],
+                ["nonce", [32]],
+                ["recipient", "string"],
+                [
+                    "callbackUrl",
+                    {
+                        "kind": "option",
+                        "type": "string",
+                    },
+                ],
+            ],
+        },
+    ]
+]
+
 
 def validate_nonce(value: Union[str, bytes, list[int]]):  # noqa: D102
     if isinstance(value, bytes):
@@ -48,7 +88,10 @@ def verify_access_key_owner(public_key, account_id):
         response.raise_for_status()
         content = response.json()
         account_ids = content.get("account_ids", [])
-        return account_id in account_ids
+        key_owner_verified = account_id in account_ids
+        if not key_owner_verified:
+            print("Key's owner verification failed. Only NEAR Mainnet accounts are supported.")
+        return key_owner_verified
     except requests.exceptions.HTTPError as http_err:
         print(f"HTTP error occurred: {http_err}")
     except Exception as err:
@@ -57,40 +100,35 @@ def verify_access_key_owner(public_key, account_id):
     return False
 
 
-class Payload:
-    def __init__(self, message: str, nonce: Union[bytes, str, List[int]], recipient: str, callback_url: Optional[str] = None):  # noqa: D107
-        self.tag = 2147484061  # constant from https://github.com/near/NEPs/blob/master/neps/nep-0413.md#example
-        self.message = message
-        self.nonce = validate_nonce(nonce)
-        self.recipient = recipient
-        self.callbackUrl = callback_url
+def create_signature(private_key: str, payload: Payload) -> str:
+    borsh_payload = BinarySerializer(dict(PAYLOAD_SCHEMA)).serialize(payload)
+
+    to_sign = hashlib.sha256(borsh_payload).digest()
+
+    # Extract and decode the private key
+    private_key_base58 = private_key[len(ED_PREFIX):]
+    private_key_bytes = base58.b58decode(private_key_base58)
+
+    if len(private_key_bytes) != 64:
+        raise ValueError("The private key must be exactly 64 bytes long")
+
+    # Use only the first 32 bytes as the seed
+    private_key_seed = private_key_bytes[:32]
+
+    signing_key = nacl.signing.SigningKey(private_key_seed)
+    public_key = signing_key.verify_key
+
+    signed = signing_key.sign(to_sign)
+    signature = base64.b64encode(signed.signature).decode('utf-8')
+
+    public_key_base58 = base58.b58encode(public_key.encode()).decode('utf-8')
+    full_public_key = ED_PREFIX + public_key_base58
+
+    return signature, full_public_key
 
 
 def validate_signature(public_key: str, signature: str, payload: Payload):
-    payload_schema: list[list[Any]] = [
-        [
-            Payload,
-            {
-                "kind": "struct",
-                "fields": [
-                    ["tag", "u32"],
-                    ["message", "string"],
-                    ["nonce", [32]],
-                    ["recipient", "string"],
-                    [
-                        "callbackUrl",
-                        {
-                            "kind": "option",
-                            "type": "string",
-                        },
-                    ],
-                ],
-            },
-        ]
-    ]
-    ED_PREFIX = "ed25519:"  # noqa: N806
-
-    borsh_payload = BinarySerializer(dict(payload_schema)).serialize(payload)
+    borsh_payload = BinarySerializer(dict(PAYLOAD_SCHEMA)).serialize(payload)
     to_sign = hashlib.sha256(borsh_payload).digest()
     real_signature = base64.b64decode(signature)
 

@@ -2,7 +2,7 @@ import unittest
 
 # how to run:
 # python -m unittest discover -s hub/tests
-from hub.api.near.sign import Payload, validate_signature, verify_signed_message
+import hub.api.near.sign as near
 
 
 class TestSignatureVerification(unittest.TestCase):
@@ -16,9 +16,27 @@ class TestSignatureVerification(unittest.TestCase):
         self.public_key = "ed25519:2aPrik9S1qCnnfNo2doETrNa61ZaBwZYC8baschK5din"
         self.signature = "pyiixiWS3zHNhPFhd6EJy2oenB2WfxT5MTcOtNnreA/hqTgRCDKIMxu+6MjmDif7jbC+U1/V7VOT2oSv6kfXBQ=="
 
+    def test_validate_signature(self): # noqa: D102
+        payload = near.Payload(self.message, self.nonce, self.recipient, self.callback_url)
+        self.assertTrue(near.validate_signature(self.public_key, self.signature, payload))
+
+    def test_create_signature(self): # noqa: D102
+        payload = near.Payload("Hello", self.nonce, "c.near", None)
+        private_key = "ed25519:5j4jxNMwYim8phkmCJtPu8792ocAPHV6F3d9V4soJUoUXj5nUxAWmgg71VqW3rYU7aFYvrhsaEGvy6Pnrtrw9rkQ"
+        signature, public_key = near.create_signature(private_key, payload)
+
+        self.assertEqual(
+            public_key,
+            'ed25519:D7okgamWraWASEVYUUfAXhLtU5ehbuVVC4GSqntE7bjE'
+        )
+        self.assertEqual(
+            signature,
+            'TxeLYkOkYhzr3cqz8lXZaDFA/UWBAQRUo0YEnIsrU/RbOa36VYtglZkb7T0r9IQs92TNOHSE1E0PZLBSjQ6YAQ=='
+        )
+
     def test_verify_signed_message(self): # noqa: D102
         self.assertTrue(
-            verify_signed_message(
+            near.verify_signed_message(
                 self.account_id,
                 self.public_key,
                 self.signature,
@@ -31,7 +49,7 @@ class TestSignatureVerification(unittest.TestCase):
 
         illegal_message = ""
         self.assertFalse(
-            verify_signed_message(
+            near.verify_signed_message(
                 self.account_id,
                 self.public_key,
                 self.signature,
@@ -52,7 +70,7 @@ class TestSignatureVerification(unittest.TestCase):
         self.signature = "f527uJAg0o60I1BozX+zo0NrAmOdw9UdXvmLGQoA2i/gkOGTeR9AMH1sJQQdCSA4RGrOnyyKfaLTbjGWW6uTAQ=="
 
         self.assertTrue(
-            verify_signed_message(
+            near.verify_signed_message(
                 self.account_id,
                 self.public_key,
                 self.signature,
@@ -62,10 +80,6 @@ class TestSignatureVerification(unittest.TestCase):
                 self.callback_url,
             )
         )
-
-    def test_validate_signature(self): # noqa: D102
-        payload = Payload(self.message, self.nonce, self.recipient, self.callback_url)
-        self.assertTrue(validate_signature(self.public_key, self.signature, payload))
 
 
 if __name__ == "__main__":

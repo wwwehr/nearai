@@ -1,4 +1,5 @@
 import http.server
+import json
 import os.path
 import socket
 import socketserver
@@ -6,7 +7,7 @@ import threading
 import time
 import urllib.parse as urlparse
 
-from hub.api.near.sign import verify_signed_message
+import hub.api.near.sign as near
 from nearai.config import load_config_file, save_config_file
 
 # Directory containing the HTML file
@@ -21,7 +22,7 @@ httpd = None
 
 
 def update_auth_config(account_id, signature, public_key, callback_url, nonce):
-    if verify_signed_message(
+    if near.verify_signed_message(
             account_id,
             public_key,
             signature,
@@ -45,8 +46,10 @@ def update_auth_config(account_id, signature, public_key, callback_url, nonce):
         save_config_file(config)
 
         print(f"Auth data been successfully saved! You are now logged in with account ID: {account_id}")
+        return True
     else:
-        print("Invalid signature. Abort")
+        print("Signature verification failed. Abort")
+        return False
 
 
 def print_login_status():
@@ -56,6 +59,8 @@ def print_login_status():
         print(f'signature: {config["auth"]["signature"]}')
         print(f'public_key: {config["auth"]["public_key"]}')
         print(f'nonce: {config["auth"]["nonce"]}')
+        print(f'message: {config["auth"]["message"]}')
+        print(f'recipient: {config["auth"]["recipient"]}')
     else:
         print("Near auth details not found")
 
@@ -123,9 +128,39 @@ def print_url_message(url):
     print(f"Please visit the following URL to complete the login process: {url}")
 
 
-def login_with_near(remote, auth_url):
+def generate_nonce():
+    return str(int(time.time() * 1000))
+
+
+def generate_and_save_signature(account_id, private_key):
+    nonce = generate_nonce()
+    payload = near.Payload(MESSAGE, nonce, RECIPIENT, None)
+
+    signature, public_key = near.create_signature(private_key, payload)
+
+    if update_auth_config(account_id, signature, public_key, None, nonce):
+        print_login_status()
+
+
+def login_with_file_credentials(account_id):
+    file_path = os.path.expanduser(os.path.join("~/.near-credentials/", "mainnet", f"{account_id}.json"))
+
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as file:
+            content = file.read()
+            account_data = json.loads(content)
+            private_key = account_data.get("private_key", None)
+            if not private_key:
+                return print(f"Private key is missing for {account_id} on mainnet")
+            generate_and_save_signature(account_id, account_data["private_key"])
+
+    else:
+        return print(f"Account data is missing for {account_id}")
+
+
+def login_with_near_auth(remote, auth_url):
     global NONCE, PORT
-    NONCE = str(int(time.time() * 1000))
+    NONCE = generate_nonce()
 
     params = {
         "message": MESSAGE,

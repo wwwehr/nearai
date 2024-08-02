@@ -13,6 +13,7 @@ import pkg_resources
 from tabulate import tabulate
 
 import nearai
+import nearai.login as nearai_login
 from nearai.agent import load_agent
 from nearai.benchmark import BenchmarkExecutor, DatasetInfo
 from nearai.config import CONFIG, DATA_FOLDER, update_config
@@ -21,7 +22,6 @@ from nearai.db import db
 from nearai.environment import Environment
 from nearai.finetune import FinetuneCli
 from nearai.hub import hub
-from nearai.login import login_with_near, print_login_status, update_auth_config
 from nearai.registry import Registry, agent, dataset, model, registry
 from nearai.solvers import SolverStrategy, SolverStrategyRegistry
 from nearai.tensorboard_feed import TensorboardCli
@@ -432,22 +432,32 @@ class HubCLI:
 
 class LoginCLI:
     def __call__(self, **kwargs):
-        """Login with NEAR account.
+        """Login with NEAR Mainnet account.
 
         Args:
         ----
             remote (bool): Remote login allows signing message with NEAR Account on a remote machine
             auth_url (str): Url to the auth portal
+            accountId (str): AccountId in .near-credentials folder to signMessage
+            privateKey (str): Private Key to sign a message
             kwargs (Dict[str, Any]): All cli keyword arguments
 
         """
         remote = kwargs.get('remote', False)
-        auth_url = kwargs.get('auth_url', 'https://auth.near.ai')
-        login_with_near(remote, auth_url)
+        account_id = kwargs.get('accountId', None)
+        private_key = kwargs.get('privateKey', None)
+
+        if not remote and account_id and private_key:
+            nearai_login.generate_and_save_signature(account_id, private_key)
+        elif not remote and account_id:
+            nearai_login.login_with_file_credentials(account_id)
+        else:
+            auth_url = kwargs.get('auth_url', 'https://auth.near.ai')
+            nearai_login.login_with_near_auth(remote, auth_url)
 
     def status(self):
         """Load NEAR account authorization data."""
-        print_login_status()
+        nearai_login.print_login_status()
 
     def save(self, **kwargs):
         """Save NEAR account authorization data.
@@ -469,7 +479,7 @@ class LoginCLI:
         nonce = kwargs.get('nonce')
 
         if account_id and signature and public_key and callback_url and nonce:
-            update_auth_config(account_id, signature, public_key, callback_url, nonce)
+            nearai_login.update_auth_config(account_id, signature, public_key, callback_url, nonce)
         else:
             print("Missing data")
 

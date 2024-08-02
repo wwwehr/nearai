@@ -4,7 +4,7 @@ import requests
 
 from nearai.config import load_config_file
 
-config = load_config_file(local=True)
+config = load_config_file()
 
 
 def hub(query, endpoint, model, provider, info):

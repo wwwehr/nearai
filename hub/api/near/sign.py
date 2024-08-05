@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import time
 from typing import Any, List, Optional, Union
 
 import base58
@@ -49,7 +50,7 @@ PAYLOAD_SCHEMA: list[list[Any]] = [
 ]
 
 
-def validate_nonce(value: Union[str, bytes, list[int]]):  # noqa: D102
+def convert_nonce(value: Union[str, bytes, list[int]]): # noqa: D102
     if isinstance(value, bytes):
         return value
     elif isinstance(value, str):
@@ -66,6 +67,22 @@ def validate_nonce(value: Union[str, bytes, list[int]]):  # noqa: D102
         return bytes(value)
     else:
         raise ValueError("Invalid nonce format")
+
+
+def validate_nonce(value: Union[str, bytes, list[int]]):  # noqa: D102
+    nonce = convert_nonce(value)
+    nonce_int = int(nonce.decode('utf-8'))
+
+    now = int(time.time() * 1000)
+
+    if nonce_int > now:
+        # TODO(https://github.com/nearai/nearai/issues/106): Revoke nonces that are in the future.
+        raise ValueError("Nonce is in the future")
+    if now - nonce_int > 10 * 365 * 24 * 60 * 60 * 1000:
+        """If the timestamp is older than 10 years, it is considered invalid. Forcing apps to use unique nonces."""
+        raise ValueError("Nonce is too old")
+
+    return nonce
 
 
 def verify_signed_message(account_id, public_key, signature, message, nonce, recipient, callback_url):

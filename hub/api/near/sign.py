@@ -52,6 +52,10 @@ PAYLOAD_SCHEMA: list[list[Any]] = [
 
 def convert_nonce(value: Union[str, bytes, list[int]]): # noqa: D102
     if isinstance(value, bytes):
+        if len(value) > 32:
+            raise ValueError("Invalid nonce length")
+        if len(value) < 32:
+            value = value.rjust(32, b'0')
         return value
     elif isinstance(value, str):
         nonce_bytes = value.encode('utf-8')
@@ -59,7 +63,6 @@ def convert_nonce(value: Union[str, bytes, list[int]]): # noqa: D102
             raise ValueError("Invalid nonce length")
         if len(nonce_bytes) < 32:
             nonce_bytes = nonce_bytes.rjust(32, b'0')
-
         return nonce_bytes
     elif isinstance(value, list):
         if len(value) != 32:

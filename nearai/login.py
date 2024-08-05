@@ -6,12 +6,14 @@ import socketserver
 import threading
 import time
 import urllib.parse as urlparse
+import importlib.resources
 
 import hub.api.near.sign as near
 from nearai.config import load_config_file, save_config_file
 
 # Directory containing the HTML file
-DIRECTORY = "nearai/assets"
+package_root = importlib.resources.files(__package__).parent
+DIRECTORY = os.path.join(package_root, 'nearai/assets')
 
 RECIPIENT = "ai.near"
 MESSAGE = "Welcome to NEAR AI"

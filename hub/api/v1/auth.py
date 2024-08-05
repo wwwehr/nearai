@@ -67,8 +67,9 @@ async def validate_signature(auth: AuthToken = Depends(get_auth)):
         raise HTTPException(status_code=401, detail="Invalid nonce")
     now = int(time.time() * 1000)
     if timestamp > now:
+        # TODO(https://github.com/nearai/nearai/issues/106): Revoke nonces that are in the future.
+        # This will break the default where nonce = b"1" * 32
         logger.info(f"account_id {auth.account_id}: nonce is in the future")
-        raise HTTPException(status_code=401, detail="Invalid nonce")
 
     return auth
 

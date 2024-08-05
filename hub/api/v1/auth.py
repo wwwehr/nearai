@@ -32,7 +32,7 @@ class AuthToken(BaseModel):
     plainMsg: str  # noqa: N815
     """The plain message that was signed."""
 
-    @field_validator('nonce')
+    @field_validator("nonce")
     @classmethod
     def validate_and_convert_nonce(cls, value: str):  # noqa: D102
         if len(value) != 32:
@@ -53,11 +53,11 @@ async def get_auth(token: HTTPAuthorizationCredentials = Depends(bearer)):
 
 async def validate_signature(auth: AuthToken = Depends(get_auth)):
     logging.debug(f"account_id {auth.account_id}: verifying signature")
-    is_valid = verify_signed_message(auth.account_id, auth.public_key, auth.signature,
-                                     auth.plainMsg, auth.nonce, auth.recipient, auth.callback_url)
+    is_valid = verify_signed_message(
+        auth.account_id, auth.public_key, auth.signature, auth.plainMsg, auth.nonce, auth.recipient, auth.callback_url
+    )
     if not is_valid:
-        logging.error(
-            f"account_id {auth.account_id}: signature verification failed")
+        logging.error(f"account_id {auth.account_id}: signature verification failed")
         raise HTTPException(status_code=401, detail="Invalid signature")
 
     logging.debug(f"account_id {auth.account_id}: signature verified")
@@ -79,12 +79,10 @@ async def revokable_auth(auth: AuthToken = Depends(validate_signature)):
     user_nonce = db.get_account_nonce(auth.account_id, auth.nonce)
 
     if user_nonce and user_nonce.is_revoked():
-        logging.error(
-            f"account_id {auth.account_id}: nonce is revoked")
+        logging.error(f"account_id {auth.account_id}: nonce is revoked")
         raise HTTPException(status_code=401, detail="Revoked nonce")
 
     if not user_nonce:
-        db.store_nonce(auth.account_id, auth.nonce, auth.plainMsg,
-                       auth.recipient, auth.callback_url)
+        db.store_nonce(auth.account_id, auth.nonce, auth.plainMsg, auth.recipient, auth.callback_url)
 
     return auth

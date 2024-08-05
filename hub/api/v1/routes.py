@@ -93,11 +93,9 @@ def completions(request: CompletionsRequest = Depends(convert_request), auth: Au
         assert request.provider is not None
         llm = get_llm_ai(request.provider)
     except NotImplementedError:
-        raise HTTPException(
-            status_code=400, detail="Provider not supported") from None
+        raise HTTPException(status_code=400, detail="Provider not supported") from None
 
-    resp = llm.completions.create(
-        **request.model_dump(exclude={"provider", "response_format"}))
+    resp = llm.completions.create(**request.model_dump(exclude={"provider", "response_format"}))
 
     if request.stream:
 
@@ -111,8 +109,7 @@ def completions(request: CompletionsRequest = Depends(convert_request), auth: Au
     else:
         c = json.dumps(resp.model_dump())
 
-        db.add_user_usage(auth.account_id, request.prompt, c,
-                          request.model, request.provider, "/completions")
+        db.add_user_usage(auth.account_id, request.prompt, c, request.model, request.provider, "/completions")
 
         return JSONResponse(content=json.loads(c))
 
@@ -127,11 +124,9 @@ async def chat_completions(
         assert request.provider is not None
         llm = get_llm_ai(request.provider)
     except NotImplementedError:
-        raise HTTPException(
-            status_code=400, detail="Provider not supported") from None
+        raise HTTPException(status_code=400, detail="Provider not supported") from None
 
-    resp = llm.chat.completions.create(
-        **request.model_dump(exclude={"provider"}))
+    resp = llm.chat.completions.create(**request.model_dump(exclude={"provider"}))
 
     if request.stream:
 
@@ -186,7 +181,7 @@ class RevokeNonce(BaseModel):
     nonce: bytes
     """The nonce to revoke."""
 
-    @field_validator('nonce')
+    @field_validator("nonce")
     @classmethod
     def validate_and_convert_nonce(cls, value: str):  # noqa: D102
         if len(value) != 32:
@@ -197,18 +192,15 @@ class RevokeNonce(BaseModel):
 @v1_router.post("/nonce/revoke")
 async def revoke_nonce(nonce: RevokeNonce, auth: AuthToken = Depends(validate_signature)):
     """Revoke a nonce for the account."""
-    logger.info(
-        f"Received request to revoke nonce {nonce} for account {auth.account_id}")
+    logger.info(f"Received request to revoke nonce {nonce} for account {auth.account_id}")
     if auth.plainMsg != REVOKE_MESSAGE:
-        raise HTTPException(
-            status_code=401, detail="Invalid nonce revoke message")
+        raise HTTPException(status_code=401, detail="Invalid nonce revoke message")
 
     # If signature is too old, request will be rejected
     ts = int(auth.nonce)
     now = int(time.time() * 1000)
     if now - ts > 5 * 60 * 1000:
-        raise HTTPException(
-            status_code=401, detail="Invalid nonce")
+        raise HTTPException(status_code=401, detail="Invalid nonce")
 
     db.revoke_nonce(auth.account_id, nonce.nonce)
     return JSONResponse(content={"message": f"Nonce {nonce} revoked"})
@@ -217,18 +209,15 @@ async def revoke_nonce(nonce: RevokeNonce, auth: AuthToken = Depends(validate_si
 @v1_router.post("/nonce/revoke/all")
 async def revoke_all_nonces(auth: AuthToken = Depends(validate_signature)):
     """Revoke all nonces for the account."""
-    logger.info(
-        f"Received request to revoke all nonces for account {auth.account_id}")
+    logger.info(f"Received request to revoke all nonces for account {auth.account_id}")
     if auth.plainMsg != REVOKE_ALL_MESSAGE:
-        raise HTTPException(
-            status_code=401, detail="Invalid nonce revoke message")
+        raise HTTPException(status_code=401, detail="Invalid nonce revoke message")
 
     # If signature is too old, request will be rejected
     ts = int(auth.nonce)
     now = int(time.time() * 1000)
     if now - ts > 5 * 60 * 1000:
-        raise HTTPException(
-            status_code=401, detail="Invalid nonce")
+        raise HTTPException(status_code=401, detail="Invalid nonce")
 
     db.revoke_all_nonces(auth.account_id)
     return JSONResponse(content={"message": "All nonces revoked"})

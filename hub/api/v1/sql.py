@@ -45,7 +45,7 @@ class SqlClient:
             user=getenv("DATABASE_USER"),
             password=getenv("DATABASE_PASSWORD"),
             database=getenv("DATABASE_NAME"),
-            autocommit=True
+            autocommit=True,
         )
 
     def __fetch_all(self, query: str):
@@ -85,7 +85,7 @@ class SqlClient:
         INSERT INTO nonces (nonce, account_id, message, recipient, callback_url, nonce_status)
         VALUES (%s, %s, %s, %s, %s, %s)
         """
-        self.db.cursor().execute(query, (nonce.decode(), account_id, message, recipient, callback_url, 'active'))
+        self.db.cursor().execute(query, (nonce.decode(), account_id, message, recipient, callback_url, "active"))
         self.db.commit()
 
     def get_account_nonces(self, account_id: str):  # noqa: D102
@@ -108,8 +108,7 @@ class SqlClient:
         self.db.commit()
 
     def revoke_all_nonces(self, account_id):  # noqa: D102
-        logging.info(
-            f"Revoking all nonces  for account {account_id}")
+        logging.info(f"Revoking all nonces  for account {account_id}")
         query = f"UPDATE nonces SET nonce_status = 'revoked' WHERE account_id = '{account_id}'"
         self.db.cursor().execute(query)
         self.db.commit()

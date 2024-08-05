@@ -10,12 +10,10 @@ from hub.api.near.serializer import BinarySerializer
 
 
 def verify_signed_message(account_id, public_key, signature, message, nonce, recipient, callback_url):
-    is_valid = validate_signature(public_key, signature, Payload(
-        message, nonce, recipient, callback_url))
+    is_valid = validate_signature(public_key, signature, Payload(message, nonce, recipient, callback_url))
 
     if not is_valid and callback_url is not None:
-        is_valid = validate_signature(
-            public_key, signature, Payload(message, nonce, recipient, None))
+        is_valid = validate_signature(public_key, signature, Payload(message, nonce, recipient, None))
 
     if is_valid:
         # verify that key belongs to `account_id`
@@ -78,8 +76,7 @@ def validate_signature(public_key: str, signature: str, payload: Payload):
     to_sign = hashlib.sha256(borsh_payload).digest()
     real_signature = base64.b64decode(signature)
 
-    verify_key: nacl.signing.VerifyKey = nacl.signing.VerifyKey(
-        base58.b58decode(public_key[len(ED_PREFIX):]))
+    verify_key: nacl.signing.VerifyKey = nacl.signing.VerifyKey(base58.b58decode(public_key[len(ED_PREFIX) :]))
 
     try:
         verify_key.verify(to_sign, real_signature)

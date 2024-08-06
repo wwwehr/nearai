@@ -32,7 +32,6 @@ export const routerRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const u = env.ROUTER_URL + "/chat/completions";
 
-      console.log("u", u)
       const response = await fetch(u, {
         method: "POST",
         headers: {
@@ -41,8 +40,6 @@ export const routerRouter = createTRPCRouter({
         },
         body: JSON.stringify(input),
       });
-
-      console.log("response", response)
 
       // check for errors
       if (!response.ok) {

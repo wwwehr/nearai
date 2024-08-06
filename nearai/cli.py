@@ -427,6 +427,9 @@ class HubCLI:
         hub_provider = kwargs.get('provider', "fireworks")
         hub_info = kwargs.get('info', False)
 
+        if not hub_query:
+            return print ("Error: 'query' is required for the `hub chat` command.")
+
         hub(hub_query, hub_endpoint, hub_model, hub_provider, hub_info)
 
 

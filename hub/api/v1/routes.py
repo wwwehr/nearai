@@ -225,7 +225,7 @@ async def list_nonces(auth: AuthToken = Depends(revokable_auth)):
 
 
 async def verify_revoke_nonce(auth):
-    """ If signature is too old, request will be rejected."""
+    """If signature is too old, request will be rejected."""
     ts = int(auth.nonce)
     now = int(time.time() * 1000)
     if now - ts > 5 * 60 * 1000:

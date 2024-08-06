@@ -39,8 +39,8 @@ def health():
 @app.exception_handler(TokenValidationError)
 async def token_validation_exception_handler(request, exc: TokenValidationError):
     lines = exc.detail.split('\n')
-    first_two_lines = '\n'.join(lines[:3])
-    logger.info(f"Received invalid Auth Token: {first_two_lines}")
+    error_message_short = '\n'.join(lines[:3])
+    logger.info(f"Received invalid Auth Token: {error_message_short}")
 
     # 400 Bad Request if auth request was invalid
-    return JSONResponse(status_code=400, content={"detail": f"Invalid auth data: {first_two_lines}"})
+    return JSONResponse(status_code=400, content={"detail": f"Invalid auth data: {error_message_short}"})

@@ -1,13 +1,13 @@
 import json
 import logging
-import time
 from typing import Optional
 
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, field_validator
 
-from hub.api.near.sign import verify_signed_message
+from hub.api.near.sign import validate_nonce, verify_signed_message
+from hub.api.v1.exceptions import TokenValidationError
 from hub.api.v1.sql import SqlClient
 
 bearer = HTTPBearer()
@@ -28,7 +28,7 @@ class AuthToken(BaseModel):
     """The callback URL."""
     recipient: str = "ai.near"
     """Message Recipient"""
-    nonce: bytes = b"1" * 32
+    nonce: bytes
     """Nonce of the signed message, it must be 32 bytes long."""
     plainMsg: str  # noqa: N815
     """The plain message that was signed."""
@@ -36,9 +36,7 @@ class AuthToken(BaseModel):
     @field_validator("nonce")
     @classmethod
     def validate_and_convert_nonce(cls, value: str):  # noqa: D102
-        if len(value) != 32:
-            raise ValueError("Invalid nonce, must of length 32")
-        return value
+        return validate_nonce(value)
 
     # allow auth to be passed along to other services - needs review
     def json(self):
@@ -65,8 +63,7 @@ async def get_auth(token: HTTPAuthorizationCredentials = Depends(bearer)):
         logger.debug(f"Token: {token.credentials}")
         return AuthToken.model_validate_json(token.credentials)
     except Exception as e:
-        logging.error(f"Error parsing token: {e}")
-        raise HTTPException(status_code=401, detail="Invalid token") from None
+        raise TokenValidationError(detail=str(e)) from None
 
 
 async def validate_signature(auth: AuthToken = Depends(get_auth)):
@@ -79,19 +76,6 @@ async def validate_signature(auth: AuthToken = Depends(get_auth)):
         raise HTTPException(status_code=401, detail="Invalid signature")
 
     logging.debug(f"account_id {auth.account_id}: signature verified")
-
-    timestamp = int(auth.nonce)
-    if timestamp <= 0:
-        raise HTTPException(status_code=401, detail="Invalid nonce")
-    now = int(time.time() * 1000)
-    if timestamp > now:
-        # TODO(https://github.com/nearai/nearai/issues/106): Revoke nonces that are in the future.
-        # This will break the default where nonce = b"1" * 32
-        logger.info(f"account_id {auth.account_id}: nonce is in the future")
-    if now - timestamp > 10 * 365 * 24 * 60 * 60 * 1000:
-        """If the timestamp is older than 10 years, it is considered invalid. Forcing apps to use unique nonces."""
-        logging.error(f"account_id {auth.account_id}: nonce is too old")
-        raise HTTPException(status_code=401, detail="Invalid nonce, too old")
 
     return auth
 

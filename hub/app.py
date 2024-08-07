@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+import hub.api.v1.registry  # noqa
 from hub.api.v1.routes import v1_router
 
 # Configure logging

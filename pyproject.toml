@@ -32,6 +32,7 @@ pymysql = { version = "^1.1.0" }
 python-dotenv = { version = "^1.0.1", optional = true }
 requests = { version = "^2.31.0", optional = true }
 setuptools = { version = "^69.5.1" }
+sqlmodel = { version = "^0.0.21", optional = true }
 tabulate = { version = "^0.9.0" }
 tenacity = { version = "^8.2.3" }
 tensorboardX = { version = "^2.6.2.2" }
@@ -56,12 +57,13 @@ vllm = { version = "^0.5.3", optional = true }
 explatform = ["flask", "fabric", "gunicorn", "requests"]
 hub = [
     "base58",
-    "fastapi",
     "fastapi-cli",
-    "pydantic",
+    "fastapi",
     "pydantic-core",
+    "pydantic",
     "python-dotenv",
     "requests",
+    "sqlmodel",
 ]
 torch = ["torch", "torchao", "torchtune"]
 vllm = ["vllm", "torch"]

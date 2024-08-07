@@ -1,7 +1,7 @@
 import logging
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -37,10 +37,10 @@ def health():
 
 
 @app.exception_handler(TokenValidationError)
-async def token_validation_exception_handler(request, exc: TokenValidationError):
-    lines = exc.detail.split('\n')
-    error_message_short = '\n'.join(lines[:3])
-    logger.info(f"Received invalid Auth Token: {error_message_short}")
-
+async def token_validation_exception_handler(request: Request, exc: TokenValidationError):
+    exc_lines = exc.detail.split('\n')
+    exc_str = f"{exc_lines[0]}: {exc_lines[1]}.{exc_lines[2]}".replace("  ", " ") if len(exc_lines) > 2 else ""
+    logger.info(f"Received invalid Auth Token. {exc_str}")
     # 400 Bad Request if auth request was invalid
-    return JSONResponse(status_code=400, content={"detail": f"Invalid auth data: {error_message_short}"})
+    content = {"status_code": 400, "message": exc_str, "data": None}
+    return JSONResponse(content=content, status_code=status.HTTP_400_BAD_REQUEST)

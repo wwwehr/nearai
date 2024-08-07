@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 import nearai
 from nearai.config import CONFIG, DATA_FOLDER
-from nearai.db import DisplayRegistry, db
+from nearai.db import DisplayRegistry, RegistryEntry, db
 
 
 def upload_file(s3_client: S3Client, s3_path: str, local_path: Path) -> None:
@@ -251,6 +251,39 @@ class Registry:
         tags = self._all_tags(tags)
         result: List[DisplayRegistry] = db.list_registry_entries(total=total, show_all=show_all, tags=tags)
         return result
+
+    def get_entry(self, identifier: Union[str, int], version: Optional[str] = None) -> Union[RegistryEntry, None]:
+        """Get a specific entry from the registry."""
+        return db.get_registry_entry_by_identifier(identifier, version=version)
+
+    def get_file(
+        self, identifier: Union[str, int], file: Optional[str] = None, version: Optional[str] = None
+    ) -> Union[bytes, None]:
+        """Download a specific file from the registry."""
+        entry = db.get_registry_entry_by_identifier(identifier, version=version)
+        if entry is None:
+            return None
+
+        s3_client = boto3.client("s3")
+
+        if file is None:
+            # list files below the prefix
+            s3_path = CONFIG.s3_prefix + "/" + entry.path
+            list = s3_client.list_objects_v2(Bucket=CONFIG.s3_bucket, Prefix=s3_path)
+            if "Contents" not in list:
+                return None
+            # get first filename
+            file = list["Contents"][0]["Key"].split("/")[-1]
+
+        s3_path = "registry/" + entry.path + (f"/{file}" if file else "")
+        source = f"s3://{CONFIG.s3_bucket}/{s3_path}"
+        print(f"Downloading {s3_path} from {source}")
+        nearai.log(target="Download from S3", name=identifier)
+        try:
+            response = s3_client.get_object(Bucket=CONFIG.s3_bucket, Key=s3_path)
+        except s3_client.exceptions.NoSuchKey:
+            return None
+        return response["Body"].read()
 
 
 dataset = Registry(["dataset"])

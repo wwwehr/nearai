@@ -50,7 +50,8 @@ PAYLOAD_SCHEMA: list[list[Any]] = [
 ]
 
 
-def convert_nonce(value: Union[str, bytes, list[int]]): # noqa: D102
+def convert_nonce(value: Union[str, bytes, list[int]]):
+    """Converts a given value to a 32-byte nonce."""
     if isinstance(value, bytes):
         if len(value) > 32:
             raise ValueError("Invalid nonce length")
@@ -72,7 +73,8 @@ def convert_nonce(value: Union[str, bytes, list[int]]): # noqa: D102
         raise ValueError("Invalid nonce format")
 
 
-def validate_nonce(value: Union[str, bytes, list[int]]):  # noqa: D102
+def validate_nonce(value: Union[str, bytes, list[int]]):
+    """Ensures that the nonce is a valid timestamp."""
     nonce = convert_nonce(value)
     nonce_int = int(nonce.decode('utf-8'))
 
@@ -89,6 +91,7 @@ def validate_nonce(value: Union[str, bytes, list[int]]):  # noqa: D102
 
 
 def verify_signed_message(account_id, public_key, signature, message, nonce, recipient, callback_url):
+    """Verifies a signed message and ensures the public key belongs to the specified account."""
     is_valid = validate_signature(public_key, signature, Payload(message, nonce, recipient, callback_url))
 
     if not is_valid and callback_url is not None:
@@ -102,6 +105,7 @@ def verify_signed_message(account_id, public_key, signature, message, nonce, rec
 
 
 def verify_access_key_owner(public_key, account_id):
+    """Verifies if a given public key belongs to a specified account ID using FastNEAR API."""
     try:
         url = f"https://api.fastnear.com/v0/public_key/{public_key}"
         response = requests.get(url)
@@ -121,6 +125,7 @@ def verify_access_key_owner(public_key, account_id):
 
 
 def create_signature(private_key: str, payload: Payload) -> str:
+    """Creates a cryptographic signature for a given payload using a specified private key."""
     borsh_payload = BinarySerializer(dict(PAYLOAD_SCHEMA)).serialize(payload)
 
     to_sign = hashlib.sha256(borsh_payload).digest()
@@ -148,11 +153,12 @@ def create_signature(private_key: str, payload: Payload) -> str:
 
 
 def validate_signature(public_key: str, signature: str, payload: Payload):
+    """Validates a cryptographic signature for a given payload using a specified public key."""
     borsh_payload = BinarySerializer(dict(PAYLOAD_SCHEMA)).serialize(payload)
     to_sign = hashlib.sha256(borsh_payload).digest()
     real_signature = base64.b64decode(signature)
 
-    verify_key: nacl.signing.VerifyKey = nacl.signing.VerifyKey(base58.b58decode(public_key[len(ED_PREFIX) :]))
+    verify_key: nacl.signing.VerifyKey = nacl.signing.VerifyKey(base58.b58decode(public_key[len(ED_PREFIX):]))
 
     try:
         verify_key.verify(to_sign, real_signature)

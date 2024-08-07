@@ -120,7 +120,7 @@ def verify_access_key_owner(public_key, account_id):
     return False
 
 
-def create_signature(private_key: str, payload: Payload) -> str:
+def create_signature(private_key: str, payload: Payload) -> tuple[str, str]:
     """Creates a cryptographic signature for a given payload using a specified private key."""
     borsh_payload = BinarySerializer(dict(PAYLOAD_SCHEMA)).serialize(payload)
 

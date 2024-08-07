@@ -20,6 +20,7 @@ httpd = None
 
 
 def update_auth_config(account_id, signature, public_key, callback_url, nonce):
+    """Update authentication configuration if the provided signature is valid."""
     if near.verify_signed_message(
             account_id,
             public_key,
@@ -51,6 +52,7 @@ def update_auth_config(account_id, signature, public_key, callback_url, nonce):
 
 
 def print_login_status():
+    """Prints the current authentication status if available in the config file."""
     config = load_config_file()
     if config["auth"].get("account_id"):
         print(f'Auth data for: {config["auth"]["account_id"]}')
@@ -96,8 +98,6 @@ class AuthHandler(http.server.SimpleHTTPRequestHandler):
             else:
                 print("Required parameters not found")
 
-            # http://localhost:50397/auth?accountId=zavodil.near&signature=n5dWHjbywmVYvzNwPCRK5wilamAz50vETrbyZ%2F1P6IjsTpzFz0xPQRtGpx8TcmjQTYT1GfaPXwKnIRvQqPxdAQ%3D%3D&publicKey=ed25519%3AHFd5upW3ppKKqwmNNbm56JW7VHXzEoDpwFKuetXLuNSq&
-
             with open(os.path.join(assets_folder, "auth_complete.html"), 'r', encoding='utf-8') as file:
                 content = file.read()
             self.send_response(200)
@@ -116,24 +116,29 @@ class AuthHandler(http.server.SimpleHTTPRequestHandler):
 
 
 def find_open_port() -> int:
+    """Finds and returns an open port number by binding to a free port on the local machine."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(('', 0))
         return s.getsockname()[1]
 
 
 def generate_callback_url(port):
+    """Generates a callback URL using the specified port number."""
     return f"http://localhost:{port}/capture"
 
 
 def print_url_message(url):
+    """Prints a message instructing the user to visit the given URL to complete the login process."""
     print(f"Please visit the following URL to complete the login process: {url}")
 
 
 def generate_nonce():
+    """Generates a nonce based on the current time in milliseconds."""
     return str(int(time.time() * 1000))
 
 
 def generate_and_save_signature(account_id, private_key):
+    """Generates a signature for the given account ID and private key, then updates the auth configuration."""
     nonce = generate_nonce()
     payload = near.Payload(MESSAGE, nonce, RECIPIENT, None)
 
@@ -144,6 +149,7 @@ def generate_and_save_signature(account_id, private_key):
 
 
 def login_with_file_credentials(account_id):
+    """Logs in using credentials from a file for the specified account ID, generating and saving a signature."""
     file_path = os.path.expanduser(os.path.join("~/.near-credentials/", "mainnet", f"{account_id}.json"))
 
     if os.path.exists(file_path):
@@ -160,6 +166,7 @@ def login_with_file_credentials(account_id):
 
 
 def login_with_near_auth(remote, auth_url):
+    """Initiates the login process using NEAR authentication, either starting a local server to handle the callback or providing a URL for remote authentication."""  # noqa: E501
     global NONCE, PORT
     NONCE = generate_nonce()
 

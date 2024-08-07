@@ -9,8 +9,15 @@ CREATE TABLE
         account_id VARCHAR(64),
         message TEXT NOT NULL,
         recipient VARCHAR(64) NOT NULL,
-        callback_url TEXT,
+        callback_url TEXT NULL,
         nonce_status ENUM ('active', 'revoked') NOT NULL,
         first_seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (account_id, nonce, message (255), recipient)
+        PRIMARY KEY (account_id, nonce, message (255), recipient),
+        UNIQUE KEY unique_nonce (
+            account_id,
+            nonce,
+            message (255),
+            callback_url (255),
+            recipient
+        )
     );

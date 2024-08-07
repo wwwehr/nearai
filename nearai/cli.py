@@ -8,18 +8,22 @@ from pathlib import Path
 from subprocess import check_output, run
 from typing import Any, List, Optional, Tuple, Union
 
+import boto3
 import fire
 import pkg_resources
 from tabulate import tabulate
 
 import nearai
+import nearai.login as nearai_login
 from nearai.agent import load_agent
 from nearai.benchmark import BenchmarkExecutor, DatasetInfo
+from nearai.clients.lambda_client import LambdaWrapper
 from nearai.config import CONFIG, DATA_FOLDER, update_config
 from nearai.dataset import load_dataset
 from nearai.db import db
 from nearai.environment import Environment
 from nearai.finetune import FinetuneCli
+from nearai.hub import hub
 from nearai.registry import Registry, agent, dataset, model, registry
 from nearai.solvers import SolverStrategy, SolverStrategyRegistry
 from nearai.tensorboard_feed import TensorboardCli
@@ -388,6 +392,14 @@ class EnvironmentCli:
         env.exec_command("sleep 10")
         # TODO: Setup server that will allow to interact with agents and environment
 
+    def run_on_aws_lambda(self, agents: str, environment_id: str, auth: str, new_message: str = ""):
+        """Invoke a Container based AWS lambda function to run agents on a given environment."""
+        wrapper = LambdaWrapper(boto3.client("lambda", region_name="us-east-2"))
+        wrapper.invoke_function(
+            "agent-runner-docker",
+            {"agents": agents, "environment_id": environment_id, "auth": json.dumps(auth), "new_message": new_message},
+        )
+
 
 class VllmCli:
     def run(self, *args: Any, **kwargs: Any) -> None:  # noqa: D102
@@ -405,12 +417,94 @@ class VllmCli:
             sys.argv = original_argv
 
 
+class HubCLI:
+    def chat(self, **kwargs):
+        """Chat with model from NearAI hub.
+
+        Args:
+        ----
+            query (str): User's query to model
+            endpoint (str): NearAI HUB's url
+            model (str): Name of a model
+            provider (str): Name of a provider
+            info (bool): Display system info
+            kwargs (Dict[str, Any]): All cli keyword arguments
+
+        """
+        hub_query = kwargs.get("query")
+        hub_endpoint = kwargs.get("endpoint", "http://127.0.0.1:8081/api/v1/chat/completions")
+        hub_model = kwargs.get("model", "accounts/fireworks/models/llama-v3-70b-instruct")
+        hub_provider = kwargs.get("provider", "fireworks")
+        hub_info = kwargs.get("info", False)
+
+        if not hub_query:
+            return print("Error: 'query' is required for the `hub chat` command.")
+
+        hub(hub_query, hub_endpoint, hub_model, hub_provider, hub_info)
+
+
+class LoginCLI:
+    def __call__(self, **kwargs):
+        """Login with NEAR Mainnet account.
+
+        Args:
+        ----
+            remote (bool): Remote login allows signing message with NEAR Account on a remote machine
+            auth_url (str): Url to the auth portal
+            accountId (str): AccountId in .near-credentials folder to signMessage
+            privateKey (str): Private Key to sign a message
+            kwargs (Dict[str, Any]): All cli keyword arguments
+
+        """
+        remote = kwargs.get("remote", False)
+        account_id = kwargs.get("accountId", None)
+        private_key = kwargs.get("privateKey", None)
+
+        if not remote and account_id and private_key:
+            nearai_login.generate_and_save_signature(account_id, private_key)
+        elif not remote and account_id:
+            nearai_login.login_with_file_credentials(account_id)
+        else:
+            auth_url = kwargs.get("auth_url", "https://auth.near.ai")
+            nearai_login.login_with_near_auth(remote, auth_url)
+
+    def status(self):
+        """Load NEAR account authorization data."""
+        nearai_login.print_login_status()
+
+    def save(self, **kwargs):
+        """Save NEAR account authorization data.
+
+        Args:
+        ----
+            accountId (str): Near Account
+            signature (str): Signature
+            publicKey (str): Public Key used to sign
+            callbackUrl (str): Callback Url
+            nonce (str): nonce
+            kwargs (Dict[str, Any]): All cli keyword arguments
+
+        """
+        account_id = kwargs.get("accountId")
+        signature = kwargs.get("signature")
+        public_key = kwargs.get("publicKey")
+        callback_url = kwargs.get("callbackUrl")
+        nonce = kwargs.get("nonce")
+
+        if account_id and signature and public_key and callback_url and nonce:
+            nearai_login.update_auth_config(account_id, signature, public_key, callback_url, nonce)
+        else:
+            print("Missing data")
+
+
 class CLI:
     def __init__(self) -> None:  # noqa: D107
         self.registry = RegistryCli(registry)
         self.datasets = RegistryCli(dataset)
         self.models = RegistryCli(model)
         self.agents = RegistryCli(agent)
+        self.login = LoginCLI()
+        self.hub = HubCLI()
 
         self.supervisor = SupervisorCli()
         self.server = ServerCli()

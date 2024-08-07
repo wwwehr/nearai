@@ -43,7 +43,7 @@ def health():
 
 @app.exception_handler(TokenValidationError)
 async def token_validation_exception_handler(request: Request, exc: TokenValidationError):
-    exc_lines = exc.detail.split('\n')
+    exc_lines = exc.detail.split("\n")
     exc_str = f"{exc_lines[0]}: {exc_lines[1]}.{exc_lines[2]}".replace("  ", " ") if len(exc_lines) > 2 else ""
     logger.info(f"Received invalid Auth Token. {exc_str}")
     # 400 Bad Request if auth request was invalid
@@ -56,4 +56,3 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     exc_str = f"{exc}".replace("\n", " ").replace("   ", " ")
     content = {"status_code": 422, "message": exc_str, "data": None}
     return JSONResponse(content=content, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY)
-

@@ -22,24 +22,16 @@ def hub(query, endpoint, model, provider, info):
 
         bearer_token = json.dumps(bearer_data)
 
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {bearer_token}'
-        }
+        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {bearer_token}"}
 
         data = {
             "max_tokens": 256,
             "temperature": 1,
             "frequency_penalty": 0,
             "n": 1,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": query
-                }
-            ],
+            "messages": [{"role": "user", "content": query}],
             "model": model,
-            "provider": provider
+            "provider": provider,
         }
 
         if info:
@@ -49,7 +41,7 @@ def hub(query, endpoint, model, provider, info):
 
         completion = response.json()
 
-        print(completion['choices'][0]['message']['content'])
+        print(completion["choices"][0]["message"]["content"])
 
     except Exception as e:
         print(f"Request failed: {e}")

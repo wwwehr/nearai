@@ -22,13 +22,13 @@ httpd = None
 def update_auth_config(account_id, signature, public_key, callback_url, nonce):
     """Update authentication configuration if the provided signature is valid."""
     if near.verify_signed_message(
-            account_id,
-            public_key,
-            signature,
-            MESSAGE,
-            nonce,
-            RECIPIENT,
-            callback_url,
+        account_id,
+        public_key,
+        signature,
+        MESSAGE,
+        nonce,
+        RECIPIENT,
+        callback_url,
     ):
         config = load_config_file()
         auth = {
@@ -38,7 +38,7 @@ def update_auth_config(account_id, signature, public_key, callback_url, nonce):
             "callback_url": callback_url,
             "nonce": nonce,
             "recipient": RECIPIENT,
-            "message": MESSAGE
+            "message": MESSAGE,
         }
 
         config["auth"] = auth
@@ -75,35 +75,40 @@ class AuthHandler(http.server.SimpleHTTPRequestHandler):
         global NONCE, PORT
 
         script_path = Path(__file__).resolve()
-        assets_folder = script_path.parent / 'assets'
+        assets_folder = script_path.parent / "assets"
 
-        if self.path.startswith('/capture'):
-            with open(os.path.join(assets_folder, "auth_capture.html"), 'r', encoding='utf-8') as file:
+        if self.path.startswith("/capture"):
+            with open(os.path.join(assets_folder, "auth_capture.html"), "r", encoding="utf-8") as file:
                 content = file.read()
             self.send_response(200)
-            self.send_header('Content-type', 'text/html')
+            self.send_header("Content-type", "text/html")
             self.end_headers()
-            self.wfile.write(content.encode('utf-8'))
+            self.wfile.write(content.encode("utf-8"))
 
-        if self.path.startswith('/auth'):
+        if self.path.startswith("/auth"):
             parsed_url = urlparse.urlparse(self.path)
             fragment = parsed_url.query
             params = urlparse.parse_qs(fragment)
 
-            required_params = ['accountId', 'signature', 'publicKey']
+            required_params = ["accountId", "signature", "publicKey"]
 
             if all(param in params for param in required_params):
-                update_auth_config(params['accountId'][0], params['signature'][0], params['publicKey'][0],
-                                   callback_url=generate_callback_url(PORT), nonce=NONCE)
+                update_auth_config(
+                    params["accountId"][0],
+                    params["signature"][0],
+                    params["publicKey"][0],
+                    callback_url=generate_callback_url(PORT),
+                    nonce=NONCE,
+                )
             else:
                 print("Required parameters not found")
 
-            with open(os.path.join(assets_folder, "auth_complete.html"), 'r', encoding='utf-8') as file:
+            with open(os.path.join(assets_folder, "auth_complete.html"), "r", encoding="utf-8") as file:
                 content = file.read()
             self.send_response(200)
-            self.send_header('Content-type', 'text/html')
+            self.send_header("Content-type", "text/html")
             self.end_headers()
-            self.wfile.write(content.encode('utf-8'))
+            self.wfile.write(content.encode("utf-8"))
 
             # Give the server some time to read the response before shutting it down
             def shutdown_server():
@@ -118,7 +123,7 @@ class AuthHandler(http.server.SimpleHTTPRequestHandler):
 def find_open_port() -> int:
     """Finds and returns an open port number by binding to a free port on the local machine."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(('', 0))
+        s.bind(("", 0))
         return s.getsockname()[1]
 
 
@@ -153,7 +158,7 @@ def login_with_file_credentials(account_id):
     file_path = os.path.expanduser(os.path.join("~/.near-credentials/", "mainnet", f"{account_id}.json"))
 
     if os.path.exists(file_path):
-        with open(file_path, 'r') as file:
+        with open(file_path, "r") as file:
             content = file.read()
             account_data = json.loads(content)
             private_key = account_data.get("private_key", None)
@@ -174,7 +179,6 @@ def login_with_near_auth(remote, auth_url):
         "message": MESSAGE,
         "nonce": NONCE,
         "recipient": RECIPIENT,
-
     }
 
     if not remote:

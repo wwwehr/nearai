@@ -14,11 +14,7 @@ ED_PREFIX = "ed25519:"  # noqa: N806
 
 class Payload:
     def __init__(  # noqa: D107
-            self,
-            message: str,
-            nonce: Union[bytes, str, List[int]],
-            recipient: str,
-            callback_url: Optional[str] = None
+        self, message: str, nonce: Union[bytes, str, List[int]], recipient: str, callback_url: Optional[str] = None
     ):
         self.tag = 2147484061
         self.message = message
@@ -56,14 +52,14 @@ def convert_nonce(value: Union[str, bytes, list[int]]):
         if len(value) > 32:
             raise ValueError("Invalid nonce length")
         if len(value) < 32:
-            value = value.rjust(32, b'0')
+            value = value.rjust(32, b"0")
         return value
     elif isinstance(value, str):
-        nonce_bytes = value.encode('utf-8')
+        nonce_bytes = value.encode("utf-8")
         if len(nonce_bytes) > 32:
             raise ValueError("Invalid nonce length")
         if len(nonce_bytes) < 32:
-            nonce_bytes = nonce_bytes.rjust(32, b'0')
+            nonce_bytes = nonce_bytes.rjust(32, b"0")
         return nonce_bytes
     elif isinstance(value, list):
         if len(value) != 32:
@@ -76,7 +72,7 @@ def convert_nonce(value: Union[str, bytes, list[int]]):
 def validate_nonce(value: Union[str, bytes, list[int]]):
     """Ensures that the nonce is a valid timestamp."""
     nonce = convert_nonce(value)
-    nonce_int = int(nonce.decode('utf-8'))
+    nonce_int = int(nonce.decode("utf-8"))
 
     now = int(time.time() * 1000)
 
@@ -131,7 +127,7 @@ def create_signature(private_key: str, payload: Payload) -> str:
     to_sign = hashlib.sha256(borsh_payload).digest()
 
     # Extract and decode the private key
-    private_key_base58 = private_key[len(ED_PREFIX):]
+    private_key_base58 = private_key[len(ED_PREFIX) :]
     private_key_bytes = base58.b58decode(private_key_base58)
 
     if len(private_key_bytes) != 64:
@@ -144,9 +140,9 @@ def create_signature(private_key: str, payload: Payload) -> str:
     public_key = signing_key.verify_key
 
     signed = signing_key.sign(to_sign)
-    signature = base64.b64encode(signed.signature).decode('utf-8')
+    signature = base64.b64encode(signed.signature).decode("utf-8")
 
-    public_key_base58 = base58.b58encode(public_key.encode()).decode('utf-8')
+    public_key_base58 = base58.b58encode(public_key.encode()).decode("utf-8")
     full_public_key = ED_PREFIX + public_key_base58
 
     return signature, full_public_key
@@ -158,7 +154,7 @@ def validate_signature(public_key: str, signature: str, payload: Payload):
     to_sign = hashlib.sha256(borsh_payload).digest()
     real_signature = base64.b64decode(signature)
 
-    verify_key: nacl.signing.VerifyKey = nacl.signing.VerifyKey(base58.b58decode(public_key[len(ED_PREFIX):]))
+    verify_key: nacl.signing.VerifyKey = nacl.signing.VerifyKey(base58.b58decode(public_key[len(ED_PREFIX) :]))
 
     try:
         verify_key.verify(to_sign, real_signature)

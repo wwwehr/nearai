@@ -431,14 +431,14 @@ class HubCLI:
             kwargs (Dict[str, Any]): All cli keyword arguments
 
         """
-        hub_query = kwargs.get('query')
-        hub_endpoint = kwargs.get('endpoint', "http://127.0.0.1:8081/api/v1/chat/completions")
-        hub_model = kwargs.get('model', "accounts/fireworks/models/llama-v3-70b-instruct")
-        hub_provider = kwargs.get('provider', "fireworks")
-        hub_info = kwargs.get('info', False)
+        hub_query = kwargs.get("query")
+        hub_endpoint = kwargs.get("endpoint", "http://127.0.0.1:8081/api/v1/chat/completions")
+        hub_model = kwargs.get("model", "accounts/fireworks/models/llama-v3-70b-instruct")
+        hub_provider = kwargs.get("provider", "fireworks")
+        hub_info = kwargs.get("info", False)
 
         if not hub_query:
-            return print ("Error: 'query' is required for the `hub chat` command.")
+            return print("Error: 'query' is required for the `hub chat` command.")
 
         hub(hub_query, hub_endpoint, hub_model, hub_provider, hub_info)
 
@@ -456,16 +456,16 @@ class LoginCLI:
             kwargs (Dict[str, Any]): All cli keyword arguments
 
         """
-        remote = kwargs.get('remote', False)
-        account_id = kwargs.get('accountId', None)
-        private_key = kwargs.get('privateKey', None)
+        remote = kwargs.get("remote", False)
+        account_id = kwargs.get("accountId", None)
+        private_key = kwargs.get("privateKey", None)
 
         if not remote and account_id and private_key:
             nearai_login.generate_and_save_signature(account_id, private_key)
         elif not remote and account_id:
             nearai_login.login_with_file_credentials(account_id)
         else:
-            auth_url = kwargs.get('auth_url', 'https://auth.near.ai')
+            auth_url = kwargs.get("auth_url", "https://auth.near.ai")
             nearai_login.login_with_near_auth(remote, auth_url)
 
     def status(self):
@@ -485,11 +485,11 @@ class LoginCLI:
             kwargs (Dict[str, Any]): All cli keyword arguments
 
         """
-        account_id = kwargs.get('accountId')
-        signature = kwargs.get('signature')
-        public_key = kwargs.get('publicKey')
-        callback_url = kwargs.get('callbackUrl')
-        nonce = kwargs.get('nonce')
+        account_id = kwargs.get("accountId")
+        signature = kwargs.get("signature")
+        public_key = kwargs.get("publicKey")
+        callback_url = kwargs.get("callbackUrl")
+        nonce = kwargs.get("nonce")
 
         if account_id and signature and public_key and callback_url and nonce:
             nearai_login.update_auth_config(account_id, signature, public_key, callback_url, nonce)

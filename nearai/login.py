@@ -1,5 +1,4 @@
 import http.server
-import importlib.resources
 import json
 import os.path
 import socket
@@ -7,13 +6,10 @@ import socketserver
 import threading
 import time
 import urllib.parse as urlparse
+from pathlib import Path
 
 import hub.api.near.sign as near
 from nearai.config import load_config_file, save_config_file
-
-# Directory containing the HTML file
-package_root = importlib.resources.files(__package__).parent
-DIRECTORY = os.path.join(package_root, 'nearai/assets')
 
 RECIPIENT = "ai.near"
 MESSAGE = "Welcome to NEAR AI"
@@ -76,8 +72,11 @@ class AuthHandler(http.server.SimpleHTTPRequestHandler):
         """Webserver GET method."""
         global NONCE, PORT
 
+        script_path = Path(__file__).resolve()
+        assets_folder = script_path.parent / 'assets'
+
         if self.path.startswith('/capture'):
-            with open(os.path.join(DIRECTORY, "auth_capture.html"), 'r', encoding='utf-8') as file:
+            with open(os.path.join(assets_folder, "auth_capture.html"), 'r', encoding='utf-8') as file:
                 content = file.read()
             self.send_response(200)
             self.send_header('Content-type', 'text/html')
@@ -99,7 +98,7 @@ class AuthHandler(http.server.SimpleHTTPRequestHandler):
 
             # http://localhost:50397/auth?accountId=zavodil.near&signature=n5dWHjbywmVYvzNwPCRK5wilamAz50vETrbyZ%2F1P6IjsTpzFz0xPQRtGpx8TcmjQTYT1GfaPXwKnIRvQqPxdAQ%3D%3D&publicKey=ed25519%3AHFd5upW3ppKKqwmNNbm56JW7VHXzEoDpwFKuetXLuNSq&
 
-            with open(os.path.join(DIRECTORY, "auth_complete.html"), 'r', encoding='utf-8') as file:
+            with open(os.path.join(assets_folder, "auth_complete.html"), 'r', encoding='utf-8') as file:
                 content = file.read()
             self.send_response(200)
             self.send_header('Content-type', 'text/html')

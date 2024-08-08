@@ -3,6 +3,7 @@ Description=NearAI Hub
 After=network.target
 
 [Service]
+Environment="PATH=/home/setup/nearai-beta/venv/bin"
 User=setup
 WorkingDirectory=/home/setup/nearai-beta
 LimitNOFILE=4096

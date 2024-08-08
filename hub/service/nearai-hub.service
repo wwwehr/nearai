@@ -6,7 +6,7 @@ After=network.target
 User=setup
 WorkingDirectory=/home/setup/nearai-beta
 LimitNOFILE=4096
-ExecStart=/home/setup/nearai-beta/venv/bin /home/setup/nearai-beta/hub/run.py
+ExecStart=/home/setup/nearai-beta/venv/bin/python /home/setup/nearai-beta/hub/run.py
 Restart=on-failure
 RestartSec=5s
 

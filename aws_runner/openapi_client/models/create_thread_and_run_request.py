@@ -22,13 +22,16 @@ from typing import Any, ClassVar, Dict, List, Optional
 from typing import Optional, Set
 from typing_extensions import Self
 
-class ResponseFormat(BaseModel):
+class CreateThreadAndRunRequest(BaseModel):
     """
-    The format of the response.
+    CreateThreadAndRunRequest
     """ # noqa: E501
-    type: StrictStr
-    json_schema: Optional[Dict[str, Any]] = None
-    __properties: ClassVar[List[str]] = ["type", "json_schema"]
+    agent_id: Optional[StrictStr] = None
+    assistant_id: Optional[StrictStr] = None
+    environment_id: Optional[StrictStr] = None
+    thread: Optional[StrictStr] = None
+    new_message: Optional[StrictStr] = None
+    __properties: ClassVar[List[str]] = ["agent_id", "assistant_id", "environment_id", "thread", "new_message"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -48,7 +51,7 @@ class ResponseFormat(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of ResponseFormat from a JSON string"""
+        """Create an instance of CreateThreadAndRunRequest from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -69,16 +72,36 @@ class ResponseFormat(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
-        # set to None if json_schema (nullable) is None
+        # set to None if agent_id (nullable) is None
         # and model_fields_set contains the field
-        if self.json_schema is None and "json_schema" in self.model_fields_set:
-            _dict['json_schema'] = None
+        if self.agent_id is None and "agent_id" in self.model_fields_set:
+            _dict['agent_id'] = None
+
+        # set to None if assistant_id (nullable) is None
+        # and model_fields_set contains the field
+        if self.assistant_id is None and "assistant_id" in self.model_fields_set:
+            _dict['assistant_id'] = None
+
+        # set to None if environment_id (nullable) is None
+        # and model_fields_set contains the field
+        if self.environment_id is None and "environment_id" in self.model_fields_set:
+            _dict['environment_id'] = None
+
+        # set to None if thread (nullable) is None
+        # and model_fields_set contains the field
+        if self.thread is None and "thread" in self.model_fields_set:
+            _dict['thread'] = None
+
+        # set to None if new_message (nullable) is None
+        # and model_fields_set contains the field
+        if self.new_message is None and "new_message" in self.model_fields_set:
+            _dict['new_message'] = None
 
         return _dict
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of ResponseFormat from a dict"""
+        """Create an instance of CreateThreadAndRunRequest from a dict"""
         if obj is None:
             return None
 
@@ -86,8 +109,11 @@ class ResponseFormat(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "type": obj.get("type"),
-            "json_schema": obj.get("json_schema")
+            "agent_id": obj.get("agent_id"),
+            "assistant_id": obj.get("assistant_id"),
+            "environment_id": obj.get("environment_id"),
+            "thread": obj.get("thread"),
+            "new_message": obj.get("new_message")
         })
         return _obj
 

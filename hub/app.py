@@ -6,7 +6,6 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-import hub.api.v1.registry  # noqa
 from hub.api.v1.agent_routes import v1_router as agent_router
 from hub.api.v1.exceptions import TokenValidationError
 from hub.api.v1.registry_routes import v1_router as registry_router

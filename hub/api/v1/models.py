@@ -1,10 +1,10 @@
 from contextlib import contextmanager
 from datetime import datetime
 from os import getenv
-from typing import Iterator, Optional
+from typing import Dict, Iterator, Optional
 
 from dotenv import load_dotenv
-from sqlmodel import Field, Session, SQLModel, UniqueConstraint, create_engine
+from sqlmodel import JSON, Column, Field, Session, SQLModel, UniqueConstraint, create_engine
 
 load_dotenv()
 
@@ -23,11 +23,21 @@ class RegistryEntry(SQLModel, table=True):
 
     id: int = Field(default=None, primary_key=True)
     namespace: str = Field(nullable=False)
+    """Namespace under which the entry is stored. Usually the username (NEAR account id) of the owner."""
     name: str = Field(nullable=False)
+    """Name of the entry."""
     version: str = Field(nullable=False)
+    """Version of the entry."""
     time: datetime = Field(default_factory=datetime.now, nullable=False)
+    """Time when the entry was added to the registry."""
     description: str = Field(default="", nullable=False)
+    """Long description of the entry."""
+    category: str = Field(default="", nullable=False)
+    """Type of the entry, e.g. 'dataset', 'model', 'agent', ...."""
+    details: Dict = Field(default_factory=dict, sa_column=Column(JSON))
+    """Free-form dictionary with details about the entry."""
     show_entry: bool = Field(default=True)
+    """Whether to show the entry in the registry by default."""
 
     def get_key(self, object: Optional[str] = None) -> str:
         """Get the key to the project or object in S3."""

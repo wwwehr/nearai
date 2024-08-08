@@ -76,3 +76,26 @@ cp .env.example .env
 ```bash
 npm run dev
 ```
+
+
+## Run NearAI HUB as a System Service
+
+### Installation Steps
+
+```
+git pull
+cd hub
+# install dependencies
+./setup_env.sh 
+# enable and start the service 
+./install_service.sh
+```
+
+### Check logs
+`sudo journalctl -u nearai-hub.service -f`
+
+### Stop Service 
+`sudo systemctl stop nearai-hub.service`
+
+### Start service 
+`sudo systemctl start nearai-hub.service`

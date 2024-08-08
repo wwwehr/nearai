@@ -1,0 +1,14 @@
+[Unit]
+Description=NearAI Hub
+After=network.target
+
+[Service]
+User=setup
+WorkingDirectory=/home/setup/nearai-beta/hub
+LimitNOFILE=4096
+ExecStart=/home/setup/nearai-beta/hub/run.sh
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

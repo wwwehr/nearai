@@ -11,6 +11,7 @@ from typing import Any, List, Optional, Tuple, Union
 import boto3
 import fire
 import pkg_resources
+from openapi_client.api.registry_api import RegistryApi
 from tabulate import tabulate
 
 import nearai
@@ -24,7 +25,7 @@ from nearai.db import db
 from nearai.environment import Environment
 from nearai.finetune import FinetuneCli
 from nearai.hub import hub
-from nearai.registry import Registry, agent, dataset, model, registry
+from nearai.registry import Registry, registry
 from nearai.solvers import SolverStrategy, SolverStrategyRegistry
 from nearai.tensorboard_feed import TensorboardCli
 
@@ -123,28 +124,6 @@ class RegistryCli:
     def __init__(self, registry: Registry):  # noqa: D107
         self._registry = registry
 
-    def add(self, s3_path: str, description: str, name: Optional[str] = None, tags: str = "", **details: Any) -> None:
-        """Add an item to the registry that was previously uploaded to S3."""
-        tags_l = parse_tags(tags)
-        assert self._registry.exists_in_s3(s3_path), f"Item {s3_path} does not exist in S3"
-        self._registry.add(
-            s3_path=s3_path,
-            author=CONFIG.get_user_name(),
-            description=description,
-            name=name,
-            show_entry=True,
-            tags=tags_l,
-            details=details,
-        )
-
-    def add_tags(self, identifier: int, tags: str) -> None:
-        """Add tags to an item in the registry."""
-        tags_l = parse_tags(tags)
-        self._registry.add_tags(identifier=identifier, tags=tags_l)
-
-    def remove_tag(self, identifier: int, tag: str) -> None:  # noqa: D102
-        self._registry.remove_tag(identifier=identifier, tag=tag)
-
     def list(self, total: int = 16, show_all: bool = False, verbose: bool = False, tags: str = "") -> None:
         """List available items."""
         tags_l = parse_tags(tags)
@@ -183,7 +162,7 @@ class RegistryCli:
         details: Optional[dict] = None,
         show_entry: Optional[bool] = None,
     ) -> None:
-        """Update item in the registry."""
+        """Update metadata of a registry item."""
         self._registry.update(
             identifier=identifier,
             author=author,
@@ -193,7 +172,7 @@ class RegistryCli:
             show_entry=show_entry,
         )
 
-    def info(self) -> None:
+    def info(self, project: str) -> None:
         """Show information about an item."""
         raise NotImplementedError()
 
@@ -500,9 +479,6 @@ class LoginCLI:
 class CLI:
     def __init__(self) -> None:  # noqa: D107
         self.registry = RegistryCli(registry)
-        self.datasets = RegistryCli(dataset)
-        self.models = RegistryCli(model)
-        self.agents = RegistryCli(agent)
         self.login = LoginCLI()
         self.hub = HubCLI()
 
@@ -581,4 +557,5 @@ class CLI:
 
 
 def main() -> None:
+    # TODO: Check for latest version and prompt to update.
     fire.Fire(CLI)

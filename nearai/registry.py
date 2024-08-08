@@ -84,15 +84,12 @@ def exists_directory_in_s3(s3_path: str) -> bool:
 
 
 class Registry:
-    def __init__(self, tags: List[str]):  # noqa: D107
-        self.tags = tags
+    def __init__(self):
+        """Create Registry object to interact with the registry programatically."""
         self.download_folder = DATA_FOLDER / "registry"
 
         if not self.download_folder.exists():
             self.download_folder.mkdir(parents=True, exist_ok=True)
-
-    def _all_tags(self, tags: List[str]) -> List[str]:
-        return list(set(self.tags + tags))
 
     def update(  # noqa: D102
         self,
@@ -286,7 +283,4 @@ class Registry:
         return response["Body"].read()
 
 
-dataset = Registry(["dataset"])
-model = Registry(["model"])
-agent = Registry(["agent"])
 registry = Registry([])

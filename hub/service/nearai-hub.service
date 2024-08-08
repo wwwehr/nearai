@@ -3,11 +3,10 @@ Description=NearAI Hub
 After=network.target
 
 [Service]
-Environment="PATH=/home/setup/nearai-beta/venv/bin"
 User=setup
 WorkingDirectory=/home/setup/nearai-beta
 LimitNOFILE=4096
-ExecStart=/home/setup/nearai-beta/hub/run.sh
+ExecStart=/home/setup/nearai-beta/venv/bin /home/setup/nearai-beta/hub/run.py
 Restart=on-failure
 RestartSec=5s
 

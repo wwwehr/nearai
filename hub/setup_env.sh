@@ -13,4 +13,9 @@ source venv/bin/activate
 
 pip install -e .
 
+pip install unicorn
+pip install fastapi
+pip install base58
+pip install pynacl
+
 echo "Setup complete"

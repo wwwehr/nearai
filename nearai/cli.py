@@ -1,18 +1,16 @@
 import json
 import os
-import re
 import runpy
 import sys
 from dataclasses import asdict
 from pathlib import Path
-from subprocess import check_output, run
+from subprocess import run
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import boto3
 import fire
 import pkg_resources
 from openapi_client import EntryLocation, EntryMetadataInput
-from tqdm import tqdm
 
 import nearai
 import nearai.login as nearai_login
@@ -21,89 +19,13 @@ from nearai.benchmark import BenchmarkExecutor, DatasetInfo
 from nearai.clients.lambda_client import LambdaWrapper
 from nearai.config import CONFIG, DATA_FOLDER, update_config
 from nearai.dataset import load_dataset
-from nearai.db import db
 from nearai.environment import Environment
 from nearai.finetune import FinetuneCli
 from nearai.hub import hub
+from nearai.lib import _check_metadata, parse_location
 from nearai.registry import registry
 from nearai.solvers import SolverStrategy, SolverStrategyRegistry
 from nearai.tensorboard_feed import TensorboardCli
-
-
-class Host:
-    # SSH destination
-    host: str
-    # URL of the supervisor API
-    endpoint: str
-    # Name of the cluster for this endpoint
-    cluster: str
-
-    def __init__(self, host: str, cluster: str):  # noqa: D107
-        self.host = host
-        url = host.split("@")[1]
-        self.endpoint = f"http://{url}:8000"
-        self.cluster = cluster
-
-
-def parse_hosts(hosts_path: Path) -> List[Host]:
-    hostnames = set()
-    hosts = []
-    with open(hosts_path) as f:
-        for line in f:
-            p = line.find("#")
-            if p != -1:
-                line = line[:p]
-            line = line.strip(" \n")
-            if not line:
-                continue
-            host, cluster = line.split()
-            hostnames.add(host)
-            hosts.append(Host(host, cluster))
-
-    assert len(hostnames) == len(hosts), "Duplicate hosts"
-    return hosts
-
-
-def install(hosts_description: List[Host], skip_install: str) -> None:
-    """Install supervisor on every host.
-
-    Skip nearai installation on the dev machine (skip_install).
-    """
-    from fabric import ThreadingGroup as Group
-
-    hosts_str = [h.host for h in hosts_description]
-    all_hosts = Group(*hosts_str)
-    install_hosts = Group(*[h.host for h in hosts_description if h.host != skip_install])
-
-    # Check we have connection to every host
-    result = all_hosts.run("hostname", hide=True, warn=False)
-    for host, res in sorted(result.items()):
-        stdout = res.stdout.strip(" \n")
-        print(f"Host: {host}, hostname: {stdout}")
-
-    def run_bash_script(name: str) -> None:
-        # Install setup_host.sh script
-        script = nearai.etc(name)
-        assert script.exists(), script
-        install_hosts.put(script, f"/tmp/{name}")
-        install_hosts.run(f"bash /tmp/{name}", warn=False)
-
-    run_bash_script("install_cli.sh")
-
-    nearai_path = "/home/setup/.local/bin/nearai"
-
-    for conn in all_hosts:
-        conn.run(f"{nearai_path} config set supervisor_id {conn.host}")
-
-    all_hosts.run(f"{nearai_path} config set db_user {CONFIG.db_user}")
-    all_hosts.run(f"{nearai_path} config set db_password {CONFIG.db_password}")
-
-    result = all_hosts.run(f"{nearai_path} config get supervisor_id")
-    for host, res in sorted(result.items()):
-        stdout = res.stdout.strip(" \n")
-        print(f"Host: {host}, supervisor_id: {stdout}")
-
-    run_bash_script("setup_supervisor.sh")
 
 
 def parse_tags(tags: Union[str, Tuple[str, ...]]) -> List[str]:
@@ -118,23 +40,6 @@ def parse_tags(tags: Union[str, Tuple[str, ...]]) -> List[str]:
 
     else:
         raise ValueError(f"Invalid tags argument: {tags}")
-
-
-entry_location_pattern = re.compile("^(?P<namespace>[^/]+)/(?P<name>[^/]+)/(?P<version>[^/]+)$")
-
-
-def parse_location(entry_location: str) -> EntryLocation:
-    """Create a EntryLocation from a string in the format namespace/name/version."""
-    match = entry_location_pattern.match(entry_location)
-
-    if match is None:
-        raise ValueError(f"Invalid entry format: {entry_location}. Should have the format <namespace>/<name>/<version>")
-
-    return EntryLocation(
-        namespace=match.group("namespace"),
-        name=match.group("name"),
-        version=match.group("version"),
-    )
 
 
 class RegistryCli:
@@ -187,12 +92,6 @@ class RegistryCli:
         for entry in entries:
             print(entry)
 
-    def _check_metadata(self, path: Path):
-        if not path.exists():
-            print(f"Metadata file not found: {path.absolute()}")
-            print("Create a metadata file with `nearai registry metadata_template`")
-            exit(1)
-
     def update(self, local_path: str = ".") -> None:
         """Update metadata of a registry item."""
         path = Path(local_path)
@@ -202,7 +101,7 @@ class RegistryCli:
             exit(1)
 
         metadata_path = path / "metadata.json"
-        self._check_metadata(metadata_path)
+        _check_metadata(metadata_path)
 
         with open(metadata_path) as f:
             metadata: Dict[str, Any] = json.load(f)
@@ -223,118 +122,11 @@ class RegistryCli:
 
     def upload(self, local_path: str = ".") -> None:
         """Upload item to the registry."""
-        path = Path(local_path).absolute()
+        registry.upload(Path(local_path).absolute(), show_progress=True)
 
-        if CONFIG.auth is None:
-            print("Please login with `nearai login`")
-            exit(1)
-
-        metadata_path = path / "metadata.json"
-        self._check_metadata(metadata_path)
-
-        with open(metadata_path) as f:
-            metadata: Dict[str, Any] = json.load(f)
-
-        namespace = CONFIG.auth.account_id
-
-        entry_location = EntryLocation.model_validate(
-            dict(
-                namespace=namespace,
-                name=metadata.pop("name"),
-                version=metadata.pop("version"),
-            )
-        )
-
-        entry_metadata = EntryMetadataInput.model_validate(metadata)
-        registry.update(entry_location, entry_metadata)
-
-        all_files = []
-        total_size = 0
-
-        # Traverse all files in the directory `path`
-        for file in path.rglob("*"):
-            if not file.is_file():
-                continue
-
-            relative = file.relative_to(path)
-
-            # Don't upload metadata file.
-            if file == metadata_path:
-                continue
-
-            # Don't upload backup files.
-            if file.name.endswith("~"):
-                continue
-
-            # Don't upload configuration files.
-            if relative.parts[0] == ".nearai":
-                continue
-
-            size = file.stat().st_size
-            total_size += size
-
-            all_files.append((file, relative, size))
-
-        pbar = tqdm(total=total_size, unit="B", unit_scale=True)
-        for file, relative, size in all_files:
-            registry.upload_file(entry_location, file, relative)
-            pbar.update(size)
-
-    def download(self, entry_location_reference: str, force: bool = False) -> None:
+    def download(self, entry_location: str, force: bool = False) -> None:
         """Download item."""
-        entry_location = parse_location(entry_location_reference)
         registry.download(entry_location, force=force, show_progress=True)
-
-
-class SupervisorCli:
-    def install(self) -> None:
-        """Install supervisor service in current machine."""
-        file = nearai.etc("supervisor.service")
-        target = Path("/etc/systemd/system/nearai_supervisor.service")
-        run(["sudo", "cp", str(file), str(target)])
-        run(["sudo", "systemctl", "daemon-reload"])
-
-    def start(self) -> None:
-        """Start installed supervisor service in current machine."""
-        run(["sudo", "systemctl", "restart", "nearai_supervisor"])
-
-    def run(self):
-        """Run supervisor app in debug mode."""
-        from nearai.supervisor import run_supervisor
-
-        run_supervisor()
-
-
-class ServerCli:
-    def install_supervisors(self, hosts: str, skip: str = "") -> None:
-        """Install and start supervisor in every host machine."""
-        hosts_l = parse_hosts(Path(hosts))
-        install(hosts_l, skip)
-
-    def start(self, hosts: str) -> None:  # noqa: D102
-        from nearai.supervisor import SupervisorClient
-
-        parsed_hosts = parse_hosts(Path(hosts))
-        update_config("supervisors", [h.endpoint for h in parsed_hosts])
-
-        db.set_all_supervisors_unavailable()
-
-        for host in parsed_hosts:
-            client = SupervisorClient(host.endpoint)
-            client.init(host.cluster, host.endpoint)
-
-        file = nearai.etc("server.service")
-        target = Path("/etc/systemd/system/nearai_server.service")
-
-        run(["sudo", "cp", str(file), str(target)])
-        run(["sudo", "systemctl", "daemon-reload"])
-        run(["sudo", "systemctl", "restart", "nearai_server"])
-
-    def run(self) -> None:
-        """Run server app in debug mode."""
-        from nearai.server import run_server
-
-        run_server()
 
 
 class ConfigCli:
@@ -366,7 +158,9 @@ class BenchmarkCli:
         It will cache the results in the database and subsequent runs will pull the results from the cache.
         If force is set to True, it will run the benchmark again and update the cache.
         """
-        benchmark_id = db.get_benchmark_id(dataset, solver_strategy, force, subset=subset, **solver_kwargs)
+        # TODO(db-api): Expose an interface to cache the result of the benchmarks
+        # benchmark_id = db.get_benchmark_id(dataset, solver_strategy, force, subset=subset, **solver_kwargs)
+        benchmark_id = -1
 
         name, subset, dataset = dataset, subset, load_dataset(dataset)
 
@@ -558,42 +352,12 @@ class CLI:
         self.login = LoginCLI()
         self.hub = HubCLI()
 
-        self.supervisor = SupervisorCli()
-        self.server = ServerCli()
         self.config = ConfigCli()
         self.benchmark = BenchmarkCli()
         self.environment = EnvironmentCli()
         self.finetune = FinetuneCli()
         self.tensorboard = TensorboardCli()
         self.vllm = VllmCli()
-
-    def submit(self, command: str, name: str, nodes: int = 1, cluster: str = "truthwatcher") -> None:
-        """Submit task."""
-        from nearai.server import ServerClient
-
-        author = CONFIG.get_user_name()
-
-        client = ServerClient(CONFIG.server_url)
-
-        # Check we can connect to the server
-        client.status()
-
-        # Detect in-progress git action
-        # https://adamj.eu/tech/2023/05/29/git-detect-in-progress-operation/
-        operation = ["CHERRY_PICK_HEAD", "MERGE_HEAD", "REBASE_HEAD", "REVERT_HEAD"]
-        for op in operation:
-            result = run(["git", "rev-parse", "--verify", op], capture_output=True)
-            if result.returncode == 0:
-                print(f"Detected in-progress git operation: {op}")
-                return
-
-        repository_url = check_output(["git", "remote", "-v"]).decode().split("\n")[0].split("\t")[1].split()[0]
-        commit = check_output(["git", "rev-parse", "HEAD"]).decode().strip()
-        diff = check_output(["git", "diff", "HEAD"]).decode()
-
-        submission_result = client.submit(name, repository_url, commit, command, author, diff, nodes, cluster)
-
-        print("experiment id:", submission_result["experiment"]["id"])
 
     def inference(self) -> None:
         """Submit inference task."""
@@ -618,18 +382,6 @@ class CLI:
 
         if path.exists():
             run(["git", "pull"], cwd=path)
-
-    def status(self) -> None:
-        """Show status of the cluster."""
-        from nearai.server import ServerClient
-
-        client = ServerClient(CONFIG.server_url)
-        status = client.status()
-
-        for experiment in status.get("last_experiments", []):
-            experiment["diff_len"] = len(experiment.pop("diff", ""))
-
-        print(json.dumps(status))
 
 
 def main() -> None:

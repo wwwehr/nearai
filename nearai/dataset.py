@@ -7,9 +7,9 @@ from nearai.registry import registry
 
 
 def get_dataset(name: str) -> Path:
-    """Download the dataset from the registry if it hasn't been downloaded yet.
+    """Download the dataset from the registry and download it locally if it hasn't been downloaded yet.
 
-    :param name:
+    :param name: The name of the entry to download the dataset. The format should be namespace/name/version.
     :return: The path to the downloaded dataset
     """
     return registry.download(name)

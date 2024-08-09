@@ -31,5 +31,7 @@ def load_agent(name: str) -> Agent:
     # TODO: Figure out how to integrate StreamerAgent as a Agent
     # if alias_or_name == "streamer":
     #     return StreamerAgent()
+
     path = registry.download(name)
+    assert path is not None, f"Agent {name} not found."
     return Agent.from_disk(path.as_posix())

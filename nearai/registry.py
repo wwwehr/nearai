@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from openapi_client import ProjectLocation, ProjectMetadata, ProjectMetadataInput
 from openapi_client.api.registry_api import (
@@ -24,15 +24,12 @@ class Registry:
         if not self.download_folder.exists():
             self.download_folder.mkdir(parents=True, exist_ok=True)
 
-    def update(self, project: ProjectLocation, metadata: ProjectMetadataInput):
+    def update(self, project: ProjectLocation, metadata: ProjectMetadataInput) -> Dict[str, Any]:
         """Update metadata of a project in the registry."""
         result = self.api.upload_metadata_v1_registry_upload_metadata_post(
             BodyUploadMetadataV1RegistryUploadMetadataPost(metadata=metadata, project=project)
         )
-
-        print(result)
-
-        raise NotImplementedError()
+        return result
 
     def info(self, project: ProjectLocation) -> Optional[ProjectMetadata]:
         """Get metadata of a project in the registry."""

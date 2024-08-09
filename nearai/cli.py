@@ -232,7 +232,8 @@ class RegistryCli:
         )
 
         project_metadata = ProjectMetadataInput.model_validate(metadata)
-        registry.update(project_location, project_metadata)
+        result = registry.update(project_location, project_metadata)
+        print(json.dumps(result, indent=2))
 
     # def upload(
     #     self,
@@ -608,8 +609,6 @@ class CLI:
             experiment["diff_len"] = len(experiment.pop("diff", ""))
 
         print(json.dumps(status))
-
-
 
 
 def main() -> None:

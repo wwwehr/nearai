@@ -69,7 +69,7 @@ class AuthData(BaseModel):
     callback_url: str
     nonce: str
     recipient: str
-    message: str
+    plain_message: str
 
 
 class Config(BaseModel):

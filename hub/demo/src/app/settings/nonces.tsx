@@ -65,7 +65,7 @@ export default function ListNonces() {
       public_key: hashParams.publicKey,
       signature: hashParams.signature,
       callback_url: CALLBACK_URL + cleanUrl,
-      plainMsg: message,
+      plain_message: message,
       recipient: RECIPIENT,
       nonce: signingNonce,
     });

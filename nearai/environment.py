@@ -22,7 +22,7 @@ from openapi_client import EntryMetadata
 from nearai.agent import Agent
 from nearai.completion import InferenceRouter
 from nearai.config import Config
-from nearai.lib import parse_location, plain_location
+from nearai.lib import plain_location
 from nearai.registry import registry
 from nearai.tool_registry import ToolRegistry
 

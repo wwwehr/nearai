@@ -66,9 +66,7 @@ if __name__ == "__main__":
     }
 
     # TODO: Upload llama-3 tokenizer to the registry
-    optimistic_path = registry.download(parse_location("TODO/tokenizers/llama-3"))
-    assert optimistic_path is not None
-    tokenizer_path = optimistic_path / "tokenizer.model"
+    tokenizer_path = registry.download("TODO/tokenizers/llama-3") / "tokenizer.model"
     tokenizer = llama3_tokenizer(tokenizer_path)
 
     max_len = 0

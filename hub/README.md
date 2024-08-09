@@ -98,3 +98,6 @@ cd hub
 
 ### Start service
 `sudo systemctl start nearai-hub.service`
+
+### Restart service
+`sudo systemctl restart nearai-hub.service`

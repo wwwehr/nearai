@@ -7,6 +7,7 @@ site_url: https://docs.near.ai/
 edit_uri: edit/main/docs/
 theme:
   name: material
+  favicon: assets/images/favicon.ico
   icon:
     repo: fontawesome/brands/github
     edit: material/pencil 
@@ -120,8 +121,9 @@ extra_javascript:
 extra_css:
   - https://unpkg.com/katex@0/dist/katex.min.css
 nav:
-  - Introduction: 
-    - Welcome To NearAI: 'index.md'
+  - Getting Started: 
+    - Welcome To NearAI Docs: 'index.md'
+    - Contributing: 'contributing.md'
 plugins:
   - social
   - search:

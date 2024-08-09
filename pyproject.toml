@@ -62,7 +62,6 @@ hub = [
     "cryptography",
     "fastapi-cli",
     "fastapi",
-    "fastapi",
     "pydantic-core",
     "pydantic",
     "pynacl",

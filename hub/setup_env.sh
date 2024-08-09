@@ -2,7 +2,6 @@
 
 cd "$(dirname "$0")"/.. || exit
 
-pyenv global 3.10.14
 pyenv shell 3.10.14
 
 if [ ! -d "venv" ]; then
@@ -11,8 +10,6 @@ fi
 
 source venv/bin/activate
 
-pip install -e .
-
-pip3.10 install unicorn fastapi base58 pynacl
+pip3.10 install -e .[hub]
 
 echo "Setup complete"

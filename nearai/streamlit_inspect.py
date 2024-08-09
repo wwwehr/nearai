@@ -1,12 +1,13 @@
 import json
 import os
 import tarfile
-import sys
+from typing import Any, List, Tuple
 
-import streamlit as st
+import streamlit as st  # type: ignore # TODO: Update pyproject to install streamlit
+
 
 # Function to read file content
-def read_file(file_path):
+def read_file(file_path: str) -> str:
     with open(file_path, "r") as file:
         return file.read()
 
@@ -19,7 +20,7 @@ for file in os.listdir():
             tarfile.open(file).extractall(fdir)
 
 
-def fetch_folders(path):
+def fetch_folders(path: str) -> List[str]:
     result = []
     for fdir in os.listdir(path):
         if os.path.isdir(f"{path}/{fdir}"):
@@ -28,17 +29,18 @@ def fetch_folders(path):
             result += fetch_folders(f"{path}/{fdir}")
     return result
 
+
 # for fdir in os.listdir():
 #     if os.path.isdir(fdir) and os.path.exists(f"{fdir}/chat.txt"):
 #         dir_names.append(fdir)
-dir_names = fetch_folders('.')
+dir_names = fetch_folders(".")
 
 # List of directories to explore
 directories = {fdir: fdir for fdir in dir_names}
 
 
 # Function to get boilerplate chat messages based on the selected directory
-def get_chat_messages(directory):
+def get_chat_messages(directory: str) -> List[Tuple[Any, Any]]:
     messages = []
 
     with open(f"{directory}/chat.txt", "r") as file:
@@ -54,7 +56,9 @@ def get_chat_messages(directory):
 # Combo box to select directory
 selected_directory = st.sidebar.selectbox("Select a folder", list(directories.keys()))
 
+
 # Get the path of the selected directory
+assert isinstance(selected_directory, str)
 directory_path = directories[selected_directory]
 
 # Get list of files in the selected directory (flat view)

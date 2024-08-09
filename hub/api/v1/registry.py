@@ -13,7 +13,6 @@ from sqlmodel import delete, select, text
 
 from hub.api.v1.auth import AuthToken, revokable_auth
 from hub.api.v1.models import RegistryEntry, Tags, get_session
-from hub.api.v1.util import as_form
 
 load_dotenv()
 S3_BUCKET = getenv("S3_BUCKET")
@@ -45,7 +44,6 @@ def valid_tag(tag: str) -> bool:
     return tag_pattern.match(tag) is not None
 
 
-@as_form
 class EntryLocation(BaseModel):
     namespace: Annotated[str, AfterValidator(valid_identifier)]
     name: Annotated[str, AfterValidator(valid_identifier)]
@@ -66,9 +64,14 @@ class EntryLocation(BaseModel):
             version=match.group("version"),
         )
 
+    @classmethod
+    def as_form(cls, namespace: str = Form(...), name: str = Form(...), version: str = Form(...)):
+        """Create a location from form data."""
+        return cls(namespace=namespace, name=name, version=version)
+
 
 def with_write_access(use_forms=False):
-    default = Depends() if use_forms else Body()
+    default = Depends(EntryLocation.as_form) if use_forms else Body()
 
     def fn_with_write_access(
         entry_location: EntryLocation = default,

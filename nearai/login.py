@@ -40,7 +40,7 @@ def update_auth_config(account_id, signature, public_key, callback_url, nonce):
                 "callback_url": callback_url,
                 "nonce": nonce,
                 "recipient": RECIPIENT,
-                "plain_message": MESSAGE,
+                "message": MESSAGE,
             }
         )
 

@@ -193,7 +193,7 @@ class RevokeNonce(BaseModel):
 async def revoke_nonce(nonce: RevokeNonce, auth: AuthToken = Depends(validate_signature)):
     """Revoke a nonce for the account."""
     logger.info(f"Received request to revoke nonce {nonce} for account {auth.account_id}")
-    if auth.plain_message != REVOKE_MESSAGE:
+    if auth.message != REVOKE_MESSAGE:
         raise HTTPException(status_code=401, detail="Invalid nonce revoke message")
 
     await verify_revoke_nonce(auth)
@@ -206,7 +206,7 @@ async def revoke_nonce(nonce: RevokeNonce, auth: AuthToken = Depends(validate_si
 async def revoke_all_nonces(auth: AuthToken = Depends(validate_signature)):
     """Revoke all nonces for the account."""
     logger.info(f"Received request to revoke all nonces for account {auth.account_id}")
-    if auth.plain_message != REVOKE_ALL_MESSAGE:
+    if auth.message != REVOKE_ALL_MESSAGE:
         raise HTTPException(status_code=401, detail="Invalid nonce revoke message")
 
     await verify_revoke_nonce(auth)

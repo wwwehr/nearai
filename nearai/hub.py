@@ -15,7 +15,7 @@ def hub(query, endpoint, model, provider, info):
             "public_key": auth["public_key"],
             "signature": auth["signature"],
             "callback_url": auth["callback_url"],
-            "plain_message": auth["message"],
+            "message": auth["message"],
             "nonce": auth["nonce"],
             "recipient": auth["recipient"],
         }

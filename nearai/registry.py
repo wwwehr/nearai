@@ -23,7 +23,7 @@ from nearai.lib import _check_metadata, parse_location
 
 class Registry:
     def __init__(self):
-        """Create Registry object to interact with the registry programatically."""
+        """Create Registry object to interact with the registry programmatically."""
         self.download_folder = DATA_FOLDER / "registry"
         self.api = RegistryApi()
 

@@ -1,4 +1,3 @@
-import inspect
 import re
 from os import getenv
 from typing import Annotated, Dict, List, Tuple
@@ -14,6 +13,7 @@ from sqlmodel import delete, select, text
 
 from hub.api.v1.auth import AuthToken, revokable_auth
 from hub.api.v1.models import RegistryEntry, Tags, get_session
+from hub.api.v1.util import as_form
 
 load_dotenv()
 S3_BUCKET = getenv("S3_BUCKET")
@@ -24,23 +24,6 @@ v1_router = APIRouter(
     prefix="/registry",
     tags=["registry"],
 )
-
-
-# Code from: https://stackoverflow.com/a/77113651/4950797
-def as_form(cls):
-    new_params = [
-        inspect.Parameter(
-            field_name,
-            inspect.Parameter.POSITIONAL_ONLY,
-            default=model_field.default,
-            annotation=Annotated[model_field.annotation, Form(), *model_field.metadata],  # type: ignore
-        )
-        for field_name, model_field in cls.model_fields.items()
-    ]
-
-    cls.__signature__ = cls.__signature__.replace(parameters=new_params)
-
-    return cls
 
 
 identifier_pattern = re.compile(r"^[a-zA-Z0-9_\-.]+$")

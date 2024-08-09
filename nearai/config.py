@@ -62,6 +62,16 @@ class LLMConfig(BaseModel):
     models: Dict[str, str]
 
 
+class AuthData(BaseModel):
+    account_id: str
+    signature: str
+    public_key: str
+    callback_url: str
+    nonce: str
+    recipient: str
+    message: str
+
+
 class Config(BaseModel):
     origin: Optional[str] = None
     user_name: Optional[str] = None
@@ -69,10 +79,9 @@ class Config(BaseModel):
     api_url: Optional[str] = None
     inference_url: str = "http://localhost:5000/v1/"
     inference_api_key: str = "n/a"
-
     llm_config: Optional[LLMConfig] = None
-
     confirm_commands: bool = True
+    auth: Optional[AuthData] = None
 
     def update_with(self, extra_config: Dict[str, Any], map_key: Callable[[str], str] = lambda x: x) -> "Config":
         """Update the config with the given dictionary."""

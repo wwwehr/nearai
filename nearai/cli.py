@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import runpy
 import sys
 import textwrap
@@ -11,7 +12,7 @@ from typing import Any, List, Optional, Tuple, Union
 import boto3
 import fire
 import pkg_resources
-from openapi_client.api.registry_api import RegistryApi
+from openapi_client import ApiClient, ProjectLocation, ProjectMetadata
 from tabulate import tabulate
 
 import nearai
@@ -25,7 +26,7 @@ from nearai.db import db
 from nearai.environment import Environment
 from nearai.finetune import FinetuneCli
 from nearai.hub import hub
-from nearai.registry import Registry, registry
+from nearai.registry import registry
 from nearai.solvers import SolverStrategy, SolverStrategyRegistry
 from nearai.tensorboard_feed import TensorboardCli
 
@@ -120,9 +121,57 @@ def parse_tags(tags: Union[str, Tuple[str, ...]]) -> List[str]:
         raise ValueError(f"Invalid tags argument: {tags}")
 
 
+project_location_pattern = re.compile("^(?P<namespace>[^/]+)/(?P<name>[^/]+)/(?P<version>[^/]+)$")
+
+
+def parse_location(project_location: str) -> ProjectLocation:
+    """Create a ProjectLocation from a string in the format namespace/name/version."""
+    match = project_location_pattern.match(project_location)
+
+    if match is None:
+        raise ValueError(
+            f"Invalid project format: {project_location}. Should have the format <namespace>/<name>/<version>"
+        )
+
+    return ProjectLocation(
+        namespace=match.group("namespace"),
+        name=match.group("name"),
+        version=match.group("version"),
+    )
+
+
 class RegistryCli:
-    def __init__(self, registry: Registry):  # noqa: D107
-        self._registry = registry
+    def info(self, project: str) -> None:
+        """Show information about an item."""
+        project_location = parse_location(project)
+        metadata = registry.info(project_location)
+
+        if metadata is None:
+            print(f"Project {project} not found.")
+            return
+
+        print(metadata.model_dump_json(indent=2))
+
+    def metadata_template(self, local_path: str = "."):
+        """Create a metadata template."""
+        path = Path(local_path)
+
+        metadata_path = path / "metadata.json"
+
+        with open(metadata_path, "w") as f:
+            json.dump(
+                {
+                    "name": "foobar",
+                    "version": "0.0.1",
+                    "description": "Template metadata",
+                    "category": "model",
+                    "tags": ["foo", "bar"],
+                    "details": {},
+                    "show_entry": True,
+                },
+                f,
+                indent=2,
+            )
 
     def list(self, total: int = 16, show_all: bool = False, verbose: bool = False, tags: str = "") -> None:
         """List available items."""
@@ -152,58 +201,66 @@ class RegistryCli:
 
         print(tabulate(table, headers="firstrow", tablefmt="simple_grid"))
 
-    def update(
-        self,
-        identifier: int,
-        *,
-        author: Optional[str] = None,
-        description: Optional[str] = None,
-        name: Optional[str] = None,
-        details: Optional[dict] = None,
-        show_entry: Optional[bool] = None,
-    ) -> None:
+    def update(self, local_path: str = ".") -> None:
         """Update metadata of a registry item."""
-        self._registry.update(
-            identifier=identifier,
-            author=author,
-            description=description,
-            name=name,
-            details=details,
-            show_entry=show_entry,
+        path = Path(local_path)
+
+        metadata_path = path / "metadata.json"
+
+        if not metadata_path.exists():
+            print(f"Metadata file not found: {metadata_path.absolute()}")
+            print("Create a metadata file with `nearai registry metadata_template`")
+            exit(1)
+
+        with open(metadata_path) as f:
+            metadata = json.load(f)
+
+        project_metadata = ProjectMetadata.model_validate(metadata)
+
+        # TODO: Get the namespace from the logged user
+
+        if CONFIG.auth is None:
+            print("Please login with `nearai login`")
+            exit(1)
+
+        namespace = CONFIG.auth.account_id
+
+        project_location = ProjectLocation(
+            namespace=namespace,
+            name=project_metadata.name,
+            version=project_metadata.version,
         )
 
-    def info(self, project: str) -> None:
-        """Show information about an item."""
-        raise NotImplementedError()
+        registry.update(project_location, project_metadata)
 
-    def upload(
-        self,
-        path: str,
-        s3_path: str,
-        description: str,
-        name: Optional[str] = None,
-        show_entry: bool = True,
-        tags: str = "",
-        **details: Any,
-    ) -> None:
-        """Upload item to the registry."""
-        tags_l = parse_tags(tags)
+    # def upload(
+    #     self,
+    #     path: str,
+    #     s3_path: str,
+    #     description: str,
+    #     name: Optional[str] = None,
+    #     show_entry: bool = True,
+    #     tags: str = "",
+    #     **details: Any,
+    # ) -> None:
+    #     """Upload item to the registry."""
+    #     tags_l = parse_tags(tags)
 
-        author = CONFIG.get_user_name()
-        self._registry.upload(
-            path=Path(path),
-            s3_path=s3_path,
-            author=author,
-            description=description,
-            name=name,
-            details=details,
-            show_entry=show_entry,
-            tags=tags_l,
-        )
+    #     author = CONFIG.get_user_name()
+    #     self._registry.upload(
+    #         path=Path(path),
+    #         s3_path=s3_path,
+    #         author=author,
+    #         description=description,
+    #         name=name,
+    #         details=details,
+    #         show_entry=show_entry,
+    #         tags=tags_l,
+    #     )
 
-    def download(self, name: str) -> None:
-        """Download item."""
-        self._registry.download(name)
+    # def download(self, name: str) -> None:
+    #     """Download item."""
+    #     self._registry.download(name)
 
 
 class SupervisorCli:
@@ -272,10 +329,6 @@ class ConfigCli:
 
 
 class BenchmarkCli:
-    def __init__(self, datasets: RegistryCli, models: RegistryCli):  # noqa: D107
-        self.datasets = datasets
-        self.models = models
-
     def run(
         self,
         dataset: str,
@@ -478,14 +531,14 @@ class LoginCLI:
 
 class CLI:
     def __init__(self) -> None:  # noqa: D107
-        self.registry = RegistryCli(registry)
+        self.registry = RegistryCli()
         self.login = LoginCLI()
         self.hub = HubCLI()
 
         self.supervisor = SupervisorCli()
         self.server = ServerCli()
         self.config = ConfigCli()
-        self.benchmark = BenchmarkCli(self.datasets, self.models)
+        self.benchmark = BenchmarkCli()
         self.environment = EnvironmentCli()
         self.finetune = FinetuneCli()
         self.tensorboard = TensorboardCli()
@@ -557,5 +610,8 @@ class CLI:
 
 
 def main() -> None:
+    client = ApiClient()
+    client.configuration.host = "http://localhost:8081"
+
     # TODO: Check for latest version and prompt to update.
     fire.Fire(CLI)

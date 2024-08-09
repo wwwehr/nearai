@@ -1,7 +1,7 @@
 import os
 from typing import Any, Optional
 
-from nearai.registry import agent
+from nearai.registry import registry
 
 AGENT_FILENAME = "agent.py"
 
@@ -27,9 +27,9 @@ class Agent(object):
         exec(self.code, d, d)
 
 
-def load_agent(alias_or_name: str) -> Agent:
+def load_agent(name: str) -> Agent:
     # TODO: Figure out how to integrate StreamerAgent as a Agent
     # if alias_or_name == "streamer":
     #     return StreamerAgent()
-    path = agent.download(alias_or_name)
+    path = registry.download(name)
     return Agent.from_disk(path.as_posix())

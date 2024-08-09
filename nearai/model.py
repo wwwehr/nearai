@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from nearai.registry import model
+from nearai.registry import registry
 
 
 def get_model(name: str) -> Path:
@@ -9,4 +9,4 @@ def get_model(name: str) -> Path:
     :param name: The name of the model to download
     :return: The path to the downloaded model
     """
-    return model.download(name)
+    return registry.download(name)

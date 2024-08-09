@@ -1,7 +1,7 @@
 import inspect
 import re
 from os import getenv
-from typing import Annotated, Dict, List
+from typing import Annotated, Dict, List, Optional
 
 import boto3
 import botocore
@@ -67,6 +67,21 @@ class ProjectLocation(BaseModel):
     namespace: Annotated[str, AfterValidator(valid_identifier)]
     name: Annotated[str, AfterValidator(valid_identifier)]
     version: Annotated[str, AfterValidator(valid_identifier)]
+
+    @staticmethod
+    def from_str(project: str) -> "ProjectLocation":
+        """Create a ProjectLocation from a string in the format namespace/name/version."""
+        pattern = re.compile("^(?P<namespace>[^/]+)/(?P<name>[^/]+)/(?P<version>[^/]+)$")
+        match = pattern.match(project)
+
+        if match is None:
+            raise ValueError(f"Invalid project format: {project}. Should have the format <namespace>/<name>/<version>")
+
+        return ProjectLocation(
+            namespace=match.group("namespace"),
+            name=match.group("name"),
+            version=match.group("version"),
+        )
 
 
 def with_write_access(use_forms=False):

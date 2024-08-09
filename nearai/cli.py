@@ -3,7 +3,6 @@ import os
 import re
 import runpy
 import sys
-import textwrap
 from dataclasses import asdict
 from pathlib import Path
 from subprocess import check_output, run
@@ -12,8 +11,8 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import boto3
 import fire
 import pkg_resources
-from openapi_client import ApiClient, Configuration, ProjectLocation, ProjectMetadataInput, RegistryApi
-from tabulate import tabulate
+from openapi_client import ProjectLocation, ProjectMetadataInput
+from tqdm import tqdm
 
 import nearai
 import nearai.login as nearai_login
@@ -173,33 +172,23 @@ class RegistryCli:
                 indent=2,
             )
 
-    def list(self, total: int = 16, show_all: bool = False, verbose: bool = False, tags: str = "") -> None:
+    def list(
+        self,
+        category: str = "",
+        tags: str = "",
+        total: int = 32,
+        show_all: bool = False,
+        verbose: bool = False,
+    ) -> None:
         """List available items."""
+        # Make sure tags is a comma-separated list of tags
         tags_l = parse_tags(tags)
+        tags = ",".join(tags_l)
 
-        header = ["id", "name", "description", "tags"]
+        projects = registry.list(category, tags, total, show_all)
 
-        if verbose:
-            header += ["author", "date", "path"]
-
-        table: list[list[Any]] = [header]
-
-        for entry in self._registry.list(tags=tags_l, total=total, show_all=show_all):
-            tags = ", ".join(entry.tags)
-
-            row = [
-                entry.id,
-                (entry.name or entry.path) if not verbose else entry.name,
-                textwrap.fill(entry.description or "", width=50),
-                textwrap.fill(tags, width=20),
-            ]
-
-            if verbose:
-                row += [entry.author, entry.time.strftime("%Y-%m-%d"), entry.path]
-
-            table.append(row)
-
-        print(tabulate(table, headers="firstrow", tablefmt="simple_grid"))
+        for project in projects:
+            print(project)
 
     def _check_metadata(self, path: Path):
         if not path.exists():
@@ -235,34 +224,69 @@ class RegistryCli:
         result = registry.update(project_location, project_metadata)
         print(json.dumps(result, indent=2))
 
-    # def upload(
-    #     self,
-    #     path: str,
-    #     s3_path: str,
-    #     description: str,
-    #     name: Optional[str] = None,
-    #     show_entry: bool = True,
-    #     tags: str = "",
-    #     **details: Any,
-    # ) -> None:
-    #     """Upload item to the registry."""
-    #     tags_l = parse_tags(tags)
+    def upload(self, local_path: str = ".") -> None:
+        """Upload item to the registry."""
+        path = Path(local_path).absolute()
 
-    #     author = CONFIG.get_user_name()
-    #     self._registry.upload(
-    #         path=Path(path),
-    #         s3_path=s3_path,
-    #         author=author,
-    #         description=description,
-    #         name=name,
-    #         details=details,
-    #         show_entry=show_entry,
-    #         tags=tags_l,
-    #     )
+        if CONFIG.auth is None:
+            print("Please login with `nearai login`")
+            exit(1)
 
-    # def download(self, name: str) -> None:
-    #     """Download item."""
-    #     self._registry.download(name)
+        metadata_path = path / "metadata.json"
+        self._check_metadata(metadata_path)
+
+        with open(metadata_path) as f:
+            metadata: Dict[str, Any] = json.load(f)
+
+        namespace = CONFIG.auth.account_id
+
+        project_location = ProjectLocation.model_validate(
+            dict(
+                namespace=namespace,
+                name=metadata.pop("name"),
+                version=metadata.pop("version"),
+            )
+        )
+
+        project_metadata = ProjectMetadataInput.model_validate(metadata)
+        registry.update(project_location, project_metadata)
+
+        all_files = []
+        total_size = 0
+
+        # Traverse all files in the directory `path`
+        for file in path.rglob("*"):
+            if not file.is_file():
+                continue
+
+            relative = file.relative_to(path)
+
+            # Don't upload metadata file.
+            if file == metadata_path:
+                continue
+
+            # Don't upload backup files.
+            if file.name.endswith("~"):
+                continue
+
+            # Don't upload configuration files.
+            if relative.parts[0] == ".nearai":
+                continue
+
+            size = file.stat().st_size
+            total_size += size
+
+            all_files.append((file, relative, size))
+
+        pbar = tqdm(total=total_size, unit="B", unit_scale=True)
+        for file, relative, size in all_files:
+            registry.upload_file(project_location, file, relative)
+            pbar.update(size)
+
+    def download(self, project: str, force: bool = False) -> None:
+        """Download item."""
+        project_location = parse_location(project)
+        registry.download(project_location, force=force, show_progress=True)
 
 
 class SupervisorCli:

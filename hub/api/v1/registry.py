@@ -1,7 +1,7 @@
 import inspect
 import re
 from os import getenv
-from typing import Annotated, Dict, List, Optional
+from typing import Annotated, Dict, List
 
 import boto3
 import botocore
@@ -182,7 +182,7 @@ async def download_file(
 ):
     # https://stackoverflow.com/a/71126498/4950797
     object = s3.get_object(Bucket=S3_BUCKET, Key=project.get_key(path))
-    return StreamingResponse(object["Body"].iter_chunks(), media_type="application/octet-stream")
+    return StreamingResponse(object["Body"].iter_chunks())
 
 
 @v1_router.post("/upload_metadata")
@@ -245,6 +245,9 @@ async def list_projects(
     total: int = 32,
     show_hidden: bool = False,
 ) -> List[ProjectLocation]:
+    # TODO: Return metadata instead of location to show the information in the cli
+    # TODO: Return only the latest version of each project (order by id)
+
     tags_list = list({tag for tag in tags.split(",") if tag})
 
     with get_session() as session:

@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import boto3
 import fire
 import pkg_resources
-from openapi_client import ProjectLocation, ProjectMetadataInput
+from openapi_client import EntryLocation, EntryMetadataInput
 from tqdm import tqdm
 
 import nearai
@@ -120,19 +120,17 @@ def parse_tags(tags: Union[str, Tuple[str, ...]]) -> List[str]:
         raise ValueError(f"Invalid tags argument: {tags}")
 
 
-project_location_pattern = re.compile("^(?P<namespace>[^/]+)/(?P<name>[^/]+)/(?P<version>[^/]+)$")
+entry_location_pattern = re.compile("^(?P<namespace>[^/]+)/(?P<name>[^/]+)/(?P<version>[^/]+)$")
 
 
-def parse_location(project_location: str) -> ProjectLocation:
-    """Create a ProjectLocation from a string in the format namespace/name/version."""
-    match = project_location_pattern.match(project_location)
+def parse_location(entry_location: str) -> EntryLocation:
+    """Create a EntryLocation from a string in the format namespace/name/version."""
+    match = entry_location_pattern.match(entry_location)
 
     if match is None:
-        raise ValueError(
-            f"Invalid project format: {project_location}. Should have the format <namespace>/<name>/<version>"
-        )
+        raise ValueError(f"Invalid entry format: {entry_location}. Should have the format <namespace>/<name>/<version>")
 
-    return ProjectLocation(
+    return EntryLocation(
         namespace=match.group("namespace"),
         name=match.group("name"),
         version=match.group("version"),
@@ -140,13 +138,13 @@ def parse_location(project_location: str) -> ProjectLocation:
 
 
 class RegistryCli:
-    def info(self, project: str) -> None:
+    def info(self, entry: str) -> None:
         """Show information about an item."""
-        project_location = parse_location(project)
-        metadata = registry.info(project_location)
+        entry_location = parse_location(entry)
+        metadata = registry.info(entry_location)
 
         if metadata is None:
-            print(f"Project {project} not found.")
+            print(f"Entry {entry} not found.")
             return
 
         print(metadata.model_dump_json(indent=2))
@@ -178,17 +176,16 @@ class RegistryCli:
         tags: str = "",
         total: int = 32,
         show_all: bool = False,
-        verbose: bool = False,
     ) -> None:
         """List available items."""
         # Make sure tags is a comma-separated list of tags
         tags_l = parse_tags(tags)
         tags = ",".join(tags_l)
 
-        projects = registry.list(category, tags, total, show_all)
+        entries = registry.list(category, tags, total, show_all)
 
-        for project in projects:
-            print(project)
+        for entry in entries:
+            print(entry)
 
     def _check_metadata(self, path: Path):
         if not path.exists():
@@ -212,7 +209,7 @@ class RegistryCli:
 
         namespace = CONFIG.auth.account_id
 
-        project_location = ProjectLocation.model_validate(
+        entry_location = EntryLocation.model_validate(
             dict(
                 namespace=namespace,
                 name=metadata.pop("name"),
@@ -220,8 +217,8 @@ class RegistryCli:
             )
         )
 
-        project_metadata = ProjectMetadataInput.model_validate(metadata)
-        result = registry.update(project_location, project_metadata)
+        entry_metadata = EntryMetadataInput.model_validate(metadata)
+        result = registry.update(entry_location, entry_metadata)
         print(json.dumps(result, indent=2))
 
     def upload(self, local_path: str = ".") -> None:
@@ -240,7 +237,7 @@ class RegistryCli:
 
         namespace = CONFIG.auth.account_id
 
-        project_location = ProjectLocation.model_validate(
+        entry_location = EntryLocation.model_validate(
             dict(
                 namespace=namespace,
                 name=metadata.pop("name"),
@@ -248,8 +245,8 @@ class RegistryCli:
             )
         )
 
-        project_metadata = ProjectMetadataInput.model_validate(metadata)
-        registry.update(project_location, project_metadata)
+        entry_metadata = EntryMetadataInput.model_validate(metadata)
+        registry.update(entry_location, entry_metadata)
 
         all_files = []
         total_size = 0
@@ -280,13 +277,13 @@ class RegistryCli:
 
         pbar = tqdm(total=total_size, unit="B", unit_scale=True)
         for file, relative, size in all_files:
-            registry.upload_file(project_location, file, relative)
+            registry.upload_file(entry_location, file, relative)
             pbar.update(size)
 
-    def download(self, project: str, force: bool = False) -> None:
+    def download(self, entry_location_reference: str, force: bool = False) -> None:
         """Download item."""
-        project_location = parse_location(project)
-        registry.download(project_location, force=force, show_progress=True)
+        entry_location = parse_location(entry_location_reference)
+        registry.download(entry_location, force=force, show_progress=True)
 
 
 class SupervisorCli:

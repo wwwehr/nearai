@@ -17,9 +17,9 @@ DB_NAME = getenv("DATABASE_NAME")
 
 
 class RegistryEntry(SQLModel, table=True):
-    """Project stored in the registry."""
+    """Entry stored in the registry."""
 
-    __table_args__ = (UniqueConstraint("namespace", "name", "version", name="unique_project"),)
+    __table_args__ = (UniqueConstraint("namespace", "name", "version", name="unique_entry"),)
 
     id: int = Field(default=None, primary_key=True)
     namespace: str = Field(nullable=False)
@@ -40,7 +40,7 @@ class RegistryEntry(SQLModel, table=True):
     """Whether to show the entry in the registry by default."""
 
     def get_key(self, object: Optional[str] = None) -> str:
-        """Get the key to the project or object in S3."""
+        """Get the key to the entry or object in S3."""
         assert S3_PREFIX is not None
         key = f"{S3_PREFIX}/{self.namespace}/{self.name}/{self.version}"
         if object is not None:

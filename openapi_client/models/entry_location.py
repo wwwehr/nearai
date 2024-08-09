@@ -19,17 +19,17 @@ import json
 
 from pydantic import BaseModel, ConfigDict, StrictStr
 from typing import Any, ClassVar, Dict, List
-from openapi_client.models.entry_location import EntryLocation
 from typing import Optional, Set
 from typing_extensions import Self
 
-class BodyDownloadFileV1RegistryDownloadFilePost(BaseModel):
+class EntryLocation(BaseModel):
     """
-    BodyDownloadFileV1RegistryDownloadFilePost
+    EntryLocation
     """ # noqa: E501
-    path: StrictStr
-    entry_location: EntryLocation
-    __properties: ClassVar[List[str]] = ["path", "entry_location"]
+    namespace: StrictStr
+    name: StrictStr
+    version: StrictStr
+    __properties: ClassVar[List[str]] = ["namespace", "name", "version"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -49,7 +49,7 @@ class BodyDownloadFileV1RegistryDownloadFilePost(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of BodyDownloadFileV1RegistryDownloadFilePost from a JSON string"""
+        """Create an instance of EntryLocation from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -70,14 +70,11 @@ class BodyDownloadFileV1RegistryDownloadFilePost(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
-        # override the default output from pydantic by calling `to_dict()` of entry_location
-        if self.entry_location:
-            _dict['entry_location'] = self.entry_location.to_dict()
         return _dict
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of BodyDownloadFileV1RegistryDownloadFilePost from a dict"""
+        """Create an instance of EntryLocation from a dict"""
         if obj is None:
             return None
 
@@ -85,8 +82,9 @@ class BodyDownloadFileV1RegistryDownloadFilePost(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "path": obj.get("path"),
-            "entry_location": EntryLocation.from_dict(obj["entry_location"]) if obj.get("entry_location") is not None else None
+            "namespace": obj.get("namespace"),
+            "name": obj.get("name"),
+            "version": obj.get("version")
         })
         return _obj
 

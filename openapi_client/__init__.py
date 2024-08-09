@@ -42,11 +42,11 @@ from openapi_client.models.body_upload_metadata_v1_registry_upload_metadata_post
 from openapi_client.models.chat_completions_request import ChatCompletionsRequest
 from openapi_client.models.completions_request import CompletionsRequest
 from openapi_client.models.create_thread_and_run_request import CreateThreadAndRunRequest
+from openapi_client.models.entry_location import EntryLocation
+from openapi_client.models.entry_metadata import EntryMetadata
+from openapi_client.models.entry_metadata_input import EntryMetadataInput
 from openapi_client.models.http_validation_error import HTTPValidationError
 from openapi_client.models.message import Message
-from openapi_client.models.project_location import ProjectLocation
-from openapi_client.models.project_metadata import ProjectMetadata
-from openapi_client.models.project_metadata_input import ProjectMetadataInput
 from openapi_client.models.request import Request
 from openapi_client.models.response_format import ResponseFormat
 from openapi_client.models.revoke_nonce import RevokeNonce

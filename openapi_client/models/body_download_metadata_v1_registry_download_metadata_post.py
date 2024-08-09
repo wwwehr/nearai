@@ -19,7 +19,7 @@ import json
 
 from pydantic import BaseModel, ConfigDict
 from typing import Any, ClassVar, Dict, List
-from openapi_client.models.project_location import ProjectLocation
+from openapi_client.models.entry_location import EntryLocation
 from typing import Optional, Set
 from typing_extensions import Self
 
@@ -27,8 +27,8 @@ class BodyDownloadMetadataV1RegistryDownloadMetadataPost(BaseModel):
     """
     BodyDownloadMetadataV1RegistryDownloadMetadataPost
     """ # noqa: E501
-    project: ProjectLocation
-    __properties: ClassVar[List[str]] = ["project"]
+    entry_location: EntryLocation
+    __properties: ClassVar[List[str]] = ["entry_location"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -69,9 +69,9 @@ class BodyDownloadMetadataV1RegistryDownloadMetadataPost(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
-        # override the default output from pydantic by calling `to_dict()` of project
-        if self.project:
-            _dict['project'] = self.project.to_dict()
+        # override the default output from pydantic by calling `to_dict()` of entry_location
+        if self.entry_location:
+            _dict['entry_location'] = self.entry_location.to_dict()
         return _dict
 
     @classmethod
@@ -84,7 +84,7 @@ class BodyDownloadMetadataV1RegistryDownloadMetadataPost(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "project": ProjectLocation.from_dict(obj["project"]) if obj.get("project") is not None else None
+            "entry_location": EntryLocation.from_dict(obj["entry_location"]) if obj.get("entry_location") is not None else None
         })
         return _obj
 

@@ -19,8 +19,8 @@ import json
 
 from pydantic import BaseModel, ConfigDict
 from typing import Any, ClassVar, Dict, List
-from openapi_client.models.project_location import ProjectLocation
-from openapi_client.models.project_metadata_input import ProjectMetadataInput
+from openapi_client.models.entry_location import EntryLocation
+from openapi_client.models.entry_metadata_input import EntryMetadataInput
 from typing import Optional, Set
 from typing_extensions import Self
 
@@ -28,9 +28,9 @@ class BodyUploadMetadataV1RegistryUploadMetadataPost(BaseModel):
     """
     BodyUploadMetadataV1RegistryUploadMetadataPost
     """ # noqa: E501
-    metadata: ProjectMetadataInput
-    project: ProjectLocation
-    __properties: ClassVar[List[str]] = ["metadata", "project"]
+    metadata: EntryMetadataInput
+    entry_location: EntryLocation
+    __properties: ClassVar[List[str]] = ["metadata", "entry_location"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -74,9 +74,9 @@ class BodyUploadMetadataV1RegistryUploadMetadataPost(BaseModel):
         # override the default output from pydantic by calling `to_dict()` of metadata
         if self.metadata:
             _dict['metadata'] = self.metadata.to_dict()
-        # override the default output from pydantic by calling `to_dict()` of project
-        if self.project:
-            _dict['project'] = self.project.to_dict()
+        # override the default output from pydantic by calling `to_dict()` of entry_location
+        if self.entry_location:
+            _dict['entry_location'] = self.entry_location.to_dict()
         return _dict
 
     @classmethod
@@ -89,8 +89,8 @@ class BodyUploadMetadataV1RegistryUploadMetadataPost(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "metadata": ProjectMetadataInput.from_dict(obj["metadata"]) if obj.get("metadata") is not None else None,
-            "project": ProjectLocation.from_dict(obj["project"]) if obj.get("project") is not None else None
+            "metadata": EntryMetadataInput.from_dict(obj["metadata"]) if obj.get("metadata") is not None else None,
+            "entry_location": EntryLocation.from_dict(obj["entry_location"]) if obj.get("entry_location") is not None else None
         })
         return _obj
 

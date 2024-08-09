@@ -63,21 +63,21 @@ def valid_tag(tag: str) -> bool:
 
 
 @as_form
-class ProjectLocation(BaseModel):
+class EntryLocation(BaseModel):
     namespace: Annotated[str, AfterValidator(valid_identifier)]
     name: Annotated[str, AfterValidator(valid_identifier)]
     version: Annotated[str, AfterValidator(valid_identifier)]
 
     @staticmethod
-    def from_str(project: str) -> "ProjectLocation":
-        """Create a ProjectLocation from a string in the format namespace/name/version."""
+    def from_str(entry: str) -> "EntryLocation":
+        """Create a location from a string in the format namespace/name/version."""
         pattern = re.compile("^(?P<namespace>[^/]+)/(?P<name>[^/]+)/(?P<version>[^/]+)$")
-        match = pattern.match(project)
+        match = pattern.match(entry)
 
         if match is None:
-            raise ValueError(f"Invalid project format: {project}. Should have the format <namespace>/<name>/<version>")
+            raise ValueError(f"Invalid entry format: {entry}. Should have the format <namespace>/<name>/<version>")
 
-        return ProjectLocation(
+        return EntryLocation(
             namespace=match.group("namespace"),
             name=match.group("name"),
             version=match.group("version"),
@@ -88,54 +88,59 @@ def with_write_access(use_forms=False):
     default = Depends() if use_forms else Body()
 
     def fn_with_write_access(
-        project: ProjectLocation = default,
+        entry_location: EntryLocation = default,
         auth: AuthToken = Depends(revokable_auth),
-    ) -> ProjectLocation:
-        """Check the user has write access to the project."""
-        if auth.account_id != project.namespace:
+    ) -> EntryLocation:
+        """Check the user has write access to the entry."""
+        if auth.account_id != entry_location.namespace:
             raise HTTPException(
-                status_code=403, detail=f"Unauthorized. Namespace: {project.namespace} != Account: {auth.account_id}"
+                status_code=403,
+                detail=f"Unauthorized. Namespace: {entry_location.namespace} != Account: {auth.account_id}",
             )
-        return project
+        return entry_location
 
     return fn_with_write_access
 
 
-def get_or_create(project: ProjectLocation = Depends(with_write_access())) -> int:
+def get_or_create(entry_location: EntryLocation = Depends(with_write_access())) -> int:
     with get_session() as session:
         entry = session.exec(
             select(RegistryEntry).where(
-                RegistryEntry.namespace == project.namespace,
-                RegistryEntry.name == project.name,
-                RegistryEntry.version == project.version,
+                RegistryEntry.namespace == entry_location.namespace,
+                RegistryEntry.name == entry_location.name,
+                RegistryEntry.version == entry_location.version,
             )
         ).first()
 
         if entry is None:
-            entry = RegistryEntry(namespace=project.namespace, name=project.name, version=project.version)
+            entry = RegistryEntry(
+                namespace=entry_location.namespace,
+                name=entry_location.name,
+                version=entry_location.version,
+            )
             session.add(entry)
             session.commit()
 
         return entry.id
 
 
-def get(project: ProjectLocation = Body()) -> RegistryEntry:
+def get(entry_location: EntryLocation = Body()) -> RegistryEntry:
     with get_session() as session:
         entry = session.exec(
             select(RegistryEntry).where(
-                RegistryEntry.namespace == project.namespace,
-                RegistryEntry.name == project.name,
-                RegistryEntry.version == project.version,
+                RegistryEntry.namespace == entry_location.namespace,
+                RegistryEntry.name == entry_location.name,
+                RegistryEntry.version == entry_location.version,
             )
         ).first()
 
         if entry is None:
-            raise HTTPException(status_code=404, detail="Project not found")
+            raise HTTPException(status_code=404, detail="Entry not found")
 
         return entry
 
 
-class ProjectMetadataInput(BaseModel):
+class EntryMetadataInput(BaseModel):
     category: str
     description: str
     tags: List[str]
@@ -143,7 +148,7 @@ class ProjectMetadataInput(BaseModel):
     show_entry: bool
 
 
-class ProjectMetadata(ProjectMetadataInput):
+class EntryMetadata(EntryMetadataInput):
     name: str
     version: str
 
@@ -160,11 +165,11 @@ def check_file_exists(key):
 
 @v1_router.post("/upload_file")
 async def upload_file(
-    project: ProjectLocation = Depends(with_write_access(use_forms=True)),
+    entry_location: EntryLocation = Depends(with_write_access(use_forms=True)),
     path: str = Form(...),
     file: UploadFile = File(...),
 ):
-    entry = get(project)
+    entry = get(entry_location)
     key = entry.get_key(path)
 
     if check_file_exists(key):
@@ -177,76 +182,76 @@ async def upload_file(
 
 @v1_router.post("/download_file")
 async def download_file(
-    project: RegistryEntry = Depends(get),
+    entry: RegistryEntry = Depends(get),
     path: str = Body(),
 ):
     # https://stackoverflow.com/a/71126498/4950797
-    object = s3.get_object(Bucket=S3_BUCKET, Key=project.get_key(path))
+    object = s3.get_object(Bucket=S3_BUCKET, Key=entry.get_key(path))
     return StreamingResponse(object["Body"].iter_chunks())
 
 
 @v1_router.post("/upload_metadata")
-async def upload_metadata(registry_entry_id: int = Depends(get_or_create), metadata: ProjectMetadataInput = Body()):
+async def upload_metadata(registry_entry_id: int = Depends(get_or_create), metadata: EntryMetadataInput = Body()):
     with get_session() as session:
-        project = session.get(RegistryEntry, registry_entry_id)
+        entry = session.get(RegistryEntry, registry_entry_id)
 
-        full_metadata = ProjectMetadata(name=project.name, version=project.version, **metadata.model_dump())
+        full_metadata = EntryMetadata(name=entry.name, version=entry.version, **metadata.model_dump())
 
-        project.category = full_metadata.category
-        project.description = full_metadata.description
-        project.details = full_metadata.details
-        project.show_entry = full_metadata.show_entry
+        entry.category = full_metadata.category
+        entry.description = full_metadata.description
+        entry.details = full_metadata.details
+        entry.show_entry = full_metadata.show_entry
 
-        session.add(project)
+        session.add(entry)
 
         # Delete all previous tags
-        session.exec(delete(Tags).where(Tags.registry_id == project.id))
+        session.exec(delete(Tags).where(Tags.registry_id == entry.id))
 
         # Add the new tags
         if len(full_metadata.tags) > 0:
-            tags = [Tags(registry_id=project.id, tag=tag) for tag in full_metadata.tags]
+            tags = [Tags(registry_id=entry.id, tag=tag) for tag in full_metadata.tags]
             session.add_all(tags)
 
         session.commit()
 
-        return {"status": "Updated metadata", "namespace": project.namespace, "metadata": full_metadata.model_dump()}
+        return {"status": "Updated metadata", "namespace": entry.namespace, "metadata": full_metadata.model_dump()}
 
 
 @v1_router.post("/download_metadata")
-async def download_metadata(project: RegistryEntry = Depends(get)) -> ProjectMetadata:
+async def download_metadata(entry: RegistryEntry = Depends(get)) -> EntryMetadata:
     with get_session() as session:
-        q_tags = select(Tags).where(Tags.registry_id == project.id)
+        q_tags = select(Tags).where(Tags.registry_id == entry.id)
         tags = [tag.tag for tag in session.exec(q_tags).all()]
 
-    return ProjectMetadata(
-        name=project.name,
-        version=project.version,
-        category=project.category,
-        description=project.description,
+    return EntryMetadata(
+        name=entry.name,
+        version=entry.version,
+        category=entry.category,
+        description=entry.description,
         tags=tags,
-        details=project.details,
-        show_entry=project.show_entry,
+        details=entry.details,
+        show_entry=entry.show_entry,
     )
 
 
 @v1_router.post("/list_files")
-async def list_files(project: RegistryEntry = Depends(get)) -> List[str]:
-    """List all files that belong to a project."""
-    key = project.get_key() + "/"
+async def list_files(entry: RegistryEntry = Depends(get)) -> List[str]:
+    """List all files that belong to a entry."""
+    key = entry.get_key() + "/"
     objects = s3.list_objects(Bucket=S3_BUCKET, Prefix=key)
     files = [obj["Key"][len(key) :] for obj in objects.get("Contents", [])]
     return files
 
 
-@v1_router.post("/list_projects")
-async def list_projects(
+@v1_router.post("/list_entries")
+async def list_entries(
     category: str = "",
     tags: str = "",
     total: int = 32,
     show_hidden: bool = False,
-) -> List[ProjectLocation]:
+) -> List[EntryLocation]:
     # TODO: Return metadata instead of location to show the information in the cli
-    # TODO: Return only the latest version of each project (order by id)
+    # TODO: Return only the latest version of each entry (order by id)
 
     tags_list = list({tag for tag in tags.split(",") if tag})
 
@@ -264,7 +269,7 @@ async def list_projects(
 
             result = session.exec(query).all()
             return [
-                ProjectLocation(namespace=entry.namespace, name=entry.name, version=entry.version) for entry in result
+                EntryLocation(namespace=entry.namespace, name=entry.name, version=entry.version) for entry in result
             ]
         else:
             assert valid_tag(category)
@@ -299,6 +304,6 @@ async def list_projects(
             final = sorted(filtered.items(), key=lambda x: x[0], reverse=True)
 
             return [
-                ProjectLocation(namespace=namespace, name=name, version=version)
+                EntryLocation(namespace=namespace, name=name, version=version)
                 for _, (namespace, name, version) in final
             ]

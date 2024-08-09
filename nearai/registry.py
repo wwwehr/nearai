@@ -2,7 +2,7 @@ from pathlib import Path
 from shutil import copyfileobj
 from typing import Any, Dict, List, Optional
 
-from openapi_client import ProjectLocation, ProjectMetadata, ProjectMetadataInput
+from openapi_client import EntryLocation, EntryMetadata, EntryMetadataInput
 from openapi_client.api.registry_api import (
     BodyDownloadFileV1RegistryDownloadFilePost,
     BodyDownloadMetadataV1RegistryDownloadMetadataPost,
@@ -28,23 +28,23 @@ class Registry:
         if not self.download_folder.exists():
             self.download_folder.mkdir(parents=True, exist_ok=True)
 
-    def update(self, project: ProjectLocation, metadata: ProjectMetadataInput) -> Dict[str, Any]:
-        """Update metadata of a project in the registry."""
+    def update(self, entry_location: EntryLocation, metadata: EntryMetadataInput) -> Dict[str, Any]:
+        """Update metadata of a entry in the registry."""
         result = self.api.upload_metadata_v1_registry_upload_metadata_post(
-            BodyUploadMetadataV1RegistryUploadMetadataPost(metadata=metadata, project=project)
+            BodyUploadMetadataV1RegistryUploadMetadataPost(metadata=metadata, entry_location=entry_location)
         )
         return result
 
-    def info(self, project: ProjectLocation) -> Optional[ProjectMetadata]:
-        """Get metadata of a project in the registry."""
+    def info(self, entry_location: EntryLocation) -> Optional[EntryMetadata]:
+        """Get metadata of a entry in the registry."""
         try:
             return self.api.download_metadata_v1_registry_download_metadata_post(
-                BodyDownloadMetadataV1RegistryDownloadMetadataPost.from_dict(dict(project=project))
+                BodyDownloadMetadataV1RegistryDownloadMetadataPost.from_dict(dict(entry_location=entry_location))
             )
         except NotFoundException:
             return None
 
-    def upload_file(self, project: ProjectLocation, local_path: Path, path: Path) -> bool:
+    def upload_file(self, entry_location: EntryLocation, local_path: Path, path: Path) -> bool:
         """Upload a file to the registry."""
         with open(local_path, "rb") as file:
             data = file.read()
@@ -53,9 +53,9 @@ class Registry:
                 self.api.upload_file_v1_registry_upload_file_post(
                     path=str(path),
                     file=data,
-                    namespace=project.namespace,
-                    name=project.name,
-                    version=project.version,
+                    namespace=entry_location.namespace,
+                    name=entry_location.name,
+                    version=entry_location.version,
                 )
                 return True
             except BadRequestException as e:
@@ -64,12 +64,12 @@ class Registry:
 
                 raise e
 
-    def download_file(self, project: ProjectLocation, path: Path, local_path: Path):
+    def download_file(self, entry_location: EntryLocation, path: Path, local_path: Path):
         """Download a file from the registry."""
         result = self.api.download_file_v1_registry_download_file_post_without_preload_content(
             BodyDownloadFileV1RegistryDownloadFilePost.from_dict(
                 dict(
-                    project=project,
+                    entry_location=entry_location,
                     path=str(path),
                 )
             )
@@ -82,26 +82,28 @@ class Registry:
 
     def download(
         self,
-        project: ProjectLocation,
+        entry_location: EntryLocation,
         force: bool = False,
         show_progress: bool = False,
     ) -> Path:
-        """Download project from the registry locally."""
-        files = registry.list_files(project)
+        """Download entry from the registry locally."""
+        files = registry.list_files(entry_location)
 
-        download_path = DATA_FOLDER / "registry" / project.namespace / project.name / project.version
+        download_path = (
+            DATA_FOLDER / "registry" / entry_location.namespace / entry_location.name / entry_location.version
+        )
 
         if download_path.exists():
             if not force:
-                print(f"Project {project} already exists at {download_path}. Use --force to overwrite the project.")
+                print(f"Entry {entry_location} already exists at {download_path}. Use --force to overwrite the entry.")
                 return download_path
 
         download_path.mkdir(parents=True, exist_ok=True)
 
-        metadata = registry.info(project)
+        metadata = registry.info(entry_location)
 
         if metadata is None:
-            print(f"Project {project} not found.")
+            print(f"Entry {entry_location} not found.")
             return
 
         metadata_path = download_path / "metadata.json"
@@ -110,15 +112,15 @@ class Registry:
 
         for file in (pbar := tqdm(files, disable=not show_progress)):
             pbar.set_description(file)
-            registry.download_file(project, file, download_path / file)
+            registry.download_file(entry_location, file, download_path / file)
 
-    def list_files(self, project: ProjectLocation) -> List[str]:
-        """List files in a project in the registry.
+    def list_files(self, entry_location: EntryLocation) -> List[str]:
+        """List files in from an entry in the registry.
 
-        Return the relative paths to all files with respect to the root of the project.
+        Return the relative paths to all files with respect to the root of the entry.
         """
         return self.api.list_files_v1_registry_list_files_post(
-            BodyListFilesV1RegistryListFilesPost.from_dict(dict(project=project))
+            BodyListFilesV1RegistryListFilesPost.from_dict(dict(entry_location=entry_location))
         )
 
     def list(
@@ -127,9 +129,9 @@ class Registry:
         tags: str,
         total: int,
         show_hidden: bool,
-    ) -> List[ProjectLocation]:
-        """List and filter projects in the registry."""
-        return self.api.list_projects_v1_registry_list_projects_post(
+    ) -> List[EntryLocation]:
+        """List and filter entries in the registry."""
+        return self.api.list_entries_v1_registry_list_entries_post(
             category=category,
             tags=tags,
             total=total,

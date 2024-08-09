@@ -1,19 +1,18 @@
-import os
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional
 
-import boto3
+from openapi_client import ProjectLocation, ProjectMetadata, ProjectMetadataInput
 from openapi_client.api.registry_api import (
     BodyDownloadMetadataV1RegistryDownloadMetadataPost,
-    ProjectLocation,
-    ProjectMetadata,
+    BodyUploadMetadataV1RegistryUploadMetadataPost,
     RegistryApi,
 )
 from openapi_client.exceptions import NotFoundException
 
-import nearai
-from nearai.config import CONFIG, DATA_FOLDER
-from nearai.db import DisplayRegistry, RegistryEntry, db
+# Note: We should import nearai.config on this file to make sure the method setup_api_client is called at least once
+#       before creating RegistryApi object. This is because setup_api_client sets the default configuration for the
+#       API client that is used by Registry API.
+from nearai.config import DATA_FOLDER
 
 
 class Registry:
@@ -25,9 +24,13 @@ class Registry:
         if not self.download_folder.exists():
             self.download_folder.mkdir(parents=True, exist_ok=True)
 
-    def update(self, project: ProjectLocation, metadata: ProjectMetadata):
+    def update(self, project: ProjectLocation, metadata: ProjectMetadataInput):
         """Update metadata of a project in the registry."""
-        self.api.upload_metadata_v1_registry_upload_metadata_post()
+        result = self.api.upload_metadata_v1_registry_upload_metadata_post(
+            BodyUploadMetadataV1RegistryUploadMetadataPost(metadata=metadata, project=project)
+        )
+
+        print(result)
 
         raise NotImplementedError()
 

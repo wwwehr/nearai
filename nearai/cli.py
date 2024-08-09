@@ -7,12 +7,12 @@ import textwrap
 from dataclasses import asdict
 from pathlib import Path
 from subprocess import check_output, run
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import boto3
 import fire
 import pkg_resources
-from openapi_client import ApiClient, ProjectLocation, ProjectMetadata
+from openapi_client import ApiClient, Configuration, ProjectLocation, ProjectMetadataInput, RegistryApi
 from tabulate import tabulate
 
 import nearai
@@ -201,36 +201,37 @@ class RegistryCli:
 
         print(tabulate(table, headers="firstrow", tablefmt="simple_grid"))
 
-    def update(self, local_path: str = ".") -> None:
-        """Update metadata of a registry item."""
-        path = Path(local_path)
-
-        metadata_path = path / "metadata.json"
-
-        if not metadata_path.exists():
-            print(f"Metadata file not found: {metadata_path.absolute()}")
+    def _check_metadata(self, path: Path):
+        if not path.exists():
+            print(f"Metadata file not found: {path.absolute()}")
             print("Create a metadata file with `nearai registry metadata_template`")
             exit(1)
 
-        with open(metadata_path) as f:
-            metadata = json.load(f)
-
-        project_metadata = ProjectMetadata.model_validate(metadata)
-
-        # TODO: Get the namespace from the logged user
+    def update(self, local_path: str = ".") -> None:
+        """Update metadata of a registry item."""
+        path = Path(local_path)
 
         if CONFIG.auth is None:
             print("Please login with `nearai login`")
             exit(1)
 
+        metadata_path = path / "metadata.json"
+        self._check_metadata(metadata_path)
+
+        with open(metadata_path) as f:
+            metadata: Dict[str, Any] = json.load(f)
+
         namespace = CONFIG.auth.account_id
 
-        project_location = ProjectLocation(
-            namespace=namespace,
-            name=project_metadata.name,
-            version=project_metadata.version,
+        project_location = ProjectLocation.model_validate(
+            dict(
+                namespace=namespace,
+                name=metadata.pop("name"),
+                version=metadata.pop("version"),
+            )
         )
 
+        project_metadata = ProjectMetadataInput.model_validate(metadata)
         registry.update(project_location, project_metadata)
 
     # def upload(
@@ -609,9 +610,8 @@ class CLI:
         print(json.dumps(status))
 
 
-def main() -> None:
-    client = ApiClient()
-    client.configuration.host = "http://localhost:8081"
 
+
+def main() -> None:
     # TODO: Check for latest version and prompt to update.
     fire.Fire(CLI)

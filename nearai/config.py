@@ -1,9 +1,9 @@
 import json
 import os
-from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
+from openapi_client import ApiClient, Configuration
 from pydantic import BaseModel
 
 DATA_FOLDER = Path.home() / ".nearai"
@@ -120,3 +120,15 @@ CONFIG = CONFIG.update_with(load_config_file(local=False))
 CONFIG = CONFIG.update_with(load_config_file(local=True))
 # Update config from environment variables
 CONFIG = CONFIG.update_with(dict(os.environ), map_key=str.upper)
+
+
+def setup_api_client():
+    kwargs = {"host": CONFIG.api_url}
+    if CONFIG.auth is not None:
+        kwargs["access_token"] = f"Bearer {CONFIG.auth.model_dump_json()}"
+    configuration = Configuration(**kwargs)
+    client = ApiClient(configuration)
+    ApiClient.set_default(client)
+
+
+setup_api_client()

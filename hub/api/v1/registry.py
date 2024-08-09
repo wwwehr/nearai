@@ -1,7 +1,7 @@
 import inspect
 import re
 from os import getenv
-from typing import Annotated, Dict, List
+from typing import Annotated, Dict, List, Tuple
 
 import boto3
 import botocore
@@ -175,6 +175,7 @@ async def upload_file(
     if check_file_exists(key):
         raise HTTPException(status_code=400, detail=f"File {key} already exists.")
 
+    assert isinstance(S3_BUCKET, str)
     s3.upload_fileobj(file.file, S3_BUCKET, key)
 
     return {"status": "File uploaded", "path": key}
@@ -186,6 +187,7 @@ async def download_file(
     path: str = Body(),
 ):
     # https://stackoverflow.com/a/71126498/4950797
+    assert isinstance(S3_BUCKET, str)
     object = s3.get_object(Bucket=S3_BUCKET, Key=entry.get_key(path))
     return StreamingResponse(object["Body"].iter_chunks())
 
@@ -194,6 +196,7 @@ async def download_file(
 async def upload_metadata(registry_entry_id: int = Depends(get_or_create), metadata: EntryMetadataInput = Body()):
     with get_session() as session:
         entry = session.get(RegistryEntry, registry_entry_id)
+        assert entry is not None
 
         full_metadata = EntryMetadata(name=entry.name, version=entry.version, **metadata.model_dump())
 
@@ -205,7 +208,9 @@ async def upload_metadata(registry_entry_id: int = Depends(get_or_create), metad
         session.add(entry)
 
         # Delete all previous tags
-        session.exec(delete(Tags).where(Tags.registry_id == entry.id))
+        # Ignore type check since delete is not supported as a valid statement.
+        # https://github.com/tiangolo/sqlmodel/issues/909
+        session.exec(delete(Tags).where(Tags.registry_id == entry.id))  # type: ignore
 
         # Add the new tags
         if len(full_metadata.tags) > 0:
@@ -238,6 +243,7 @@ async def download_metadata(entry: RegistryEntry = Depends(get)) -> EntryMetadat
 async def list_files(entry: RegistryEntry = Depends(get)) -> List[str]:
     """List all files that belong to a entry."""
     key = entry.get_key() + "/"
+    assert isinstance(S3_BUCKET, str)
     objects = s3.list_objects(Bucket=S3_BUCKET, Prefix=key)
     files = [obj["Key"][len(key) :] for obj in objects.get("Contents", [])]
     return files
@@ -265,7 +271,8 @@ async def list_entries(
             if not show_hidden:
                 query = query.where(RegistryEntry.show_entry)
 
-            query = query.limit(total).order_by(RegistryEntry.id.desc())
+            order_by = RegistryEntry.id.desc()  # type: ignore
+            query = query.limit(total).order_by(order_by)
 
             result = session.exec(query).all()
             return [
@@ -277,7 +284,7 @@ async def list_entries(
 
             tags_input = ",".join(f"'{tag}'" for tag in tags_list)
 
-            query = f"""WITH FilteredRegistry AS (
+            query_text = f"""WITH FilteredRegistry AS (
                     SELECT registry.id FROM registryentry registry
                     JOIN tags ON registry.id = tags.registry_id
                     WHERE show_entry >= {1 - int(show_hidden)} AND
@@ -299,7 +306,8 @@ async def list_entries(
                     ORDER BY registry.id DESC
                 """
 
-            result = session.exec(text(query)).all()
+            result: List[Tuple[int, str, str, str, str]] = session.exec(text(query_text)).all()  # type: ignore
+            assert isinstance(result, list)
             filtered = {id: (namespace, name, version) for id, namespace, name, version, _ in result}
             final = sorted(filtered.items(), key=lambda x: x[0], reverse=True)
 

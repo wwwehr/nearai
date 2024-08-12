@@ -54,7 +54,7 @@ class Tags(SQLModel, table=True):
 
     __tablename__ = "entry_tags"
 
-    registry_id: int = Field(foreign_key="registryentry.id", primary_key=True)
+    registry_id: int = Field(foreign_key="registry_entry.id", primary_key=True)
     tag: str = Field(primary_key=True)
 
 

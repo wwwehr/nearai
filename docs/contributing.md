@@ -15,7 +15,7 @@ There are several ways you can contribute to `nearai`:
 
 * Fix outstanding issues with the existing code.
 * Submit issues related to bugs or desired new features.
-* Implement new solvers, agents, or benchmarks.
+* Implement new features (including but not limited to solvers, agents, or benchmarks).
 * Contribute to the examples or to the documentation.
 
 ## Fixing outstanding issues

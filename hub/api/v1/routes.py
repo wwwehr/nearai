@@ -86,7 +86,9 @@ def convert_request(request: ChatCompletionsRequest | CompletionsRequest):
 
 
 @v1_router.post("/completions")
-async def completions(request: CompletionsRequest = Depends(convert_request), auth: AuthToken = Depends(revokable_auth)):
+async def completions(
+    request: CompletionsRequest = Depends(convert_request), auth: AuthToken = Depends(revokable_auth)
+):
     logger.info(f"Received completions request: {request.model_dump()}")
 
     try:

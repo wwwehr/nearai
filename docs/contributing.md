@@ -37,7 +37,10 @@ already reported** (use the search bar on GitHub under Issues). Your issue shoul
 
 Once you've confirmed the bug hasn't already been reported, please include the following information in your issue so we can quickly resolve it:
 
-* Your **OS type and version** and **Python**, **PyTorch** and versions when applicable.
+* What did you do?
+* What did you expect to happen?
+* What happened instead?
+* Your **OS type and version** and **Python**, **PyTorch** and versions where applicable.
 * A short, self-contained, code snippet that allows us to reproduce the bug in
   less than 30s.
 * The *full* traceback if an exception is raised.
@@ -58,18 +61,8 @@ If there is a new feature you'd like to see in `nearai`, please open an issue an
    Whatever it is, we'd love to hear about it!
 
 2. Describe your requested feature in as much detail as possible. The more you can tell us about it, the better we'll be able to help you.
-3. Provide a *code snippet* that demonstrates the features usage.
+3. Provide a *code snippet* that demonstrates the feature usage.
 4. If the feature is related to a paper, please include a link.
-
-If your issue is well written we're already 80% of the way there by the time you create it.
-
-## Do you want to implement a new solver / agent / benchmark?
-
-Here are some technical guides for implementing solvers, agents, or benchmarks:
-
-- Implementing a new solver: TODO
-- Implementing a new agent: TODO
-- Implementing a new benchmark: TODO
 
 ## Create a Pull Request
 
@@ -80,7 +73,8 @@ unsure, it is always a good idea to open an issue to get some feedback.
 You will need basic `git` proficiency to contribute to
 `nearai`. While `git` is not the easiest tool to use, it has the greatest
 manual. Type `git --help` in a shell and enjoy! If you prefer books, [Pro
-Git](https://git-scm.com/book/en/v2) is a very good reference.
+Git](https://git-scm.com/book/en/v2) is a very good reference. We also recommend
+asking any available AGI to help you with `git`.
 
 Follow the steps below to start contributing:
 

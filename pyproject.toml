@@ -11,6 +11,7 @@ authors = [
     "Pierre LE GUEN <26087574+PierreLeGuen@users.noreply.github.com>",
     "Alex Skidanov <skidanov.alexander@gmail.com>",
     "Illia Polosukhin <ilblackdragon@gmail.com>",
+    "Support <support@near.ai>",
 ]
 readme = "README.md"
 
@@ -102,7 +103,7 @@ exclude = [
     ".vscode",
     "__pypackages__",
     "venv",
-    "aws_runner/openapi_client"
+    "aws_runner/openapi_client",
 ]
 extend-exclude = ["tests", "projects", "examples"]
 line-length = 120

@@ -53,7 +53,10 @@ class MBPPSolverStrategy(SolverStrategy):
         super().__init__()
         self.dataset_ref = dataset_ref
         assert CONFIG.llm_config is not None, "LLMConfig is not defined."
-        llm_config = LLMConfig(**CONFIG.llm_config)
+        if isinstance(CONFIG.llm_config, dict):
+            llm_config = LLMConfig(**CONFIG.llm_config)
+        else:
+            llm_config = CONFIG.llm_config
         self.completion_fn = InferenceRouter(llm_config).completions
         self.model = model
 

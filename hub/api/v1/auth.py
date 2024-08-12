@@ -30,7 +30,7 @@ class AuthToken(BaseModel):
     """Message Recipient"""
     nonce: bytes
     """Nonce of the signed message, it must be 32 bytes long."""
-    plainMsg: str  # noqa: N815
+    message: str  # noqa: N815
     """The plain message that was signed."""
 
     @field_validator("nonce")
@@ -48,7 +48,7 @@ class AuthToken(BaseModel):
                 "signature": self.signature,
                 "callback_url": self.callback_url,
                 "recipient": self.recipient,
-                "plainMsg": self.plainMsg,
+                "message": self.message,
             }
         )
 
@@ -69,7 +69,13 @@ async def get_auth(token: HTTPAuthorizationCredentials = Depends(bearer)):
 async def validate_signature(auth: AuthToken = Depends(get_auth)):
     logging.debug(f"account_id {auth.account_id}: verifying signature")
     is_valid = verify_signed_message(
-        auth.account_id, auth.public_key, auth.signature, auth.plainMsg, auth.nonce, auth.recipient, auth.callback_url
+        auth.account_id,
+        auth.public_key,
+        auth.signature,
+        auth.message,
+        auth.nonce,
+        auth.recipient,
+        auth.callback_url,
     )
     if not is_valid:
         logging.error(f"account_id {auth.account_id}: signature verification failed")
@@ -90,6 +96,6 @@ async def revokable_auth(auth: AuthToken = Depends(validate_signature)):
         raise HTTPException(status_code=401, detail="Revoked nonce")
 
     if not user_nonce:
-        db.store_nonce(auth.account_id, auth.nonce, auth.plainMsg, auth.recipient, auth.callback_url)
+        db.store_nonce(auth.account_id, auth.nonce, auth.message, auth.recipient, auth.callback_url)
 
     return auth

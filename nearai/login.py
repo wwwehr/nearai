@@ -9,7 +9,7 @@ import urllib.parse as urlparse
 from pathlib import Path
 
 import hub.api.near.sign as near
-from nearai.config import load_config_file, save_config_file
+from nearai.config import AuthData, load_config_file, save_config_file
 
 RECIPIENT = "ai.near"
 MESSAGE = "Welcome to NEAR AI"
@@ -31,20 +31,23 @@ def update_auth_config(account_id, signature, public_key, callback_url, nonce):
         callback_url,
     ):
         config = load_config_file()
-        auth = {
-            "account_id": account_id,
-            "signature": signature,
-            "public_key": public_key,
-            "callback_url": callback_url,
-            "nonce": nonce,
-            "recipient": RECIPIENT,
-            "message": MESSAGE,
-        }
 
-        config["auth"] = auth
+        auth = AuthData.model_validate(
+            {
+                "account_id": account_id,
+                "signature": signature,
+                "public_key": public_key,
+                "callback_url": callback_url,
+                "nonce": nonce,
+                "recipient": RECIPIENT,
+                "message": MESSAGE,
+            }
+        )
+
+        config["auth"] = auth.model_dump()
         save_config_file(config)
 
-        print(f"Auth data been successfully saved! You are now logged in with account ID: {account_id}")
+        print(f"Auth data has been successfully saved! You are now logged in with account ID: {account_id}")
         return True
     else:
         print("Signature verification failed. Abort")

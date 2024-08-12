@@ -12,7 +12,7 @@ If you would like to help build our future, please see our [contributing guide](
 
 The NearAI project is a toolkit to help build, measure, and deploy AI systems focused on agents.
 
-NearAI constists of:
+NearAI consists of:
 
 1. A CLI tool to interact with the NearAI registry, download agents, run them in environments, and more.
 2. A library with access to the same tools as the CLI, but to be used programmatically.

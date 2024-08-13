@@ -21,8 +21,8 @@ from openapi_client import EntryMetadata
 
 from nearai.agent import Agent
 from nearai.completion import InferenceRouter
-from nearai.config import Config
 from nearai.lib import plain_location
+from nearai.config import Config, NearAiHubConfig
 from nearai.registry import registry
 from nearai.tool_registry import ToolRegistry
 
@@ -39,11 +39,14 @@ class Environment(object):
         self._agents = agents
         self._done = False
         self._config = config
-        assert config.llm_config is not None, "LLMConfig is not defined."
-        self._inference = InferenceRouter(config.llm_config)
+        self._inference = InferenceRouter(config)
         self._user_name = config.user_name
         self._tools = ToolRegistry()
         self.register_standard_tools()
+
+        if self._config.nearai_hub is None:
+            self._config.nearai_hub = NearAiHubConfig()
+
         if create_files:
             os.makedirs(self._path, exist_ok=True)
             open(os.path.join(self._path, CHAT_FILENAME), "a").close()
@@ -176,7 +179,11 @@ class Environment(object):
         return result
 
     def completions(
-        self, model: str, messages: Iterable[ChatCompletionMessageParam], stream: bool = False, **kwargs: Any
+        self,
+        model: str,
+        messages: Iterable[ChatCompletionMessageParam],
+        stream: bool = False,
+        **kwargs: Any
     ) -> Union[ModelResponse, CustomStreamWrapper]:
         """Returns all completions for given messages using the given model."""
         return self._inference.completions(model, messages, stream=stream, **kwargs)
@@ -207,7 +214,11 @@ class Environment(object):
                     self.add_message("tool", function_response_json, tool_call_id=tool_call.id, name=function_name)
         return response
 
-    def completion(self, model: str, messages: Iterable[ChatCompletionMessageParam]) -> str:
+    def completion(
+        self,
+        model: str,
+        messages: Iterable[ChatCompletionMessageParam]
+    ) -> str:
         """Returns a completion for the given messages using the given model."""
         raw_response = self.completions(model, messages)
         assert isinstance(raw_response, ModelResponse), "Expected ModelResponse"

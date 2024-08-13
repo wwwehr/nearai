@@ -87,21 +87,26 @@ class Registry:
         entry_location: Union[str, EntryLocation],
         force: bool = False,
         show_progress: bool = False,
+        local: bool = False,
     ) -> Path:
         """Download entry from the registry locally."""
         if isinstance(entry_location, str):
             entry_location = parse_location(entry_location)
 
-        files = registry.list_files(entry_location)
-
         download_path = (
-            DATA_FOLDER / "registry" / entry_location.namespace / entry_location.name / entry_location.version
+                DATA_FOLDER / "registry" / entry_location.namespace / entry_location.name / entry_location.version
         )
 
         if download_path.exists():
             if not force:
                 print(f"Entry {entry_location} already exists at {download_path}. Use --force to overwrite the entry.")
                 return download_path
+            if local:
+                return download_path
+        elif local:
+            raise ValueError(f"Local agent {download_path} not found.")
+
+        files = registry.list_files(entry_location)
 
         download_path.mkdir(parents=True, exist_ok=True)
 

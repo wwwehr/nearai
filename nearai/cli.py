@@ -21,7 +21,7 @@ from nearai.config import CONFIG, DATA_FOLDER, update_config
 from nearai.dataset import load_dataset
 from nearai.environment import Environment
 from nearai.finetune import FinetuneCli
-from nearai.hub import hub
+from nearai.hub import Hub
 from nearai.lib import _check_metadata, parse_location
 from nearai.registry import registry
 from nearai.solvers import SolverStrategy, SolverStrategyRegistry
@@ -214,9 +214,9 @@ class EnvironmentCli:
         lines = sys.stdin.readlines()
         env.save_from_history(lines, name)
 
-    def interactive(self, agents: str, path: str, record_run: str = "true", load_env: str = "") -> None:
+    def interactive(self, agents: str, path: str, record_run: str = "true", load_env: str = "", local: bool = False) -> None:
         """Runs agent interactively with environment from given path."""
-        _agents = [load_agent(agent) for agent in agents.split(",")]
+        _agents = [load_agent(agent, local) for agent in agents.split(",")]
         env = Environment(path, _agents, CONFIG)
         env.run_interactive(record_run, load_env)
 
@@ -280,16 +280,8 @@ class HubCLI:
             kwargs (Dict[str, Any]): All cli keyword arguments
 
         """
-        hub_query = kwargs.get("query")
-        hub_endpoint = kwargs.get("endpoint", "http://127.0.0.1:8081/v1/chat/completions")
-        hub_model = kwargs.get("model", "accounts/fireworks/models/llama-v3-70b-instruct")
-        hub_provider = kwargs.get("provider", "fireworks")
-        hub_info = kwargs.get("info", False)
-
-        if not hub_query:
-            return print("Error: 'query' is required for the `hub chat` command.")
-
-        hub(hub_query, hub_endpoint, hub_model, hub_provider, hub_info)
+        hub = Hub(CONFIG)
+        hub.chat(kwargs)
 
 
 class LoginCLI:

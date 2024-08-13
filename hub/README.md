@@ -46,7 +46,7 @@ fastapi dev app.py --port 8081
 Start production server with:
 
 ```
-fastapi run app.py --port 8081
+fastapi run app.py --port 8001
 ```
 
 ## Frontend

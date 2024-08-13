@@ -45,21 +45,39 @@ def update_config(key: str, value: Any, local: bool = False) -> None:
     save_config_file(config, local)
 
 
-class LLMProviderConfig(BaseModel):
-    base_url: str
-    api_key: str
+class NearAiHubConfig(BaseModel):
+    """NearAiHub Config.
 
+    login_with_near (Optional[bool]): Indicates whether to attempt login using Near Auth.
 
-class LLMConfig(BaseModel):
-    """LLM Config.
+    api_key (Optional[str]): The API key to use if Near Auth is not being utilized
 
-    Providers: {"<provider_name>": {"base_url": "<url>", "api_key": "<api_key>"}}
+    base_url (Optional[str]): NearAI Hub url
 
-    Models: {"<model_name>": "<provider_name>:<model_path>"
+    default_provider (Optional[str]): Default provider name
+
+    default_model (Optional[str]): Default model name
+
+    custom_llm_provider (Optional[str]): provider to be used by litellm proxy
     """
 
-    providers: Dict[str, LLMProviderConfig]
-    models: Dict[str, str]
+    base_url: str = "https://api.near.ai/v1"
+    # base_url: str = "http://127.0.0.1:8081/v1"
+    default_provider: str = "fireworks"
+    default_model: str = "llama-v3-70b-instruct"
+    custom_llm_provider: str = "openai"
+    login_with_near: Optional[bool] = True
+    api_key: Optional[str] = ""
+
+
+class AuthConfig(BaseModel):
+    account_id: str
+    public_key: str
+    signature: str
+    callback_url: Optional[str]
+    message: str
+    nonce: str
+    recipient: str
 
 
 class AuthData(BaseModel):
@@ -71,6 +89,22 @@ class AuthData(BaseModel):
     recipient: str
     message: str
 
+    def generate_bearer_token(self):
+        # Required auth keys
+        required_keys = {
+            "account_id", "public_key", "signature",
+            "callback_url", "message", "nonce", "recipient"
+        }
+
+        for key in required_keys:
+            if getattr(self, key) is None:
+                raise ValueError(f"Missing required auth data: {key}")
+
+        bearer_data = {key: getattr(self, key) for key in required_keys}
+
+        return json.dumps(bearer_data)
+
+
 
 class Config(BaseModel):
     origin: Optional[str] = None
@@ -79,7 +113,8 @@ class Config(BaseModel):
     api_url: Optional[str] = None
     inference_url: str = "http://localhost:5000/v1/"
     inference_api_key: str = "n/a"
-    llm_config: Optional[LLMConfig] = None
+    nearai_hub: Optional[NearAiHubConfig] = None
+    auth: Optional[AuthConfig] = None
     confirm_commands: bool = True
     auth: Optional[AuthData] = None
 

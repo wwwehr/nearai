@@ -31,8 +31,7 @@ class HellaswagSolverStrategy(SolverStrategy):
     def __init__(self, dataset_ref: Union[Dataset, DatasetDict], model: str) -> None:  # noqa: D107
         super().__init__()
         self.dataset_ref = dataset_ref
-        assert CONFIG.llm_config is not None, "LLMConfig is not defined."
-        self.completion_fn = InferenceRouter(CONFIG.llm_config).completions
+        self.completion_fn = InferenceRouter(CONFIG.nearai_hub).completions
         self.model = model
 
     def compatible_datasets(self) -> List[str]:  # noqa: D102

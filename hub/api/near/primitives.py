@@ -5,6 +5,25 @@ import json
 import base58
 import pytz
 
+from typing import Optional
+
+PROVIDER_MODEL_SEP = "::"
+
+
+def get_provider_model(provider: Optional[str], model: str):
+    """
+    Splits the `model` string based on a predefined separator and returns the components.
+
+    Args:
+        provider (Optional[str]): The default provider name. Can be `None` if the provider
+                                  is included in the `model` string.
+        model (str): The model identifier, which may include the provider name separated by
+                     a specific delimiter (defined by `PROVIDER_MODEL_SEP`, e.g. `::`).
+    """
+    if PROVIDER_MODEL_SEP in model:
+        return model.split(PROVIDER_MODEL_SEP)
+    return provider, model
+
 
 def now():
     return datetime.datetime.now(pytz.utc)

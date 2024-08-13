@@ -27,11 +27,11 @@ class Agent(object):
         exec(self.code, d, d)
 
 
-def load_agent(name: str) -> Agent:
+def load_agent(name: str, local: bool = False) -> Agent:
     # TODO: Figure out how to integrate StreamerAgent as a Agent
     # if alias_or_name == "streamer":
     #     return StreamerAgent()
 
-    path = registry.download(name)
+    path = registry.download(name, local=local)
     assert path is not None, f"Agent {name} not found."
     return Agent.from_disk(path.as_posix())

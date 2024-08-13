@@ -144,7 +144,7 @@ nearai environment interactive <AGENT> <ENVIRONMENT_PATH>
 Example calling a local agent:
 
 ```
-nearai environment interactive agent/my-agent/v1 ~/tmp/test-agents/my-agent-v1
+nearai environment interactive agent/my-agent/v1 ~/tmp/test-agents/my-agent-v1/env0
 ```
 
 Example calling a downloaded agent:

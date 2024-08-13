@@ -4,7 +4,7 @@ from os import getenv
 from typing import Dict, Iterator, Optional
 
 from dotenv import load_dotenv
-from sqlmodel import JSON, Column, Field, PrimaryKeyConstraint, Session, SQLModel, create_engine
+from sqlmodel import JSON, Column, Field, Session, SQLModel, create_engine
 
 load_dotenv()
 
@@ -20,7 +20,6 @@ class RegistryEntry(SQLModel, table=True):
     """Entry stored in the registry."""
 
     __tablename__ = "registry_entry"
-    __table_args__ = (PrimaryKeyConstraint("namespace", "name", "version", name="unique_entry"),)
 
     id: int = Field(default=None, primary_key=True)
     namespace: str = Field(nullable=False)

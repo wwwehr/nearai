@@ -1,4 +1,4 @@
-name: CI and MkDocs Deployment
+name: CI
 
 on:
   push:

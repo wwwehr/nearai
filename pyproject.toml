@@ -86,7 +86,7 @@ mkdocstrings-python = "^1.10.7"
 mkdocs-redirects = "^1.2.1"
 mkdocs-embed-external-markdown = "^3.0.2"
 mkdocs-exclude = "^1.0.2"
-mkdocs-material = "^9.5.31"
+mkdocs-material = {extras = ["imaging"], version = "^9.5.31"}
 mkdocs-simple-hooks = "^0.1.5"
 
 [tool.poetry.scripts]

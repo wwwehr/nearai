@@ -156,7 +156,7 @@ nearai environment interactive xela-agent ~/tmp/test-agents/xela-agent-v2
 ## Running environment task
 To run without user interaction pass the task input to the task
  * command `nearai environment task <AGENT> <INPUT> <ENVIRONMENT_PATH>`.
- * example `nearai environment task xela-agent "Build a command line chess engine" ~/tmp/test-agents/chess-engine`.
+ * example `nearai environment task xela-agent "Build a command line chess engine" ~/tmp/test-agents/chess-engine/env0`.
 
 ## Saving and loading environment runs
 By default each environment run is saved to the registry. You can disable this by adding the flag `--record_run=False`.

@@ -150,7 +150,7 @@ nearai environment interactive agent/my-agent/v1 ~/tmp/test-agents/my-agent-v1/e
 Example calling a downloaded agent:
 
 ```
-nearai environment interactive xela-agent ~/tmp/test-agents/xela-agent-v2
+nearai environment interactive xela-agent ~/tmp/test-agents/xela-agent-v2/env0
 ```
 
 ## Running environment task

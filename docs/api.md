@@ -6,25 +6,7 @@
         merge_init_into_class: false 
         group_by_category: false
 
-::: nearai.cli.Host
-    options:
-        show_root_heading: true
-        merge_init_into_class: false
-        group_by_category: false
-
 ::: nearai.cli.RegistryCli
-    options:
-        show_root_heading: true
-        merge_init_into_class: false
-        group_by_category: false
-
-::: nearai.cli.SupervisorCli
-    options:
-        show_root_heading: true
-        merge_init_into_class: false
-        group_by_category: false
-
-::: nearai.cli.ServerCli
     options:
         show_root_heading: true
         merge_init_into_class: false
@@ -60,12 +42,6 @@
         merge_init_into_class: false
         group_by_category: false
 
-::: nearai.server.ServerClient
-    options:
-        show_root_heading: true
-        merge_init_into_class: false
-        group_by_category: false
-
 ::: nearai.agent.Agent
     options:
         show_root_heading: true
@@ -79,12 +55,6 @@
         group_by_category: false
 
 ::: nearai.benchmark.BenchmarkExecutor
-    options:
-        show_root_heading: true
-        merge_init_into_class: false
-        group_by_category: false
-
-::: nearai.supervisor.SupervisorClient
     options:
         show_root_heading: true
         merge_init_into_class: false

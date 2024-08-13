@@ -171,7 +171,7 @@ Environment runs can be loaded by passing the name of a previous run to  the --l
 
 ## Fine tuning
 
-We use [`torchtune`](https://github.com/pytorch/torchtune) to fine tuning models. The following command will start a fine tuning process using the `llama-3-8b-instruct` model and the `llama3` tokenizer.
+We use [`torchtune`](https://github.com/pytorch/torchtune) for fine tuning models. The following command will start a fine tuning process using the `llama-3-8b-instruct` model and the `llama3` tokenizer.
 
 ```bash
 poetry run python3 -m nearai finetune start \

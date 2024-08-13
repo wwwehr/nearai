@@ -22,7 +22,7 @@ class RegistryEntry(SQLModel, table=True):
     __tablename__ = "registry_entry"
     __table_args__ = (PrimaryKeyConstraint("namespace", "name", "version", name="unique_entry"),)
 
-    id: int = Field(default=None, unique=True)
+    id: int = Field(default=None, primary_key=True)
     namespace: str = Field(nullable=False)
     """Namespace under which the entry is stored. Usually the username (NEAR account id) of the owner."""
     name: str = Field(nullable=False)

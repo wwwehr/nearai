@@ -25,7 +25,7 @@ class MMLUSolverStrategy(SolverStrategy):
     def __init__(self, dataset_ref: Union[Dataset, DatasetDict], model: str) -> None:  # noqa: D107
         super().__init__()
         self.dataset_ref = dataset_ref
-        self.completion_fn = InferenceRouter(CONFIG.nearai_hub).completions
+        self.completion_fn = InferenceRouter(CONFIG).completions
         self.model = model
 
     def compatible_datasets(self) -> List[str]:  # noqa: D102

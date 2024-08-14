@@ -98,7 +98,7 @@ class Config(BaseModel):
     api_url: Optional[str] = None
     inference_url: str = "http://localhost:5000/v1/"
     inference_api_key: str = "n/a"
-    nearai_hub: Optional[NearAiHubConfig] = None
+    nearai_hub: Optional[NearAiHubConfig] = NearAiHubConfig()
     confirm_commands: bool = True
     auth: Optional[AuthData] = None
 

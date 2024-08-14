@@ -225,7 +225,7 @@ class EnvironmentCli:
         from nearai.environment import Environment
 
         _agents = [load_agent(agent, local) for agent in agents.split(",")]
-        if path == "":
+        if not path:
             if len(_agents) == 1:
                 path = _agents[0].path
             else:

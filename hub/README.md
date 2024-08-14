@@ -8,18 +8,26 @@ It supports multiple providers and can be easily extended to support more. Suppo
 
 ### Database setup
 
-- Make sure you have a MySql database running. Example using docker:
+-   Run a SingleStore Database. [Example using docker](https://github.com/singlestore-labs/singlestoredb-dev-image):
 
 ```bash
-docker run --name mysql -d \
-    -p 3306:3306 \
-    -e MYSQL_ROOT_PASSWORD=change-me \
-    --restart unless-stopped \
-    mysql:latest
+docker run -d --name singlestoredb-dev \
+           -e ROOT_PASSWORD="change-me" \
+           --platform linux/amd64 \
+           -p 3306:3306 -p 8080:8080 -p 9000:9000 \
+           ghcr.io/singlestore-labs/singlestoredb-dev:latest
 ```
 
-- Apply migrations available here: [link](./migrations/20240604133844_init.sql).
-  - Apply migrations using: `make apply-migrations` or `make docker-apply-migrations`, depending on your setup.
+-   Copy .env.example to .env and update DATABSE\_\* values as needed.
+-   Apply all migrations using [alembic](https://alembic.sqlalchemy.org/en/latest/).
+
+```bash
+# Install alembic
+pip install alembic
+
+# Apply migrations
+alembic upgrade head
+```
 
 ### Python server setup
 
@@ -53,25 +61,25 @@ fastapi run app.py --port 8081
 
 ### Setup
 
-- Move to `demo` directory:
+-   Move to `demo` directory:
 
 ```bash
 cd demo
 ```
 
-- Install the dependencies:
+-   Install the dependencies:
 
 ```bash
 npm install
 ```
 
-- Copy the `.env.example` file to `.env` and update the values as needed.
+-   Copy the `.env.example` file to `.env` and update the values as needed.
 
 ```bash
 cp .env.example .env
 ```
 
-- Start the next app in development mode:
+-   Start the next app in development mode:
 
 ```bash
 npm run dev

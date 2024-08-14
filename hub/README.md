@@ -18,7 +18,7 @@ docker run -d --name singlestoredb-dev \
            ghcr.io/singlestore-labs/singlestoredb-dev:latest
 ```
 
--   Copy .env.example to .env and update DATABSE\_\* values as needed.
+-   Copy .env.example to .env and update DATABASE\_\* values as needed.
 -   Apply all migrations using [alembic](https://alembic.sqlalchemy.org/en/latest/).
 
 ```bash

@@ -49,29 +49,5 @@ jobs:
     - name: Type Check
       run: ./scripts/type_check.sh
 
-  deploy-docs:
-    needs: pipeline
-    if: github.event_name == 'release' && github.event.action == 'published'
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.x'
-        
-    - name: Install poetry
-      run: pipx install poetry
-
-    - name: Install dependencies
-      run: poetry install --extras explatform --extras hub      
-        
-    - name: Build site
+    - name: Build Site
       run: ./scripts/build_mkdocs.sh
-      
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./site

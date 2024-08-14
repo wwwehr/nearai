@@ -1,23 +1,23 @@
+import importlib.metadata
 import json
 import os
 import runpy
 import sys
 from dataclasses import asdict
 from pathlib import Path
-from subprocess import run
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import boto3
 import fire
-import pkg_resources
 from openapi_client import EntryLocation, EntryMetadataInput
+from openapi_client.api.default_api import DefaultApi
 
 import nearai
 import nearai.login as nearai_login
 from nearai.agent import load_agent
 from nearai.benchmark import BenchmarkExecutor, DatasetInfo
 from nearai.clients.lambda_client import LambdaWrapper
-from nearai.config import CONFIG, DATA_FOLDER, update_config
+from nearai.config import CONFIG, update_config
 from nearai.dataset import load_dataset
 from nearai.environment import Environment
 from nearai.finetune import FinetuneCli
@@ -359,31 +359,30 @@ class CLI:
         self.tensorboard = TensorboardCli()
         self.vllm = VllmCli()
 
-    def inference(self) -> None:
-        """Submit inference task."""
-        raise NotImplementedError()
-
-    def location(self) -> None:  # noqa: D102
+    def location(self):
+        """Show location where nearai is installed."""
         print(nearai.cli_path())
 
-    def version(self) -> None:  # noqa: D102
-        # TODO: Show current commit or tag
-        print(pkg_resources.get_distribution("nearai").version)
+    def version(self):
+        """Show nearai version."""
+        print(importlib.metadata.version("nearai"))
 
-    def update(self) -> None:
-        """Update nearai version."""
-        path = DATA_FOLDER / "nearai"
 
-        if path.absolute() != nearai.cli_path().absolute():
-            print()
-            print(f"Updating nearai version installed in {path}")
-            print(f"The invoked nearai is in {nearai.cli_path()}")
-            print()
+def check_update():
+    """Check if there is a new version of nearai CLI available."""
+    try:
+        api = DefaultApi()
+        latest = api.version_v1_version_get()
+        current = importlib.metadata.version("nearai")
 
-        if path.exists():
-            run(["git", "pull"], cwd=path)
+        if latest != current:
+            print(f"New version of nearai CLI available: {latest}. Current version: {current}")
+            print("Run `pip install --upgrade nearai` to update.")
+
+    except Exception as _:
+        pass
 
 
 def main() -> None:
-    # TODO: Check for latest version and prompt to update.
+    check_update()
     fire.Fire(CLI)

@@ -1,3 +1,4 @@
+import importlib.metadata
 import json
 import logging
 import time
@@ -260,3 +261,8 @@ async def verify_revoke_nonce(auth):
     now = int(time.time() * 1000)
     if now - ts > 5 * 60 * 1000:
         raise HTTPException(status_code=401, detail="Invalid nonce")
+
+
+@v1_router.get("/version")
+async def version() -> str:
+    return importlib.metadata.version("nearai")

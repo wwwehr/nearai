@@ -18,18 +18,19 @@ import re  # noqa: F401
 import json
 
 from pydantic import BaseModel, ConfigDict, StrictStr
-from typing import Any, ClassVar, Dict, List
+from typing import Any, ClassVar, Dict, List, Optional
+from openapi_client.models.input import Input
 from typing import Optional, Set
 from typing_extensions import Self
 
-class ProjectLocation(BaseModel):
+class EmbeddingsRequest(BaseModel):
     """
-    ProjectLocation
+    Request for embeddings.
     """ # noqa: E501
-    namespace: StrictStr
-    name: StrictStr
-    version: StrictStr
-    __properties: ClassVar[List[str]] = ["namespace", "name", "version"]
+    input: Input
+    model: Optional[StrictStr] = 'fireworks::nomic-ai/nomic-embed-text-v1.5'
+    provider: Optional[StrictStr] = None
+    __properties: ClassVar[List[str]] = ["input", "model", "provider"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -49,7 +50,7 @@ class ProjectLocation(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of ProjectLocation from a JSON string"""
+        """Create an instance of EmbeddingsRequest from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -70,11 +71,19 @@ class ProjectLocation(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
+        # override the default output from pydantic by calling `to_dict()` of input
+        if self.input:
+            _dict['input'] = self.input.to_dict()
+        # set to None if provider (nullable) is None
+        # and model_fields_set contains the field
+        if self.provider is None and "provider" in self.model_fields_set:
+            _dict['provider'] = None
+
         return _dict
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of ProjectLocation from a dict"""
+        """Create an instance of EmbeddingsRequest from a dict"""
         if obj is None:
             return None
 
@@ -82,9 +91,9 @@ class ProjectLocation(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "namespace": obj.get("namespace"),
-            "name": obj.get("name"),
-            "version": obj.get("version")
+            "input": Input.from_dict(obj["input"]) if obj.get("input") is not None else None,
+            "model": obj.get("model") if obj.get("model") is not None else 'fireworks::nomic-ai/nomic-embed-text-v1.5',
+            "provider": obj.get("provider")
         })
         return _obj
 

@@ -45,8 +45,10 @@ class StreamerAgent(object):
                 print(chunk.choices[0].delta.content or "", end="")
             print()
 
+            raw_output = litellm.stream_chunk_builder(chunks, messages=messages)
+            assert raw_output is not None, "Expected llm streaming output to be not None"
             output = str(
-                cast(List[litellm.Choices], litellm.stream_chunk_builder(chunks, messages=messages).choices)[
+                cast(List[litellm.Choices], raw_output.choices)[
                     0
                 ].message.content
             )

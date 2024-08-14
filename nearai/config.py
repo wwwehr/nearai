@@ -62,7 +62,6 @@ class NearAiHubConfig(BaseModel):
     """
 
     base_url: str = "https://api.near.ai/v1"
-    # base_url: str = "http://127.0.0.1:8081/v1"
     default_provider: str = "fireworks"
     default_model: str = "llama-v3-70b-instruct"
     custom_llm_provider: str = "openai"
@@ -90,11 +89,8 @@ class AuthData(BaseModel):
     message: str
 
     def generate_bearer_token(self):
-        # Required auth keys
-        required_keys = {
-            "account_id", "public_key", "signature",
-            "callback_url", "message", "nonce", "recipient"
-        }
+        """Generates a JSON-encoded bearer token containing authentication data."""
+        required_keys = {"account_id", "public_key", "signature", "callback_url", "message", "nonce", "recipient"}
 
         for key in required_keys:
             if getattr(self, key) is None:
@@ -103,7 +99,6 @@ class AuthData(BaseModel):
         bearer_data = {key: getattr(self, key) for key in required_keys}
 
         return json.dumps(bearer_data)
-
 
 
 class Config(BaseModel):

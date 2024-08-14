@@ -89,18 +89,13 @@ class Registry:
             copyfileobj(result, f)
 
     def download(
-        self,
-        entry_location: Union[str, EntryLocation],
-        force: bool = False,
-        show_progress: bool = False
+        self, entry_location: Union[str, EntryLocation], force: bool = False, show_progress: bool = False
     ) -> Path:
         """Download entry from the registry locally."""
         if isinstance(entry_location, str):
             entry_location = parse_location(entry_location)
 
-        download_path = (
-                get_registry_folder() / entry_location.namespace / entry_location.name / entry_location.version
-        )
+        download_path = get_registry_folder() / entry_location.namespace / entry_location.name / entry_location.version
 
         if download_path.exists():
             if not force:

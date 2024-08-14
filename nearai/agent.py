@@ -1,7 +1,7 @@
 import os
 from typing import Any, Optional
 
-from nearai.registry import registry, get_registry_folder
+from nearai.registry import get_registry_folder, registry
 
 AGENT_FILENAME = "agent.py"
 
@@ -34,7 +34,7 @@ def load_agent(name: str, local: bool = False) -> Agent:
     #     return StreamerAgent()
 
     if local:
-        path = (get_registry_folder() / name)
+        path = get_registry_folder() / name
         if not path.exists():
             raise ValueError(f"Local agent {path} not found.")
     else:

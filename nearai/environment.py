@@ -21,8 +21,8 @@ from openapi_client import EntryMetadata
 
 from nearai.agent import Agent
 from nearai.completion import InferenceRouter
-from nearai.lib import plain_location
 from nearai.config import Config, NearAiHubConfig
+from nearai.lib import plain_location
 from nearai.registry import registry
 from nearai.tool_registry import ToolRegistry
 
@@ -179,11 +179,7 @@ class Environment(object):
         return result
 
     def completions(
-        self,
-        model: str,
-        messages: Iterable[ChatCompletionMessageParam],
-        stream: bool = False,
-        **kwargs: Any
+        self, model: str, messages: Iterable[ChatCompletionMessageParam], stream: bool = False, **kwargs: Any
     ) -> Union[ModelResponse, CustomStreamWrapper]:
         """Returns all completions for given messages using the given model."""
         return self._inference.completions(model, messages, stream=stream, **kwargs)
@@ -214,11 +210,7 @@ class Environment(object):
                     self.add_message("tool", function_response_json, tool_call_id=tool_call.id, name=function_name)
         return response
 
-    def completion(
-        self,
-        model: str,
-        messages: Iterable[ChatCompletionMessageParam]
-    ) -> str:
+    def completion(self, model: str, messages: Iterable[ChatCompletionMessageParam]) -> str:
         """Returns a completion for the given messages using the given model."""
         raw_response = self.completions(model, messages)
         assert isinstance(raw_response, ModelResponse), "Expected ModelResponse"

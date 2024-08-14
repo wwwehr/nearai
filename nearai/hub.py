@@ -2,11 +2,12 @@ import json
 
 import requests
 
-from nearai.config import NearAiHubConfig, Config
+from nearai.config import Config, NearAiHubConfig
 
 
 class Hub(object):
     def __init__(self, config: Config) -> None:
+        """Initializes the Hub class with the given configuration."""
         self.info = None
         self.provider = None
         self.model = None
@@ -15,6 +16,7 @@ class Hub(object):
         self._config = config
 
     def parse_hub_chat_params(self, kwargs):
+        """Parses and sets instance attributes from the given keyword arguments, using default values if needed."""
         if self._config.nearai_hub is None:
             self._config.nearai_hub = NearAiHubConfig()
 
@@ -25,6 +27,7 @@ class Hub(object):
         self.info = kwargs.get("info", False)
 
     def chat(self, kwargs):
+        """Processes a chat request by sending parameters to the NearAI Hub and printing the response."""
         try:
             self.parse_hub_chat_params(kwargs)
 
@@ -40,7 +43,7 @@ class Hub(object):
                 "frequency_penalty": 0,
                 "n": 1,
                 "messages": [{"role": "user", "content": self.query}],
-                "model": self.model
+                "model": self.model,
             }
 
             auth = self._config.auth
@@ -59,7 +62,7 @@ class Hub(object):
                 return print("Illegal NearAI Hub Config")
 
             if self.info:
-                print(f'Requesting hub using NEAR Account {auth.account_id}')
+                print(f"Requesting hub using NEAR Account {auth.account_id}")
 
             response = requests.post(self.endpoint, headers=headers, data=json.dumps(data))
 

@@ -53,6 +53,7 @@ types-regex = { version = "^2024.5.15.20240519" }
 types-setuptools = { version = "^71.1.0.20240724" }
 types-ujson = { version = "^5.10.0.20240515" }
 vllm = { version = "^0.5.3", optional = true }
+alembic = "^1.13.2"
 
 [tool.poetry.extras]
 # Experiment platform

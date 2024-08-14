@@ -63,20 +63,10 @@ class NearAiHubConfig(BaseModel):
 
     base_url: str = "https://api.near.ai/v1"
     default_provider: str = "fireworks"
-    default_model: str = "llama-v3-70b-instruct"
+    default_model: str = "fireworks::accounts/fireworks/models/llama-v3-70b-instruct"
     custom_llm_provider: str = "openai"
     login_with_near: Optional[bool] = True
     api_key: Optional[str] = ""
-
-
-class AuthConfig(BaseModel):
-    account_id: str
-    public_key: str
-    signature: str
-    callback_url: Optional[str]
-    message: str
-    nonce: str
-    recipient: str
 
 
 class AuthData(BaseModel):
@@ -109,7 +99,6 @@ class Config(BaseModel):
     inference_url: str = "http://localhost:5000/v1/"
     inference_api_key: str = "n/a"
     nearai_hub: Optional[NearAiHubConfig] = None
-    auth: Optional[AuthConfig] = None
     confirm_commands: bool = True
     auth: Optional[AuthData] = None
 

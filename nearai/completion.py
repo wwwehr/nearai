@@ -37,6 +37,8 @@ class InferenceRouter(object):
         **kwargs: Any,
     ) -> Union[ModelResponse, CustomStreamWrapper]:
         """Takes a model `provider:model_name` and a list of messages and returns all completions."""
+        if self._config.nearai_hub is None:
+            raise ValueError("Missing NearAI Hub config")
         provider, model = get_provider_model(self._config.nearai_hub.default_provider, model)
 
         auth = self._config.auth

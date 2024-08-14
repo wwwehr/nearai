@@ -34,7 +34,7 @@ class Hub(object):
             if not self.query:
                 return print("Error: 'query' is required for the `hub chat` command.")
 
-            if not self._config.nearai_hub:
+            if self._config.nearai_hub is None:
                 self._config.nearai_hub = NearAiHubConfig()
 
             data = {

@@ -22,7 +22,7 @@ from openapi_client import EntryMetadata
 
 from nearai.agent import Agent
 from nearai.completion import InferenceRouter
-from nearai.config import Config
+from nearai.config import Config, NearAiHubConfig
 from nearai.lib import plain_location
 from nearai.registry import registry
 from nearai.tool_registry import ToolRegistry
@@ -40,11 +40,14 @@ class Environment(object):
         self._agents = agents
         self._done = False
         self._config = config
-        assert config.llm_config is not None, "LLMConfig is not defined."
-        self._inference = InferenceRouter(config.llm_config)
+        self._inference = InferenceRouter(config)
         self._user_name = config.user_name
         self._tools = ToolRegistry()
         self.register_standard_tools()
+
+        if self._config.nearai_hub is None:
+            self._config.nearai_hub = NearAiHubConfig()
+
         if create_files:
             os.makedirs(self._path, exist_ok=True)
             open(os.path.join(self._path, CHAT_FILENAME), "a").close()

@@ -2,46 +2,73 @@ import json
 
 import requests
 
-from nearai.config import load_config_file
-
-config = load_config_file()
+from nearai.config import Config, NearAiHubConfig
 
 
-def hub(query, endpoint, model, provider, info):
-    try:
-        auth = config["auth"]
-        bearer_data = {
-            "account_id": auth["account_id"],
-            "public_key": auth["public_key"],
-            "signature": auth["signature"],
-            "callback_url": auth["callback_url"],
-            "message": auth["message"],
-            "nonce": auth["nonce"],
-            "recipient": auth["recipient"],
-        }
+class Hub(object):
+    def __init__(self, config: Config) -> None:
+        """Initializes the Hub class with the given configuration."""
+        self.info = None
+        self.provider = None
+        self.model = None
+        self.endpoint = None
+        self.query = None
+        self._config = config
 
-        bearer_token = json.dumps(bearer_data)
+    def parse_hub_chat_params(self, kwargs):
+        """Parses and sets instance attributes from the given keyword arguments, using default values if needed."""
+        if self._config.nearai_hub is None:
+            self._config.nearai_hub = NearAiHubConfig()
 
-        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {bearer_token}"}
+        self.query = kwargs.get("query")
+        self.endpoint = kwargs.get("endpoint", f"{self._config.nearai_hub.base_url}/chat/completions")
+        self.model = kwargs.get("model", self._config.nearai_hub.default_model)
+        self.provider = kwargs.get("provider", self._config.nearai_hub.default_provider)
+        self.info = kwargs.get("info", False)
 
-        data = {
-            "max_tokens": 256,
-            "temperature": 1,
-            "frequency_penalty": 0,
-            "n": 1,
-            "messages": [{"role": "user", "content": query}],
-            "model": model,
-            "provider": provider,
-        }
+    def chat(self, kwargs):
+        """Processes a chat request by sending parameters to the NearAI Hub and printing the response."""
+        try:
+            self.parse_hub_chat_params(kwargs)
 
-        if info:
-            print(f'Requesting hub using NEAR Account {auth["account_id"]}')
+            if not self.query:
+                return print("Error: 'query' is required for the `hub chat` command.")
 
-        response = requests.post(endpoint, headers=headers, data=json.dumps(data))
+            if self._config.nearai_hub is None:
+                self._config.nearai_hub = NearAiHubConfig()
 
-        completion = response.json()
+            data = {
+                "max_tokens": 256,
+                "temperature": 1,
+                "frequency_penalty": 0,
+                "n": 1,
+                "messages": [{"role": "user", "content": str(self.query)}],
+                "model": self.model,
+            }
 
-        print(completion["choices"][0]["message"]["content"])
+            auth = self._config.auth
 
-    except Exception as e:
-        print(f"Request failed: {e}")
+            if self._config.nearai_hub.login_with_near:
+                bearer_token = auth.generate_bearer_token()
+                headers = {"Content-Type": "application/json", "Authorization": f"Bearer {bearer_token}"}
+
+                data["provider"] = self.provider
+            elif self._config.nearai_hub.api_key:
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer {}".format(self._config.nearai_hub.api_key),
+                }
+            else:
+                return print("Illegal NearAI Hub Config")
+
+            if self.info:
+                print(f"Requesting hub using NEAR Account {auth.account_id}")
+
+            response = requests.post(self.endpoint, headers=headers, data=json.dumps(data))
+
+            completion = response.json()
+
+            print(completion["choices"][0]["message"]["content"])
+
+        except Exception as e:
+            print(f"Request failed: {e}")

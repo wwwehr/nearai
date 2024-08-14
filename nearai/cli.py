@@ -223,7 +223,7 @@ class EnvironmentCli:
             if len(_agents) == 1:
                 path = _agents[0].path
             else:
-                return print("Local path is required when running multiple agents")
+                raise ValueError("Local path is required when running multiple agents")
         env = Environment(path, _agents, CONFIG)
         env.run_interactive(record_run, load_env)
 

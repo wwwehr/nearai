@@ -214,9 +214,14 @@ class EnvironmentCli:
         lines = sys.stdin.readlines()
         env.save_from_history(lines, name)
 
-    def interactive(self, agents: str, path: str, record_run: str = "true", load_env: str = "", local: bool = False) -> None:
+    def interactive(self, agents: str, path: Optional[str] = "", record_run: str = "true", load_env: str = "", local: bool = False) -> None:
         """Runs agent interactively with environment from given path."""
         _agents = [load_agent(agent, local) for agent in agents.split(",")]
+        if path == "":
+            if len(_agents) == 1:
+                path = _agents[0].path
+            else:
+                return print("Local path is required when running multiple agents")
         env = Environment(path, _agents, CONFIG)
         env.run_interactive(record_run, load_env)
 

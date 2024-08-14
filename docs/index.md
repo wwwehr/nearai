@@ -21,7 +21,8 @@ NearAI consists of:
 This intro is split into two parts:
 
 1. [CLI Usage Guide](#cli-usage-guide)
-2. [Library Usage Guide](#library-usage-guide)
+2. [Web Usage Guide](#web-usage-guide)
+3. [Library Usage Guide](#library-usage-guide)
 
 # CLI Usage Guide
 
@@ -197,6 +198,27 @@ This will submit a new experiment. The command must be executed from a folder th
 The current commit will be used for running the command so make sure it is already available online. The diff with respect to the current commit will be applied remotely (new files are not included in the diff).
 
 On each node the environment variable `ASSIGNED_SUPERVISORS` will be available with a comma separated list of supervisors that are running the experiment. The current supervisor can be accessed via `nearai.CONFIG.supervisor_id`. See [examples/prepare_data.py](examples/prepare_data.py) for an example.
+
+# Web Usage Guide
+
+https://app.near.ai allows you to use NEAR AI Hub directly from your broweser. It currently offers a subset of the features available from the Hub.
+
+Features:
+
+- NEAR AI Login
+  - Login with your NEAR account using your favourite wallet provider.
+- Inference using the provider of your choice
+  - Chose between the best open source models.
+- Read the [registry](#registry):
+  - Datasets - https://app.near.ai/datasets
+  - Benchmarks - https://app.near.ai/benchmarks
+  - Models - https://app.near.ai/models
+  - Agents - https://app.near.ai/agents
+- View and manage your NEAR AI access keys.
+
+  - https://app.near.ai/settings
+
+Source code in: [demo](/hub/demo/)
 
 # Library Usage Guide
 

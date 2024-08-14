@@ -42,7 +42,7 @@ class Hub(object):
                 "temperature": 1,
                 "frequency_penalty": 0,
                 "n": 1,
-                "messages": [{"role": "user", "content": self.query}],
+                "messages": [{"role": "user", "content": str(self.query)}],
                 "model": self.model,
             }
 

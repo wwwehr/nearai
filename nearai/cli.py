@@ -223,6 +223,7 @@ class EnvironmentCli:
     ) -> None:
         """Runs agent interactively with environment from given path."""
         from nearai.environment import Environment
+
         _agents = [load_agent(agent, local) for agent in agents.split(",")]
         if path == "":
             if len(_agents) == 1:

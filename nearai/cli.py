@@ -12,19 +12,13 @@ import fire
 from openapi_client import EntryLocation, EntryMetadataInput
 from openapi_client.api.default_api import DefaultApi
 
-import nearai
-import nearai.login as nearai_login
 from nearai.agent import load_agent
-from nearai.benchmark import BenchmarkExecutor, DatasetInfo
 from nearai.clients.lambda_client import LambdaWrapper
 from nearai.config import CONFIG, update_config
-from nearai.dataset import load_dataset
-from nearai.environment import Environment
 from nearai.finetune import FinetuneCli
-from nearai.hub import hub
+from nearai.hub import Hub
 from nearai.lib import _check_metadata, parse_location
 from nearai.registry import registry
-from nearai.solvers import SolverStrategy, SolverStrategyRegistry
 from nearai.tensorboard_feed import TensorboardCli
 
 
@@ -158,6 +152,10 @@ class BenchmarkCli:
         It will cache the results in the database and subsequent runs will pull the results from the cache.
         If force is set to True, it will run the benchmark again and update the cache.
         """
+        from nearai.benchmark import BenchmarkExecutor, DatasetInfo
+        from nearai.dataset import load_dataset
+        from nearai.solvers import SolverStrategy, SolverStrategyRegistry
+
         # TODO(db-api): Expose an interface to cache the result of the benchmarks
         # benchmark_id = db.get_benchmark_id(dataset, solver_strategy, force, subset=subset, **solver_kwargs)
         benchmark_id = -1
@@ -187,11 +185,15 @@ class EnvironmentCli:
 
     def inspect(self, path: str) -> None:
         """Inspect environment from given path."""
+        from nearai.environment import Environment
+
         env = Environment(path, [], CONFIG, create_files=False)
         env.inspect()
 
     def save_folder(self, path: str, name: Optional[str] = None) -> None:
         """Saves all subfolders with agent task runs (must contain non-empty chat.txt)."""
+        from nearai.environment import Environment
+
         env = Environment(path, [], CONFIG, create_files=False)
         env.save_folder(name)
 
@@ -209,14 +211,25 @@ class EnvironmentCli:
         Run:
         $ history | grep "environment interactive" | sed "s:~:$HOME:g" | nearai environment save_from_history environment_interactive_runs_from_lambda_00
         """  # noqa: E501
+        from nearai.environment import Environment
+
         env = Environment("/", [], CONFIG, create_files=False)
         # Read from stdin (piped input)
         lines = sys.stdin.readlines()
         env.save_from_history(lines, name)
 
-    def interactive(self, agents: str, path: str, record_run: str = "true", load_env: str = "") -> None:
+    def interactive(
+        self, agents: str, path: Optional[str] = "", record_run: str = "true", load_env: str = "", local: bool = False
+    ) -> None:
         """Runs agent interactively with environment from given path."""
-        _agents = [load_agent(agent) for agent in agents.split(",")]
+        from nearai.environment import Environment
+
+        _agents = [load_agent(agent, local) for agent in agents.split(",")]
+        if not path:
+            if len(_agents) == 1:
+                path = _agents[0].path
+            else:
+                raise ValueError("Local path is required when running multiple agents")
         env = Environment(path, _agents, CONFIG)
         env.run_interactive(record_run, load_env)
 
@@ -230,12 +243,16 @@ class EnvironmentCli:
         load_env: str = "",
     ) -> None:
         """Runs agent non interactively with environment from given path."""
+        from nearai.environment import Environment
+
         _agents = [load_agent(agent) for agent in agents.split(",")]
         env = Environment(path, _agents, CONFIG)
         env.run_task(task, record_run, load_env, max_iterations)
 
     def run(self, agents: str, task: str, path: str) -> None:
         """Runs agent in the current environment."""
+        from nearai.environment import Environment
+
         _agents = [load_agent(agent) for agent in agents.split(",")]
         env = Environment(path, [], CONFIG)
         env.exec_command("sleep 10")
@@ -280,16 +297,8 @@ class HubCLI:
             kwargs (Dict[str, Any]): All cli keyword arguments
 
         """
-        hub_query = kwargs.get("query")
-        hub_endpoint = kwargs.get("endpoint", "http://127.0.0.1:8081/v1/chat/completions")
-        hub_model = kwargs.get("model", "accounts/fireworks/models/llama-v3-70b-instruct")
-        hub_provider = kwargs.get("provider", "fireworks")
-        hub_info = kwargs.get("info", False)
-
-        if not hub_query:
-            return print("Error: 'query' is required for the `hub chat` command.")
-
-        hub(hub_query, hub_endpoint, hub_model, hub_provider, hub_info)
+        hub = Hub(CONFIG)
+        hub.chat(kwargs)
 
 
 class LoginCLI:
@@ -305,21 +314,25 @@ class LoginCLI:
             kwargs (Dict[str, Any]): All cli keyword arguments
 
         """
+        from nearai.login import generate_and_save_signature, login_with_file_credentials, login_with_near_auth
+
         remote = kwargs.get("remote", False)
         account_id = kwargs.get("accountId", None)
         private_key = kwargs.get("privateKey", None)
 
         if not remote and account_id and private_key:
-            nearai_login.generate_and_save_signature(account_id, private_key)
+            generate_and_save_signature(account_id, private_key)
         elif not remote and account_id:
-            nearai_login.login_with_file_credentials(account_id)
+            login_with_file_credentials(account_id)
         else:
             auth_url = kwargs.get("auth_url", "https://auth.near.ai")
-            nearai_login.login_with_near_auth(remote, auth_url)
+            login_with_near_auth(remote, auth_url)
 
     def status(self):
         """Load NEAR account authorization data."""
-        nearai_login.print_login_status()
+        from nearai.login import print_login_status
+
+        print_login_status()
 
     def save(self, **kwargs):
         """Save NEAR account authorization data.
@@ -334,6 +347,8 @@ class LoginCLI:
             kwargs (Dict[str, Any]): All cli keyword arguments
 
         """
+        from nearai.login import update_auth_config
+
         account_id = kwargs.get("accountId")
         signature = kwargs.get("signature")
         public_key = kwargs.get("publicKey")
@@ -341,7 +356,7 @@ class LoginCLI:
         nonce = kwargs.get("nonce")
 
         if account_id and signature and public_key and callback_url and nonce:
-            nearai_login.update_auth_config(account_id, signature, public_key, callback_url, nonce)
+            update_auth_config(account_id, signature, public_key, callback_url, nonce)
         else:
             print("Missing data")
 
@@ -359,9 +374,11 @@ class CLI:
         self.tensorboard = TensorboardCli()
         self.vllm = VllmCli()
 
-    def location(self):
+    def location(self) -> None:  # noqa: D102
         """Show location where nearai is installed."""
-        print(nearai.cli_path())
+        from nearai import cli_path
+
+        print(cli_path())
 
     def version(self):
         """Show nearai version."""

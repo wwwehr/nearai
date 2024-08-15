@@ -19,7 +19,7 @@ DB_NAME = getenv("DATABASE_NAME")
 config.set_main_option("sqlalchemy.url", f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}")
 
 # Interpret the config file for Python logging.
-# This line sets up loggers basically.
+# This line sets up loggers.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 

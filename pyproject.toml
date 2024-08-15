@@ -2,7 +2,7 @@
 name = "nearai"
 version = "0.1.0"
 description = ""
-authors = ["Marcelo Fornet <mfornet94@gmail.com>"]
+authors = ["Support <support@near.ai>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
@@ -76,6 +76,7 @@ vllm = ["vllm", "torch"]
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.11.0"
 ruff = "^0.5.2"
+commitizen = "^3.29.0"
 
 
 [tool.poetry.group.docs.dependencies]
@@ -87,11 +88,20 @@ mkdocstrings-python = "^1.10.7"
 mkdocs-redirects = "^1.2.1"
 mkdocs-embed-external-markdown = "^3.0.2"
 mkdocs-exclude = "^1.0.2"
-mkdocs-material = {extras = ["imaging"], version = "^9.5.31"}
+mkdocs-material = { extras = ["imaging"], version = "^9.5.31" }
 mkdocs-simple-hooks = "^0.1.5"
 
 [tool.poetry.scripts]
 nearai = "nearai.cli:main"
+
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "v$version"
+version_scheme = "semver2"
+version_provider = "poetry"
+update_changelog_on_bump = true
+major_version_zero = true
 
 [build-system]
 requires = ["poetry-core"]

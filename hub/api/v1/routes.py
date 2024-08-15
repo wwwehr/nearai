@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security import HTTPBearer
 from pydantic import BaseModel, field_validator
 
+from hub.api.near.primitives import PROVIDER_MODEL_SEP, get_provider_model
 from hub.api.v1.auth import AuthToken, revokable_auth, validate_signature
 from hub.api.v1.completions import Message, Provider, get_llm_ai, handle_stream
 from hub.api.v1.sql import SqlClient
@@ -17,15 +18,9 @@ db = SqlClient()
 logger = logging.getLogger(__name__)
 security = HTTPBearer()
 
-PROVIDER_MODEL_SEP = "::"
+
 REVOKE_MESSAGE = "Are you sure? Revoking a nonce"
 REVOKE_ALL_MESSAGE = "Are you sure? Revoking all nonces"
-
-
-def get_provider_model(provider: Optional[str], model: str):
-    if PROVIDER_MODEL_SEP in model:
-        return model.split(PROVIDER_MODEL_SEP)
-    return provider, model
 
 
 class ResponseFormat(BaseModel):
@@ -42,7 +37,7 @@ class LlmRequest(BaseModel):
 
     model: str = f"fireworks{PROVIDER_MODEL_SEP}accounts/fireworks/models/mixtral-8x22b-instruct"
     """The model to use for generation."""
-    provider: Optional[str] = None
+    provider: Optional[str] = "fireworks"
     """The provider to use for generation."""
     max_tokens: Optional[int] = 1024
     """The maximum number of tokens to generate."""
@@ -62,6 +57,13 @@ class LlmRequest(BaseModel):
     """The format of the response."""
     stream: bool = False
     """Whether to stream the response."""
+
+    @field_validator("model")
+    @classmethod
+    def validate_model(cls, value: str):  # noqa: D102
+        if PROVIDER_MODEL_SEP not in value:
+            value = f"fireworks{PROVIDER_MODEL_SEP}accounts/fireworks/models/{value}"
+        return value
 
 
 class CompletionsRequest(LlmRequest):
@@ -175,8 +177,8 @@ async def get_models():
 
     for p in Provider:
         try:
-            provider_models = get_llm_ai(p.value).models.list()
-            for model in provider_models:
+            provider_models = await get_llm_ai(p.value).models.list()
+            for model in provider_models.data:
                 model_dict = model.model_dump()
                 model_dict["id"] = f"{p.value}{PROVIDER_MODEL_SEP}{model_dict['id']}"
                 all_models.append(model_dict)

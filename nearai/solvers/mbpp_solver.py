@@ -9,7 +9,7 @@ from litellm import Choices, ModelResponse
 from pydantic import BaseModel
 
 from nearai.completion import InferenceRouter
-from nearai.config import CONFIG, PROMPTS_FOLDER, LLMConfig
+from nearai.config import CONFIG, PROMPTS_FOLDER
 from nearai.solvers import SolverStrategy
 
 
@@ -52,12 +52,7 @@ class MBPPSolverStrategy(SolverStrategy):
     def __init__(self, dataset_ref: Union[Dataset, DatasetDict], model: str) -> None:  # noqa: D107
         super().__init__()
         self.dataset_ref = dataset_ref
-        assert CONFIG.llm_config is not None, "LLMConfig is not defined."
-        if isinstance(CONFIG.llm_config, dict):
-            llm_config = LLMConfig(**CONFIG.llm_config)
-        else:
-            llm_config = CONFIG.llm_config
-        self.completion_fn = InferenceRouter(llm_config).completions
+        self.completion_fn = InferenceRouter(CONFIG).completions
         self.model = model
 
     def compatible_datasets(self) -> List[str]:  # noqa: D102

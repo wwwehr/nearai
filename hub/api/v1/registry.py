@@ -132,7 +132,6 @@ class EntryMetadataInput(BaseModel):
     tags: List[str]
     details: Dict
     show_entry: bool
-    imports: List[str]
 
 
 class EntryMetadata(EntryMetadataInput):

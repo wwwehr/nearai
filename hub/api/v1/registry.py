@@ -172,9 +172,21 @@ async def download_file(
     entry: RegistryEntry = Depends(get),
     path: str = Body(),
 ):
+    source = entry.details.get("_source")
+
+    if source is None:
+        # Default source, which is S3
+        assert isinstance(S3_BUCKET, str)
+        bucket = S3_BUCKET
+        key = entry.get_key(path)
+    elif source["origin"] == "s3":
+        bucket = source["bucket"]
+        key = source["key"]
+    else:
+        raise HTTPException(status_code=400, detail=f"Unsupported source: {source}")
+
     # https://stackoverflow.com/a/71126498/4950797
-    assert isinstance(S3_BUCKET, str)
-    object = s3.get_object(Bucket=S3_BUCKET, Key=entry.get_key(path))
+    object = s3.get_object(Bucket=bucket, Key=key)
     return StreamingResponse(object["Body"].iter_chunks())
 
 
@@ -228,9 +240,22 @@ async def download_metadata(entry: RegistryEntry = Depends(get)) -> EntryMetadat
 @v1_router.post("/list_files")
 async def list_files(entry: RegistryEntry = Depends(get)) -> List[str]:
     """List all files that belong to a entry."""
-    key = entry.get_key() + "/"
-    assert isinstance(S3_BUCKET, str)
-    objects = s3.list_objects(Bucket=S3_BUCKET, Prefix=key)
+    source = entry.details.get("_source")
+
+    if source is None:
+        # Default source, which is S3
+        assert isinstance(S3_BUCKET, str)
+        bucket = S3_BUCKET
+        key = entry.get_key()
+    elif source["origin"] == "s3":
+        bucket = source["bucket"]
+        key = source["key"]
+    else:
+        raise HTTPException(status_code=400, detail=f"Unsupported source: {source}")
+
+    key = key.strip("/") + "/"
+
+    objects = s3.list_objects(Bucket=bucket, Prefix=key)
     files = [obj["Key"][len(key) :] for obj in objects.get("Contents", [])]
     return files
 

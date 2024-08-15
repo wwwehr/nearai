@@ -17,7 +17,7 @@ from nearai.clients.lambda_client import LambdaWrapper
 from nearai.config import CONFIG, DATA_FOLDER, update_config
 from nearai.finetune import FinetuneCli
 from nearai.hub import Hub
-from nearai.lib import _check_metadata, parse_location
+from nearai.lib import check_metadata, parse_location
 from nearai.registry import registry
 from nearai.tensorboard_feed import TensorboardCli
 
@@ -95,7 +95,7 @@ class RegistryCli:
             exit(1)
 
         metadata_path = path / "metadata.json"
-        _check_metadata(metadata_path)
+        check_metadata(metadata_path)
 
         with open(metadata_path) as f:
             metadata: Dict[str, Any] = json.load(f)

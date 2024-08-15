@@ -29,14 +29,11 @@ class Agent(object):
         # collect agent python files
         agent_imports = []
         for filename in os.listdir(path):
-            if filename != AGENT_FILENAME and filename.endswith('.py'):
+            if filename != AGENT_FILENAME and filename.endswith(".py"):
                 file_path = os.path.join(path, filename)
-                with open(file_path, 'r', encoding='utf-8') as file:
+                with open(file_path, "r", encoding="utf-8") as file:
                     code = file.read()
-                    agent_imports.append({
-                        'file_name': filename,
-                        'code': code
-                    })
+                    agent_imports.append({"file_name": filename, "code": code})
 
         with open(os.path.join(path, AGENT_FILENAME)) as f:
             return Agent(parts[-2], parts[-1], path, f.read(), agent_imports)
@@ -59,15 +56,15 @@ class Agent(object):
 
         # save all python code from agent folder in `agent_temp_dir`
         for object_to_import in self.imports:
-            import_file_path = os.path.join(agent_temp_dir, object_to_import['file_name'])
-            with open(import_file_path, 'w+', encoding='utf-8') as import_file:
-                import_file.write(object_to_import['code'])
+            import_file_path = os.path.join(agent_temp_dir, object_to_import["file_name"])
+            with open(import_file_path, "w+", encoding="utf-8") as import_file:
+                import_file.write(object_to_import["code"])
                 import_file.flush()  # Ensure content is written to disk
                 import_files.append(import_file_path)
 
         # save agent code in `agent_temp_dir`
         agent_file_path = os.path.join(agent_temp_dir, AGENT_FILENAME)
-        with open(agent_file_path, 'w+', encoding='utf-8') as code_file:
+        with open(agent_file_path, "w+", encoding="utf-8") as code_file:
             code_file.write(self.code)
             code_file.flush()  # Ensure content is written to disk
 

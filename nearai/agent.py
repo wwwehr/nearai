@@ -38,7 +38,7 @@ class Agent(object):
                     with open(import_file_path) as i:
                         agent_imports.append(i.read())
         else:
-            raise ValueError(f"Agent metadata not found.")
+            raise ValueError("Agent metadata not found.")
 
         with open(os.path.join(path, AGENT_FILENAME)) as f:
             return Agent(parts[-2], parts[-1], path, f.read(), agent_imports)

@@ -241,10 +241,7 @@ class Environment(object):
 
     def call_agent(self, agent_path: int, task: str) -> None:
         """Calls agent with given task."""
-        try:
-            self._agents[agent_path].run(self, task=task)
-        finally:
-            print("end!!")
+        self._agents[agent_path].run(self, task=task)
 
     def get_agents(self) -> List[Agent]:
         """Returns list of agents available in environment."""

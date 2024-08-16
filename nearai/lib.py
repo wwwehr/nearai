@@ -59,7 +59,7 @@ def log(*, target: str, **content: Any) -> None:
     print("WARNING: Logging is disabled")
 
 
-def _check_metadata(path: Path):
+def check_metadata(path: Path):
     if not path.exists():
         print(f"Metadata file not found: {path.absolute()}")
         print("Create a metadata file with `nearai registry metadata_template`")

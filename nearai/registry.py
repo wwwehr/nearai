@@ -24,6 +24,7 @@ REGISTRY_FOLDER = "registry"
 
 
 def get_registry_folder() -> Path:
+    """Path to local registry"""
     return DATA_FOLDER / REGISTRY_FOLDER
 
 
@@ -133,6 +134,10 @@ class Registry:
         otherwise it will use the metadata.json found on the root of the directory.
         """
         path = Path(local_path).absolute()
+
+        if not path.exists():
+            # try path in local registry if original path not exists
+            path = get_registry_folder() / local_path
 
         if CONFIG.auth is None:
             print("Please login with `nearai login`")

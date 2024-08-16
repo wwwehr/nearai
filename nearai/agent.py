@@ -1,39 +1,49 @@
+import json
 import os
 import runpy
 import shutil
 import sys
 import tempfile
 import time
-from typing import Any, Optional
+from pathlib import Path
+from typing import Any, Dict, Optional
 
+from nearai.lib import _check_metadata
 from nearai.registry import get_registry_folder, registry
 
 AGENT_FILENAME = "agent.py"
 
 
 class Agent(object):
-    def __init__(self, name: str, version: str, path: str, code: str, temp_dir: str):  # noqa: D107
-        self.name = name
-        self.version = version
+    def __init__(self, path: str):  # noqa: D107
+        self.name: str = ""
+        self.version: str = ""
+
         self.path = path
-        self.code = code
-        self.temp_dir = temp_dir
+        self.load_agent_metadata()
 
-    @staticmethod
-    def from_disk(path: str) -> "Agent":
-        """Path must contain alias and version.
-
-        .../agents/<alias>/<version>/agent.py
-        """
-        parts = path.split("/")
-
-        agent_temp_dir = os.path.join(tempfile.gettempdir(), str(int(time.time())))
+        temp_dir = os.path.join(tempfile.gettempdir(), str(int(time.time())))
 
         # Copy all agent files including subfolders
-        shutil.copytree(path, agent_temp_dir, dirs_exist_ok=True)
+        shutil.copytree(path, temp_dir, dirs_exist_ok=True)
 
-        with open(os.path.join(path, AGENT_FILENAME)) as f:
-            return Agent(parts[-2], parts[-1], path, f.read(), agent_temp_dir)
+        self.temp_dir = temp_dir
+
+    def load_agent_metadata(self) -> None:
+        """Load agent details from metadata.json."""
+        metadata_path = os.path.join(self.path, "metadata.json")
+        _check_metadata(Path(metadata_path))
+        with open(metadata_path) as f:
+            metadata: Dict[str, Any] = json.load(f)
+
+            try:
+                self.name = metadata["name"]
+                self.version = metadata["version"]
+            except KeyError as e:
+                raise ValueError(f"Missing key in metadata: {e}") from None
+
+        if not self.version or not self.name:
+            raise ValueError("Both 'version' and 'name' must be non-empty in metadata.")
 
     def run(self, env: Any, task: Optional[str] = None) -> None:  # noqa: D102
         context = {"env": env, "agent": self, "task": task}
@@ -55,10 +65,8 @@ def load_agent(name: str, local: bool = False) -> Agent:
 
     if local:
         path = get_registry_folder() / name
-        if not path.exists():
-            raise ValueError(f"Local agent {path} not found.")
     else:
         path = registry.download(name)
 
     assert path is not None, f"Agent {name} not found."
-    return Agent.from_disk(path.as_posix())
+    return Agent(path.as_posix())

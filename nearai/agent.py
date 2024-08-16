@@ -1,8 +1,10 @@
+import shutil
 import sys
 import os
 import runpy
 import tempfile
-from typing import Any, Dict, List, Optional
+import time
+from typing import Any, Optional
 
 from nearai.registry import get_registry_folder, registry
 
@@ -10,13 +12,12 @@ AGENT_FILENAME = "agent.py"
 
 
 class Agent(object):
-    def __init__(self, name: str, version: str, path: str, code: str, imports: List[Dict[str, str]]):  # noqa: D107
+    def __init__(self, name: str, version: str, path: str, code: str, agent_temp_dir: str):  # noqa: D107
         self.name = name
         self.version = version
         self.path = path
         self.code = code
-        # python files in the agent folder
-        self.imports = imports
+        self.temp_dir = agent_temp_dir
 
     @staticmethod
     def from_disk(path: str) -> "Agent":
@@ -26,61 +27,25 @@ class Agent(object):
         """
         parts = path.split("/")
 
-        # collect agent python files
-        agent_imports = []
-        for filename in os.listdir(path):
-            if filename != AGENT_FILENAME and filename.endswith(".py"):
-                file_path = os.path.join(path, filename)
-                with open(file_path, "r", encoding="utf-8") as file:
-                    code = file.read()
-                    agent_imports.append({"file_name": filename, "code": code})
+        agent_temp_dir = os.path.join(tempfile.gettempdir(), str(int(time.time())))
+
+        # Copy all agent files including subfolders
+        shutil.copytree(path, agent_temp_dir, dirs_exist_ok=True)
 
         with open(os.path.join(path, AGENT_FILENAME)) as f:
-            return Agent(parts[-2], parts[-1], path, f.read(), agent_imports)
+            return Agent(parts[-2], parts[-1], path, f.read(), agent_temp_dir)
 
     def run(self, env: Any, task: Optional[str] = None) -> None:  # noqa: D102
         context = {"env": env, "agent": self, "task": task}
 
-        import_files = []
-        agent_temp_dir = tempfile.gettempdir()
-
-        def run_script(script_name):
-            original_cwd = os.getcwd()
-            try:
-                os.chdir(agent_temp_dir)
-                sys.path.insert(0, agent_temp_dir)
-                runpy.run_path(script_name, init_globals=context, run_name="__main__")
-            finally:
-                os.chdir(original_cwd)
-                sys.path.pop(0)
-
-        # save all python code from agent folder in `agent_temp_dir`
-        for object_to_import in self.imports:
-            import_file_path = os.path.join(agent_temp_dir, object_to_import["file_name"])
-            with open(import_file_path, "w+", encoding="utf-8") as import_file:
-                import_file.write(object_to_import["code"])
-                import_file.flush()  # Ensure content is written to disk
-                import_files.append(import_file_path)
-
-        # save agent code in `agent_temp_dir`
-        agent_file_path = os.path.join(agent_temp_dir, AGENT_FILENAME)
-        with open(agent_file_path, "w+", encoding="utf-8") as code_file:
-            code_file.write(self.code)
-            code_file.flush()  # Ensure content is written to disk
-
-        # run all python files from agent folder
-        for import_file_path in import_files:
-            run_script(import_file_path)
-
-        # run agent
-        if agent_file_path:
-            run_script(agent_file_path)
-
-        # remove temp files
-        for import_file_path in import_files:
-            os.remove(import_file_path)
-        if agent_file_path:
-            os.remove(agent_file_path)
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(self.temp_dir)
+            sys.path.insert(0, self.temp_dir)
+            runpy.run_path(AGENT_FILENAME, init_globals=context, run_name="__main__")
+        finally:
+            os.chdir(original_cwd)
+            sys.path.pop(0)
 
 
 def load_agent(name: str, local: bool = False) -> Agent:

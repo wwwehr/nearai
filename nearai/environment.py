@@ -426,8 +426,6 @@ class Environment(object):
 
         self.clear_temp_agent_files()
 
-        print("record_run", record_run)
-
         if record_run:
             run_name = record_run if record_run and record_run != "true" else None
             self.save_to_registry(self._path, "interactive", run_id, base_id, run_name)

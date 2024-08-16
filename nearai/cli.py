@@ -116,7 +116,7 @@ class RegistryCli:
 
     def upload(self, local_path: str = ".") -> None:
         """Upload item to the registry."""
-        registry.upload(Path(local_path).absolute(), show_progress=True)
+        registry.upload(Path(local_path), show_progress=True)
 
     def download(self, entry_location: str, force: bool = False) -> None:
         """Download item."""

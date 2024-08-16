@@ -642,7 +642,7 @@ class AgentsAssistantsApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '200': "bytearray",
+            '200': "object",
             '422': "HTTPValidationError",
         }
         response_data = self.api_client.call_api(

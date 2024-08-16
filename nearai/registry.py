@@ -24,7 +24,7 @@ REGISTRY_FOLDER = "registry"
 
 
 def get_registry_folder() -> Path:
-    """Path to local registry"""
+    """Path to local registry."""
     return DATA_FOLDER / REGISTRY_FOLDER
 
 

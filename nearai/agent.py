@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from nearai.lib import _check_metadata
+from nearai.lib import check_metadata
 from nearai.registry import get_registry_folder, registry
 
 AGENT_FILENAME = "agent.py"
@@ -32,7 +32,7 @@ class Agent(object):
     def load_agent_metadata(self) -> None:
         """Load agent details from metadata.json."""
         metadata_path = os.path.join(self.path, "metadata.json")
-        _check_metadata(Path(metadata_path))
+        check_metadata(Path(metadata_path))
         with open(metadata_path) as f:
             metadata: Dict[str, Any] = json.load(f)
 

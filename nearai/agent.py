@@ -12,12 +12,12 @@ AGENT_FILENAME = "agent.py"
 
 
 class Agent(object):
-    def __init__(self, name: str, version: str, path: str, code: str, agent_temp_dir: str):  # noqa: D107
+    def __init__(self, name: str, version: str, path: str, code: str, temp_dir: str):  # noqa: D107
         self.name = name
         self.version = version
         self.path = path
         self.code = code
-        self.temp_dir = agent_temp_dir
+        self.temp_dir = temp_dir
 
     @staticmethod
     def from_disk(path: str) -> "Agent":

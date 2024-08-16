@@ -265,19 +265,28 @@ async def list_entries(
                 EntryLocation(namespace=entry.namespace, name=entry.name, version=entry.version) for entry in result
             ]
         else:
-            assert valid_tag(category)
-            assert all(valid_tag(tag) for tag in tags_list)
+            if category:
+                if not valid_tag(category):
+                    raise HTTPException(status_code=400, detail={"message": "Invalid category", "category": category})
+
+                category_condition = f"AND category = '{category}'"
+            else:
+                category_condition = ""
+
+            for tag in tags_list:
+                if not valid_tag(tag):
+                    raise HTTPException(status_code=400, detail={"message": "Invalid tag", "tag": tag})
 
             tags_input = ",".join(f"'{tag}'" for tag in tags_list)
 
             query_text = f"""WITH FilteredRegistry AS (
-                    SELECT registry.id FROM registryentry registry
-                    JOIN tags ON registry.id = tags.registry_id
-                    WHERE show_entry >= {1 - int(show_hidden)} AND
-                          tags.tag IN ({tags_input}) AND
-                          category = '{category}'
+                    SELECT registry.id FROM registry_entry registry
+                    JOIN entry_tags ON registry.id = entry_tags.registry_id
+                    WHERE show_entry >= {1 - int(show_hidden)}
+                            AND entry_tags.tag IN ({tags_input})
+                            {category_condition}
                     GROUP BY registry.id
-                    HAVING COUNT(DISTINCT tags.tag) = {len(tags_list)}
+                    HAVING COUNT(DISTINCT entry_tags.tag) = {len(tags_list)}
                     ),
                     RankedRegistry AS (
                         SELECT id, ROW_NUMBER() OVER (ORDER BY id DESC) AS col_rank
@@ -285,9 +294,9 @@ async def list_entries(
                     )
 
                     SELECT registry.id, registry.namespace, registry.name, registry.version,
-                           tags.tag FROM RankedRegistry ranked
-                    JOIN registryentry registry ON ranked.id = registry.id
-                    JOIN tags ON registry.id = tags.registry_id
+                           entry_tags.tag FROM RankedRegistry ranked
+                    JOIN registry_entry registry ON ranked.id = registry.id
+                    JOIN entry_tags ON registry.id = entry_tags.registry_id
                     WHERE ranked.col_rank <= {total}
                     ORDER BY registry.id DESC
                 """

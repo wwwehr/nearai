@@ -486,6 +486,16 @@
         "operationId": "list_entries_v1_registry_list_entries_post",
         "parameters": [
           {
+            "name": "namespace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Namespace"
+            }
+          },
+          {
             "name": "category",
             "in": "query",
             "required": false,
@@ -681,7 +691,7 @@
               "application/gzip": {
                 "schema": {
                   "type": "string",
-                  "format": "byte"
+                  "format": "binary"
                 }
               }
             }
@@ -842,7 +852,8 @@
                 "type": "null"
               }
             ],
-            "title": "Provider"
+            "title": "Provider",
+            "default": "fireworks"
           },
           "max_tokens": {
             "anyOf": [
@@ -957,7 +968,8 @@
                 "type": "null"
               }
             ],
-            "title": "Provider"
+            "title": "Provider",
+            "default": "fireworks"
           },
           "max_tokens": {
             "anyOf": [

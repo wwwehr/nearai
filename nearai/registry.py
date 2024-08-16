@@ -207,6 +207,7 @@ class Registry:
 
     def list(
         self,
+        namespace: str,
         category: str,
         tags: str,
         total: int,
@@ -214,6 +215,7 @@ class Registry:
     ) -> List[EntryLocation]:
         """List and filter entries in the registry."""
         return self.api.list_entries_v1_registry_list_entries_post(
+            namespace=namespace,
             category=category,
             tags=tags,
             total=total,

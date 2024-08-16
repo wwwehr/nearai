@@ -588,6 +588,7 @@ class RegistryApi:
     @validate_call
     def list_entries_v1_registry_list_entries_post(
         self,
+        namespace: Optional[StrictStr] = None,
         category: Optional[StrictStr] = None,
         tags: Optional[StrictStr] = None,
         total: Optional[StrictInt] = None,
@@ -608,6 +609,8 @@ class RegistryApi:
         """List Entries
 
 
+        :param namespace:
+        :type namespace: str
         :param category:
         :type category: str
         :param tags:
@@ -639,6 +642,7 @@ class RegistryApi:
         """ # noqa: E501
 
         _param = self._list_entries_v1_registry_list_entries_post_serialize(
+            namespace=namespace,
             category=category,
             tags=tags,
             total=total,
@@ -667,6 +671,7 @@ class RegistryApi:
     @validate_call
     def list_entries_v1_registry_list_entries_post_with_http_info(
         self,
+        namespace: Optional[StrictStr] = None,
         category: Optional[StrictStr] = None,
         tags: Optional[StrictStr] = None,
         total: Optional[StrictInt] = None,
@@ -687,6 +692,8 @@ class RegistryApi:
         """List Entries
 
 
+        :param namespace:
+        :type namespace: str
         :param category:
         :type category: str
         :param tags:
@@ -718,6 +725,7 @@ class RegistryApi:
         """ # noqa: E501
 
         _param = self._list_entries_v1_registry_list_entries_post_serialize(
+            namespace=namespace,
             category=category,
             tags=tags,
             total=total,
@@ -746,6 +754,7 @@ class RegistryApi:
     @validate_call
     def list_entries_v1_registry_list_entries_post_without_preload_content(
         self,
+        namespace: Optional[StrictStr] = None,
         category: Optional[StrictStr] = None,
         tags: Optional[StrictStr] = None,
         total: Optional[StrictInt] = None,
@@ -766,6 +775,8 @@ class RegistryApi:
         """List Entries
 
 
+        :param namespace:
+        :type namespace: str
         :param category:
         :type category: str
         :param tags:
@@ -797,6 +808,7 @@ class RegistryApi:
         """ # noqa: E501
 
         _param = self._list_entries_v1_registry_list_entries_post_serialize(
+            namespace=namespace,
             category=category,
             tags=tags,
             total=total,
@@ -820,6 +832,7 @@ class RegistryApi:
 
     def _list_entries_v1_registry_list_entries_post_serialize(
         self,
+        namespace,
         category,
         tags,
         total,
@@ -844,6 +857,10 @@ class RegistryApi:
 
         # process the path parameters
         # process the query parameters
+        if namespace is not None:
+            
+            _query_params.append(('namespace', namespace))
+            
         if category is not None:
             
             _query_params.append(('category', category))

@@ -40,8 +40,11 @@ def valid_identifier(identifier: str) -> str:
 tag_pattern = re.compile(r"^[a-zA-Z0-9_\-]+$")
 
 
-def valid_tag(tag: str) -> bool:
-    return tag_pattern.match(tag) is not None
+def valid_tag(tag: str) -> str:
+    result = tag_pattern.match(tag)
+    if result is None:
+        raise HTTPException(status_code=400, detail=f"Invalid tag: {repr(tag)}. Should match {tag_pattern.pattern}")
+    return result[0]
 
 
 class EntryLocation(BaseModel):
@@ -237,6 +240,7 @@ async def list_files(entry: RegistryEntry = Depends(get)) -> List[str]:
 
 @v1_router.post("/list_entries")
 async def list_entries(
+    namespace: str = "",
     category: str = "",
     tags: str = "",
     total: int = 32,
@@ -254,6 +258,9 @@ async def list_entries(
             if category:
                 query = query.where(RegistryEntry.category == category)
 
+            if namespace:
+                query = query.where(RegistryEntry.namespace == namespace)
+
             if not show_hidden:
                 query = query.where(RegistryEntry.show_entry)
 
@@ -266,17 +273,18 @@ async def list_entries(
             ]
         else:
             if category:
-                if not valid_tag(category):
-                    raise HTTPException(status_code=400, detail={"message": "Invalid category", "category": category})
-
+                category = valid_tag(category)
                 category_condition = f"AND category = '{category}'"
             else:
                 category_condition = ""
 
-            for tag in tags_list:
-                if not valid_tag(tag):
-                    raise HTTPException(status_code=400, detail={"message": "Invalid tag", "tag": tag})
+            if namespace:
+                namespace = valid_identifier(namespace)
+                namespace_condition = f"AND namespace = '{namespace}'"
+            else:
+                namespace_condition = ""
 
+            tags_list = [valid_tag(tag) for tag in tags_list]
             tags_input = ",".join(f"'{tag}'" for tag in tags_list)
 
             query_text = f"""WITH FilteredRegistry AS (
@@ -285,6 +293,7 @@ async def list_entries(
                     WHERE show_entry >= {1 - int(show_hidden)}
                             AND entry_tags.tag IN ({tags_input})
                             {category_condition}
+                            {namespace_condition}
                     GROUP BY registry.id
                     HAVING COUNT(DISTINCT entry_tags.tag) = {len(tags_list)}
                     ),

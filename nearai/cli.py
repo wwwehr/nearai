@@ -71,6 +71,7 @@ class RegistryCli:
 
     def list(
         self,
+        namespace: str = "",
         category: str = "",
         tags: str = "",
         total: int = 32,
@@ -81,7 +82,7 @@ class RegistryCli:
         tags_l = parse_tags(tags)
         tags = ",".join(tags_l)
 
-        entries = registry.list(category, tags, total, show_all)
+        entries = registry.list(namespace, category, tags, total, show_all)
 
         for entry in entries:
             print(entry)

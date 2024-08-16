@@ -40,8 +40,11 @@ def valid_identifier(identifier: str) -> str:
 tag_pattern = re.compile(r"^[a-zA-Z0-9_\-]+$")
 
 
-def valid_tag(tag: str) -> bool:
-    return tag_pattern.match(tag) is not None
+def valid_tag(tag: str) -> str:
+    result = tag_pattern.match(tag)
+    if result is None:
+        raise HTTPException(status_code=400, detail=f"Invalid tag: {repr(tag)}. Should match {tag_pattern.pattern}")
+    return result[0]
 
 
 class EntryLocation(BaseModel):
@@ -172,9 +175,21 @@ async def download_file(
     entry: RegistryEntry = Depends(get),
     path: str = Body(),
 ):
+    source = entry.details.get("_source")
+
+    if source is None:
+        # Default source, which is S3
+        assert isinstance(S3_BUCKET, str)
+        bucket = S3_BUCKET
+        key = entry.get_key(path)
+    elif source["origin"] == "s3":
+        bucket = source["bucket"]
+        key = source["key"]
+    else:
+        raise HTTPException(status_code=400, detail=f"Unsupported source: {source}")
+
     # https://stackoverflow.com/a/71126498/4950797
-    assert isinstance(S3_BUCKET, str)
-    object = s3.get_object(Bucket=S3_BUCKET, Key=entry.get_key(path))
+    object = s3.get_object(Bucket=bucket, Key=key)
     return StreamingResponse(object["Body"].iter_chunks())
 
 
@@ -228,15 +243,29 @@ async def download_metadata(entry: RegistryEntry = Depends(get)) -> EntryMetadat
 @v1_router.post("/list_files")
 async def list_files(entry: RegistryEntry = Depends(get)) -> List[str]:
     """List all files that belong to a entry."""
-    key = entry.get_key() + "/"
-    assert isinstance(S3_BUCKET, str)
-    objects = s3.list_objects(Bucket=S3_BUCKET, Prefix=key)
+    source = entry.details.get("_source")
+
+    if source is None:
+        # Default source, which is S3
+        assert isinstance(S3_BUCKET, str)
+        bucket = S3_BUCKET
+        key = entry.get_key()
+    elif source["origin"] == "s3":
+        bucket = source["bucket"]
+        key = source["key"]
+    else:
+        raise HTTPException(status_code=400, detail=f"Unsupported source: {source}")
+
+    key = key.strip("/") + "/"
+
+    objects = s3.list_objects(Bucket=bucket, Prefix=key)
     files = [obj["Key"][len(key) :] for obj in objects.get("Contents", [])]
     return files
 
 
 @v1_router.post("/list_entries")
 async def list_entries(
+    namespace: str = "",
     category: str = "",
     tags: str = "",
     total: int = 32,
@@ -254,6 +283,9 @@ async def list_entries(
             if category:
                 query = query.where(RegistryEntry.category == category)
 
+            if namespace:
+                query = query.where(RegistryEntry.namespace == namespace)
+
             if not show_hidden:
                 query = query.where(RegistryEntry.show_entry)
 
@@ -265,19 +297,30 @@ async def list_entries(
                 EntryLocation(namespace=entry.namespace, name=entry.name, version=entry.version) for entry in result
             ]
         else:
-            assert valid_tag(category)
-            assert all(valid_tag(tag) for tag in tags_list)
+            if category:
+                category = valid_tag(category)
+                category_condition = f"AND category = '{category}'"
+            else:
+                category_condition = ""
 
+            if namespace:
+                namespace = valid_identifier(namespace)
+                namespace_condition = f"AND namespace = '{namespace}'"
+            else:
+                namespace_condition = ""
+
+            tags_list = [valid_tag(tag) for tag in tags_list]
             tags_input = ",".join(f"'{tag}'" for tag in tags_list)
 
             query_text = f"""WITH FilteredRegistry AS (
-                    SELECT registry.id FROM registryentry registry
-                    JOIN tags ON registry.id = tags.registry_id
-                    WHERE show_entry >= {1 - int(show_hidden)} AND
-                          tags.tag IN ({tags_input}) AND
-                          category = '{category}'
+                    SELECT registry.id FROM registry_entry registry
+                    JOIN entry_tags ON registry.id = entry_tags.registry_id
+                    WHERE show_entry >= {1 - int(show_hidden)}
+                            AND entry_tags.tag IN ({tags_input})
+                            {category_condition}
+                            {namespace_condition}
                     GROUP BY registry.id
-                    HAVING COUNT(DISTINCT tags.tag) = {len(tags_list)}
+                    HAVING COUNT(DISTINCT entry_tags.tag) = {len(tags_list)}
                     ),
                     RankedRegistry AS (
                         SELECT id, ROW_NUMBER() OVER (ORDER BY id DESC) AS col_rank
@@ -285,9 +328,9 @@ async def list_entries(
                     )
 
                     SELECT registry.id, registry.namespace, registry.name, registry.version,
-                           tags.tag FROM RankedRegistry ranked
-                    JOIN registryentry registry ON ranked.id = registry.id
-                    JOIN tags ON registry.id = tags.registry_id
+                           entry_tags.tag FROM RankedRegistry ranked
+                    JOIN registry_entry registry ON ranked.id = registry.id
+                    JOIN entry_tags ON registry.id = entry_tags.registry_id
                     WHERE ranked.col_rank <= {total}
                     ORDER BY registry.id DESC
                 """

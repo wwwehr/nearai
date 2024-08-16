@@ -505,6 +505,16 @@
         "operationId": "list_entries_v1_registry_list_entries_post",
         "parameters": [
           {
+            "name": "namespace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Namespace"
+            }
+          },
+          {
             "name": "category",
             "in": "query",
             "required": false,
@@ -673,6 +683,51 @@
         ]
       }
     },
+    "/v1/download_environment": {
+      "post": {
+        "tags": [
+          "agents, assistants"
+        ],
+        "summary": "Download Environment",
+        "operationId": "download_environment_v1_download_environment_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_download_environment_v1_download_environment_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "application/gzip": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -692,6 +747,23 @@
   },
   "components": {
     "schemas": {
+      "Body_download_environment_v1_download_environment_post": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "entry_location": {
+            "$ref": "#/components/schemas/EntryLocation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "entry_location"
+        ],
+        "title": "Body_download_environment_v1_download_environment_post"
+      },
       "Body_download_file_v1_registry_download_file_post": {
         "properties": {
           "path": {
@@ -1073,6 +1145,32 @@
             ],
             "title": "New Message",
             "description": "A message to pass to the environment before running the agents."
+          },
+          "max_iterations": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Iterations",
+            "description": "Allow an agent to run for up to this number of iterations.",
+            "default": 10
+          },
+          "record_run": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Record Run",
+            "description": "Whether to record the run in the registry.",
+            "default": true
           }
         },
         "type": "object",

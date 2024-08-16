@@ -17,7 +17,7 @@ from nearai.clients.lambda_client import LambdaWrapper
 from nearai.config import CONFIG, update_config
 from nearai.finetune import FinetuneCli
 from nearai.hub import Hub
-from nearai.lib import _check_metadata, parse_location
+from nearai.lib import check_metadata, parse_location
 from nearai.registry import registry
 from nearai.tensorboard_feed import TensorboardCli
 
@@ -71,6 +71,7 @@ class RegistryCli:
 
     def list(
         self,
+        namespace: str = "",
         category: str = "",
         tags: str = "",
         total: int = 32,
@@ -81,7 +82,7 @@ class RegistryCli:
         tags_l = parse_tags(tags)
         tags = ",".join(tags_l)
 
-        entries = registry.list(category, tags, total, show_all)
+        entries = registry.list(namespace, category, tags, total, show_all)
 
         for entry in entries:
             print(entry)
@@ -95,7 +96,7 @@ class RegistryCli:
             exit(1)
 
         metadata_path = path / "metadata.json"
-        _check_metadata(metadata_path)
+        check_metadata(metadata_path)
 
         with open(metadata_path) as f:
             metadata: Dict[str, Any] = json.load(f)
@@ -116,7 +117,7 @@ class RegistryCli:
 
     def upload(self, local_path: str = ".") -> None:
         """Upload item to the registry."""
-        registry.upload(Path(local_path).absolute(), show_progress=True)
+        registry.upload(Path(local_path), show_progress=True)
 
     def download(self, entry_location: str, force: bool = False) -> None:
         """Download item."""

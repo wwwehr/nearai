@@ -15,7 +15,7 @@ nearai login
 ```
 
 ### 2. Remote Web Login
-In this scenario, a login link to `auth.near.ai` is generated without a callbackUrl. The command line interface (CLI) will display instructions to complete the login process. This option is convenient if you haven't used your NEAR account on the current machine but can copy the authorization link, complete the authorization on another machine, and then return to the original machine to execute the command for finalizing the login.
+In this scenario, a login link to `auth.near.ai` is generated without a callbackUrl. The NearAI CLI will display instructions to complete the login process. This option is convenient if you haven't used your NEAR account on the current machine but can copy the authorization link, complete the authorization on another machine, and then return to the original machine to execute the command for finalizing the login.
 
 **Command:**
 ```bash

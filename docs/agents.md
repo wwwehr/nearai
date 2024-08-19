@@ -6,13 +6,12 @@ Agents run in response to messages, usually from a user or another agent. Messag
 from other systems such as a scheduler or indexer.
 
 ## How to build and run a python agent on NearAI
- * [Install](https://github.com/nearai/nearai/#setup) the NearAI CLI
+ * [Install](https://github.com/nearai/nearai/#setup) the NearAI CLI.
  * Create a new folder for your agent; we recommend placing it inside your local registry `mkdir -p ~/.nearai/registry/example_agent`. 
  * Create a metadata.json file for your agent `nearai registry metadata_template ~/.nearai/registry/example_agent` and edit it.
- * Create an `agent.py` file in that folder
+ * Create an `agent.py` file in that folder.
  * Write your agent, in agent.py, using the [environment API](#the-environment-api) described below.
- * Use your agent locally using the cli and passing it a folder to write output to. 
-The execution folder is optional; by default, the initial agent's folder may be used instead.
+ * Use your agent locally using the cli and passing it a folder to write output to. The execution folder is optional; by default, the initial agent's folder may be used instead.
  * If you use a folder other than the local registry, provide the full path to the agent instead of just the agent name.
 ```shell
 nearai environment interactive AGENT [EXECUTION_FOLDER] --local

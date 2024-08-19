@@ -14,7 +14,7 @@ In the `nearai` project, a benchmark is the combination of a dataset and a solve
 
 ### Adding a solver
 
-To implement a solver, you will need to implement the [SolverStrategy](api.md#nearai.solvers.SolverStrategy) interface under the [`nearai.solver`](api.md#nearai.solver) package. The most important method the solver should implement is the [`solve`](api.md#nearai.solvers.SolverStrategy.solve) method. This method should take a datum, run your implementation specific agentic strategy / strategies, and return a result.
+To implement a solver, you will need to implement the [SolverStrategy](api.md#nearai.solvers.SolverStrategy) interface under the [`nearai.solver`](api.md#nearai.solver) module. The most important method the solver should implement is the [`solve`](api.md#nearai.solvers.SolverStrategy.solve) method. This method should take a datum, run your implementation specific agentic strategy / strategies, and return a result.
 
 ## Implementing the "3 digit addition" benchmark
 
@@ -60,7 +60,13 @@ nearai registry upload ./3_digit_addition
 
 ### Step 2: Creating the solver
 
-To create the solver, we will implement the `SolverStrategy` interface. The solver will take in a datum, parse the input, run the addition, and return the result.
+To create the solver, we will implement the `SolverStrategy` interface. The solver will take in a datum, parse the input, execute any setup for the agent, run the agent, and return the correctness of the agents result.
+
+???+ note "Remember"
+    To ensure this solver is registered with `nearai`:
+    
+    1. Write this implementation in the [`nearai.solver`](api.md#nearai.solver) module.
+    2. Import it in the `__init__.py` file in the [`nearai.solver`](api.md#nearai.solver) module.
 
 ```python
 ... imports ...
@@ -73,7 +79,7 @@ class ThreeDigitAdditionDatum(BaseModel):
 class ThreeDigitAdditionAgentSolver(SolverStrategy):
     """Solver for the 3 digit addition benchmark."""
 
-    def __init__(self, dataset_ref: Dataset, agent):
+    def __init__(self, dataset_ref: Dataset, agent: str):
         self.dataset = dataset_ref
         self.agent = agent
         self.verbose = verbose
@@ -100,4 +106,12 @@ class ThreeDigitAdditionAgentSolver(SolverStrategy):
         with open(os.path.join(path, "result.txt"), "r") as f:
             result = f.read().strip()
         return result == datum.output
+```
+
+### Step 3: Running the benchmark
+
+To run the benchmark, we will use the `nearai` CLI. We will specify the dataset and solver we want to use.
+
+```bash
+nearai benchmark run 3_digit_addition ThreeDigitAdditionAgentSolver --agent <my_agent>
 ```

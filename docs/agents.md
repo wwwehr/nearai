@@ -7,17 +7,28 @@ from other systems such as a scheduler or indexer.
 
 ## How to build and run a python agent on NearAI
  * [Install](https://github.com/nearai/nearai/#setup) the NearAI CLI
- * Create a new folder for your agent, inside your local registry `mkdir -p ~/.nearai/registry/example_agent`
+ * Create a new folder for your agent; we recommend placing it inside your local registry `mkdir -p ~/.nearai/registry/example_agent`. 
  * Create a metadata.json file for your agent `nearai registry metadata_template ~/.nearai/registry/example_agent` and edit it.
  * Create an `agent.py` file in that folder
- * Write your agent, in agent.py, using the [environment api](#the-environment-api) described below.
- * Use your agent locally using the cli and passing it a folder to write output to.
+ * Write your agent, in agent.py, using the [environment API](#the-environment-api) described below.
+ * Use your agent locally using the cli and passing it a folder to write output to. 
+The execution folder is optional; by default, the initial agent's folder may be used instead.
+ * If you use a folder other than the local registry, provide the full path to the agent instead of just the agent name.
 ```shell
-nearai environment interactive AGENT EXECUTION_FOLDER --local
+nearai environment interactive AGENT [EXECUTION_FOLDER] --local
 ```
 ```shell
 nearai environment interactive example_agent /tmp/example_agent_run_1 --local
 ```
+```shell
+nearai environment interactive example_agent --local
+```
+
+## Agent Operation and Features:
+* `interactive` mode runs the agent in an infinite loop until it is forcibly exited with a code, stopped by the user with "Ctrl+C," or terminated by typing "exit" in the chat.
+* The agent can save temporary files to track the progress of a task from the user in case the dialogue execution is interrupted. By default, the entire message history is stored in a file named `chat.txt`. The agent can add messages there by using `env.add_message()`. Learn more about [the environment API](#the-environment-api).
+* During its operation, the agent creates a file named `.next_agent`, which stores the role of the next participant expected in the dialogue (either `user` or `agent`) during the next iteration of the loop. The agent can control this value using `env.set_next_actor()`.
+* The agent can use local imports from the home folder or its subfolders. It is executed from a temporary folder within a temporary environment.
 
 ## Example agent.py
 ```python
@@ -39,6 +50,9 @@ Download an agent by name
 ```shell
 nearai registry download flatirons.near/xela-agent/5
 ```
+
+The `--force` flag allows you to overwrite the local agent with the version from the registry.
+
 ⚠️ Warning: Review the agent code before running it!
 
 ### Running an agent interactively
@@ -61,12 +75,12 @@ nearai environment task flatirons.near/xela-agent/5 "Build a command line chess 
 ```
 
 
-## The environment api
+## The Environment API
 Your agent will receive an `env` object that has the following methods:
 
  * `request_user_input`: tell the agent that it is the user's turn, stop iterating.
  * `completion`: request inference completions from a provider and model.
-  Model format is `PROVIDER::MODEL`. By default the provider is Fireworks and the model is llama-v3-70b-instruct.
+The model format can be either `PROVIDER::MODEL` or simply `MODEL`. By default the provider is `Fireworks` and the model is `llama-v3-70b-instruct`.
 
  * `list_messages` - returns the list of messages in the conversation. 
 You have full control to add and remove messages from this list.
@@ -135,6 +149,8 @@ response = env.completions_and_run_tools("llama-v3p1-405b-instruct", messages, t
 
  * You must be logged in to upload, `nearai login`
  * Upload the agent `nearai registry upload ~/.nearai/registry/example_agent`
+
+⚠️ You can't remove or overwrite a file once it's uploaded, but you can hide the entire agent by setting the `"show_entry": false` field.
 
 ## Running an agent remotely through the CLI
 Agents can be run through the CLI using the `nearai environment run_remote` command.

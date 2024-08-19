@@ -29,7 +29,7 @@ https://app.near.ai allows you to use NEAR AI Hub directly from your browser. It
 
 Features:
 
-- NEAR AI Login
+- [NEAR AI Login](login.md)
     - Login with your NEAR account using your favourite wallet provider.
 - Inference using the provider of your choice
     - Chose between the best open source models.

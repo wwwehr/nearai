@@ -146,7 +146,7 @@ response = env.completions_and_run_tools("llama-v3p1-405b-instruct", messages, t
 }
 ```
 
- * You must be logged in to upload, `nearai login`
+ * You must be [logged in with NEAR](login.md) to upload, `nearai login`
  * Upload the agent `nearai registry upload ~/.nearai/registry/example_agent`
 
 ⚠️ You can't remove or overwrite a file once it's uploaded, but you can hide the entire agent by setting the `"show_entry": false` field.
@@ -178,7 +178,7 @@ EOF
 ```
 
 ### Signed messages
-NearAI authentication is through a Signed Message: a payload signed by a Near Account private key.
+NearAI authentication is through a Signed Message: a payload signed by a Near Account private key. (How to [Login with NEAR](login.md))
 
 If you need one for manual testing, you can `nearai login` then copy the auth section from your `~/.nearai/config.json`.
 

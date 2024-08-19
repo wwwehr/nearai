@@ -60,9 +60,6 @@ class Tags(SQLModel, table=True):
 engine = create_engine(f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}")
 
 
-SQLModel.metadata.create_all(engine)
-
-
 @contextmanager
 def get_session() -> Iterator[Session]:
     with Session(engine) as session:

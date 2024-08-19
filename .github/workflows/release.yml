@@ -62,7 +62,6 @@ jobs:
     
     - name: Create release
       uses: actions/create-release@v1
-      if: ${{ github.event.inputs.make-release == 'true' }}
       with:
         tag_name: ${{ env.REVISION }}
         body_path: "body.md"

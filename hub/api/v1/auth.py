@@ -1,4 +1,3 @@
-import json
 import logging
 from typing import Optional
 
@@ -37,20 +36,6 @@ class AuthToken(BaseModel):
     @classmethod
     def validate_and_convert_nonce(cls, value: str):  # noqa: D102
         return validate_nonce(value)
-
-    # allow auth to be passed along to other services - needs review
-    def json(self):
-        """Deprecated. For use by tests. Return the JSON representation of the object."""
-        return json.dumps(
-            {
-                "account_id": self.account_id,
-                "public_key": self.public_key,
-                "signature": self.signature,
-                "callback_url": self.callback_url,
-                "recipient": self.recipient,
-                "message": self.message,
-            }
-        )
 
 
 async def get_auth(token: HTTPAuthorizationCredentials = Depends(bearer)):

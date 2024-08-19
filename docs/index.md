@@ -55,14 +55,14 @@ The registry is a place to store models, datasets, agents, and environments (mor
     The registry is backed by an S3 bucket with metadata stored in a database.
 
 To upload an item to the registry, you need a directory containing a metadata.json file. The metadata.json file describes
-the item, and all the other files in the directory make up the item. For an agent that is one `agent.py` file, for a 
+the item, and all the other files in the directory make up the item. For an agent that is one `agent.py` file, for a
 dataset it may be hundreds of files.
 
 The metadata_template command will create a template for you to fill in.
 ```
 nearai registry metadata_template <ITEM_LOCAL_DIRECTORY_PATH>
 ```
-Fill in name, version, category and any other fields for which you have values. 
+Fill in name, version, category and any other fields for which you have values.
 The current categories are: `model`, `dataset`, `agent`, `environment`.
 
 ```json
@@ -85,25 +85,34 @@ Upload an element to the registry using:
 nearai registry upload <ITEM_LOCAL_DIRECTORY_PATH>
 ```
 
+You can list elements in the registry using several filters:
+
+```shell
+nearai registry list  --namespace <NAMESPACE> \
+                      --category <CATEGORY> \
+                      --tags <COMMA_SEPARTED_LIST_OF_TAGS>
+                      --show_all
+```
+
 Check the item is available by listing all elements in the registry of that category:
 
-```
-nearai registry list --category agent
+```shell
+nearai registry list --namespace near.ai --category agent
 ```
 
 Show only items with the tag `quine` and `python`:
 
-```
+```shell
 nearai registry list --tags quine,python
 ```
 
-Download this element locally. To download refer to the item by <author>/<name>/<version>. Trying to download an item that was previously downloaded is a no-op.
+Download this element locally. To download refer to the item by <namespace>/<name>/<version>. Trying to download an item that was previously downloaded is a no-op.
 
 ```
 nearai registry download zavodil.near/hello-world-agent/1
 ```
 
-!!! tip 
+!!! tip
     If you start downloading and item, and cancel the download midway, you should delete the folder at `~/.nearai/registry/` to trigger a new download.
 
 Update the metadata of an item with the registry update command
@@ -230,4 +239,4 @@ Source code in: [demo](/hub/demo/)
 
 You can import `nearai` as a library in your python code. The main features are:
 
-- Download/upload models and datasets from the registry. See [examples/prepare_data.py](examples/prepare_data.py).
+- Download/upload models and datasets from the registry. See [examples/prepare_data.py](https://github.com/nearai/nearai/blob/main/examples/prepare_data.py).

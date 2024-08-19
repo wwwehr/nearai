@@ -238,15 +238,21 @@ class EnvironmentCli:
         self,
         agents: str,
         task: str,
-        path: str,
+        path: Optional[str] = "",
         max_iterations: int = 10,
         record_run: str = "true",
         load_env: str = "",
+        local: bool = False,
     ) -> None:
         """Runs agent non interactively with environment from given path."""
         from nearai.environment import Environment
 
-        _agents = [load_agent(agent) for agent in agents.split(",")]
+        _agents = [load_agent(agent, local) for agent in agents.split(",")]
+        if not path:
+            if len(_agents) == 1:
+                path = _agents[0].path
+            else:
+                raise ValueError("Local path is required when running multiple agents")
         env = Environment(path, _agents, CONFIG)
         env.run_task(task, record_run, load_env, max_iterations)
 

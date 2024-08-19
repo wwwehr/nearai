@@ -123,6 +123,7 @@ extra_css:
 nav:
   - Getting Started: 
     - Welcome To NearAI Docs: 'index.md'
+    - Building and running a benchmark: 'benchmarking.md'
     - API Reference: 'api.md'
     - Contributing: 'contributing.md'
 plugins:
@@ -138,3 +139,4 @@ plugins:
             members_order: alphabetical
             allow_inspection: true
             show_bases: true
+            show_submodules: true

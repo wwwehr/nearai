@@ -5,12 +5,14 @@ import runpy
 import sys
 from dataclasses import asdict
 from pathlib import Path
+from textwrap import fill
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import boto3
 import fire
 from openapi_client import EntryLocation, EntryMetadataInput
 from openapi_client.api.default_api import DefaultApi
+from tabulate import tabulate
 
 from nearai.agent import load_agent
 from nearai.clients.lambda_client import LambdaWrapper
@@ -83,10 +85,28 @@ class RegistryCli:
         tags_l = parse_tags(tags)
         tags = ",".join(tags_l)
 
-        entries = registry.list(namespace, category, tags, total, show_all, show_latest_version)
+        entries = registry.list(namespace, category, tags, total + 1, show_all, show_latest_version)
 
+        more_rows = len(entries) > total
+        entries = entries[:total]
+
+        header = ["entry", "category", "description", "tags"]
+
+        table = []
         for entry in entries:
-            print(entry)
+            table.append(
+                [
+                    fill(f"{entry.namespace}/{entry.name}/{entry.version}"),
+                    entry.category,
+                    fill(entry.description, 50),
+                    ", ".join(entry.tags),
+                ]
+            )
+
+        if more_rows:
+            table.append(["...", "...", "...", "..."])
+
+        print(tabulate(table, headers=header, tablefmt="simple_grid"))
 
     def update(self, local_path: str = ".") -> None:
         """Update metadata of a registry item."""

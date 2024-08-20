@@ -3,7 +3,7 @@ from pathlib import Path
 from shutil import copyfileobj
 from typing import Any, Dict, List, Optional, Union
 
-from openapi_client import EntryLocation, EntryMetadata, EntryMetadataInput
+from openapi_client import EntryInformation, EntryLocation, EntryMetadata, EntryMetadataInput
 from openapi_client.api.registry_api import (
     BodyDownloadFileV1RegistryDownloadFilePost,
     BodyDownloadMetadataV1RegistryDownloadMetadataPost,
@@ -224,7 +224,7 @@ class Registry:
         total: int,
         show_hidden: bool,
         show_latest_version: bool,
-    ) -> List[EntryLocation]:
+    ) -> List[EntryInformation]:
         """List and filter entries in the registry."""
         return self.api.list_entries_v1_registry_list_entries_post(
             namespace=namespace,

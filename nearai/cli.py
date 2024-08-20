@@ -97,9 +97,9 @@ class RegistryCli:
             table.append(
                 [
                     fill(f"{entry.namespace}/{entry.name}/{entry.version}"),
-                    entry.category,
+                    fill(entry.category, 20),
                     fill(entry.description, 50),
-                    ", ".join(entry.tags),
+                    fill(", ".join(entry.tags), 20),
                 ]
             )
 

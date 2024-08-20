@@ -351,7 +351,7 @@ async def list_entries(
                     ORDER BY registry.id DESC
                 """
 
-        for id, namespace, name, version, category, description, details in session.exec(text(query_text)).all():
+        for id, namespace, name, version, category, description, details in session.exec(text(query_text)).all():  # type: ignore
             entries_info.append(
                 EntryInformation(
                     id=id,
@@ -368,7 +368,7 @@ async def list_entries(
         # Get the tags of all entries
         ids = [entry.id for entry in entries_info]
 
-        q_tags = select(Tags).where(Tags.registry_id.in_(ids))
+        q_tags = select(Tags).where(Tags.registry_id.in_(ids))  # type: ignore
         q_tags_r = session.exec(q_tags).all()
 
         q_tags_dict: Dict[int, List[str]] = defaultdict(list)

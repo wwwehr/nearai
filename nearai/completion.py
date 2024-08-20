@@ -8,7 +8,7 @@ from openai.types.chat import ChatCompletion, ChatCompletionMessageParam
 
 from hub.api.near.primitives import get_provider_model
 
-from .config import CONFIG, Config, NearAiHubConfig
+from .config import CONFIG, AuthData, Config, NearAiHubConfig
 
 
 def create_completion_fn(model: str) -> Callable[..., ChatCompletion]:
@@ -34,6 +34,7 @@ class InferenceRouter(object):
         messages: Iterable[ChatCompletionMessageParam],
         stream: bool = False,
         temperature: Optional[float] = None,
+        auth: Optional[AuthData] = None,
         **kwargs: Any,
     ) -> Union[ModelResponse, CustomStreamWrapper]:
         """Takes a model `provider:model_name` and a list of messages and returns all completions."""
@@ -41,7 +42,9 @@ class InferenceRouter(object):
             raise ValueError("Missing NearAI Hub config")
         provider, model = get_provider_model(self._config.nearai_hub.default_provider, model)
 
-        auth = self._config.auth
+        if auth is None:
+            auth = self._config.auth
+
         bearer_data = {
             key: getattr(auth, key)
             for key in ["account_id", "public_key", "signature", "callback_url", "message", "nonce", "recipient"]

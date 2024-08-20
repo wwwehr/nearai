@@ -1,6 +1,8 @@
+import json
 import re
+from collections import defaultdict
 from os import getenv
-from typing import Annotated, Dict, List, Tuple
+from typing import Annotated, Any, Dict, List, Tuple
 
 import boto3
 import botocore
@@ -238,6 +240,17 @@ async def list_files(entry: RegistryEntry = Depends(get)) -> List[str]:
     return files
 
 
+class EntryInformation(BaseModel):
+    id: int
+    namespace: str
+    name: str
+    version: str
+    category: str
+    description: str
+    details: Dict[str, Any]
+    tags: List[str]
+
+
 @v1_router.post("/list_entries")
 async def list_entries(
     namespace: str = "",
@@ -245,13 +258,14 @@ async def list_entries(
     tags: str = "",
     total: int = 32,
     show_hidden: bool = False,
-) -> List[EntryLocation]:
-    # TODO: Return metadata instead of location to show the information in the cli
+) -> List[EntryInformation]:
     # TODO: Return only the latest version of each entry (order by id)
 
     tags_list = list({tag for tag in tags.split(",") if tag})
 
     with get_session() as session:
+        entries_info: List[EntryInformation] = []
+
         if len(tags_list) == 0:
             query = select(RegistryEntry)
 
@@ -267,10 +281,21 @@ async def list_entries(
             order_by = RegistryEntry.id.desc()  # type: ignore
             query = query.limit(total).order_by(order_by)
 
-            result = session.exec(query).all()
-            return [
-                EntryLocation(namespace=entry.namespace, name=entry.name, version=entry.version) for entry in result
-            ]
+            entries = session.exec(query).all()
+
+            for entry in entries:
+                info = EntryInformation(
+                    id=entry.id,
+                    namespace=entry.namespace,
+                    name=entry.name,
+                    version=entry.version,
+                    category=entry.category,
+                    description=entry.description,
+                    details=entry.details,
+                    tags=[],
+                )
+                entries_info.append(info)
+
         else:
             if category:
                 category = valid_tag(category)
@@ -303,19 +328,39 @@ async def list_entries(
                     )
 
                     SELECT registry.id, registry.namespace, registry.name, registry.version,
-                           entry_tags.tag FROM RankedRegistry ranked
+                           registry.category, registry.description, registry.details FROM RankedRegistry ranked
                     JOIN registry_entry registry ON ranked.id = registry.id
-                    JOIN entry_tags ON registry.id = entry_tags.registry_id
                     WHERE ranked.col_rank <= {total}
                     ORDER BY registry.id DESC
                 """
 
-            result: List[Tuple[int, str, str, str, str]] = session.exec(text(query_text)).all()  # type: ignore
-            assert isinstance(result, list)
-            filtered = {id: (namespace, name, version) for id, namespace, name, version, _ in result}
-            final = sorted(filtered.items(), key=lambda x: x[0], reverse=True)
+            for id, namespace, name, version, category, description, details in session.exec(text(query_text)).all():
+                entries_info.append(
+                    EntryInformation(
+                        id=id,
+                        namespace=namespace,
+                        name=name,
+                        version=version,
+                        category=category,
+                        description=description,
+                        details=json.loads(details),
+                        tags=[],
+                    )
+                )
 
-            return [
-                EntryLocation(namespace=namespace, name=name, version=version)
-                for _, (namespace, name, version) in final
-            ]
+        # Get the tags of all entries
+        ids = [entry.id for entry in entries_info]
+
+        q_tags = select(Tags).where(Tags.registry_id.in_(ids))
+        q_tags_r = session.exec(q_tags).all()
+
+        q_tags_dict: Dict[int, List[str]] = defaultdict(list)
+        for tag in q_tags_r:
+            q_tags_dict[tag.registry_id].append(tag.tag)
+
+        for entry in entries_info:
+            entry.tags = q_tags_dict[entry.id]
+
+        entries_info.sort(key=lambda x: x.id, reverse=True)
+
+        return entries_info

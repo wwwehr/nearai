@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nearai"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["Support <support@near.ai>"]
 readme = "README.md"
@@ -58,13 +58,7 @@ alembic = "^1.13.2"
 [tool.poetry.extras]
 # Experiment platform
 explatform = ["flask", "fabric", "gunicorn", "requests"]
-hub = [
-    "cryptography",
-    "fastapi-cli",
-    "fastapi",
-    "python-dotenv",
-    "sqlmodel",
-]
+hub = ["cryptography", "fastapi-cli", "fastapi", "python-dotenv", "sqlmodel"]
 torch = ["torch", "torchao", "torchtune"]
 vllm = ["vllm", "torch"]
 

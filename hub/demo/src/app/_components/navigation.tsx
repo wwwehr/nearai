@@ -59,7 +59,7 @@ export function Navigation() {
             </div>
           </div>
         </div>
-        <div>
+        <div className="flex flex-col gap-3">
           {store.isAuthenticated() && (
             <Button
               className="w-full"
@@ -72,6 +72,14 @@ export function Navigation() {
             </Button>
           )}
           {!store.isAuthenticated() && <NearLogin />}
+
+          <Link
+            className="self-center text-xs underline"
+            href="/terms-and-conditions.pdf"
+            target="_blank"
+          >
+            Terms & Conditions
+          </Link>
         </div>
       </div>
     </HydrationZustand>

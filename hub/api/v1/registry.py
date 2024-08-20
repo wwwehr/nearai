@@ -2,7 +2,7 @@ import json
 import re
 from collections import defaultdict
 from os import getenv
-from typing import Annotated, Any, Dict, List, Tuple
+from typing import Annotated, Any, Dict, List
 
 import boto3
 import botocore
@@ -256,64 +256,56 @@ async def list_entries(
     namespace: str = "",
     category: str = "",
     tags: str = "",
-    total: int = 32,
+    total: int = 16,
     show_hidden: bool = False,
+    show_latest_version: bool = True,
 ) -> List[EntryInformation]:
-    # TODO: Return only the latest version of each entry (order by id)
-
     tags_list = list({tag for tag in tags.split(",") if tag})
+
+    if category:
+        category = valid_tag(category)
+        category_condition = f"AND category = '{category}'"
+    else:
+        category_condition = ""
+
+    if namespace:
+        namespace = valid_identifier(namespace)
+        namespace_condition = f"AND namespace = '{namespace}'"
+    else:
+        namespace_condition = ""
+
+    latest_version_condition = (
+        """JOIN (SELECT MAX(id) as id FROM registry_entry GROUP BY namespace, name) last_entry
+             ON last_entry.id = registry.id"""
+        if show_latest_version
+        else ""
+    )
 
     with get_session() as session:
         entries_info: List[EntryInformation] = []
 
         if len(tags_list) == 0:
-            query = select(RegistryEntry)
-
-            if category:
-                query = query.where(RegistryEntry.category == category)
-
-            if namespace:
-                query = query.where(RegistryEntry.namespace == namespace)
-
-            if not show_hidden:
-                query = query.where(RegistryEntry.show_entry)
-
-            order_by = RegistryEntry.id.desc()  # type: ignore
-            query = query.limit(total).order_by(order_by)
-
-            entries = session.exec(query).all()
-
-            for entry in entries:
-                info = EntryInformation(
-                    id=entry.id,
-                    namespace=entry.namespace,
-                    name=entry.name,
-                    version=entry.version,
-                    category=entry.category,
-                    description=entry.description,
-                    details=entry.details,
-                    tags=[],
-                )
-                entries_info.append(info)
+            query_text = f"""
+            SELECT registry.id, registry.namespace, registry.name, registry.version,
+            registry.category, registry.description, registry.details
+            FROM registry_entry registry
+            {latest_version_condition}
+            WHERE show_entry >= {1 - int(show_hidden)}
+                  {category_condition}
+                  {namespace_condition}
+            ORDER BY registry.id DESC
+            LIMIT {total}
+            """
 
         else:
-            if category:
-                category = valid_tag(category)
-                category_condition = f"AND category = '{category}'"
-            else:
-                category_condition = ""
-
-            if namespace:
-                namespace = valid_identifier(namespace)
-                namespace_condition = f"AND namespace = '{namespace}'"
-            else:
-                namespace_condition = ""
-
             tags_list = [valid_tag(tag) for tag in tags_list]
             tags_input = ",".join(f"'{tag}'" for tag in tags_list)
 
-            query_text = f"""WITH FilteredRegistry AS (
-                    SELECT registry.id FROM registry_entry registry
+            query_text = f"""WITH
+                    FilteredRegistry AS (
+                    SELECT registry.id
+                    FROM registry_entry registry
+                    {latest_version_condition}
                     JOIN entry_tags ON registry.id = entry_tags.registry_id
                     WHERE show_entry >= {1 - int(show_hidden)}
                             AND entry_tags.tag IN ({tags_input})
@@ -334,19 +326,19 @@ async def list_entries(
                     ORDER BY registry.id DESC
                 """
 
-            for id, namespace, name, version, category, description, details in session.exec(text(query_text)).all():
-                entries_info.append(
-                    EntryInformation(
-                        id=id,
-                        namespace=namespace,
-                        name=name,
-                        version=version,
-                        category=category,
-                        description=description,
-                        details=json.loads(details),
-                        tags=[],
-                    )
+        for id, namespace, name, version, category, description, details in session.exec(text(query_text)).all():
+            entries_info.append(
+                EntryInformation(
+                    id=id,
+                    namespace=namespace,
+                    name=name,
+                    version=version,
+                    category=category,
+                    description=description,
+                    details=json.loads(details),
+                    tags=[],
                 )
+            )
 
         # Get the tags of all entries
         ids = [entry.id for entry in entries_info]

@@ -212,6 +212,7 @@ class Registry:
         tags: str,
         total: int,
         show_hidden: bool,
+        show_latest_version: bool,
     ) -> List[EntryLocation]:
         """List and filter entries in the registry."""
         return self.api.list_entries_v1_registry_list_entries_post(
@@ -220,6 +221,7 @@ class Registry:
             tags=tags,
             total=total,
             show_hidden=show_hidden,
+            show_latest_version=show_latest_version,
         )
 
 

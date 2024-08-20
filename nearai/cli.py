@@ -76,13 +76,14 @@ class RegistryCli:
         tags: str = "",
         total: int = 32,
         show_all: bool = False,
+        show_latest_version: bool = True,
     ) -> None:
         """List available items."""
         # Make sure tags is a comma-separated list of tags
         tags_l = parse_tags(tags)
         tags = ",".join(tags_l)
 
-        entries = registry.list(namespace, category, tags, total, show_all)
+        entries = registry.list(namespace, category, tags, total, show_all, show_latest_version)
 
         for entry in entries:
             print(entry)

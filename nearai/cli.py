@@ -1,23 +1,23 @@
+import importlib.metadata
 import json
 import os
 import runpy
 import sys
 from dataclasses import asdict
 from pathlib import Path
-from subprocess import run
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import boto3
 import fire
-import pkg_resources
 from openapi_client import EntryLocation, EntryMetadataInput
+from openapi_client.api.default_api import DefaultApi
 
 from nearai.agent import load_agent
 from nearai.clients.lambda_client import LambdaWrapper
-from nearai.config import CONFIG, DATA_FOLDER, update_config
+from nearai.config import CONFIG, update_config
 from nearai.finetune import FinetuneCli
 from nearai.hub import Hub
-from nearai.lib import _check_metadata, parse_location
+from nearai.lib import check_metadata, parse_location
 from nearai.registry import registry
 from nearai.tensorboard_feed import TensorboardCli
 
@@ -97,7 +97,7 @@ class RegistryCli:
             exit(1)
 
         metadata_path = path / "metadata.json"
-        _check_metadata(metadata_path)
+        check_metadata(metadata_path)
 
         with open(metadata_path) as f:
             metadata: Dict[str, Any] = json.load(f)
@@ -118,7 +118,7 @@ class RegistryCli:
 
     def upload(self, local_path: str = ".") -> None:
         """Upload item to the registry."""
-        registry.upload(Path(local_path).absolute(), show_progress=True)
+        registry.upload(Path(local_path), show_progress=True)
 
     def download(self, entry_location: str, force: bool = False) -> None:
         """Download item."""
@@ -180,11 +180,7 @@ class BenchmarkCli:
         be.run(max_concurrent=max_concurrent)
 
 
-class EnvironmentCli:
-    def setup(self, dataset: str, task_id: int) -> None:
-        """Setup environment with given task from the dataset."""
-        pass
-
+class AgentCli:
     def inspect(self, path: str) -> None:
         """Inspect environment from given path."""
         from nearai.environment import Environment
@@ -200,7 +196,7 @@ class EnvironmentCli:
         env.save_folder(name)
 
     def save_from_history(self, name: Optional[str] = None) -> None:
-        """Reads piped history, finds agent task runs, writes start_command.log files, and saves to registry. For detailed usage, run: nearai environment save_from_history --help.
+        """Reads piped history, finds agent task runs, writes start_command.log files, and saves to registry. For detailed usage, run: nearai agent save_from_history --help.
 
         This command:
         1. Finds agent task runs (must contain non-empty chat.txt)
@@ -209,9 +205,9 @@ class EnvironmentCli:
 
         Only 'interactive' is supported.
         Assumes format:
-        ' <line_number>  <program_name> environment interactive <comma_separated_agents> <path> <other_args>'
+        ' <line_number>  <program_name> agent interactive <comma_separated_agents> <path> <other_args>'
         Run:
-        $ history | grep "environment interactive" | sed "s:~:$HOME:g" | nearai environment save_from_history environment_interactive_runs_from_lambda_00
+        $ history | grep "agent interactive" | sed "s:~:$HOME:g" | nearai agent save_from_history environment_interactive_runs_from_lambda_00
         """  # noqa: E501
         from nearai.environment import Environment
 
@@ -239,34 +235,56 @@ class EnvironmentCli:
         self,
         agents: str,
         task: str,
-        path: str,
+        path: Optional[str] = "",
         max_iterations: int = 10,
         record_run: str = "true",
         load_env: str = "",
+        local: bool = False,
     ) -> None:
         """Runs agent non interactively with environment from given path."""
         from nearai.environment import Environment
 
-        _agents = [load_agent(agent) for agent in agents.split(",")]
+        _agents = [load_agent(agent, local) for agent in agents.split(",")]
+        if not path:
+            if len(_agents) == 1:
+                path = _agents[0].path
+            else:
+                raise ValueError("Local path is required when running multiple agents")
         env = Environment(path, _agents, CONFIG)
         env.run_task(task, record_run, load_env, max_iterations)
 
-    def run(self, agents: str, task: str, path: str) -> None:
-        """Runs agent in the current environment."""
-        from nearai.environment import Environment
-
-        _agents = [load_agent(agent) for agent in agents.split(",")]
-        env = Environment(path, [], CONFIG)
-        env.exec_command("sleep 10")
-        # TODO: Setup server that will allow to interact with agents and environment
-
-    def run_on_aws_lambda(self, agents: str, environment_id: str, auth: str, new_message: str = ""):
+    def run_remote(
+        self,
+        agents: str,
+        new_message: str = "",
+        environment_id: str = "",
+        provider: str = "aws_lambda",
+        params: object = None,
+    ) -> None:
         """Invoke a Container based AWS lambda function to run agents on a given environment."""
+        if not CONFIG.auth:
+            print("Please login with `nearai login`")
+            return
+        if provider != "aws_lambda":
+            print(f"Provider {provider} is not supported.")
+            return
+        if not params:
+            params = {"max_iterations": 2}
         wrapper = LambdaWrapper(boto3.client("lambda", region_name="us-east-2"))
-        wrapper.invoke_function(
-            "agent-runner-docker",
-            {"agents": agents, "environment_id": environment_id, "auth": json.dumps(auth), "new_message": new_message},
-        )
+        try:
+            new_environment = wrapper.invoke_function(
+                "agent-runner-docker",
+                {
+                    "agents": agents,
+                    "environment_id": environment_id,
+                    "auth": CONFIG.auth.model_dump(),
+                    "new_message": new_message,
+                    "params": params,
+                },
+            )
+            print(f"Agent run finished. New environment is {new_environment}")
+        except Exception as e:
+            print(f"Error running agent remotely: {e}")
 
 
 class VllmCli:
@@ -371,40 +389,37 @@ class CLI:
 
         self.config = ConfigCli()
         self.benchmark = BenchmarkCli()
-        self.environment = EnvironmentCli()
+        self.agent = AgentCli()
         self.finetune = FinetuneCli()
         self.tensorboard = TensorboardCli()
         self.vllm = VllmCli()
 
-    def inference(self) -> None:
-        """Submit inference task."""
-        raise NotImplementedError()
-
     def location(self) -> None:  # noqa: D102
+        """Show location where nearai is installed."""
         from nearai import cli_path
 
         print(cli_path())
 
-    def version(self) -> None:  # noqa: D102
-        # TODO: Show current commit or tag
-        print(pkg_resources.get_distribution("nearai").version)
+    def version(self):
+        """Show nearai version."""
+        print(importlib.metadata.version("nearai"))
 
-    def update(self) -> None:
-        """Update nearai version."""
-        from nearai import cli_path
 
-        path = DATA_FOLDER / "nearai"
+def check_update():
+    """Check if there is a new version of nearai CLI available."""
+    try:
+        api = DefaultApi()
+        latest = api.version_v1_version_get()
+        current = importlib.metadata.version("nearai")
 
-        if path.absolute() != cli_path().absolute():
-            print()
-            print(f"Updating nearai version installed in {path}")
-            print(f"The invoked nearai is in {cli_path()}")
-            print()
+        if latest != current:
+            print(f"New version of nearai CLI available: {latest}. Current version: {current}")
+            print("Run `pip install --upgrade nearai` to update.")
 
-        if path.exists():
-            run(["git", "pull"], cwd=path)
+    except Exception as _:
+        pass
 
 
 def main() -> None:
-    # TODO: Check for latest version and prompt to update.
+    check_update()
     fire.Fire(CLI)

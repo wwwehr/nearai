@@ -263,6 +263,25 @@
         ]
       }
     },
+    "/v1/version": {
+      "get": {
+        "summary": "Version",
+        "operationId": "version_v1_version_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "title": "Response Version V1 Version Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/registry/upload_file": {
       "post": {
         "tags": [

@@ -20,9 +20,10 @@ from litellm.utils import CustomStreamWrapper
 from openai.types.chat import ChatCompletionMessageParam
 from openapi_client import EntryMetadata
 
+import hub.api.near.sign as near
 from nearai.agent import Agent
 from nearai.completion import InferenceRouter
-from nearai.config import Config, NearAiHubConfig
+from nearai.config import AuthData, Config, NearAiHubConfig
 from nearai.lib import plain_location
 from nearai.registry import registry
 from nearai.tool_registry import ToolRegistry
@@ -67,6 +68,7 @@ class Environment(object):
         reg.register_tool(self.write_file)
         reg.register_tool(self.request_user_input)
         reg.register_tool(self.list_files)
+        reg.register_tool(self.verify_message)
 
     def add_message(self, role: str, message: str, filename: str = CHAT_FILENAME, **kwargs: Any) -> None:  # noqa: D102
         with open(os.path.join(self._path, filename), "a") as f:
@@ -83,6 +85,14 @@ class Environment(object):
 
         with open(path, "r") as f:
             return [json.loads(message) for message in f.read().split(DELIMITER) if message]
+
+    def verify_message(
+        self, account_id: str, public_key: str, signature: str, message: str, nonce: str, callback_url: str
+    ) -> bool:
+        """Verify user message signed with NEAR Account."""
+        return near.verify_signed_message(
+            account_id, public_key, signature, message, nonce, self._agents[0].name, callback_url
+        )
 
     def list_files(self, path: str) -> List[str]:
         """Lists files in the environment.
@@ -180,10 +190,15 @@ class Environment(object):
         return result
 
     def completions(
-        self, model: str, messages: Iterable[ChatCompletionMessageParam], stream: bool = False, **kwargs: Any
+        self,
+        model: str,
+        messages: Iterable[ChatCompletionMessageParam],
+        stream: bool = False,
+        auth: Optional[AuthData] = None,
+        **kwargs: Any,
     ) -> Union[ModelResponse, CustomStreamWrapper]:
         """Returns all completions for given messages using the given model."""
-        return self._inference.completions(model, messages, stream=stream, **kwargs)
+        return self._inference.completions(model, messages, auth=auth, stream=stream, **kwargs)
 
     def completions_and_run_tools(
         self,
@@ -211,9 +226,13 @@ class Environment(object):
                     self.add_message("tool", function_response_json, tool_call_id=tool_call.id, name=function_name)
         return response
 
-    def completion(self, model: str, messages: Iterable[ChatCompletionMessageParam]) -> str:
+    def completion(
+        self, model: str, messages: Iterable[ChatCompletionMessageParam], auth: Dict | Optional[AuthData] = None
+    ) -> str:
         """Returns a completion for the given messages using the given model."""
-        raw_response = self.completions(model, messages)
+        if isinstance(auth, Dict):
+            auth = AuthData(**auth)
+        raw_response = self.completions(model, messages, auth=auth)
         assert isinstance(raw_response, ModelResponse), "Expected ModelResponse"
         response: ModelResponse = raw_response
         assert all(map(lambda choice: isinstance(choice, Choices), response.choices)), "Expected Choices"
@@ -274,10 +293,7 @@ class Environment(object):
         """Save Environment to Registry."""
         author = self._user_name
         if not author:
-            print(
-                "Warning: No author specified in config. Run not saved to registry."
-                " To set an author run `nearai config set user_name <YOUR_NAME>`"
-            )
+            print("Warning: You are not logged in, run not saved to registry." " To log in run `nearai login`")
             return None
 
         agent_name = self._agents[0].name if self._agents else "unknown"
@@ -285,47 +301,51 @@ class Environment(object):
         name = run_name or generated_name
 
         tempdir = Path(tempfile.mkdtemp())
+        environment_path = tempdir / "environment.tar.gz"
 
-        with open(tempdir / "environment.tar.gz", "r+b") as f:
-            with tarfile.open(fileobj=f, mode="w:gz") as tar:
-                tar.add(path, arcname=".")
-            f.flush()
-            f.seek(0)
-            snapshot = f.read()
-            tar_filename = f.name
+        if os.path.exists(environment_path):
+            with open(environment_path, "r+b") as f:
+                with tarfile.open(fileobj=f, mode="w:gz") as tar:
+                    tar.add(path, arcname=".")
+                f.flush()
+                f.seek(0)
+                snapshot = f.read()
+                tar_filename = f.name
 
-            timestamp = datetime.now(timezone.utc).isoformat()
+                timestamp = datetime.now(timezone.utc).isoformat()
 
-            entry_location = registry.upload(
-                tempdir,
-                EntryMetadata.from_dict(
-                    {
-                        "name": name,
-                        "version": "0.0.1",
-                        "description": f"Agent {run_type} run {agent_name}",
-                        "category": "environment",
-                        "tags": ["environment"],
-                        "details": {
-                            "base_id": base_id,
-                            "timestamp": timestamp,
-                            "agents": [agent.name for agent in self._agents],
-                            "run_id": run_id,
-                            "run_type": run_type,
-                            "filename": tar_filename,
-                        },
-                        "show_entry": True,
-                    }
-                ),
-                show_progress=True,
-            )
+                entry_location = registry.upload(
+                    tempdir,
+                    EntryMetadata.from_dict(
+                        {
+                            "name": name,
+                            "version": "0.0.1",
+                            "description": f"Agent {run_type} run {agent_name}",
+                            "category": "environment",
+                            "tags": ["environment"],
+                            "details": {
+                                "base_id": base_id,
+                                "timestamp": timestamp,
+                                "agents": [agent.name for agent in self._agents],
+                                "run_id": run_id,
+                                "run_type": run_type,
+                                "filename": tar_filename,
+                            },
+                            "show_entry": True,
+                        }
+                    ),
+                    show_progress=True,
+                )
 
-            location_str = plain_location(entry_location)
+                location_str = plain_location(entry_location)
 
-            print(f"Saved environment {entry_location} to registry. To load use flag `--load-env={location_str}`.")
+                print(f"Saved environment {entry_location} to registry. To load use flag `--load-env={location_str}`.")
 
-        rmtree(tempdir)
-
-        return snapshot
+            rmtree(tempdir)
+            return snapshot
+        else:
+            print(f"The file {environment_path} does not exist.")
+            return None
 
     def load_snapshot(self, snapshot: bytes) -> None:
         """Load Environment from Snapshot."""
@@ -361,6 +381,10 @@ class Environment(object):
     def request_user_input(self) -> None:
         """Must be called to request input from the user."""
         self.set_next_actor("user")
+
+    def clear_temp_agent_files(self) -> None:  # noqa: D102
+        """Remove temp agent files created to be used in `runpy`."""
+        shutil.rmtree(self._agents[0].temp_dir)
 
     def set_next_actor(self, who: str) -> None:  # noqa: D102
         next_action_fn = os.path.join(self._path, ".next_action")
@@ -415,6 +439,8 @@ class Environment(object):
                 self.add_message("user", new_message)
 
                 self.set_next_actor("agent")
+
+        self.clear_temp_agent_files()
 
         if record_run:
             run_name = record_run if record_run and record_run != "true" else None

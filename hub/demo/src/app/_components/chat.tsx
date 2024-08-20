@@ -53,6 +53,7 @@ export function Chat() {
     console.log("values", values);
 
     values.messages.map((m) => console.log(m.content));
+    values.stop = ["[INST]"];
 
     const response = await chat.mutateAsync(values);
 
@@ -177,16 +178,6 @@ export function Chat() {
                   onClick={clearConversation}
                 >
                   Clear Conversation
-                </Button>
-              )}
-              {store.isAuthenticated() && (
-                <Button
-                  onClick={() => {
-                    store.clearAuth();
-                  }}
-                  type="button"
-                >
-                  Sign Out
                 </Button>
               )}
             </div>

@@ -18,12 +18,13 @@ from tqdm import tqdm
 #       before creating RegistryApi object. This is because setup_api_client sets the default configuration for the
 #       API client that is used by Registry API.
 from nearai.config import CONFIG, DATA_FOLDER
-from nearai.lib import _check_metadata, parse_location
+from nearai.lib import check_metadata, parse_location
 
 REGISTRY_FOLDER = "registry"
 
 
 def get_registry_folder() -> Path:
+    """Path to local registry."""
     return DATA_FOLDER / REGISTRY_FOLDER
 
 
@@ -134,6 +135,10 @@ class Registry:
         """
         path = Path(local_path).absolute()
 
+        if not path.exists():
+            # try path in local registry if original path not exists
+            path = get_registry_folder() / local_path
+
         if CONFIG.auth is None:
             print("Please login with `nearai login`")
             exit(1)
@@ -144,7 +149,7 @@ class Registry:
             with open(metadata_path, "w") as f:
                 f.write(metadata.model_dump_json(indent=2))
 
-        _check_metadata(metadata_path)
+        check_metadata(metadata_path)
 
         with open(metadata_path) as f:
             plain_metadata: Dict[str, Any] = json.load(f)
@@ -160,6 +165,12 @@ class Registry:
         )
 
         entry_metadata = EntryMetadataInput.model_validate(plain_metadata)
+        source = entry_metadata.details.get("_source", None)
+
+        if source is not None:
+            print(f"Only default source is allowed, found: {source}. Remove details._source from metadata.")
+            exit(1)
+
         registry.update(entry_location, entry_metadata)
 
         all_files = []

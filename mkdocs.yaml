@@ -123,7 +123,9 @@ extra_css:
 nav:
   - Getting Started: 
     - Welcome To NearAI Docs: 'index.md'
+    - Agents: 'agents.md'
     - API Reference: 'api.md'
+    - Login with NEAR: 'login.md'
     - Contributing: 'contributing.md'
 plugins:
   - social

@@ -20,7 +20,7 @@ export function Navigation() {
 
   return (
     <HydrationZustand>
-      <div className="flex min-h-[100vh] min-w-[20%] flex-col justify-between gap-3 border-r-2 px-4 py-4">
+      <div className="flex h-screen w-64 flex-col justify-between gap-3 overflow-y-auto border-r-2 px-4 py-4">
         <div>
           <Three>AI Hub</Three>
           <div className="flex flex-col justify-between">
@@ -59,7 +59,7 @@ export function Navigation() {
             </div>
           </div>
         </div>
-        <div>
+        <div className="flex flex-col gap-3">
           {store.isAuthenticated() && (
             <Button
               className="w-full"
@@ -72,6 +72,14 @@ export function Navigation() {
             </Button>
           )}
           {!store.isAuthenticated() && <NearLogin />}
+
+          <Link
+            className="self-center text-xs underline"
+            href="/terms-and-conditions.pdf"
+            target="_blank"
+          >
+            Terms & Conditions
+          </Link>
         </div>
       </div>
     </HydrationZustand>

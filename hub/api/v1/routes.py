@@ -141,7 +141,14 @@ async def chat_completions(
     except NotImplementedError:
         raise HTTPException(status_code=400, detail="Provider not supported") from None
 
-    resp = await llm.chat.completions.create(**request.model_dump(exclude={"provider"}))
+    try:
+        resp = await llm.chat.completions.create(**request.model_dump(exclude={"provider"}))
+    except Exception as e:
+        error_message = str(e)
+        if "Error code: 404" in error_message and "Model not found, inaccessible, and/or not deployed" in error_message:
+            raise HTTPException(status_code=400, detail="Model not supported") from None
+        else:
+            raise HTTPException(status_code=400, detail=error_message) from None
 
     if request.stream:
 

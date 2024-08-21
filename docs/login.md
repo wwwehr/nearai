@@ -54,3 +54,11 @@ To verify the current login status, you can use the following command:
 ```bash
 nearai login status
 ```
+
+## Logout
+
+Clear NEAR account auth data from NearAI config file:
+
+```bash
+nearai logout 
+```

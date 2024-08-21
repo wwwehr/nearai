@@ -57,7 +57,7 @@ def update_auth_config(account_id, signature, public_key, callback_url, nonce):
 def print_login_status():
     """Prints the current authentication status if available in the config file."""
     config = load_config_file()
-    if config["auth"].get("account_id"):
+    if config.get("auth") and config["auth"].get("account_id"):
         print(f'Auth data for: {config["auth"]["account_id"]}')
         print(f'signature: {config["auth"]["signature"]}')
         print(f'public_key: {config["auth"]["public_key"]}')

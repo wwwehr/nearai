@@ -320,6 +320,20 @@ class HubCLI:
         hub.chat(kwargs)
 
 
+class LogoutCLI:
+    def __call__(self, **kwargs):
+        """Clear NEAR account auth data."""
+        from nearai.config import load_config_file, save_config_file
+
+        config = load_config_file()
+        if not config.get("auth") or not config["auth"].get("account_id"):
+            print("Auth data does not exist.")
+        else:
+            config.pop("auth", None)
+            save_config_file(config)
+            print("Auth data removed")
+
+
 class LoginCLI:
     def __call__(self, **kwargs):
         """Login with NEAR Mainnet account.
@@ -384,6 +398,7 @@ class CLI:
     def __init__(self) -> None:  # noqa: D107
         self.registry = RegistryCli()
         self.login = LoginCLI()
+        self.logout = LogoutCLI()
         self.hub = HubCLI()
 
         self.config = ConfigCli()

@@ -65,7 +65,11 @@ class InferenceRouter(object):
             **kwargs,
         )
 
-        result: Union[ModelResponse, CustomStreamWrapper] = self._endpoint(
-            model=model, messages=messages, stream=stream, temperature=temperature, **kwargs
-        )
+        try:
+            result: Union[ModelResponse, CustomStreamWrapper] = self._endpoint(
+                model=model, messages=messages, stream=stream, temperature=temperature, **kwargs
+            )
+        except Exception as e:
+            raise ValueError(f"Bad request: {e}") from None
+
         return result

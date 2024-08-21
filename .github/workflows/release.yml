@@ -22,8 +22,6 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
-    
-    environment: NearAI CI
     steps:
     - uses: actions/checkout@v4
 

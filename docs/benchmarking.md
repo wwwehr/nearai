@@ -10,11 +10,11 @@ In the `nearai` project, a benchmark is the combination of a dataset and a solve
 
 ### Adding a benchmark dataset
 
-`nearai` leverages [huggingface datasets](https://huggingface.co/docs/datasets/en/index) as the primitive when operating with datasets + benchmarks (see [`load_dataset`](api.md#nearai.dataset.load_dataset)). This means that to add a new benchmark, you need to create a new dataset and register it with the `nearai` registry (we will go over this in [Implementing a benchmark](#implementing-a-benchmark)).
+`nearai` leverages [huggingface datasets](https://huggingface.co/docs/datasets/en/index) as the primitive when operating with datasets + benchmarks (see [`load_dataset`](api.md#nearai.dataset.load_dataset)). This means that to add a new benchmark, you need to create a new dataset and register it with the `nearai` registry (we will go over this in [Implementing the "3 digit addition" benchmark](#implementing-the-3-digit-addition-benchmark)).
 
 ### Adding a solver
 
-To implement a solver, you will need to implement the [SolverStrategy](api.md#nearai.solvers.SolverStrategy) interface under the [`nearai.solver`](api.md#nearai.solver) module. The most important method the solver should implement is the [`solve`](api.md#nearai.solvers.SolverStrategy.solve) method. This method should take a datum, run your implementation specific agentic strategy / strategies, and return a result.
+To implement a solver, you will need to implement the [SolverStrategy](api.md#nearai.solvers.SolverStrategy) interface under the [`nearai.solvers`](api.md#nearai.solvers) module. The most important method the solver should implement is the [`solve`](api.md#nearai.solvers.SolverStrategy.solve) method. This method should take a datum, run your implementation specific agentic strategy / strategies, and return a result.
 
 ## Implementing the "3 digit addition" benchmark
 
@@ -65,12 +65,16 @@ To create the solver, we will implement the `SolverStrategy` interface. The solv
 ???+ note "Remember"
     To ensure this solver is registered with `nearai`:
     
-    1. Write this implementation in the [`nearai.solver`](api.md#nearai.solver) module.
-    2. Import it in the `__init__.py` file in the [`nearai.solver`](api.md#nearai.solver) module.
+    1. Write this implementation in the [`nearai.solvers`](api.md#nearai.solvers) module.
+    2. Import it in the `__init__.py` file in the [`nearai.solvers`](api.md#nearai.solvers) module.
 
 ```python
-... imports ...
+# ... other imports ...
+from pydantic import BaseModel
+from huggingface import Dataset
 from nearai.solvers import SolverStrategy
+
+from typing import Dict, List
 
 class ThreeDigitAdditionDatum(BaseModel):
     input: str

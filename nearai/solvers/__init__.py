@@ -20,13 +20,18 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
 
     @property
     def name(self) -> str:
+        """Returns the name of the solver strategy."""
         return type(self).__name__
 
     @abstractmethod
-    def compatible_datasets(self) -> List[str]: ...
+    def compatible_datasets(self) -> List[str]:
+        """Returns the list of datasets that the solver strategy is compatible with."""
+        ...
 
     @abstractmethod
-    def solve(self, datum: dict) -> Union[bool, Tuple[bool, Any]]: ...
+    def solve(self, datum: dict) -> Union[bool, Tuple[bool, Any]]:
+        """Solves the task for the given datum."""
+        ...
 
 
 SolverStrategyRegistry: Dict[str, SolverStrategy] = {}

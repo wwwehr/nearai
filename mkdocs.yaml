@@ -5,6 +5,11 @@ repo_name: nearai
 repo_url: https://github.com/nearai/nearai/
 site_url: https://docs.near.ai/ 
 edit_uri: edit/main/docs/
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
 theme:
   name: material
   favicon: assets/images/favicon.ico
@@ -124,11 +129,13 @@ nav:
   - Getting Started: 
     - Welcome To NearAI Docs: 'index.md'
     - Agents: 'agents.md'
+    - Building and running a benchmark: 'benchmarking.md'
     - API Reference: 'api.md'
     - Login with NEAR: 'login.md'
     - Contributing: 'contributing.md'
 plugins:
   - social
+  - autorefs
   - search:
       separator: '[\s\u200b\-_,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
   - minify:
@@ -140,3 +147,4 @@ plugins:
             members_order: alphabetical
             allow_inspection: true
             show_bases: true
+            show_submodules: true

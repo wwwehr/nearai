@@ -16,5 +16,6 @@ def get_dataset(name: str) -> Path:
 
 
 def load_dataset(alias_or_name: str) -> Union[Dataset, DatasetDict]:
+    """Load a dataset from the registry."""
     path = get_dataset(alias_or_name)
     return load_from_disk(path.as_posix())

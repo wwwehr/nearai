@@ -5,6 +5,11 @@ repo_name: nearai
 repo_url: https://github.com/nearai/nearai/
 site_url: https://docs.near.ai/ 
 edit_uri: edit/main/docs/
+validation:
+  omitted_files: warn
+  absolute_links: warn  # Or 'relative_to_docs' - new in MkDocs 1.6
+  unrecognized_links: warn
+  anchors: warn  # New in MkDocs 1.6
 theme:
   name: material
   favicon: assets/images/favicon.ico
@@ -130,6 +135,7 @@ nav:
     - Contributing: 'contributing.md'
 plugins:
   - social
+  - autorefs
   - search:
       separator: '[\s\u200b\-_,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
   - minify:

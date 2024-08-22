@@ -1,8 +1,8 @@
 # Building and running a benchmark
 
-The purpose of a benchmark in the context of software development is to associate a performance metric with a specific piece of code or a system. This metric can be used to compare the performance of different implementations of the same functionality, or to track the performance of a single implementation over time.
+In the context of software engineering, the purpose of a benchmark is to associate some performance metric (accuracy, latency, memory usage, etc.) with a specific piece of code or a system. This metric is then usually used to compare different implementations of the same functionality in the hopes to improve the metric over time. This is especially important in the context of machine learning systems when measuring functional capabilities on specific tasks.
 
-In the context of the `nearai` project, a benchmark is a tool to compare different agents and solvers on sets of reference evaluations. The `nearai` project includes a benchmarking tool to do this measurement and comparison on various sets of reference evaluations, ex: [`mpbb`](https://paperswithcode.com/dataset/mbpp). The core metric for benchmarks like these is "percent true" or *"accuracy"*.
+To accomplish measuring machine learning systems capabilities, in the context of the `nearai` project, we provide a benchmark tool to compare different agents and solvers on sets of reference evaluations. This tool enables you to do measurement and compare your systems on various sets of reference evaluations, ex: [`mpbb`](https://paperswithcode.com/dataset/mbpp). The core metric for benchmarks like these is "percent true" or *"accuracy"*.
 
 ## How is a benchmark implemented?
 
@@ -18,7 +18,7 @@ To implement a solver, you will need to implement the [SolverStrategy](api.md#ne
 
 ## Implementing the "3 digit addition" benchmark
 
-In this section we will be implementing a benchmark we'll call "3 digit addition". The goal of the benchmark is to test an agents ability to add two 1-3 digit numbers together. The dataset will be benchmarking on will be a set of 1000 examples of 3 digit addition problems and their solutions. The solver will adjudicate the agents answers and return an single accuracy score.
+In this section we will be implementing a benchmark we'll call "3 digit addition". The goal of the benchmark is to test an agents ability to add two 1-3 digit numbers together. The dataset will consist of 1000 examples of 3 digit addition problems and their solutions. The solver will adjudicate the agents answers and return an single accuracy score. While this benchmark is simple and can be solved with a simple program, it serves as a good example of how to implement a benchmark in `nearai`.
 
 ### Step 1: Creating the dataset
 

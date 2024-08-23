@@ -18,6 +18,7 @@ class Agent(object):
     def __init__(self, path: str):  # noqa: D107
         self.name: str = ""
         self.version: str = ""
+        self.env_vars: Dict[str, Any] = {}
 
         self.path = path
         self.load_agent_metadata()
@@ -42,10 +43,24 @@ class Agent(object):
             except KeyError as e:
                 raise ValueError(f"Missing key in metadata: {e}") from None
 
+            if metadata["details"]:
+                self.env_vars = metadata["details"].get("env_vars", {})
+
         if not self.version or not self.name:
             raise ValueError("Both 'version' and 'name' must be non-empty in metadata.")
 
     def run(self, env: Any, task: Optional[str] = None) -> None:  # noqa: D102
+        if not os.path.exists(os.path.join(self.path, AGENT_FILENAME)):
+            raise ValueError("Agent run error: {AGENT_FILENAME} does not exist")
+
+        # combine agent.env_vars and env.env_vars
+        total_env_vars = {**self.env_vars, **env.env_vars}
+
+        # save os env vars
+        os.environ.update(total_env_vars)
+        # save env.env_vars
+        env.env_vars = total_env_vars
+
         context = {"env": env, "agent": self, "task": task}
 
         original_cwd = os.getcwd()

@@ -35,7 +35,12 @@ TERMINAL_FILENAME = "terminal.txt"
 
 class Environment(object):
     def __init__(  # noqa: D107
-        self, path: str, agents: List[Agent], config: Config, create_files: bool = True
+        self,
+        path: str,
+        agents: List[Agent],
+        config: Config,
+        create_files: bool = True,
+        env_vars: Optional[Dict[str, Any]] = None,
     ) -> None:
         self._path = path
         self._agents = agents
@@ -45,6 +50,7 @@ class Environment(object):
         self._user_name = config.user_name
         self._tools = ToolRegistry()
         self.register_standard_tools()
+        self.env_vars: Dict[str, Any] = env_vars if env_vars else {}
 
         if self._config.nearai_hub is None:
             self._config.nearai_hub = NearAiHubConfig()

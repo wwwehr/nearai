@@ -216,7 +216,13 @@ class AgentCli:
         env.save_from_history(lines, name)
 
     def interactive(
-        self, agents: str, path: Optional[str] = "", record_run: str = "true", load_env: str = "", local: bool = False
+        self,
+        agents: str,
+        path: Optional[str] = "",
+        record_run: str = "true",
+        env_vars: Optional[Dict[str, Any]] = None,
+        load_env: str = "",
+        local: bool = False,
     ) -> None:
         """Runs agent interactively with environment from given path."""
         from nearai.environment import Environment
@@ -227,7 +233,7 @@ class AgentCli:
                 path = _agents[0].path
             else:
                 raise ValueError("Local path is required when running multiple agents")
-        env = Environment(path, _agents, CONFIG)
+        env = Environment(path, _agents, CONFIG, env_vars=env_vars)
         env.run_interactive(record_run, load_env)
 
     def task(
@@ -237,6 +243,7 @@ class AgentCli:
         path: Optional[str] = "",
         max_iterations: int = 10,
         record_run: str = "true",
+        env_vars: Optional[Dict[str, Any]] = None,
         load_env: str = "",
         local: bool = False,
     ) -> None:
@@ -249,7 +256,7 @@ class AgentCli:
                 path = _agents[0].path
             else:
                 raise ValueError("Local path is required when running multiple agents")
-        env = Environment(path, _agents, CONFIG)
+        env = Environment(path, _agents, CONFIG, env_vars=env_vars)
         env.run_task(task, record_run, load_env, max_iterations)
 
     def run_remote(

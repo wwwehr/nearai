@@ -287,15 +287,22 @@ async def list_entries(
 ) -> List[EntryInformation]:
     tags_list = list({tag for tag in tags.split(",") if tag})
 
+    bind_params = {
+        "show_entry": 1 - int(show_hidden),
+        "total": total,
+    }
+
     if category:
         category = valid_tag(category)
-        category_condition = f"AND category = '{category}'"
+        category_condition = "AND category = :category"
+        bind_params["category"] = category
     else:
         category_condition = ""
 
     if namespace:
         namespace = valid_identifier(namespace)
-        namespace_condition = f"AND namespace = '{namespace}'"
+        namespace_condition = "AND namespace = :namespace"
+        bind_params["namespace"] = namespace
     else:
         namespace_condition = ""
 
@@ -315,16 +322,15 @@ async def list_entries(
             registry.category, registry.description, registry.details
             FROM registry_entry registry
             {latest_version_condition}
-            WHERE show_entry >= {1 - int(show_hidden)}
+            WHERE show_entry >= :show_entry
                   {category_condition}
                   {namespace_condition}
             ORDER BY registry.id DESC
-            LIMIT {total}
+            LIMIT :total
             """
 
         else:
             tags_list = [valid_tag(tag) for tag in tags_list]
-            tags_input = ",".join(f"'{tag}'" for tag in tags_list)
 
             query_text = f"""WITH
                     FilteredRegistry AS (
@@ -332,12 +338,12 @@ async def list_entries(
                     FROM registry_entry registry
                     {latest_version_condition}
                     JOIN entry_tags ON registry.id = entry_tags.registry_id
-                    WHERE show_entry >= {1 - int(show_hidden)}
-                            AND entry_tags.tag IN ({tags_input})
+                    WHERE show_entry >= :show_entry
+                            AND entry_tags.tag IN :tags
                             {category_condition}
                             {namespace_condition}
                     GROUP BY registry.id
-                    HAVING COUNT(DISTINCT entry_tags.tag) = {len(tags_list)}
+                    HAVING COUNT(DISTINCT entry_tags.tag) = :ntags
                     ),
                     RankedRegistry AS (
                         SELECT id, ROW_NUMBER() OVER (ORDER BY id DESC) AS col_rank
@@ -347,18 +353,23 @@ async def list_entries(
                     SELECT registry.id, registry.namespace, registry.name, registry.version,
                            registry.category, registry.description, registry.details FROM RankedRegistry ranked
                     JOIN registry_entry registry ON ranked.id = registry.id
-                    WHERE ranked.col_rank <= {total}
+                    WHERE ranked.col_rank <= :total
                     ORDER BY registry.id DESC
                 """
 
-        for id, namespace, name, version, category, description, details in session.exec(text(query_text)).all():  # type: ignore
+            bind_params["tags"] = tags_list
+            bind_params["ntags"] = len(tags_list)
+
+        for id, namespace_, name, version, category_, description, details in session.exec(
+            text(query_text).bindparams(**bind_params)
+        ).all():  # type: ignore
             entries_info.append(
                 EntryInformation(
                     id=id,
-                    namespace=namespace,
+                    namespace=namespace_,
                     name=name,
                     version=version,
-                    category=category,
+                    category=category_,
                     description=description,
                     details=json.loads(details),
                     tags=[],

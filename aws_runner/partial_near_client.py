@@ -27,7 +27,8 @@ class PartialNearClient:
         """Calls NearAI Api to return all completions for given messages using the given model."""
         api_instance = DefaultApi(self._client)
         chat_completions_request = ChatCompletionsRequest(
-            model="fireworks::accounts/fireworks/models/llama-v3p1-405b-instruct-long",  # todo move model mappings into hub
+            # todo move model mappings into hub
+            model="fireworks::accounts/fireworks/models/llama-v3p1-405b-instruct-long",
             messages=messages,
             stream=stream,
             temperature=temperature,

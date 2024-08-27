@@ -12,7 +12,7 @@ from openapi_client import EntryMetadata
 
 import nearai
 from nearai import timestamp
-from nearai.config import CONFIG, DATA_FOLDER, ETC_FOLDER
+from nearai.config import DATA_FOLDER, ETC_FOLDER
 from nearai.model import get_model
 from nearai.registry import registry
 

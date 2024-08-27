@@ -23,6 +23,7 @@ from openapi_client.models.chat_completions_request import ChatCompletionsReques
 from openapi_client.models.completions_request import CompletionsRequest
 from openapi_client.models.create_thread_and_run_request import CreateThreadAndRunRequest
 from openapi_client.models.embeddings_request import EmbeddingsRequest
+from openapi_client.models.entry_information import EntryInformation
 from openapi_client.models.entry_location import EntryLocation
 from openapi_client.models.entry_metadata import EntryMetadata
 from openapi_client.models.entry_metadata_input import EntryMetadataInput

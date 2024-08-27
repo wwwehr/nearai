@@ -38,7 +38,7 @@ class AgentsApi:
 
 
     @validate_call
-    def create_environment_and_run_v1_environment_runs_post(
+    def run_agent_v1_agent_runs_post(
         self,
         create_thread_and_run_request: CreateThreadAndRunRequest,
         _request_timeout: Union[
@@ -54,7 +54,7 @@ class AgentsApi:
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
     ) -> str:
-        """Create Environment And Run
+        """Run Agent
 
         Run an agent against an existing or a new environment.  Returns the ID of the new environment resulting from the run.
 
@@ -82,7 +82,7 @@ class AgentsApi:
         :return: Returns the result object.
         """ # noqa: E501
 
-        _param = self._create_environment_and_run_v1_environment_runs_post_serialize(
+        _param = self._run_agent_v1_agent_runs_post_serialize(
             create_thread_and_run_request=create_thread_and_run_request,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -106,7 +106,7 @@ class AgentsApi:
 
 
     @validate_call
-    def create_environment_and_run_v1_environment_runs_post_with_http_info(
+    def run_agent_v1_agent_runs_post_with_http_info(
         self,
         create_thread_and_run_request: CreateThreadAndRunRequest,
         _request_timeout: Union[
@@ -122,7 +122,7 @@ class AgentsApi:
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
     ) -> ApiResponse[str]:
-        """Create Environment And Run
+        """Run Agent
 
         Run an agent against an existing or a new environment.  Returns the ID of the new environment resulting from the run.
 
@@ -150,7 +150,7 @@ class AgentsApi:
         :return: Returns the result object.
         """ # noqa: E501
 
-        _param = self._create_environment_and_run_v1_environment_runs_post_serialize(
+        _param = self._run_agent_v1_agent_runs_post_serialize(
             create_thread_and_run_request=create_thread_and_run_request,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -174,7 +174,7 @@ class AgentsApi:
 
 
     @validate_call
-    def create_environment_and_run_v1_environment_runs_post_without_preload_content(
+    def run_agent_v1_agent_runs_post_without_preload_content(
         self,
         create_thread_and_run_request: CreateThreadAndRunRequest,
         _request_timeout: Union[
@@ -190,7 +190,7 @@ class AgentsApi:
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
     ) -> RESTResponseType:
-        """Create Environment And Run
+        """Run Agent
 
         Run an agent against an existing or a new environment.  Returns the ID of the new environment resulting from the run.
 
@@ -218,7 +218,7 @@ class AgentsApi:
         :return: Returns the result object.
         """ # noqa: E501
 
-        _param = self._create_environment_and_run_v1_environment_runs_post_serialize(
+        _param = self._run_agent_v1_agent_runs_post_serialize(
             create_thread_and_run_request=create_thread_and_run_request,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -237,7 +237,7 @@ class AgentsApi:
         return response_data.response
 
 
-    def _create_environment_and_run_v1_environment_runs_post_serialize(
+    def _run_agent_v1_agent_runs_post_serialize(
         self,
         create_thread_and_run_request,
         _request_auth,
@@ -296,7 +296,7 @@ class AgentsApi:
 
         return self.api_client.param_serialize(
             method='POST',
-            resource_path='/v1/environment/runs',
+            resource_path='/v1/agent/runs',
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
@@ -313,7 +313,7 @@ class AgentsApi:
 
 
     @validate_call
-    def create_environment_and_run_v1_threads_runs_post(
+    def run_agent_v1_threads_runs_post(
         self,
         create_thread_and_run_request: CreateThreadAndRunRequest,
         _request_timeout: Union[
@@ -329,7 +329,7 @@ class AgentsApi:
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
     ) -> str:
-        """Create Environment And Run
+        """Run Agent
 
         Run an agent against an existing or a new environment.  Returns the ID of the new environment resulting from the run.
 
@@ -357,7 +357,7 @@ class AgentsApi:
         :return: Returns the result object.
         """ # noqa: E501
 
-        _param = self._create_environment_and_run_v1_threads_runs_post_serialize(
+        _param = self._run_agent_v1_threads_runs_post_serialize(
             create_thread_and_run_request=create_thread_and_run_request,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -381,7 +381,7 @@ class AgentsApi:
 
 
     @validate_call
-    def create_environment_and_run_v1_threads_runs_post_with_http_info(
+    def run_agent_v1_threads_runs_post_with_http_info(
         self,
         create_thread_and_run_request: CreateThreadAndRunRequest,
         _request_timeout: Union[
@@ -397,7 +397,7 @@ class AgentsApi:
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
     ) -> ApiResponse[str]:
-        """Create Environment And Run
+        """Run Agent
 
         Run an agent against an existing or a new environment.  Returns the ID of the new environment resulting from the run.
 
@@ -425,7 +425,7 @@ class AgentsApi:
         :return: Returns the result object.
         """ # noqa: E501
 
-        _param = self._create_environment_and_run_v1_threads_runs_post_serialize(
+        _param = self._run_agent_v1_threads_runs_post_serialize(
             create_thread_and_run_request=create_thread_and_run_request,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -449,7 +449,7 @@ class AgentsApi:
 
 
     @validate_call
-    def create_environment_and_run_v1_threads_runs_post_without_preload_content(
+    def run_agent_v1_threads_runs_post_without_preload_content(
         self,
         create_thread_and_run_request: CreateThreadAndRunRequest,
         _request_timeout: Union[
@@ -465,7 +465,7 @@ class AgentsApi:
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
     ) -> RESTResponseType:
-        """Create Environment And Run
+        """Run Agent
 
         Run an agent against an existing or a new environment.  Returns the ID of the new environment resulting from the run.
 
@@ -493,7 +493,7 @@ class AgentsApi:
         :return: Returns the result object.
         """ # noqa: E501
 
-        _param = self._create_environment_and_run_v1_threads_runs_post_serialize(
+        _param = self._run_agent_v1_threads_runs_post_serialize(
             create_thread_and_run_request=create_thread_and_run_request,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -512,7 +512,7 @@ class AgentsApi:
         return response_data.response
 
 
-    def _create_environment_and_run_v1_threads_runs_post_serialize(
+    def _run_agent_v1_threads_runs_post_serialize(
         self,
         create_thread_and_run_request,
         _request_auth,

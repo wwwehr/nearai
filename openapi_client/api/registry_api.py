@@ -22,7 +22,7 @@ from openapi_client.models.body_download_file_v1_registry_download_file_post imp
 from openapi_client.models.body_download_metadata_v1_registry_download_metadata_post import BodyDownloadMetadataV1RegistryDownloadMetadataPost
 from openapi_client.models.body_list_files_v1_registry_list_files_post import BodyListFilesV1RegistryListFilesPost
 from openapi_client.models.body_upload_metadata_v1_registry_upload_metadata_post import BodyUploadMetadataV1RegistryUploadMetadataPost
-from openapi_client.models.entry_location import EntryLocation
+from openapi_client.models.entry_information import EntryInformation
 from openapi_client.models.entry_metadata import EntryMetadata
 
 from openapi_client.api_client import ApiClient, RequestSerialized
@@ -593,6 +593,7 @@ class RegistryApi:
         tags: Optional[StrictStr] = None,
         total: Optional[StrictInt] = None,
         show_hidden: Optional[StrictBool] = None,
+        show_latest_version: Optional[StrictBool] = None,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -605,7 +606,7 @@ class RegistryApi:
         _content_type: Optional[StrictStr] = None,
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
-    ) -> List[EntryLocation]:
+    ) -> List[EntryInformation]:
         """List Entries
 
 
@@ -619,6 +620,8 @@ class RegistryApi:
         :type total: int
         :param show_hidden:
         :type show_hidden: bool
+        :param show_latest_version:
+        :type show_latest_version: bool
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -647,6 +650,7 @@ class RegistryApi:
             tags=tags,
             total=total,
             show_hidden=show_hidden,
+            show_latest_version=show_latest_version,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -654,7 +658,7 @@ class RegistryApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '200': "List[EntryLocation]",
+            '200': "List[EntryInformation]",
             '422': "HTTPValidationError",
         }
         response_data = self.api_client.call_api(
@@ -676,6 +680,7 @@ class RegistryApi:
         tags: Optional[StrictStr] = None,
         total: Optional[StrictInt] = None,
         show_hidden: Optional[StrictBool] = None,
+        show_latest_version: Optional[StrictBool] = None,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -688,7 +693,7 @@ class RegistryApi:
         _content_type: Optional[StrictStr] = None,
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
-    ) -> ApiResponse[List[EntryLocation]]:
+    ) -> ApiResponse[List[EntryInformation]]:
         """List Entries
 
 
@@ -702,6 +707,8 @@ class RegistryApi:
         :type total: int
         :param show_hidden:
         :type show_hidden: bool
+        :param show_latest_version:
+        :type show_latest_version: bool
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -730,6 +737,7 @@ class RegistryApi:
             tags=tags,
             total=total,
             show_hidden=show_hidden,
+            show_latest_version=show_latest_version,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -737,7 +745,7 @@ class RegistryApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '200': "List[EntryLocation]",
+            '200': "List[EntryInformation]",
             '422': "HTTPValidationError",
         }
         response_data = self.api_client.call_api(
@@ -759,6 +767,7 @@ class RegistryApi:
         tags: Optional[StrictStr] = None,
         total: Optional[StrictInt] = None,
         show_hidden: Optional[StrictBool] = None,
+        show_latest_version: Optional[StrictBool] = None,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -785,6 +794,8 @@ class RegistryApi:
         :type total: int
         :param show_hidden:
         :type show_hidden: bool
+        :param show_latest_version:
+        :type show_latest_version: bool
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -813,6 +824,7 @@ class RegistryApi:
             tags=tags,
             total=total,
             show_hidden=show_hidden,
+            show_latest_version=show_latest_version,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -820,7 +832,7 @@ class RegistryApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '200': "List[EntryLocation]",
+            '200': "List[EntryInformation]",
             '422': "HTTPValidationError",
         }
         response_data = self.api_client.call_api(
@@ -837,6 +849,7 @@ class RegistryApi:
         tags,
         total,
         show_hidden,
+        show_latest_version,
         _request_auth,
         _content_type,
         _headers,
@@ -876,6 +889,10 @@ class RegistryApi:
         if show_hidden is not None:
             
             _query_params.append(('show_hidden', show_hidden))
+            
+        if show_latest_version is not None:
+            
+            _query_params.append(('show_latest_version', show_latest_version))
             
         # process the header parameters
         # process the form parameters

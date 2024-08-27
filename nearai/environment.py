@@ -65,6 +65,7 @@ class Environment(object):
         return uuid.uuid4().hex
 
     def get_tool_registry(self) -> ToolRegistry:  # noqa: D102
+        """Returns the tool registry, a dictionary of tools that can be called by the agent."""
         return self._tools
 
     def register_standard_tools(self) -> None:  # noqa: D102
@@ -77,13 +78,16 @@ class Environment(object):
         reg.register_tool(self.verify_message)
 
     def add_message(self, role: str, message: str, filename: str = CHAT_FILENAME, **kwargs: Any) -> None:  # noqa: D102
+        """Add a message to the chat file."""
         with open(os.path.join(self._path, filename), "a") as f:
             f.write(json.dumps({"role": role, "content": message, **kwargs}) + DELIMITER)
 
     def list_terminal_commands(self, filename: str = TERMINAL_FILENAME) -> List[Any]:  # noqa: D102
+        """Returns the terminal commands from the terminal file."""
         return self.list_messages(filename)
 
     def list_messages(self, filename: str = CHAT_FILENAME) -> List[Any]:  # noqa: D102
+        """Returns messages from a specified file."""
         path = os.path.join(self._path, filename)
 
         if not os.path.exists(path):
@@ -108,6 +112,7 @@ class Environment(object):
         return os.listdir(os.path.join(self._path, path))
 
     def get_path(self) -> str:  # noqa: D102
+        """Returns the path of the current directory."""
         return self._path
 
     def read_file(self, filename: str) -> str:
@@ -393,6 +398,7 @@ class Environment(object):
         shutil.rmtree(self._agents[0].temp_dir)
 
     def set_next_actor(self, who: str) -> None:  # noqa: D102
+        """Set the next actor / action in the dialogue."""
         next_action_fn = os.path.join(self._path, ".next_action")
 
         with open(next_action_fn, "w") as f:

@@ -1,6 +1,8 @@
+import json
 import re
+from collections import defaultdict
 from os import getenv
-from typing import Annotated, Dict, List, Tuple
+from typing import Annotated, Any, Dict, List
 
 import boto3
 import botocore
@@ -263,64 +265,85 @@ async def list_files(entry: RegistryEntry = Depends(get)) -> List[str]:
     return files
 
 
+class EntryInformation(BaseModel):
+    id: int
+    namespace: str
+    name: str
+    version: str
+    category: str
+    description: str
+    details: Dict[str, Any]
+    tags: List[str]
+
+
 @v1_router.post("/list_entries")
 async def list_entries(
     namespace: str = "",
     category: str = "",
     tags: str = "",
-    total: int = 32,
+    total: int = 16,
     show_hidden: bool = False,
-) -> List[EntryLocation]:
-    # TODO: Return metadata instead of location to show the information in the cli
-    # TODO: Return only the latest version of each entry (order by id)
-
+    show_latest_version: bool = True,
+) -> List[EntryInformation]:
     tags_list = list({tag for tag in tags.split(",") if tag})
 
+    bind_params: Dict[str, Any] = {
+        "show_entry": 1 - int(show_hidden),
+        "total": total,
+    }
+
+    if category:
+        category = valid_tag(category)
+        category_condition = "AND category = :category"
+        bind_params["category"] = category
+    else:
+        category_condition = ""
+
+    if namespace:
+        namespace = valid_identifier(namespace)
+        namespace_condition = "AND namespace = :namespace"
+        bind_params["namespace"] = namespace
+    else:
+        namespace_condition = ""
+
+    latest_version_condition = (
+        """JOIN (SELECT MAX(id) as id FROM registry_entry GROUP BY namespace, name) last_entry
+             ON last_entry.id = registry.id"""
+        if show_latest_version
+        else ""
+    )
+
     with get_session() as session:
+        entries_info: List[EntryInformation] = []
+
         if len(tags_list) == 0:
-            query = select(RegistryEntry)
+            query_text = f"""
+            SELECT registry.id, registry.namespace, registry.name, registry.version,
+            registry.category, registry.description, registry.details
+            FROM registry_entry registry
+            {latest_version_condition}
+            WHERE show_entry >= :show_entry
+                  {category_condition}
+                  {namespace_condition}
+            ORDER BY registry.id DESC
+            LIMIT :total
+            """
 
-            if category:
-                query = query.where(RegistryEntry.category == category)
-
-            if namespace:
-                query = query.where(RegistryEntry.namespace == namespace)
-
-            if not show_hidden:
-                query = query.where(RegistryEntry.show_entry)
-
-            order_by = RegistryEntry.id.desc()  # type: ignore
-            query = query.limit(total).order_by(order_by)
-
-            result = session.exec(query).all()
-            return [
-                EntryLocation(namespace=entry.namespace, name=entry.name, version=entry.version) for entry in result
-            ]
         else:
-            if category:
-                category = valid_tag(category)
-                category_condition = f"AND category = '{category}'"
-            else:
-                category_condition = ""
-
-            if namespace:
-                namespace = valid_identifier(namespace)
-                namespace_condition = f"AND namespace = '{namespace}'"
-            else:
-                namespace_condition = ""
-
             tags_list = [valid_tag(tag) for tag in tags_list]
-            tags_input = ",".join(f"'{tag}'" for tag in tags_list)
 
-            query_text = f"""WITH FilteredRegistry AS (
-                    SELECT registry.id FROM registry_entry registry
+            query_text = f"""WITH
+                    FilteredRegistry AS (
+                    SELECT registry.id
+                    FROM registry_entry registry
+                    {latest_version_condition}
                     JOIN entry_tags ON registry.id = entry_tags.registry_id
-                    WHERE show_entry >= {1 - int(show_hidden)}
-                            AND entry_tags.tag IN ({tags_input})
+                    WHERE show_entry >= :show_entry
+                            AND entry_tags.tag IN :tags
                             {category_condition}
                             {namespace_condition}
                     GROUP BY registry.id
-                    HAVING COUNT(DISTINCT entry_tags.tag) = {len(tags_list)}
+                    HAVING COUNT(DISTINCT entry_tags.tag) = :ntags
                     ),
                     RankedRegistry AS (
                         SELECT id, ROW_NUMBER() OVER (ORDER BY id DESC) AS col_rank
@@ -328,19 +351,44 @@ async def list_entries(
                     )
 
                     SELECT registry.id, registry.namespace, registry.name, registry.version,
-                           entry_tags.tag FROM RankedRegistry ranked
+                           registry.category, registry.description, registry.details FROM RankedRegistry ranked
                     JOIN registry_entry registry ON ranked.id = registry.id
-                    JOIN entry_tags ON registry.id = entry_tags.registry_id
-                    WHERE ranked.col_rank <= {total}
+                    WHERE ranked.col_rank <= :total
                     ORDER BY registry.id DESC
                 """
 
-            result: List[Tuple[int, str, str, str, str]] = session.exec(text(query_text)).all()  # type: ignore
-            assert isinstance(result, list)
-            filtered = {id: (namespace, name, version) for id, namespace, name, version, _ in result}
-            final = sorted(filtered.items(), key=lambda x: x[0], reverse=True)
+            bind_params["tags"] = tags_list
+            bind_params["ntags"] = len(tags_list)
 
-            return [
-                EntryLocation(namespace=namespace, name=name, version=version)
-                for _, (namespace, name, version) in final
-            ]
+        for id, namespace_, name, version, category_, description, details in session.exec(
+            text(query_text).bindparams(**bind_params)
+        ).all():  # type: ignore
+            entries_info.append(
+                EntryInformation(
+                    id=id,
+                    namespace=namespace_,
+                    name=name,
+                    version=version,
+                    category=category_,
+                    description=description,
+                    details=json.loads(details),
+                    tags=[],
+                )
+            )
+
+        # Get the tags of all entries
+        ids = [entry.id for entry in entries_info]
+
+        q_tags = select(Tags).where(Tags.registry_id.in_(ids))  # type: ignore
+        q_tags_r = session.exec(q_tags).all()
+
+        q_tags_dict: Dict[int, List[str]] = defaultdict(list)
+        for tag in q_tags_r:
+            q_tags_dict[tag.registry_id].append(tag.tag)
+
+        for entry in entries_info:
+            entry.tags = q_tags_dict[entry.id]
+
+        entries_info.sort(key=lambda x: x.id, reverse=True)
+
+        return entries_info

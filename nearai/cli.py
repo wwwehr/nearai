@@ -5,12 +5,14 @@ import runpy
 import sys
 from dataclasses import asdict
 from pathlib import Path
+from textwrap import fill
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import boto3
 import fire
 from openapi_client import EntryLocation, EntryMetadataInput
 from openapi_client.api.default_api import DefaultApi
+from tabulate import tabulate
 
 from nearai.agent import load_agent
 from nearai.clients.lambda_client import LambdaWrapper
@@ -48,20 +50,23 @@ class RegistryCli:
 
         print(metadata.model_dump_json(indent=2))
 
-    def metadata_template(self, local_path: str = "."):
+    def metadata_template(self, local_path: str = ".", category: str = "", description: str = ""):
         """Create a metadata template."""
         path = Path(local_path)
 
         metadata_path = path / "metadata.json"
 
+        # Get the name of the folder
+        folder_name = path.name
+
         with open(metadata_path, "w") as f:
             json.dump(
                 {
-                    "name": "foobar",
+                    "name": folder_name,
                     "version": "0.0.1",
-                    "description": "Template metadata",
-                    "category": "model",
-                    "tags": ["foo", "bar"],
+                    "description": description,
+                    "category": category,
+                    "tags": [],
                     "details": {},
                     "show_entry": True,
                 },
@@ -76,16 +81,35 @@ class RegistryCli:
         tags: str = "",
         total: int = 32,
         show_all: bool = False,
+        show_latest_version: bool = True,
     ) -> None:
         """List available items."""
         # Make sure tags is a comma-separated list of tags
         tags_l = parse_tags(tags)
         tags = ",".join(tags_l)
 
-        entries = registry.list(namespace, category, tags, total, show_all)
+        entries = registry.list(namespace, category, tags, total + 1, show_all, show_latest_version)
 
+        more_rows = len(entries) > total
+        entries = entries[:total]
+
+        header = ["entry", "category", "description", "tags"]
+
+        table = []
         for entry in entries:
-            print(entry)
+            table.append(
+                [
+                    fill(f"{entry.namespace}/{entry.name}/{entry.version}"),
+                    fill(entry.category, 20),
+                    fill(entry.description, 50),
+                    fill(", ".join(entry.tags), 20),
+                ]
+            )
+
+        if more_rows:
+            table.append(["...", "...", "...", "..."])
+
+        print(tabulate(table, headers=header, tablefmt="simple_grid"))
 
     def update(self, local_path: str = ".") -> None:
         """Update metadata of a registry item."""

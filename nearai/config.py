@@ -118,7 +118,7 @@ class Config(BaseModel):
         """Get the value of a key in the config if it exists."""
         return getattr(self, key, default)
 
-    
+
 # Load default configs
 CONFIG = Config()
 # Update config from global config file

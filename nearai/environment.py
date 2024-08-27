@@ -312,49 +312,45 @@ class Environment(object):
         tempdir = Path(tempfile.mkdtemp())
         environment_path = tempdir / "environment.tar.gz"
 
-        if os.path.exists(environment_path):
-            with open(environment_path, "r+b") as f:
-                with tarfile.open(fileobj=f, mode="w:gz") as tar:
-                    tar.add(path, arcname=".")
-                f.flush()
-                f.seek(0)
-                snapshot = f.read()
-                tar_filename = f.name
+        with open(environment_path, "w+b") as f:
+            with tarfile.open(fileobj=f, mode="w:gz") as tar:
+                tar.add(path, arcname=".")
+            f.flush()
+            f.seek(0)
+            snapshot = f.read()
+            tar_filename = f.name
 
-                timestamp = datetime.now(timezone.utc).isoformat()
+            timestamp = datetime.now(timezone.utc).isoformat()
 
-                entry_location = registry.upload(
-                    tempdir,
-                    EntryMetadata.from_dict(
-                        {
-                            "name": name,
-                            "version": "0.0.1",
-                            "description": f"Agent {run_type} run {agent_name}",
-                            "category": "environment",
-                            "tags": ["environment"],
-                            "details": {
-                                "base_id": base_id,
-                                "timestamp": timestamp,
-                                "agents": [agent.name for agent in self._agents],
-                                "run_id": run_id,
-                                "run_type": run_type,
-                                "filename": tar_filename,
-                            },
-                            "show_entry": True,
-                        }
-                    ),
-                    show_progress=True,
-                )
+            entry_location = registry.upload(
+                tempdir,
+                EntryMetadata.from_dict(
+                    {
+                        "name": name,
+                        "version": "0.0.1",
+                        "description": f"Agent {run_type} run {agent_name}",
+                        "category": "environment",
+                        "tags": ["environment"],
+                        "details": {
+                            "base_id": base_id,
+                            "timestamp": timestamp,
+                            "agents": [agent.name for agent in self._agents],
+                            "run_id": run_id,
+                            "run_type": run_type,
+                            "filename": tar_filename,
+                        },
+                        "show_entry": True,
+                    }
+                ),
+                show_progress=True,
+            )
 
-                location_str = plain_location(entry_location)
+            location_str = plain_location(entry_location)
 
-                print(f"Saved environment {entry_location} to registry. To load use flag `--load-env={location_str}`.")
+            print(f"Saved environment {entry_location} to registry. To load use flag `--load-env={location_str}`.")
 
-            rmtree(tempdir)
-            return snapshot
-        else:
-            print(f"The file {environment_path} does not exist.")
-            return None
+        rmtree(tempdir)
+        return snapshot
 
     def load_snapshot(self, snapshot: bytes) -> None:
         """Load Environment from Snapshot."""

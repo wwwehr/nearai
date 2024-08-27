@@ -4,7 +4,7 @@ __pycache__/
 .nearai/
 /nearai/tests/test-agents/
 venv
-.env
+*.env
 /aws_runner/openapi_client/
 .mise*
 site/

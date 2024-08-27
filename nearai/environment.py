@@ -47,7 +47,6 @@ class Environment(object):
         self._done = False
         self._config = config
         self._inference = InferenceRouter(config)
-        self._user_name = config.user_name
         self._tools = ToolRegistry()
         self.register_standard_tools()
         self.env_vars: Dict[str, Any] = env_vars if env_vars else {}
@@ -302,9 +301,8 @@ class Environment(object):
         run_name: Optional[str] = None,
     ) -> Optional[bytes]:
         """Save Environment to Registry."""
-        author = self._user_name
-        if not author:
-            print("Warning: You are not logged in, run not saved to registry." " To log in run `nearai login`")
+        if self._config.auth is None:
+            print("Warning: Authentication is not set up. Run not saved to registry. To log in, run `nearai login`")
             return None
 
         agent_name = self._agents[0].name if self._agents else "unknown"

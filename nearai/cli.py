@@ -48,20 +48,23 @@ class RegistryCli:
 
         print(metadata.model_dump_json(indent=2))
 
-    def metadata_template(self, local_path: str = "."):
+    def metadata_template(self, local_path: str = ".", category: str = "", description: str = ""):
         """Create a metadata template."""
         path = Path(local_path)
 
         metadata_path = path / "metadata.json"
 
+        # Get the name of the folder
+        folder_name = path.name
+
         with open(metadata_path, "w") as f:
             json.dump(
                 {
-                    "name": "foobar",
+                    "name": folder_name,
                     "version": "0.0.1",
-                    "description": "Template metadata",
-                    "category": "model",
-                    "tags": ["foo", "bar"],
+                    "description": description,
+                    "category": category,
+                    "tags": [],
                     "details": {},
                     "show_entry": True,
                 },

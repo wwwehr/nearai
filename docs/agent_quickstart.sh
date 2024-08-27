@@ -1,7 +1,7 @@
 #!/bin/sh
 . .venv/bin/activate # if your virtual environment is elsewhere, change this line
 mkdir -p ~/.nearai/registry/example_agent
-nearai registry metadata_template ~/.nearai/registry/example_agent
+nearai registry metadata_template ~/.nearai/registry/example_agent agent "Example agent"
 cat docs/example_agent.py.txt > ~/.nearai/registry/example_agent/agent.py
 open ~/.nearai/registry/example_agent/metadata.json
 open ~/.nearai/registry/example_agent/agent.py

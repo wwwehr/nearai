@@ -134,8 +134,6 @@ class FinetuneCli:
         BACKGROUND_PROCESS = False
 
         if upload_checkpoint:
-            assert CONFIG.user_name is not None, "Please set the user name in the config file."
-
             registry.upload(
                 job_folder,
                 EntryMetadata.from_dict(

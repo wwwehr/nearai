@@ -3,25 +3,32 @@ from typing import Any, Callable, Dict, Literal, Optional, _GenericAlias, get_ty
 
 
 class ToolRegistry:
+    """A registry for tools that can be called by the agent."""
+
     def __init__(self) -> None:  # noqa: D107
         self.tools: Dict[str, Callable] = {}
 
     def register_tool(self, tool: Callable) -> None:  # noqa: D102
+        """Register a tool."""
         self.tools[tool.__name__] = tool
 
     def get_tool(self, name: str) -> Optional[Callable]:  # noqa: D102
+        """Get a tool by name."""
         return self.tools.get(name)
 
     def get_all_tools(self) -> Dict[str, Callable]:  # noqa: D102
+        """Get all tools."""
         return self.tools
 
     def call_tool(self, name: str, **kwargs: Any) -> Any:  # noqa: D102
+        """Call a tool by name."""
         tool = self.get_tool(name)
         if tool is None:
             raise ValueError(f"Tool '{name}' not found.")
         return tool(**kwargs)
 
     def get_tool_definition(self, name: str) -> Optional[Dict]:  # noqa: D102
+        """Get the definition of a tool by name."""
         tool = self.get_tool(name)
         if tool is None:
             return None

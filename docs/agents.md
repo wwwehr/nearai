@@ -29,7 +29,7 @@ nearai agent interactive example_agent /tmp/example_agent_run_1 --local
 ```python
 # In local interactive mode, the first user input is collected before the agent runs.
 prompt = {"role": "system", "content": "You are a travel agent that helps users plan trips."}
-result = env.completion('llama-v3-70b-instruct', [prompt] + env.list_messages())
+result = env.completion('llama-v3p1-405b-instruct-long', [prompt] + env.list_messages())
 env.add_message("agent", result)
 env.request_user_input()
 ```
@@ -102,7 +102,7 @@ Your agent will receive an `env` object that has the following methods:
 
  * `request_user_input`: tell the agent that it is the user's turn, stop iterating.
  * `completion`: request inference completions from a provider and model.
-The model format can be either `PROVIDER::MODEL` or simply `MODEL`. By default the provider is `Fireworks` and the model is `llama-v3-70b-instruct`.
+The model format can be either `PROVIDER::MODEL` or simply `MODEL`. By default the provider is `Fireworks` and the model is `llama-v3p1-405b-instruct-long`.
 
  * `list_messages` - returns the list of messages in the conversation. 
 You have full control to add and remove messages from this list.
@@ -144,7 +144,7 @@ def my_tool():
 
 env.get_tool_registry().register_tool(my_tool)
 
-response = env.completions_and_run_tools("llama-v3p1-405b-instruct", messages, tools=get_tool_registry().get_all_tools())
+response = env.completions_and_run_tools("llama-v3p1-405b-instruct-long", messages, tools=get_tool_registry().get_all_tools())
 ```
 
 ## Uploading an agent

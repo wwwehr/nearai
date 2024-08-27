@@ -287,7 +287,7 @@ async def list_entries(
 ) -> List[EntryInformation]:
     tags_list = list({tag for tag in tags.split(",") if tag})
 
-    bind_params = {
+    bind_params: Dict[str, Any] = {
         "show_entry": 1 - int(show_hidden),
         "total": total,
     }

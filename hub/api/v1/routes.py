@@ -173,7 +173,7 @@ async def chat_completions(
 
 
 @v1_router.get("/models")
-async def get_models():
+async def get_models() -> JSONResponse:
     all_models: List[Dict[str, Any]] = []
 
     for p in Provider:

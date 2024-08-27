@@ -14,7 +14,7 @@ docs/agent_quickstart.sh
 
 3. Create a metadata.json file for your agent
 
-   `nearai registry metadata_template ~/.nearai/registry/example_agent` and edit it.
+   `nearai registry metadata_template ~/.nearai/registry/example_agent agent "Example agent"` and edit it.
 
 4. Create an `agent.py` file in that folder.
      * Write your agent, in agent.py, using the [environment API](#the-environment-api) described below.

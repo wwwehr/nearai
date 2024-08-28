@@ -52,7 +52,7 @@ class Environment(object):
         self._tools = ToolRegistry()
         self.register_standard_tools()
         self.env_vars: Dict[str, Any] = env_vars if env_vars else {}
-        self._last_used_model = None
+        self._last_used_model = ""
 
         if self._config.nearai_hub is None:
             self._config.nearai_hub = NearAiHubConfig()

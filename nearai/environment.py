@@ -21,9 +21,10 @@ from openai.types.chat import ChatCompletionMessageParam
 from openapi_client import EntryMetadata
 
 import hub.api.near.sign as near
+from hub.api.near.primitives import PROVIDER_MODEL_SEP
 from nearai.agent import Agent
 from nearai.completion import InferenceRouter
-from nearai.config import AuthData, Config, NearAiHubConfig
+from nearai.config import DEFAULT_PROVIDER_MODEL, AuthData, Config, NearAiHubConfig
 from nearai.lib import plain_location
 from nearai.registry import registry
 from nearai.tool_registry import ToolRegistry
@@ -51,6 +52,7 @@ class Environment(object):
         self._tools = ToolRegistry()
         self.register_standard_tools()
         self.env_vars: Dict[str, Any] = env_vars if env_vars else {}
+        self._last_used_model = None
 
         if self._config.nearai_hub is None:
             self._config.nearai_hub = NearAiHubConfig()
@@ -200,26 +202,52 @@ class Environment(object):
             f.write(json.dumps(result) + DELIMITER)
         return result
 
+    def get_model_for_inference(self, model: str = "") -> str:
+        """Returns 'provider::model_name' or 'model_name' if provider is not given."""
+        provider = self._agents[0].model_provider if self._agents else ""
+        if model == "":
+            model = self._agents[0].model if self._agents else ""
+        if model == "":
+            return DEFAULT_PROVIDER_MODEL
+        if provider == "":
+            return model
+        return provider + PROVIDER_MODEL_SEP + model
+
+    def _run_inference_completions(
+        self,
+        messages: Iterable[ChatCompletionMessageParam],
+        model: str,
+        stream: bool,
+        auth: Optional[AuthData],
+        **kwargs: Any,
+    ) -> Union[ModelResponse, CustomStreamWrapper]:
+        """Run inference completions for given parameters."""
+        model = self.get_model_for_inference(model)
+        if model != self._last_used_model:
+            self._last_used_model = model
+            print(f"Connecting to {model}")
+        return self._inference.completions(model, messages, auth=auth, stream=stream, **kwargs)
+
     def completions(
         self,
-        model: str,
         messages: Iterable[ChatCompletionMessageParam],
+        model: str = "",
         stream: bool = False,
         auth: Optional[AuthData] = None,
         **kwargs: Any,
     ) -> Union[ModelResponse, CustomStreamWrapper]:
         """Returns all completions for given messages using the given model."""
-        return self._inference.completions(model, messages, auth=auth, stream=stream, **kwargs)
+        return self._run_inference_completions(messages, model, stream, auth, **kwargs)
 
     def completions_and_run_tools(
         self,
-        model: str,
         messages: Iterable[ChatCompletionMessageParam],
+        model: str = "",
         tools: Optional[List] = None,
         **kwargs: Any,
     ) -> ModelResponse:
         """Returns all completions for given messages using the given model and runs tools."""
-        raw_response = self._inference.completions(model, messages, stream=False, tools=tools, **kwargs)
+        raw_response = self._run_inference_completions(messages, model, stream=False, tools=tools, **kwargs)
         assert isinstance(raw_response, ModelResponse), "Expected ModelResponse"
         response: ModelResponse = raw_response
         assert all(map(lambda choice: isinstance(choice, Choices), response.choices)), "Expected Choices"
@@ -238,12 +266,12 @@ class Environment(object):
         return response
 
     def completion(
-        self, model: str, messages: Iterable[ChatCompletionMessageParam], auth: Dict | Optional[AuthData] = None
+        self, messages: Iterable[ChatCompletionMessageParam], model: str = "", auth: Dict | Optional[AuthData] = None
     ) -> str:
         """Returns a completion for the given messages using the given model."""
         if isinstance(auth, Dict):
             auth = AuthData(**auth)
-        raw_response = self.completions(model, messages, auth=auth)
+        raw_response = self.completions(messages, model, auth=auth)
         assert isinstance(raw_response, ModelResponse), "Expected ModelResponse"
         response: ModelResponse = raw_response
         assert all(map(lambda choice: isinstance(choice, Choices), response.choices)), "Expected Choices"
@@ -254,13 +282,13 @@ class Environment(object):
 
     def completion_and_run_tools(
         self,
-        model: str,
         messages: Iterable[ChatCompletionMessageParam],
+        model: str = "",
         tools: Optional[List] = None,
         **kwargs: Any,
     ) -> str:
         """Returns a completion for the given messages using the given model and runs tools."""
-        completion_tools_response = self.completions_and_run_tools(model, messages, tools, **kwargs)
+        completion_tools_response = self.completions_and_run_tools(messages, model, tools, **kwargs)
         assert all(
             map(lambda choice: isinstance(choice, Choices), completion_tools_response.choices)
         ), "Expected Choices"

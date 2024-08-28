@@ -16,7 +16,7 @@ from tabulate import tabulate
 
 from nearai.agent import load_agent
 from nearai.clients.lambda_client import LambdaWrapper
-from nearai.config import CONFIG, update_config
+from nearai.config import CONFIG, DEFAULT_MODEL, DEFAULT_PROVIDER, update_config
 from nearai.finetune import FinetuneCli
 from nearai.hub import Hub
 from nearai.lib import check_metadata, parse_location
@@ -60,19 +60,20 @@ class RegistryCli:
         folder_name = path.name
 
         with open(metadata_path, "w") as f:
-            json.dump(
-                {
-                    "name": folder_name,
-                    "version": "0.0.1",
-                    "description": description,
-                    "category": category,
-                    "tags": [],
-                    "details": {},
-                    "show_entry": True,
-                },
-                f,
-                indent=2,
-            )
+            metadata = {
+                "name": folder_name,
+                "version": "0.0.1",
+                "description": description,
+                "category": category,
+                "tags": [],
+                "details": {},
+                "show_entry": True,
+            }
+
+            if category == "agent":
+                metadata["agent"] = {"model": DEFAULT_MODEL, "model_provider": DEFAULT_PROVIDER}
+
+            json.dump(metadata, f, indent=2)
 
     def list(
         self,

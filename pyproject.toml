@@ -110,7 +110,7 @@ exclude = [
     "venv",
     "openapi_client",
 ]
-extend-exclude = ["tests", "projects", "examples"]
+extend-exclude = ["./*/tests", "./*/projects", "./*/examples"]
 line-length = 120
 indent-width = 4
 

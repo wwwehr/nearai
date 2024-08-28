@@ -20,6 +20,9 @@ class Agent(object):
         self.version: str = ""
         self.env_vars: Dict[str, Any] = {}
 
+        self.model = ""
+        self.model_provider = ""
+
         self.path = path
         self.load_agent_metadata()
 
@@ -45,6 +48,10 @@ class Agent(object):
 
             if metadata["details"]:
                 self.env_vars = metadata["details"].get("env_vars", {})
+
+            if agent_metadata := metadata.get("agent", None):
+                self.model = agent_metadata.get("model", self.model)
+                self.model_provider = agent_metadata.get("model_provider", self.model_provider)
 
         if not self.version or not self.name:
             raise ValueError("Both 'version' and 'name' must be non-empty in metadata.")

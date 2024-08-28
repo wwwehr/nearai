@@ -41,8 +41,6 @@ class InferenceRouter(object):
         if self._config.nearai_hub is None:
             raise ValueError("Missing NearAI Hub config")
         provider, model = get_provider_model(self._config.nearai_hub.default_provider, model)
-        print(f"provider: {provider}")
-        print(f"model: {model}")
 
         if auth is None:
             auth = self._config.auth

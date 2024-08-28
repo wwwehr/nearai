@@ -63,7 +63,7 @@ class NearAiHubConfig(BaseModel):
 
     base_url: str = "https://api.near.ai/v1"
     default_provider: str = "fireworks"
-    default_model: str = "fireworks::accounts/fireworks/models/llama-v3-70b-instruct"
+    default_model: str = "fireworks::accounts/fireworks/models/llama-v3p1-405b-instruct-long"
     custom_llm_provider: str = "openai"
     login_with_near: Optional[bool] = True
     api_key: Optional[str] = ""

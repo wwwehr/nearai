@@ -60,9 +60,10 @@ class LlmRequest(BaseModel):
     """Whether to stream the response."""
 
     @model_validator(mode="before")
-    def validate_model(self, values):  # noqa: D102
-        provider = values.get("provider")
-        model = values.get("model")
+    @classmethod
+    def validate_model(cls, data: dict):  # noqa: D102
+        provider = data.get("provider")
+        model = data.get("model")
 
         if provider == "fireworks":
             if "accounts/fireworks/models/" not in model:
@@ -71,9 +72,9 @@ class LlmRequest(BaseModel):
         if PROVIDER_MODEL_SEP not in model:
             model = f"{provider}{PROVIDER_MODEL_SEP}{model}"
 
-        values["model"] = model
+        data["model"] = model
 
-        return values
+        return data
 
 
 class CompletionsRequest(LlmRequest):

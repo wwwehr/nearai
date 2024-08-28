@@ -7,7 +7,7 @@ from typing import Any, Dict, Iterable, List, Optional, Union
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security import HTTPBearer
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 from hub.api.near.primitives import PROVIDER_MODEL_SEP, get_provider_model
 from hub.api.v1.auth import AuthToken, revokable_auth, validate_signature
@@ -59,12 +59,21 @@ class LlmRequest(BaseModel):
     stream: bool = False
     """Whether to stream the response."""
 
-    @field_validator("model")
-    @classmethod
-    def validate_model(cls, value: str):  # noqa: D102
-        if PROVIDER_MODEL_SEP not in value:
-            value = f"fireworks{PROVIDER_MODEL_SEP}accounts/fireworks/models/{value}"
-        return value
+    @model_validator(mode="before")
+    def validate_model(self, values):  # noqa: D102
+        provider = values.get("provider")
+        model = values.get("model")
+
+        if provider == "fireworks":
+            if "accounts/fireworks/models/" not in model:
+                model = f"accounts/fireworks/models/{model}"
+
+        if PROVIDER_MODEL_SEP not in model:
+            model = f"{provider}{PROVIDER_MODEL_SEP}{model}"
+
+        values["model"] = model
+
+        return values
 
 
 class CompletionsRequest(LlmRequest):

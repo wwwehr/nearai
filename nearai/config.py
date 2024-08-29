@@ -14,8 +14,8 @@ REPO_FOLDER = Path(__file__).parent.parent
 PROMPTS_FOLDER = REPO_FOLDER / "nearai" / "prompts"
 ETC_FOLDER = REPO_FOLDER / "etc"
 DEFAULT_PROVIDER = "fireworks"
-DEFAULT_MODEL = "llama-v3-70b-instruct"
-DEFAULT_PROVIDER_MODEL = "fireworks::llama-v3-70b-instruct"
+DEFAULT_MODEL = "llama-v3p1-405b-instruct-long"
+DEFAULT_PROVIDER_MODEL = f"fireworks::accounts/fireworks/models/{DEFAULT_MODEL}"
 
 
 def get_config_path(local: bool = False) -> Path:

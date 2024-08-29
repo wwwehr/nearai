@@ -24,7 +24,7 @@ import hub.api.near.sign as near
 from hub.api.near.primitives import PROVIDER_MODEL_SEP
 from nearai.agent import Agent
 from nearai.completion import InferenceRouter
-from nearai.config import DEFAULT_PROVIDER_MODEL, AuthData, Config, NearAiHubConfig
+from nearai.config import DEFAULT_PROVIDER, DEFAULT_PROVIDER_MODEL, AuthData, Config, NearAiHubConfig
 from nearai.lib import plain_location
 from nearai.registry import registry
 from nearai.tool_registry import ToolRegistry
@@ -203,13 +203,17 @@ class Environment(object):
         return result
 
     def get_model_for_inference(self, model: str = "") -> str:
-        """Returns 'provider::model_name' or 'model_name' if provider is not given."""
+        """Returns 'provider::model_full_path' or 'model_short_name' if provider is default or not given."""
         provider = self._agents[0].model_provider if self._agents else ""
         if model == "":
             model = self._agents[0].model if self._agents else ""
         if model == "":
             return DEFAULT_PROVIDER_MODEL
-        if provider == "":
+
+        # TODO(#225): convert model_short_name -> model_full_path before passing to AI Hub.
+        # Until it's not implemented assume the model given from metadata for not default provider
+        # is already model_full_path, or model_short_name as used by fireworks.
+        if provider == "" or provider == DEFAULT_PROVIDER:
             return model
         return provider + PROVIDER_MODEL_SEP + model
 

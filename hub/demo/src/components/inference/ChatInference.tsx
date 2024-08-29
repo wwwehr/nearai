@@ -212,7 +212,7 @@ export const ChatInference = () => {
 
           <Controller
             control={form.control}
-            defaultValue={0.1}
+            defaultValue={1.0}
             name="temperature"
             render={({ field }) => (
               <Slider

@@ -22,6 +22,8 @@ class Agent(object):
 
         self.model = ""
         self.model_provider = ""
+        self.model_temperature = None
+        self.model_max_tokens = None
 
         self.path = path
         self.load_agent_metadata()
@@ -52,6 +54,10 @@ class Agent(object):
             if agent_metadata := metadata.get("agent", None):
                 self.model = agent_metadata.get("model", self.model)
                 self.model_provider = agent_metadata.get("model_provider", self.model_provider)
+                self.model_temperature: Optional[float] = agent_metadata.get(
+                    "model_temperature", self.model_temperature
+                )
+                self.model_max_tokens: Optional[int] = agent_metadata.get("model_max_tokens", self.model_max_tokens)
 
         if not self.version or not self.name:
             raise ValueError("Both 'version' and 'name' must be non-empty in metadata.")

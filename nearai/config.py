@@ -16,6 +16,8 @@ ETC_FOLDER = REPO_FOLDER / "etc"
 DEFAULT_PROVIDER = "fireworks"
 DEFAULT_MODEL = "llama-v3p1-405b-instruct-long"
 DEFAULT_PROVIDER_MODEL = f"fireworks::accounts/fireworks/models/{DEFAULT_MODEL}"
+DEFAULT_MODEL_TEMPERATURE = 1.0
+DEFAULT_MODEL_MAX_TOKENS = 32768
 
 
 def get_config_path(local: bool = False) -> Path:
@@ -96,8 +98,6 @@ class AuthData(BaseModel):
 
 class Config(BaseModel):
     origin: Optional[str] = None
-    user_name: Optional[str] = None
-    user_email: Optional[str] = None
     api_url: Optional[str] = "https://api.near.ai"
     inference_url: str = "http://localhost:5000/v1/"
     inference_api_key: str = "n/a"
@@ -122,16 +122,6 @@ class Config(BaseModel):
     def get(self, key: str, default: Optional[Any] = None) -> Optional[Any]:
         """Get the value of a key in the config if it exists."""
         return getattr(self, key, default)
-
-    def get_user_name(self) -> str:
-        """Get the user name from the config.
-
-        Prompt the user to set the user name if it is not set.
-        """
-        if self.user_name is None:
-            print("Please set user_name with `nearai config set user_name <name>`")
-            exit(1)
-        return self.user_name
 
 
 # Load default configs

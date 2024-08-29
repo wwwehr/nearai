@@ -16,7 +16,14 @@ from tabulate import tabulate
 
 from nearai.agent import load_agent
 from nearai.clients.lambda_client import LambdaWrapper
-from nearai.config import CONFIG, DEFAULT_MODEL, DEFAULT_PROVIDER, update_config
+from nearai.config import (
+    CONFIG,
+    DEFAULT_MODEL,
+    DEFAULT_MODEL_MAX_TOKENS,
+    DEFAULT_MODEL_TEMPERATURE,
+    DEFAULT_PROVIDER,
+    update_config,
+)
 from nearai.finetune import FinetuneCli
 from nearai.hub import Hub
 from nearai.lib import check_metadata, parse_location
@@ -71,7 +78,12 @@ class RegistryCli:
             }
 
             if category == "agent":
-                metadata["agent"] = {"model": DEFAULT_MODEL, "model_provider": DEFAULT_PROVIDER}
+                metadata["agent"] = {
+                    "model": DEFAULT_MODEL,
+                    "model_provider": DEFAULT_PROVIDER,
+                    "model_temperature": DEFAULT_MODEL_TEMPERATURE,
+                    "model_max_tokens": DEFAULT_MODEL_MAX_TOKENS,
+                }
 
             json.dump(metadata, f, indent=2)
 

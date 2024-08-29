@@ -45,8 +45,8 @@ def get_origin() -> str:
     if CONFIG.origin:
         return CONFIG.origin
 
-    if CONFIG.user_name:
-        return CONFIG.user_name
+    if CONFIG.auth:
+        return CONFIG.auth.account_id
 
     CONFIG.origin = f"anonymous_{timestamp()}"
     return CONFIG.origin

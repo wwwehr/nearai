@@ -1,10 +1,12 @@
 import concurrent.futures
+import json
 from dataclasses import dataclass
 from functools import partial
 from itertools import islice
 from typing import Any, Callable, Dict, Optional, Tuple, Union
 
 from datasets import Dataset, DatasetDict  # type: ignore[attr-defined]
+from openapi_client.api.benchmark_api import BenchmarkApi
 from tqdm import tqdm
 
 from nearai.solvers import SolverStrategy
@@ -31,13 +33,13 @@ class BenchmarkExecutor:
         self.dataset_info = dataset_info
         self.solver_strategy = solver_strategy
         self.benchmark_id = benchmark_id
+        self.client = BenchmarkApi()
 
     def run(self, progress: bool = True, max_concurrent: int = 32) -> None:  # noqa: D102
         dataset = self.dataset_info.get_dataset()
 
-        # TODO(db-api): Fetch the cache from the API
-        # cache = db.get_benchmark_status(self.benchmark_id)
-        cache: Dict[int, bool] = {}
+        cache_ = self.client.get_benchmark_result_v1_benchmark_get_result_get(benchmark_id=self.benchmark_id)
+        cache = {result.index: (result.solved, result.info) for result in cache_}
 
         correct = 0
         remaining = len(dataset)
@@ -83,7 +85,7 @@ def solve_task(
     datum: Any,
 ) -> Union[bool, Tuple[bool, Any]]:
     if index in cache:
-        return cache[index]
+        return cache[index][0]
 
     result = solve_fn(datum)
     _info = ""
@@ -91,7 +93,12 @@ def solve_task(
     if isinstance(result, tuple):
         result, _info = result
 
-    # TODO(db-api): Upload the result of the task to the database via the API.
-    # db.update_benchmark_result(benchmark_id, index, result, json.dumps(info))
+    client = BenchmarkApi()
+    client.add_benchmark_result_v1_benchmark_add_result_get(
+        benchmark_id=benchmark_id,
+        index=index,
+        solved=result,
+        info=json.dumps(_info),
+    )
 
     return result

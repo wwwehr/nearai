@@ -20,6 +20,7 @@ __version__ = "1.0.0"
 from openapi_client.api.agents_api import AgentsApi
 from openapi_client.api.assistants_api import AssistantsApi
 from openapi_client.api.agents_assistants_api import AgentsAssistantsApi
+from openapi_client.api.benchmark_api import BenchmarkApi
 from openapi_client.api.default_api import DefaultApi
 from openapi_client.api.registry_api import RegistryApi
 
@@ -35,6 +36,8 @@ from openapi_client.exceptions import ApiAttributeError
 from openapi_client.exceptions import ApiException
 
 # import models into sdk package
+from openapi_client.models.benchmark import Benchmark
+from openapi_client.models.benchmark_result_output import BenchmarkResultOutput
 from openapi_client.models.body_download_environment_v1_download_environment_post import BodyDownloadEnvironmentV1DownloadEnvironmentPost
 from openapi_client.models.body_download_file_v1_registry_download_file_post import BodyDownloadFileV1RegistryDownloadFilePost
 from openapi_client.models.body_download_metadata_v1_registry_download_metadata_post import BodyDownloadMetadataV1RegistryDownloadMetadataPost

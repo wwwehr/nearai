@@ -1,6 +1,9 @@
 import '~/styles/globals.scss';
 
+import { type ReactNode } from 'react';
+
 import { Footer } from '~/components/Footer';
+import { Toaster } from '~/components/lib/Toast';
 import { Navigation } from '~/components/Navigation';
 import { SignInHandler } from '~/components/SignInHandler';
 import { ZustandHydration } from '~/components/ZustandHydration';
@@ -8,11 +11,7 @@ import { TRPCReactProvider } from '~/trpc/react';
 
 import s from './layout.module.scss';
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
@@ -28,12 +27,13 @@ export default function RootLayout({
       <body>
         <SignInHandler />
         <ZustandHydration />
+        <Toaster />
 
         <TRPCReactProvider>
           <div className={s.wrapper}>
             <Navigation />
             <main className={s.main}>{children}</main>
-            <Footer />
+            <Footer conditional />
           </div>
         </TRPCReactProvider>
       </body>

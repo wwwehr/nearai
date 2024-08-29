@@ -298,16 +298,24 @@ class BenchmarkApi:
 
         # process the path parameters
         # process the query parameters
+        if benchmark_id is not None:
+            
+            _query_params.append(('benchmark_id', benchmark_id))
+            
+        if index is not None:
+            
+            _query_params.append(('index', index))
+            
+        if solved is not None:
+            
+            _query_params.append(('solved', solved))
+            
+        if info is not None:
+            
+            _query_params.append(('info', info))
+            
         # process the header parameters
         # process the form parameters
-        if benchmark_id is not None:
-            _form_params.append(('benchmark_id', benchmark_id))
-        if index is not None:
-            _form_params.append(('index', index))
-        if solved is not None:
-            _form_params.append(('solved', solved))
-        if info is not None:
-            _form_params.append(('info', info))
         # process the body parameter
 
 
@@ -319,19 +327,6 @@ class BenchmarkApi:
                 ]
             )
 
-        # set the HTTP header `Content-Type`
-        if _content_type:
-            _header_params['Content-Type'] = _content_type
-        else:
-            _default_content_type = (
-                self.api_client.select_header_content_type(
-                    [
-                        'application/x-www-form-urlencoded'
-                    ]
-                )
-            )
-            if _default_content_type is not None:
-                _header_params['Content-Type'] = _default_content_type
 
         # authentication setting
         _auth_settings: List[str] = [
@@ -361,7 +356,7 @@ class BenchmarkApi:
         self,
         benchmark_name: StrictStr,
         solver_name: StrictStr,
-        solver_kwargs: StrictStr,
+        solver_args: StrictStr,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -382,8 +377,8 @@ class BenchmarkApi:
         :type benchmark_name: str
         :param solver_name: (required)
         :type solver_name: str
-        :param solver_kwargs: (required)
-        :type solver_kwargs: str
+        :param solver_args: (required)
+        :type solver_args: str
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -409,7 +404,7 @@ class BenchmarkApi:
         _param = self._create_benchmark_v1_benchmark_create_get_serialize(
             benchmark_name=benchmark_name,
             solver_name=solver_name,
-            solver_kwargs=solver_kwargs,
+            solver_args=solver_args,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -436,7 +431,7 @@ class BenchmarkApi:
         self,
         benchmark_name: StrictStr,
         solver_name: StrictStr,
-        solver_kwargs: StrictStr,
+        solver_args: StrictStr,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -457,8 +452,8 @@ class BenchmarkApi:
         :type benchmark_name: str
         :param solver_name: (required)
         :type solver_name: str
-        :param solver_kwargs: (required)
-        :type solver_kwargs: str
+        :param solver_args: (required)
+        :type solver_args: str
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -484,7 +479,7 @@ class BenchmarkApi:
         _param = self._create_benchmark_v1_benchmark_create_get_serialize(
             benchmark_name=benchmark_name,
             solver_name=solver_name,
-            solver_kwargs=solver_kwargs,
+            solver_args=solver_args,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -511,7 +506,7 @@ class BenchmarkApi:
         self,
         benchmark_name: StrictStr,
         solver_name: StrictStr,
-        solver_kwargs: StrictStr,
+        solver_args: StrictStr,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -532,8 +527,8 @@ class BenchmarkApi:
         :type benchmark_name: str
         :param solver_name: (required)
         :type solver_name: str
-        :param solver_kwargs: (required)
-        :type solver_kwargs: str
+        :param solver_args: (required)
+        :type solver_args: str
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -559,7 +554,7 @@ class BenchmarkApi:
         _param = self._create_benchmark_v1_benchmark_create_get_serialize(
             benchmark_name=benchmark_name,
             solver_name=solver_name,
-            solver_kwargs=solver_kwargs,
+            solver_args=solver_args,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -581,7 +576,7 @@ class BenchmarkApi:
         self,
         benchmark_name,
         solver_name,
-        solver_kwargs,
+        solver_args,
         _request_auth,
         _content_type,
         _headers,
@@ -602,14 +597,20 @@ class BenchmarkApi:
 
         # process the path parameters
         # process the query parameters
+        if benchmark_name is not None:
+            
+            _query_params.append(('benchmark_name', benchmark_name))
+            
+        if solver_name is not None:
+            
+            _query_params.append(('solver_name', solver_name))
+            
+        if solver_args is not None:
+            
+            _query_params.append(('solver_args', solver_args))
+            
         # process the header parameters
         # process the form parameters
-        if benchmark_name is not None:
-            _form_params.append(('benchmark_name', benchmark_name))
-        if solver_name is not None:
-            _form_params.append(('solver_name', solver_name))
-        if solver_kwargs is not None:
-            _form_params.append(('solver_kwargs', solver_kwargs))
         # process the body parameter
 
 
@@ -621,19 +622,6 @@ class BenchmarkApi:
                 ]
             )
 
-        # set the HTTP header `Content-Type`
-        if _content_type:
-            _header_params['Content-Type'] = _content_type
-        else:
-            _default_content_type = (
-                self.api_client.select_header_content_type(
-                    [
-                        'application/x-www-form-urlencoded'
-                    ]
-                )
-            )
-            if _default_content_type is not None:
-                _header_params['Content-Type'] = _default_content_type
 
         # authentication setting
         _auth_settings: List[str] = [
@@ -924,7 +912,7 @@ class BenchmarkApi:
         namespace: StrictStr,
         benchmark_name: StrictStr,
         solver_name: StrictStr,
-        solver_kwargs: StrictStr,
+        solver_args: StrictStr,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -940,6 +928,7 @@ class BenchmarkApi:
     ) -> int:
         """Get Benchmark
 
+        Get the ID of a benchmark given its attributes.  Return -1 if the benchmark does not exist.
 
         :param namespace: (required)
         :type namespace: str
@@ -947,8 +936,8 @@ class BenchmarkApi:
         :type benchmark_name: str
         :param solver_name: (required)
         :type solver_name: str
-        :param solver_kwargs: (required)
-        :type solver_kwargs: str
+        :param solver_args: (required)
+        :type solver_args: str
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -975,7 +964,7 @@ class BenchmarkApi:
             namespace=namespace,
             benchmark_name=benchmark_name,
             solver_name=solver_name,
-            solver_kwargs=solver_kwargs,
+            solver_args=solver_args,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -1003,7 +992,7 @@ class BenchmarkApi:
         namespace: StrictStr,
         benchmark_name: StrictStr,
         solver_name: StrictStr,
-        solver_kwargs: StrictStr,
+        solver_args: StrictStr,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -1019,6 +1008,7 @@ class BenchmarkApi:
     ) -> ApiResponse[int]:
         """Get Benchmark
 
+        Get the ID of a benchmark given its attributes.  Return -1 if the benchmark does not exist.
 
         :param namespace: (required)
         :type namespace: str
@@ -1026,8 +1016,8 @@ class BenchmarkApi:
         :type benchmark_name: str
         :param solver_name: (required)
         :type solver_name: str
-        :param solver_kwargs: (required)
-        :type solver_kwargs: str
+        :param solver_args: (required)
+        :type solver_args: str
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -1054,7 +1044,7 @@ class BenchmarkApi:
             namespace=namespace,
             benchmark_name=benchmark_name,
             solver_name=solver_name,
-            solver_kwargs=solver_kwargs,
+            solver_args=solver_args,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -1082,7 +1072,7 @@ class BenchmarkApi:
         namespace: StrictStr,
         benchmark_name: StrictStr,
         solver_name: StrictStr,
-        solver_kwargs: StrictStr,
+        solver_args: StrictStr,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -1098,6 +1088,7 @@ class BenchmarkApi:
     ) -> RESTResponseType:
         """Get Benchmark
 
+        Get the ID of a benchmark given its attributes.  Return -1 if the benchmark does not exist.
 
         :param namespace: (required)
         :type namespace: str
@@ -1105,8 +1096,8 @@ class BenchmarkApi:
         :type benchmark_name: str
         :param solver_name: (required)
         :type solver_name: str
-        :param solver_kwargs: (required)
-        :type solver_kwargs: str
+        :param solver_args: (required)
+        :type solver_args: str
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -1133,7 +1124,7 @@ class BenchmarkApi:
             namespace=namespace,
             benchmark_name=benchmark_name,
             solver_name=solver_name,
-            solver_kwargs=solver_kwargs,
+            solver_args=solver_args,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -1156,7 +1147,7 @@ class BenchmarkApi:
         namespace,
         benchmark_name,
         solver_name,
-        solver_kwargs,
+        solver_args,
         _request_auth,
         _content_type,
         _headers,
@@ -1189,9 +1180,9 @@ class BenchmarkApi:
             
             _query_params.append(('solver_name', solver_name))
             
-        if solver_kwargs is not None:
+        if solver_args is not None:
             
-            _query_params.append(('solver_kwargs', solver_kwargs))
+            _query_params.append(('solver_args', solver_args))
             
         # process the header parameters
         # process the form parameters

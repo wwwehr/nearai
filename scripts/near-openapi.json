@@ -745,16 +745,40 @@
         ],
         "summary": "Create Benchmark",
         "operationId": "create_benchmark_v1_benchmark_create_get",
-        "requestBody": {
-          "content": {
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_create_benchmark_v1_benchmark_create_get"
-              }
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "benchmark_name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Benchmark Name"
             }
           },
-          "required": true
-        },
+          {
+            "name": "solver_name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Solver Name"
+            }
+          },
+          {
+            "name": "solver_args",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Solver Args"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -777,12 +801,7 @@
               }
             }
           }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
+        }
       }
     },
     "/v1/benchmark/get": {
@@ -791,6 +810,7 @@
           "benchmark"
         ],
         "summary": "Get Benchmark",
+        "description": "Get the ID of a benchmark given its attributes.\n\nReturn -1 if the benchmark does not exist.",
         "operationId": "get_benchmark_v1_benchmark_get_get",
         "parameters": [
           {
@@ -821,12 +841,12 @@
             }
           },
           {
-            "name": "solver_kwargs",
+            "name": "solver_args",
             "in": "query",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Solver Kwargs"
+              "title": "Solver Args"
             }
           }
         ],
@@ -836,14 +856,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "anyOf": [
-                    {
-                      "type": "integer"
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ],
+                  "type": "integer",
                   "title": "Response Get Benchmark V1 Benchmark Get Get"
                 }
               }
@@ -990,16 +1003,49 @@
         ],
         "summary": "Add Benchmark Result",
         "operationId": "add_benchmark_result_v1_benchmark_add_result_get",
-        "requestBody": {
-          "content": {
-            "application/x-www-form-urlencoded": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_add_benchmark_result_v1_benchmark_add_result_get"
-              }
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "benchmark_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Benchmark Id"
             }
           },
-          "required": true
-        },
+          {
+            "name": "index",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Index"
+            }
+          },
+          {
+            "name": "solved",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "boolean",
+              "title": "Solved"
+            }
+          },
+          {
+            "name": "info",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Info"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1019,12 +1065,7 @@
               }
             }
           }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
+        }
       }
     },
     "/v1/benchmark/get_result": {
@@ -1146,57 +1187,6 @@
           "info"
         ],
         "title": "BenchmarkResultOutput"
-      },
-      "Body_add_benchmark_result_v1_benchmark_add_result_get": {
-        "properties": {
-          "benchmark_id": {
-            "type": "integer",
-            "title": "Benchmark Id"
-          },
-          "index": {
-            "type": "integer",
-            "title": "Index"
-          },
-          "solved": {
-            "type": "boolean",
-            "title": "Solved"
-          },
-          "info": {
-            "type": "string",
-            "title": "Info"
-          }
-        },
-        "type": "object",
-        "required": [
-          "benchmark_id",
-          "index",
-          "solved",
-          "info"
-        ],
-        "title": "Body_add_benchmark_result_v1_benchmark_add_result_get"
-      },
-      "Body_create_benchmark_v1_benchmark_create_get": {
-        "properties": {
-          "benchmark_name": {
-            "type": "string",
-            "title": "Benchmark Name"
-          },
-          "solver_name": {
-            "type": "string",
-            "title": "Solver Name"
-          },
-          "solver_kwargs": {
-            "type": "string",
-            "title": "Solver Kwargs"
-          }
-        },
-        "type": "object",
-        "required": [
-          "benchmark_name",
-          "solver_name",
-          "solver_kwargs"
-        ],
-        "title": "Body_create_benchmark_v1_benchmark_create_get"
       },
       "Body_download_environment_v1_download_environment_post": {
         "properties": {

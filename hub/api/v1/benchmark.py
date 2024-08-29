@@ -3,7 +3,7 @@ from typing import List, Optional
 
 import boto3
 from dotenv import load_dotenv
-from fastapi import APIRouter, Depends, Form, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import select
 
@@ -27,21 +27,22 @@ def requires_login(auth: AuthToken = Depends(revokable_auth)):
 
 @v1_router.get("/create")
 async def create_benchmark(
+    benchmark_name: str,
+    solver_name: str,
+    solver_args: str,
     namespace: str = Depends(requires_login),
-    benchmark_name: str = Form(...),
-    solver_name: str = Form(...),
-    solver_kwargs: str = Form(...),
 ) -> int:
     with get_session() as session:
         benchmark = Benchmark(
             namespace=namespace,
-            benchmark_name=benchmark_name,
-            solver_name=solver_name,
-            solver_kwargs=solver_kwargs,
+            benchmark=benchmark_name,
+            solver=solver_name,
+            args=solver_args,
         )
         session.add(benchmark)
         session.commit()
-    return benchmark.id
+        benchmark_id = benchmark.id
+    return benchmark_id
 
 
 @v1_router.get("/get")
@@ -49,19 +50,23 @@ async def get_benchmark(
     namespace: str,
     benchmark_name: str,
     solver_name: str,
-    solver_kwargs: str,
-) -> Optional[int]:
+    solver_args: str,
+) -> int:
+    """Get the ID of a benchmark given its attributes.
+
+    Return -1 if the benchmark does not exist.
+    """
     with get_session() as session:
         query = select(Benchmark).where(
             namespace == namespace,
             benchmark_name == benchmark_name,
             solver_name == solver_name,
-            solver_kwargs == solver_kwargs,
+            solver_args == solver_args,
         )
         benchmark = session.exec(query).first()
 
         if benchmark is None:
-            return None
+            return -1
         else:
             return benchmark.id
 
@@ -94,11 +99,11 @@ async def list_benchmarks(
 
 @v1_router.get("/add_result")
 async def add_benchmark_result(
+    benchmark_id: int,
+    index: int,
+    solved: bool,
+    info: str,
     namespace: str = Depends(requires_login),
-    benchmark_id: int = Form(...),
-    index: int = Form(...),
-    solved: bool = Form(...),
-    info: str = Form(...),
 ):
     with get_session() as session:
         benchmark_q = select(Benchmark).where(Benchmark.id == benchmark_id)

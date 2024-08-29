@@ -39,13 +39,16 @@ class BenchmarkExecutor:
         dataset = self.dataset_info.get_dataset()
 
         cache_ = self.client.get_benchmark_result_v1_benchmark_get_result_get(benchmark_id=self.benchmark_id)
-        cache = {result.index: (result.solved, result.info) for result in cache_}
+        cache = {result.index: result.solved for result in cache_}
 
         correct = 0
         remaining = len(dataset)
         with concurrent.futures.ThreadPoolExecutor() as executor:
             task_ctor = partial(
-                solve_task, benchmark_id=self.benchmark_id, cache=cache, solve_fn=self.solver_strategy.solve
+                solve_task,
+                benchmark_id=self.benchmark_id,
+                cache=cache,
+                solve_fn=self.solver_strategy.solve,
             )
             tasks = iter(executor.submit(task_ctor, index=index, datum=datum) for index, datum in enumerate(dataset))
 
@@ -85,7 +88,7 @@ def solve_task(
     datum: Any,
 ) -> Union[bool, Tuple[bool, Any]]:
     if index in cache:
-        return cache[index][0]
+        return cache[index]
 
     result = solve_fn(datum)
     _info = ""

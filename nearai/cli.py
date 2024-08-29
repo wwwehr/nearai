@@ -170,6 +170,9 @@ class BenchmarkCli:
         self.client = BenchmarkApi()
 
     def _get_or_create_benchmark(self, benchmark_name: str, solver_name: str, args: Dict[str, Any], force: bool) -> int:
+        if CONFIG.auth is None:
+            print("Please login with `nearai login`")
+            exit(1)
         namespace = CONFIG.auth.account_id
 
         # Sort the args to have a consistent representation.

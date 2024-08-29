@@ -1,3 +1,4 @@
+import json
 from os import getenv
 from typing import List, Optional
 
@@ -94,6 +95,7 @@ async def list_benchmarks(
 
     with get_session() as session:
         benchmarks = session.exec(query).all()
+        assert isinstance(benchmarks, list)
         return benchmarks
 
 
@@ -149,7 +151,7 @@ async def get_benchmark_result(benchmark_id: int) -> List[BenchmarkResultOutput]
             BenchmarkResultOutput(
                 index=result.index,
                 solved=result.solved,
-                info=result.info,
+                info=json.dumps(result.info),
             )
             for result in results
         ]

@@ -90,7 +90,11 @@ class Registry:
             copyfileobj(result, f)
 
     def download(
-        self, entry_location: Union[str, EntryLocation], force: bool = False, show_progress: bool = False
+        self,
+        entry_location: Union[str, EntryLocation],
+        force: bool = False,
+        show_progress: bool = False,
+        verbose: bool = True,
     ) -> Path:
         """Download entry from the registry locally."""
         if isinstance(entry_location, str):
@@ -100,7 +104,10 @@ class Registry:
 
         if download_path.exists():
             if not force:
-                print(f"Entry {entry_location} already exists at {download_path}. Use --force to overwrite the entry.")
+                if verbose:
+                    print(
+                        f"Entry {entry_location} already exists at {download_path}. Use --force to overwrite the entry."
+                    )
                 return download_path
 
         files = registry.list_files(entry_location)

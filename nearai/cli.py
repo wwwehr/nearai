@@ -170,6 +170,7 @@ class BenchmarkCli:
         max_concurrent: int = -1,
         force: bool = False,
         subset: Optional[str] = None,
+        check_compatibility: bool = True,
         **solver_kwargs: Any,
     ) -> None:
         """Run benchmark on a dataset with a solver strategy.
@@ -185,16 +186,18 @@ class BenchmarkCli:
         # benchmark_id = db.get_benchmark_id(dataset, solver_strategy, force, subset=subset, **solver_kwargs)
         benchmark_id = -1
 
-        name, subset, dataset = dataset, subset, load_dataset(dataset)
+        name, subset, dataset = dataset, subset, load_dataset(dataset, verbose=False)
 
         solver_strategy_: SolverStrategy | None = SolverStrategyRegistry.get(solver_strategy, None)
         assert (
             solver_strategy
         ), f"Solver strategy {solver_strategy} not found. Available strategies: {list(SolverStrategyRegistry.keys())}"
         solver_strategy_obj: SolverStrategy = solver_strategy_(dataset_ref=dataset, **solver_kwargs)  # type: ignore
-        assert (
-            name in solver_strategy_obj.compatible_datasets()
-        ), f"Solver strategy {solver_strategy} is not compatible with dataset {name}"
+
+        if check_compatibility:
+            assert (
+                name in solver_strategy_obj.compatible_datasets()
+            ), f"Solver strategy {solver_strategy} is not compatible with dataset {name}"
 
         be = BenchmarkExecutor(DatasetInfo(name, subset, dataset), solver_strategy_obj, benchmark_id=benchmark_id)
 

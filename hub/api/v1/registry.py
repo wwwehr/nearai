@@ -187,6 +187,7 @@ async def download_file(
     elif source["origin"] == "s3":
         bucket = source["bucket"]
         key = source["key"]
+        key = key.strip("/") + "/" + path.strip("/")
     else:
         raise HTTPException(status_code=400, detail=f"Unsupported source: {source}")
 

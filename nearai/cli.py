@@ -82,6 +82,7 @@ class RegistryCli:
         category: str = "",
         tags: str = "",
         total: int = 32,
+        offset: int = 0,
         show_all: bool = False,
         show_latest_version: bool = True,
     ) -> None:
@@ -90,7 +91,15 @@ class RegistryCli:
         tags_l = parse_tags(tags)
         tags = ",".join(tags_l)
 
-        entries = registry.list(namespace, category, tags, total + 1, show_all, show_latest_version)
+        entries = registry.list(
+            namespace=namespace,
+            category=category,
+            tags=tags,
+            total=total + 1,
+            offset=offset,
+            show_all=show_all,
+            show_latest_version=show_latest_version,
+        )
 
         more_rows = len(entries) > total
         entries = entries[:total]

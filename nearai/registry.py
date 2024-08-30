@@ -230,7 +230,8 @@ class Registry:
         category: str,
         tags: str,
         total: int,
-        show_hidden: bool,
+        offset: int,
+        show_all: bool,
         show_latest_version: bool,
     ) -> List[EntryInformation]:
         """List and filter entries in the registry."""
@@ -239,7 +240,8 @@ class Registry:
             category=category,
             tags=tags,
             total=total,
-            show_hidden=show_hidden,
+            offset=offset,
+            show_hidden=show_all,
             show_latest_version=show_latest_version,
         )
 

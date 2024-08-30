@@ -593,6 +593,7 @@ class RegistryApi:
         category: Optional[StrictStr] = None,
         tags: Optional[StrictStr] = None,
         total: Optional[StrictInt] = None,
+        offset: Optional[StrictInt] = None,
         show_hidden: Optional[StrictBool] = None,
         show_latest_version: Optional[StrictBool] = None,
         _request_timeout: Union[
@@ -619,6 +620,8 @@ class RegistryApi:
         :type tags: str
         :param total:
         :type total: int
+        :param offset:
+        :type offset: int
         :param show_hidden:
         :type show_hidden: bool
         :param show_latest_version:
@@ -650,6 +653,7 @@ class RegistryApi:
             category=category,
             tags=tags,
             total=total,
+            offset=offset,
             show_hidden=show_hidden,
             show_latest_version=show_latest_version,
             _request_auth=_request_auth,
@@ -680,6 +684,7 @@ class RegistryApi:
         category: Optional[StrictStr] = None,
         tags: Optional[StrictStr] = None,
         total: Optional[StrictInt] = None,
+        offset: Optional[StrictInt] = None,
         show_hidden: Optional[StrictBool] = None,
         show_latest_version: Optional[StrictBool] = None,
         _request_timeout: Union[
@@ -706,6 +711,8 @@ class RegistryApi:
         :type tags: str
         :param total:
         :type total: int
+        :param offset:
+        :type offset: int
         :param show_hidden:
         :type show_hidden: bool
         :param show_latest_version:
@@ -737,6 +744,7 @@ class RegistryApi:
             category=category,
             tags=tags,
             total=total,
+            offset=offset,
             show_hidden=show_hidden,
             show_latest_version=show_latest_version,
             _request_auth=_request_auth,
@@ -767,6 +775,7 @@ class RegistryApi:
         category: Optional[StrictStr] = None,
         tags: Optional[StrictStr] = None,
         total: Optional[StrictInt] = None,
+        offset: Optional[StrictInt] = None,
         show_hidden: Optional[StrictBool] = None,
         show_latest_version: Optional[StrictBool] = None,
         _request_timeout: Union[
@@ -793,6 +802,8 @@ class RegistryApi:
         :type tags: str
         :param total:
         :type total: int
+        :param offset:
+        :type offset: int
         :param show_hidden:
         :type show_hidden: bool
         :param show_latest_version:
@@ -824,6 +835,7 @@ class RegistryApi:
             category=category,
             tags=tags,
             total=total,
+            offset=offset,
             show_hidden=show_hidden,
             show_latest_version=show_latest_version,
             _request_auth=_request_auth,
@@ -849,6 +861,7 @@ class RegistryApi:
         category,
         tags,
         total,
+        offset,
         show_hidden,
         show_latest_version,
         _request_auth,
@@ -886,6 +899,10 @@ class RegistryApi:
         if total is not None:
             
             _query_params.append(('total', total))
+            
+        if offset is not None:
+            
+            _query_params.append(('offset', offset))
             
         if show_hidden is not None:
             

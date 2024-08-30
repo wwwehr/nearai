@@ -99,11 +99,11 @@ async def list_benchmarks(
     query = (
         select(
             Benchmark,
-            func.count(BenchmarkResult.benchmark_id),
-            func.sum(func.cast(BenchmarkResult.solved, Integer)),
+            func.count(BenchmarkResult.benchmark_id),  # type: ignore
+            func.sum(func.cast(BenchmarkResult.solved, Integer)),  # type: ignore
         )
         .where(Benchmark.id == BenchmarkResult.benchmark_id)
-        .group_by(Benchmark.id)
+        .group_by(Benchmark.id)  # type: ignore
     )
 
     if namespace is not None and namespace != "":

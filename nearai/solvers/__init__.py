@@ -41,6 +41,7 @@ from nearai.solvers.hellaswag_solver import HellaswagSolverStrategy  # noqa: E40
 from nearai.solvers.mbpp_agent_solver import MBPPSolverAgent  # noqa: E402
 from nearai.solvers.mbpp_solver import MBPPSolverStrategy  # noqa: E402
 from nearai.solvers.mmlu_solver import MMLUSolverStrategy  # noqa: E402
+from nearai.solvers.gsm8k_solver import GSM8KSolverStrategy  # noqa: E402
 
 __all__ = [
     "SolverStrategyRegistry",
@@ -49,4 +50,5 @@ __all__ = [
     "MBPPSolverAgent",
     "MMLUSolverStrategy",
     "HellaswagSolverStrategy",
+    "GSM8KSolverStrategy",
 ]

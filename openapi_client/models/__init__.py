@@ -14,7 +14,7 @@
 
 
 # import models into model package
-from openapi_client.models.benchmark import Benchmark
+from openapi_client.models.benchmark_output import BenchmarkOutput
 from openapi_client.models.benchmark_result_output import BenchmarkResultOutput
 from openapi_client.models.body_download_environment_v1_download_environment_post import BodyDownloadEnvironmentV1DownloadEnvironmentPost
 from openapi_client.models.body_download_file_v1_registry_download_file_post import BodyDownloadFileV1RegistryDownloadFilePost

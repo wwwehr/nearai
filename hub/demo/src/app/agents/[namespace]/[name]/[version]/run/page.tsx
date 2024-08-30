@@ -29,11 +29,7 @@ import { Text } from '~/components/lib/Text';
 import { SignInPrompt } from '~/components/SignInPrompt';
 import { useZodForm } from '~/hooks/form';
 import { useCurrentResource, useResourceParams } from '~/hooks/resources';
-import {
-  agentRequestModel,
-  chatCompletionsModel,
-  type messageModel,
-} from '~/lib/models';
+import { agentRequestModel, type messageModel } from '~/lib/models';
 import { type FileStructure } from '~/server/api/routers/hub';
 import { useAuthStore } from '~/stores/auth';
 import { api } from '~/trpc/react';
@@ -41,12 +37,9 @@ import { copyTextToClipboard } from '~/utils/clipboard';
 import { handleClientError } from '~/utils/error';
 import { formatBytes } from '~/utils/number';
 
-const LOCAL_STORAGE_KEY = 'agent_inference_conversation';
-
 export default function RunAgentPage() {
   const { currentResource } = useCurrentResource('agent');
-  const store = useAuthStore();
-  const isAuthenticated = store.isAuthenticated();
+  const isAuthenticated = useAuthStore((store) => store.isAuthenticated);
   const { namespace, name, version } = useResourceParams();
   const searchParams = useSearchParams();
   const environmentId = searchParams.get('environmentId');
@@ -100,19 +93,29 @@ export default function RunAgentPage() {
   }, [chatMutation.trpc.path, environmentName, environmentQuery.data]);
 
   async function onSubmit(values: z.infer<typeof agentRequestModel>) {
-    if (environmentName) {
-      values.environment_id = environmentName;
-    }
-
     try {
+      if (!values.new_message.trim()) return;
+
+      if (environmentName) {
+        values.environment_id = environmentName;
+      }
+
+      setConversation((current) => [
+        ...current,
+        {
+          content: values.new_message,
+          role: 'user',
+        },
+      ]);
+
+      form.setValue('new_message', '');
+      form.setFocus('new_message');
+
       const response = await chatMutation.mutateAsync(values);
       setEnvironmentName(() => response.environmentId);
       setFileStructure(() => response.fileStructure);
       setFiles(() => response.files);
       setConversation(response.conversation);
-
-      form.setValue('new_message', '');
-      form.setFocus('new_message');
     } catch (error) {
       handleClientError({ error, title: 'Failed to communicate with agent' });
     }
@@ -128,23 +131,8 @@ export default function RunAgentPage() {
   };
 
   const clearConversation = () => {
-    localStorage.removeItem(LOCAL_STORAGE_KEY);
     setConversation([]);
   };
-
-  useEffect(() => {
-    const currConv = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (currConv) {
-      try {
-        const conv: unknown = JSON.parse(currConv);
-        const parsed = chatCompletionsModel.parse(conv);
-        setConversation(parsed.messages);
-      } catch (error) {
-        console.error(error);
-        clearConversation();
-      }
-    }
-  }, [setConversation]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -292,7 +280,7 @@ export default function RunAgentPage() {
 
           <Controller
             control={form.control}
-            defaultValue={5}
+            defaultValue={1}
             name="max_iterations"
             render={({ field }) => (
               <Slider

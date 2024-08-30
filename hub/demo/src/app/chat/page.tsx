@@ -51,8 +51,7 @@ export default function InferencePage() {
   const [conversation, setConversation] = useState<
     z.infer<typeof messageModel>[]
   >([]);
-  const store = useAuthStore();
-  const isAuthenticated = store.isAuthenticated();
+  const isAuthenticated = useAuthStore((store) => store.isAuthenticated);
 
   const [parametersOpenForSmallScreens, setParametersOpenForSmallScreens] =
     useState(false);
@@ -69,18 +68,33 @@ export default function InferencePage() {
   const onSubmit: SubmitHandler<z.infer<typeof chatCompletionsModel>> = async (
     values,
   ) => {
-    values.messages = [...conversation, ...values.messages];
-    values.stop = ['[INST]'];
-
     try {
-      const response = await chatMutation.mutateAsync(values);
+      const message = values.messages.at(-1)!;
+      if (!message.content.trim()) return;
 
-      values.messages = [...values.messages, response.choices[0]!.message];
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(values));
-      setConversation(values.messages);
+      values.messages = [...conversation, ...values.messages];
+      values.stop = ['[INST]'];
+
+      setConversation((current) => [
+        ...current,
+        {
+          content: message.content,
+          role: message.role,
+        },
+      ]);
 
       form.setValue('messages.0.content', '');
       form.setFocus('messages.0.content');
+
+      const response = await chatMutation.mutateAsync(values);
+
+      values.messages = [
+        ...values.messages,
+        ...response.choices.map((choice) => choice.message),
+      ];
+
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(values));
+      setConversation(values.messages);
     } catch (error) {
       handleClientError({ error, title: 'Failed to communicate with model' });
     }
@@ -112,11 +126,13 @@ export default function InferencePage() {
   }, [form, provider, models]);
 
   useEffect(() => {
-    const currConv = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (currConv) {
+    const previousConversationRaw = localStorage.getItem(LOCAL_STORAGE_KEY);
+
+    if (previousConversationRaw) {
       try {
-        const conv: unknown = JSON.parse(currConv);
-        const parsed = chatCompletionsModel.parse(conv);
+        const parsed = chatCompletionsModel.parse(
+          JSON.parse(previousConversationRaw),
+        );
         setConversation(parsed.messages);
       } catch (error) {
         console.error(error);

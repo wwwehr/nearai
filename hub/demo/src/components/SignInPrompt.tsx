@@ -7,6 +7,7 @@ import { signInWithNear } from '~/lib/auth';
 import { Button } from './lib/Button';
 import { Container } from './lib/Container';
 import { Flex } from './lib/Flex';
+import { Section } from './lib/Section';
 import { Text } from './lib/Text';
 
 export const SignInPrompt = () => {
@@ -24,5 +25,13 @@ export const SignInPrompt = () => {
         />
       </Flex>
     </Container>
+  );
+};
+
+export const SignInPromptSection = () => {
+  return (
+    <Section grow="available">
+      <SignInPrompt />
+    </Section>
   );
 };

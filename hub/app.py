@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from hub.api.v1.agent_routes import v1_router as agent_router
+from hub.api.v1.benchmark import v1_router as benchmark_router
 from hub.api.v1.exceptions import TokenValidationError
 from hub.api.v1.registry import v1_router as registry_router
 from hub.api.v1.routes import v1_router
@@ -31,6 +32,7 @@ app.add_middleware(
 app.include_router(v1_router, prefix="/v1")
 app.include_router(registry_router, prefix="/v1")
 app.include_router(agent_router, prefix="/v1")
+app.include_router(benchmark_router, prefix="/v1")
 
 
 @app.get("/health")

@@ -57,6 +57,26 @@ class Tags(SQLModel, table=True):
     tag: str = Field(primary_key=True)
 
 
+class Benchmark(SQLModel, table=True):
+    __tablename__ = "benchmarks"
+
+    id: int = Field(default=None, primary_key=True)
+    namespace: str = Field(nullable=False)
+    benchmark: str = Field(nullable=False)
+    solver: str = Field(nullable=False)
+    args: str = Field(nullable=False)
+
+
+class BenchmarkResult(SQLModel, table=True):
+    __tablename__ = "benchmark_results"
+
+    id: int = Field(default=None, primary_key=True)
+    benchmark_id: int = Field(nullable=False)
+    index: int = Field(nullable=False)
+    solved: bool = Field(nullable=False)
+    info: Dict = Field(default_factory=dict, sa_column=Column(JSON))
+
+
 engine = create_engine(f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}")
 
 

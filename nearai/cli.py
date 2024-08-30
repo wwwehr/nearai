@@ -3,6 +3,7 @@ import json
 import os
 import runpy
 import sys
+from collections import OrderedDict
 from dataclasses import asdict
 from pathlib import Path
 from textwrap import fill
@@ -11,6 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import boto3
 import fire
 from openapi_client import EntryLocation, EntryMetadataInput
+from openapi_client.api.benchmark_api import BenchmarkApi
 from openapi_client.api.default_api import DefaultApi
 from tabulate import tabulate
 
@@ -163,6 +165,36 @@ class ConfigCli:
 
 
 class BenchmarkCli:
+    def __init__(self):
+        """Initialize Benchmark API."""
+        self.client = BenchmarkApi()
+
+    def _get_or_create_benchmark(self, benchmark_name: str, solver_name: str, args: Dict[str, Any], force: bool) -> int:
+        if CONFIG.auth is None:
+            print("Please login with `nearai login`")
+            exit(1)
+        namespace = CONFIG.auth.account_id
+
+        # Sort the args to have a consistent representation.
+        solver_args = json.dumps(OrderedDict(sorted(args.items())))
+
+        benchmark_id = self.client.get_benchmark_v1_benchmark_get_get(
+            namespace=namespace,
+            benchmark_name=benchmark_name,
+            solver_name=solver_name,
+            solver_args=solver_args,
+        )
+
+        if benchmark_id == -1 or force:
+            benchmark_id = self.client.create_benchmark_v1_benchmark_create_get(
+                benchmark_name=benchmark_name,
+                solver_name=solver_name,
+                solver_args=solver_args,
+            )
+
+        assert benchmark_id != -1
+        return benchmark_id
+
     def run(
         self,
         dataset: str,
@@ -170,7 +202,8 @@ class BenchmarkCli:
         max_concurrent: int = -1,
         force: bool = False,
         subset: Optional[str] = None,
-        **solver_kwargs: Any,
+        check_compatibility: bool = True,
+        **solver_args: Any,
     ) -> None:
         """Run benchmark on a dataset with a solver strategy.
 
@@ -181,20 +214,29 @@ class BenchmarkCli:
         from nearai.dataset import load_dataset
         from nearai.solvers import SolverStrategy, SolverStrategyRegistry
 
-        # TODO(db-api): Expose an interface to cache the result of the benchmarks
-        # benchmark_id = db.get_benchmark_id(dataset, solver_strategy, force, subset=subset, **solver_kwargs)
-        benchmark_id = -1
+        args = dict(solver_args)
+        if subset is not None:
+            args["subset"] = subset
 
-        name, subset, dataset = dataset, subset, load_dataset(dataset)
+        benchmark_id = self._get_or_create_benchmark(
+            benchmark_name=dataset,
+            solver_name=solver_strategy,
+            args=args,
+            force=force,
+        )
+
+        name, subset, dataset = dataset, subset, load_dataset(dataset, verbose=False)
 
         solver_strategy_: SolverStrategy | None = SolverStrategyRegistry.get(solver_strategy, None)
         assert (
             solver_strategy
         ), f"Solver strategy {solver_strategy} not found. Available strategies: {list(SolverStrategyRegistry.keys())}"
-        solver_strategy_obj: SolverStrategy = solver_strategy_(dataset_ref=dataset, **solver_kwargs)  # type: ignore
-        assert (
-            name in solver_strategy_obj.compatible_datasets()
-        ), f"Solver strategy {solver_strategy} is not compatible with dataset {name}"
+        solver_strategy_obj: SolverStrategy = solver_strategy_(dataset_ref=dataset, **solver_args)  # type: ignore
+
+        if check_compatibility:
+            assert (
+                name in solver_strategy_obj.compatible_datasets()
+            ), f"Solver strategy {solver_strategy} is not compatible with dataset {name}"
 
         be = BenchmarkExecutor(DatasetInfo(name, subset, dataset), solver_strategy_obj, benchmark_id=benchmark_id)
 

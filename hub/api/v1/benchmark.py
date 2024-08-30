@@ -58,11 +58,15 @@ async def get_benchmark(
     Return -1 if the benchmark does not exist.
     """
     with get_session() as session:
-        query = select(Benchmark).where(
-            namespace == namespace,
-            benchmark_name == benchmark_name,
-            solver_name == solver_name,
-            solver_args == solver_args,
+        query = (
+            select(Benchmark)
+            .where(
+                namespace == namespace,
+                benchmark_name == benchmark_name,
+                solver_name == solver_name,
+                solver_args == solver_args,
+            )
+            .order_by(Benchmark.id.desc())
         )
         benchmark = session.exec(query).first()
 

@@ -243,8 +243,12 @@ async def download_metadata(entry: RegistryEntry = Depends(get)) -> EntryMetadat
     )
 
 
+class Filename(BaseModel):
+    filename: str
+
+
 @v1_router.post("/list_files")
-async def list_files(entry: RegistryEntry = Depends(get)) -> List[str]:
+async def list_files(entry: RegistryEntry = Depends(get)) -> List[Filename]:
     """List all files that belong to a entry."""
     source = entry.details.get("_source")
 
@@ -262,7 +266,7 @@ async def list_files(entry: RegistryEntry = Depends(get)) -> List[str]:
     key = key.strip("/") + "/"
 
     objects = s3.list_objects(Bucket=bucket, Prefix=key)
-    files = [obj["Key"][len(key) :] for obj in objects.get("Contents", [])]
+    files = [Filename(filename=obj["Key"][len(key) :]) for obj in objects.get("Contents", [])]
     return files
 
 

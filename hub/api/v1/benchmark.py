@@ -59,10 +59,10 @@ async def get_benchmark(
     """
     with get_session() as session:
         query = select(Benchmark).where(
-            namespace == namespace,
-            benchmark_name == benchmark_name,
-            solver_name == solver_name,
-            solver_args == solver_args,
+            Benchmark.namespace == namespace,
+            Benchmark.benchmark == benchmark_name,
+            Benchmark.solver == solver_name,
+            Benchmark.args == solver_args,
         )
         benchmark = session.exec(query).first()
 

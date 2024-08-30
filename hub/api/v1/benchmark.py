@@ -62,10 +62,10 @@ async def get_benchmark(
         query = (
             select(Benchmark)
             .where(
-                namespace == namespace,
-                benchmark_name == benchmark_name,
-                solver_name == solver_name,
-                solver_args == solver_args,
+                Benchmark.namespace == namespace,
+                Benchmark.benchmark == benchmark_name,
+                Benchmark.solver == solver_name,
+                Benchmark.args == solver_args,
             )
             .order_by(col(Benchmark.id).desc())
         )

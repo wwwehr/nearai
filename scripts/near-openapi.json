@@ -475,7 +475,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "type": "string"
+                    "$ref": "#/components/schemas/Filename"
                   },
                   "type": "array",
                   "title": "Response List Files V1 Registry List Files Post"
@@ -540,8 +540,18 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 16,
+              "default": 32,
               "title": "Total"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Offset"
             }
           },
           {
@@ -1838,6 +1848,19 @@
           "show_entry"
         ],
         "title": "EntryMetadataInput"
+      },
+      "Filename": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename"
+        ],
+        "title": "Filename"
       },
       "HTTPValidationError": {
         "properties": {

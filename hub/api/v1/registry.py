@@ -243,8 +243,12 @@ async def download_metadata(entry: RegistryEntry = Depends(get)) -> EntryMetadat
     )
 
 
+class Filename(BaseModel):
+    filename: str
+
+
 @v1_router.post("/list_files")
-async def list_files(entry: RegistryEntry = Depends(get)) -> List[str]:
+async def list_files(entry: RegistryEntry = Depends(get)) -> List[Filename]:
     """List all files that belong to a entry."""
     source = entry.details.get("_source")
 
@@ -262,7 +266,7 @@ async def list_files(entry: RegistryEntry = Depends(get)) -> List[str]:
     key = key.strip("/") + "/"
 
     objects = s3.list_objects(Bucket=bucket, Prefix=key)
-    files = [obj["Key"][len(key) :] for obj in objects.get("Contents", [])]
+    files = [Filename(filename=obj["Key"][len(key) :]) for obj in objects.get("Contents", [])]
     return files
 
 
@@ -282,7 +286,8 @@ async def list_entries(
     namespace: str = "",
     category: str = "",
     tags: str = "",
-    total: int = 16,
+    total: int = 32,
+    offset: int = 0,
     show_hidden: bool = False,
     show_latest_version: bool = True,
 ) -> List[EntryInformation]:
@@ -290,7 +295,6 @@ async def list_entries(
 
     bind_params: Dict[str, Any] = {
         "show_entry": 1 - int(show_hidden),
-        "total": total,
     }
 
     if category:
@@ -328,7 +332,11 @@ async def list_entries(
                   {namespace_condition}
             ORDER BY registry.id DESC
             LIMIT :total
+            OFFSET :offset
             """
+
+            bind_params["total"] = total
+            bind_params["offset"] = offset
 
         else:
             tags_list = [valid_tag(tag) for tag in tags_list]
@@ -354,13 +362,17 @@ async def list_entries(
                     SELECT registry.id, registry.namespace, registry.name, registry.version,
                            registry.category, registry.description, registry.details FROM RankedRegistry ranked
                     JOIN registry_entry registry ON ranked.id = registry.id
-                    WHERE ranked.col_rank <= :total
+                    WHERE   ranked.col_rank >= :lower_bound AND
+                            ranked.col_rank < :upper_bound
                     ORDER BY registry.id DESC
                 """
 
+            bind_params["lower_bound"] = offset + 1
+            bind_params["upper_bound"] = offset + total + 1
             bind_params["tags"] = tags_list
             bind_params["ntags"] = len(tags_list)
 
+        print(bind_params)
         for id, namespace_, name, version, category_, description, details in session.exec(
             text(query_text).bindparams(**bind_params)
         ).all():  # type: ignore

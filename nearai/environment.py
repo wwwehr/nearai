@@ -41,6 +41,7 @@ class Environment(object):
         config: Config,
         create_files: bool = True,
         env_vars: Optional[Dict[str, Any]] = None,
+        reset_chat: Optional[bool] = None,
     ) -> None:
         self._path = path
         self._agents = agents
@@ -55,9 +56,14 @@ class Environment(object):
         if self._config.nearai_hub is None:
             self._config.nearai_hub = NearAiHubConfig()
 
+        if reset_chat:
+            with open(os.path.join(self._path, CHAT_FILENAME), 'w') as file:
+                file.write('')
+
         if create_files:
             os.makedirs(self._path, exist_ok=True)
             open(os.path.join(self._path, CHAT_FILENAME), "a").close()
+
         os.chdir(self._path)
 
     @staticmethod
@@ -79,6 +85,10 @@ class Environment(object):
     def add_message(self, role: str, message: str, filename: str = CHAT_FILENAME, **kwargs: Any) -> None:  # noqa: D102
         with open(os.path.join(self._path, filename), "a") as f:
             f.write(json.dumps({"role": role, "content": message, **kwargs}) + DELIMITER)
+
+    def clear_messages(self, filename: str = CHAT_FILENAME) -> None:  # noqa: D102
+        with open(os.path.join(self._path, filename), "w") as f:
+            f.write('')
 
     def list_terminal_commands(self, filename: str = TERMINAL_FILENAME) -> List[Any]:  # noqa: D102
         return self.list_messages(filename)

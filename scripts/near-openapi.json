@@ -540,8 +540,18 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 16,
+              "default": 32,
               "title": "Total"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Offset"
             }
           },
           {

@@ -24,6 +24,7 @@ from openapi_client.models.body_list_files_v1_registry_list_files_post import Bo
 from openapi_client.models.body_upload_metadata_v1_registry_upload_metadata_post import BodyUploadMetadataV1RegistryUploadMetadataPost
 from openapi_client.models.entry_information import EntryInformation
 from openapi_client.models.entry_metadata import EntryMetadata
+from openapi_client.models.filename import Filename
 
 from openapi_client.api_client import ApiClient, RequestSerialized
 from openapi_client.api_response import ApiResponse
@@ -946,7 +947,7 @@ class RegistryApi:
         _content_type: Optional[StrictStr] = None,
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
-    ) -> List[Optional[str]]:
+    ) -> List[Filename]:
         """List Files
 
         List all files that belong to a entry.
@@ -984,7 +985,7 @@ class RegistryApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '200': "List[Optional[str]]",
+            '200': "List[Filename]",
             '422': "HTTPValidationError",
         }
         response_data = self.api_client.call_api(
@@ -1014,7 +1015,7 @@ class RegistryApi:
         _content_type: Optional[StrictStr] = None,
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
-    ) -> ApiResponse[List[Optional[str]]]:
+    ) -> ApiResponse[List[Filename]]:
         """List Files
 
         List all files that belong to a entry.
@@ -1052,7 +1053,7 @@ class RegistryApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '200': "List[Optional[str]]",
+            '200': "List[Filename]",
             '422': "HTTPValidationError",
         }
         response_data = self.api_client.call_api(
@@ -1120,7 +1121,7 @@ class RegistryApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '200': "List[Optional[str]]",
+            '200': "List[Filename]",
             '422': "HTTPValidationError",
         }
         response_data = self.api_client.call_api(

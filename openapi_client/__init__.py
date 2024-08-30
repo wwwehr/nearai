@@ -51,6 +51,7 @@ from openapi_client.models.entry_information import EntryInformation
 from openapi_client.models.entry_location import EntryLocation
 from openapi_client.models.entry_metadata import EntryMetadata
 from openapi_client.models.entry_metadata_input import EntryMetadataInput
+from openapi_client.models.filename import Filename
 from openapi_client.models.http_validation_error import HTTPValidationError
 from openapi_client.models.input import Input
 from openapi_client.models.message import Message

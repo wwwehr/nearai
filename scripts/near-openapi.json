@@ -475,7 +475,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "type": "string"
+                    "$ref": "#/components/schemas/Filename"
                   },
                   "type": "array",
                   "title": "Response List Files V1 Registry List Files Post"
@@ -1827,6 +1827,19 @@
           "show_entry"
         ],
         "title": "EntryMetadataInput"
+      },
+      "Filename": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename"
+        ],
+        "title": "Filename"
       },
       "HTTPValidationError": {
         "properties": {

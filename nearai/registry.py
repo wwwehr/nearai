@@ -219,9 +219,10 @@ class Registry:
 
         Return the relative paths to all files with respect to the root of the entry.
         """
-        return self.api.list_files_v1_registry_list_files_post(
+        result = self.api.list_files_v1_registry_list_files_post(
             BodyListFilesV1RegistryListFilesPost.from_dict(dict(entry_location=entry_location))
         )
+        return [file.filename for file in result]
 
     def list(
         self,

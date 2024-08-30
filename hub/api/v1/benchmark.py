@@ -6,7 +6,8 @@ import boto3
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlmodel import select
+from sqlalchemy import Integer, func
+from sqlmodel import col, select
 
 from hub.api.v1.auth import AuthToken, revokable_auth
 from hub.api.v1.models import Benchmark, BenchmarkResult, get_session
@@ -58,11 +59,15 @@ async def get_benchmark(
     Return -1 if the benchmark does not exist.
     """
     with get_session() as session:
-        query = select(Benchmark).where(
-            Benchmark.namespace == namespace,
-            Benchmark.benchmark == benchmark_name,
-            Benchmark.solver == solver_name,
-            Benchmark.args == solver_args,
+        query = (
+            select(Benchmark)
+            .where(
+                Benchmark.namespace == namespace,
+                Benchmark.benchmark == benchmark_name,
+                Benchmark.solver == solver_name,
+                Benchmark.args == solver_args,
+            )
+            .order_by(col(Benchmark.id).desc())
         )
         benchmark = session.exec(query).first()
 
@@ -70,6 +75,16 @@ async def get_benchmark(
             return -1
         else:
             return benchmark.id
+
+
+class BenchmarkOutput(BaseModel):
+    id: int
+    namespace: str
+    benchmark: str
+    solver: str
+    args: str
+    solved: int
+    total: int
 
 
 @v1_router.get("/list")
@@ -80,23 +95,47 @@ async def list_benchmarks(
     solver_args: Optional[str] = None,
     total: int = 32,
     offset: int = 0,
-) -> List[Benchmark]:
-    query = select(Benchmark)
-    if namespace is not None:
-        query.where(Benchmark.namespace == namespace)
-    if benchmark_name is not None:
-        query.where(Benchmark.benchmark == benchmark_name)
-    if solver_name is not None:
-        query.where(Benchmark.solver == solver_name)
-    if solver_args is not None:
-        query.where(Benchmark.args == solver_args)
+) -> List[BenchmarkOutput]:
+    query = (
+        select(
+            Benchmark,
+            func.count(BenchmarkResult.benchmark_id),  # type: ignore
+            func.sum(func.cast(BenchmarkResult.solved, Integer)),  # type: ignore
+        )
+        .where(Benchmark.id == BenchmarkResult.benchmark_id)
+        .group_by(Benchmark.id)  # type: ignore
+    )
+
+    if namespace is not None and namespace != "":
+        query = query.where(Benchmark.namespace == namespace)
+    if benchmark_name is not None and benchmark_name != "":
+        query = query.where(col(Benchmark.benchmark).contains(benchmark_name))
+    if solver_name is not None and solver_name != "":
+        query = query.where(col(Benchmark.solver).contains(solver_name))
+    if solver_args is not None and solver_args != "":
+        query = query.where(col(Benchmark.args).contains(solver_args))
 
     query = query.offset(offset).limit(total)
 
     with get_session() as session:
         benchmarks = session.exec(query).all()
         assert isinstance(benchmarks, list)
-        return benchmarks
+
+        result = []
+        for benchmark, total, solved in benchmarks:
+            assert isinstance(benchmark, Benchmark)
+            result.append(
+                BenchmarkOutput(
+                    id=benchmark.id,
+                    namespace=benchmark.namespace,
+                    benchmark=benchmark.benchmark,
+                    solver=benchmark.solver,
+                    args=benchmark.args,
+                    solved=solved,
+                    total=total,
+                )
+            )
+        return result
 
 
 @v1_router.get("/add_result")

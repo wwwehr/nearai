@@ -986,7 +986,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Benchmark"
+                    "$ref": "#/components/schemas/BenchmarkOutput"
                   },
                   "title": "Response List Benchmarks V1 Benchmark List Get"
                 }
@@ -1143,7 +1143,7 @@
   },
   "components": {
     "schemas": {
-      "Benchmark": {
+      "BenchmarkOutput": {
         "properties": {
           "id": {
             "type": "integer",
@@ -1164,16 +1164,27 @@
           "args": {
             "type": "string",
             "title": "Args"
+          },
+          "solved": {
+            "type": "integer",
+            "title": "Solved"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
           }
         },
         "type": "object",
         "required": [
+          "id",
           "namespace",
           "benchmark",
           "solver",
-          "args"
+          "args",
+          "solved",
+          "total"
         ],
-        "title": "Benchmark"
+        "title": "BenchmarkOutput"
       },
       "BenchmarkResultOutput": {
         "properties": {

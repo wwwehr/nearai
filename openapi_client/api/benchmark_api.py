@@ -18,7 +18,7 @@ from typing_extensions import Annotated
 
 from pydantic import StrictBool, StrictInt, StrictStr
 from typing import Any, List, Optional
-from openapi_client.models.benchmark import Benchmark
+from openapi_client.models.benchmark_output import BenchmarkOutput
 from openapi_client.models.benchmark_result_output import BenchmarkResultOutput
 
 from openapi_client.api_client import ApiClient, RequestSerialized
@@ -1241,7 +1241,7 @@ class BenchmarkApi:
         _content_type: Optional[StrictStr] = None,
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
-    ) -> List[Benchmark]:
+    ) -> List[BenchmarkOutput]:
         """List Benchmarks
 
 
@@ -1293,7 +1293,7 @@ class BenchmarkApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '200': "List[Benchmark]",
+            '200': "List[BenchmarkOutput]",
             '422': "HTTPValidationError",
         }
         response_data = self.api_client.call_api(
@@ -1328,7 +1328,7 @@ class BenchmarkApi:
         _content_type: Optional[StrictStr] = None,
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
-    ) -> ApiResponse[List[Benchmark]]:
+    ) -> ApiResponse[List[BenchmarkOutput]]:
         """List Benchmarks
 
 
@@ -1380,7 +1380,7 @@ class BenchmarkApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '200': "List[Benchmark]",
+            '200': "List[BenchmarkOutput]",
             '422': "HTTPValidationError",
         }
         response_data = self.api_client.call_api(
@@ -1467,7 +1467,7 @@ class BenchmarkApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '200': "List[Benchmark]",
+            '200': "List[BenchmarkOutput]",
             '422': "HTTPValidationError",
         }
         response_data = self.api_client.call_api(

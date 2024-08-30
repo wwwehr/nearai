@@ -253,6 +253,44 @@ class BenchmarkCli:
         max_concurrent = (cpu_count if cpu_count is not None else 1) if max_concurrent < 0 else max_concurrent
         be.run(max_concurrent=max_concurrent)
 
+    def list(
+        self,
+        namespace: Optional[str] = None,
+        benchmark: Optional[str] = None,
+        solver: Optional[str] = None,
+        args: Optional[str] = None,
+        total: int = 32,
+        offset: int = 0,
+    ):
+        """List all executed benchmarks."""
+        result = self.client.list_benchmarks_v1_benchmark_list_get(
+            namespace=namespace,
+            benchmark_name=benchmark,
+            solver_name=solver,
+            solver_args=args,
+            total=total,
+            offset=offset,
+        )
+
+        header = ["id", "namespace", "benchmark", "solver", "args", "score", "solved", "total"]
+        table = []
+        for benchmark_output in result:
+            score = 100 * benchmark_output.solved / benchmark_output.total
+            table.append(
+                [
+                    fill(str(benchmark_output.id)),
+                    fill(benchmark_output.namespace),
+                    fill(benchmark_output.benchmark),
+                    fill(benchmark_output.solver),
+                    fill(benchmark_output.args),
+                    fill(f"{score:.2f}%"),
+                    fill(str(benchmark_output.solved)),
+                    fill(str(benchmark_output.total)),
+                ]
+            )
+
+        print(tabulate(table, headers=header, tablefmt="simple_grid"))
+
 
 class AgentCli:
     def inspect(self, path: str) -> None:

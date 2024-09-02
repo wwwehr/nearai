@@ -1,5 +1,5 @@
 from abc import ABC, ABCMeta, abstractmethod
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 
 class SolverStrategyMeta(ABCMeta):
@@ -24,8 +24,23 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
         return type(self).__name__
 
     @abstractmethod
+    def evaluation_name(self) -> str:
+        """Returns a unique name for (benchmark, solver) tuple, e.g. 'mbpp' or 'live_bench' or 'mmlu-5-shot'."""
+        ...
+
+    @abstractmethod
     def compatible_datasets(self) -> List[str]:
         """Returns the list of datasets that the solver strategy is compatible with."""
+        ...
+
+    @abstractmethod
+    def model_metadata(self) -> Optional[Dict[str, Any]]:
+        """Returns model metadata that is evaluated or used by an agent."""
+        ...
+
+    @abstractmethod
+    def agent_metadata(self) -> Optional[Dict[str, Any]]:
+        """Returns agent metadata that is evaluated."""
         ...
 
     @abstractmethod

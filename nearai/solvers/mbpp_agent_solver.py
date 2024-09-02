@@ -24,6 +24,9 @@ class MBPPSolverAgent(SolverStrategy):
         self.verbose = verbose
         self.num_iterations = num_iterations
 
+    def evaluation_name(self) -> str:  # noqa: D102
+        return "mbpp"
+
     def compatible_datasets(self) -> List[str]:  # noqa: D102
         return ["mbpp"]
 

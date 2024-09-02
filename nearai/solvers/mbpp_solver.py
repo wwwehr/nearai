@@ -55,6 +55,9 @@ class MBPPSolverStrategy(SolverStrategy):
         self.completion_fn = InferenceRouter(CONFIG).completions
         self.model = model
 
+    def evaluation_name(self) -> str:  # noqa: D102
+        return "mbpp"
+
     def compatible_datasets(self) -> List[str]:  # noqa: D102
         return ["mbpp"]
 

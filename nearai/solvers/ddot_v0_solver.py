@@ -146,6 +146,9 @@ class DDOTSV0Solver(SolverStrategy):
         self.save_snapshots = save_snapshots
         print("Saving trajectories to", self._saved_trajectories)
 
+    def evaluation_name(self) -> str:  # noqa: D102
+        return "ddots"
+
     def compatible_datasets(self) -> List[str]:  # noqa: D102
         return ["ddots_codeforces_small/v0", "datasets/ddots_codeforces_medium_A_B/v0"]
 

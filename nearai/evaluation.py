@@ -1,9 +1,12 @@
 import json
 from pathlib import Path
-from typing import Any, Dict
+from textwrap import fill
+from typing import Any, Dict, List, Set
 
-from hub.api.v1 import registry
-from nearai.registry import get_registry_folder
+from openapi_client.models.entry_information import EntryInformation
+from tabulate import tabulate
+
+from nearai.registry import get_registry_folder, registry
 from nearai.solvers import SolverStrategy
 
 EVALUATED_ENTRY_METADATA = "evaluated_entry_metadata"
@@ -21,7 +24,7 @@ def record_single_score_evaluation(solver_strategy: SolverStrategy, score: float
         model = model_metadata.get("name", "")
         version = model_metadata.get("version", "")
 
-    if agent_metadata := solver_strategy.model_metadata():
+    if agent_metadata := solver_strategy.agent_metadata():
         agent = agent_metadata.get("name", "")
         version = agent_metadata.get("version", "")
 
@@ -56,6 +59,7 @@ def upload_evaluation(
     `provider`: provider of model used; pass `local` if running locally.
     """
     key = f"evaluation_{evaluation_name}"
+    metrics[EVALUATED_ENTRY_METADATA] = {}
     if agent != "":
         metrics[EVALUATED_ENTRY_METADATA]["agent"] = agent
         key += f"_agent_{agent}"
@@ -97,3 +101,55 @@ def upload_evaluation(
         )
 
     registry.upload(Path(entry_path), show_progress=True)
+
+
+def evaluations_table(entries: List[EntryInformation], verbose: bool = False) -> None:
+    """Prints table of evaluations."""
+    rows: Dict[Dict[str, str], Dict[str, str]] = {}
+    metric_names: Set[str] = set()
+    for entry in entries:
+        evaluation_name = f"{entry.namespace}/{entry.name}/{entry.version}"
+        evaluation_path = registry.download(evaluation_name)
+        metrics_path = evaluation_path / "metrics.json"
+        with open(metrics_path, "r") as f:
+            metrics = json.load(f)
+            key = {
+                "model": metrics[EVALUATED_ENTRY_METADATA].get("model", ""),
+                "agent": metrics[EVALUATED_ENTRY_METADATA].get("agent", ""),
+                "namespace": metrics[EVALUATED_ENTRY_METADATA].get("namespace", ""),
+                "version": metrics[EVALUATED_ENTRY_METADATA].get("version", ""),
+                "provider": metrics[EVALUATED_ENTRY_METADATA].get("provider", ""),
+            }
+
+            # Convert the key dictionary to a tuple to use as a key in rows
+            key_tuple = tuple(key.items())
+
+            # Initialize the inner dictionary if this key doesn't exist
+            if key_tuple not in rows:
+                rows[key_tuple] = {}
+
+            # Add all other metrics that are not EVALUATED_ENTRY_METADATA
+            for metric_name, metric_value in metrics.items():
+                if metric_name != EVALUATED_ENTRY_METADATA:
+                    rows[key_tuple][metric_name] = str(metric_value)
+                    metric_names.add(metric_name)
+
+    header: List[str] = ["model", "agent"]
+    if verbose:
+        header = ["model", "agent", "namespace", "version", "provider"]
+    for metric_name in metric_names:
+        header.append(metric_name)
+
+    table = []
+    for row_key, row_metrics in rows.items():
+        row_key = dict(row_key)
+        row: List[str] = [fill(row_key["model"]), fill(row_key["agent"])]
+        if verbose:
+            row.append(fill(row_key["namespace"]))
+            row.append(fill(row_key["version"]))
+            row.append(fill(row_key["provider"]))
+        for metric_name in metric_names:
+            row.append(fill(row_metrics.get(metric_name, "")))
+        table.append(row)
+
+    print(tabulate(table, headers=header, tablefmt="simple_grid"))

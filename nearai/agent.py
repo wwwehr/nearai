@@ -48,14 +48,13 @@ class Agent(object):
             except KeyError as e:
                 raise ValueError(f"Missing key in metadata: {e}") from None
 
-            if metadata["details"]:
-                self.env_vars = metadata["details"].get("env_vars", {})
-
-            if agent_metadata := metadata.get("agent", None):
-                self.model = agent_metadata.get("model", self.model)
-                self.model_provider = agent_metadata.get("model_provider", self.model_provider)
-                self.model_temperature = agent_metadata.get("model_temperature", self.model_temperature)
-                self.model_max_tokens = agent_metadata.get("model_max_tokens", self.model_max_tokens)
+            if details_metadata := metadata.get("details", None):
+                self.env_vars = details_metadata.get("env_vars", {})
+                if agent_metadata := details_metadata.get("agent", None):
+                    self.model = agent_metadata.get("model", self.model)
+                    self.model_provider = agent_metadata.get("model_provider", self.model_provider)
+                    self.model_temperature = agent_metadata.get("model_temperature", self.model_temperature)
+                    self.model_max_tokens = agent_metadata.get("model_max_tokens", self.model_max_tokens)
 
         if not self.version or not self.name:
             raise ValueError("Both 'version' and 'name' must be non-empty in metadata.")

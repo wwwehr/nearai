@@ -80,7 +80,7 @@ class RegistryCli:
             }
 
             if category == "agent":
-                metadata["agent"] = {
+                metadata["details"]["agent"] = {
                     "model": DEFAULT_MODEL,
                     "model_provider": DEFAULT_PROVIDER,
                     "model_temperature": DEFAULT_MODEL_TEMPERATURE,

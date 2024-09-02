@@ -102,8 +102,18 @@ Your agent will receive an `env` object that has the following methods:
 
   * [`request_user_input`](api.md#nearai.environment.Environment.request_user_input): tell the agent that it is the user's turn, stop iterating.
   * [`completion`](api.md#nearai.environment.Environment.completion): request inference completions from a provider and model.
-The model format can be either `PROVIDER::MODEL` or simply `MODEL`. By default the provider is `Fireworks` and the model is `llama-v3p1-405b-instruct-long`.
-
+The model format can be either `PROVIDER::MODEL` or simply `MODEL`. By default the provider is `fireworks` and the model is `llama-v3p1-405b-instruct-long`. The model can be passed into `completion` function or as an agent metadata:
+   ```json
+   "details": {
+     "agent": {
+       // All fields below are optional.
+       "model": "llama-v3p1-405b-instruct-long",
+       "model_max_tokens": 16384,
+       "model_provider": "fireworks",
+       "model_temperature": 1.0
+     }
+   }
+   ```
   * [`list_messages`](api.md#nearai.environment.Environment.list_messages): returns the list of messages in the conversation. 
 You have full control to add and remove messages from this list.
   * [`add_message`](api.md#nearai.environment.Environment.add_message): adds a message to the conversation. Arguments are role and content.
@@ -162,10 +172,18 @@ response = env.completions_and_run_tools("llama-v3p1-405b-instruct-long", messag
     "python",
     "travel"
   ],
-  "details": {},
+  "details": {
+    "agent": {
+       // All fields below are optional. If not set, default values will be used.
+       "model": "llama-v3p1-405b-instruct-long",
+       "model_max_tokens": 16384,
+       "model_provider": "fireworks",
+       "model_temperature": 1.0
+     }
+  },
   "show_entry": true,
   "name": "example-travel-agent",
-  "version": "5"
+  "version": "0.0.5"
 }
 ```
 

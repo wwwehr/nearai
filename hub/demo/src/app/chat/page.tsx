@@ -11,24 +11,23 @@ import {
 import { Controller, type SubmitHandler } from 'react-hook-form';
 import { type z } from 'zod';
 
+import { ChatThread } from '~/components/inference/ChatThread';
+import { BreakpointDisplay } from '~/components/lib/BreakpointDisplay';
+import { Button } from '~/components/lib/Button';
+import { Combobox, type ComboboxItem } from '~/components/lib/Combobox';
+import { Flex } from '~/components/lib/Flex';
+import { Form } from '~/components/lib/Form';
+import { InputTextarea } from '~/components/lib/InputTextarea';
+import { Sidebar } from '~/components/lib/Sidebar';
+import { Slider } from '~/components/lib/Slider';
+import { Text } from '~/components/lib/Text';
+import { SignInPrompt } from '~/components/SignInPrompt';
 import { useZodForm } from '~/hooks/form';
 import { useListModels } from '~/hooks/queries';
 import { chatCompletionsModel, type messageModel } from '~/lib/models';
 import { useAuthStore } from '~/stores/auth';
 import { api } from '~/trpc/react';
-
-import { BreakpointDisplay } from '../lib/BreakpointDisplay';
-import { Button } from '../lib/Button';
-import { Combobox, type ComboboxItem } from '../lib/Combobox';
-import { Flex } from '../lib/Flex';
-import { Form } from '../lib/Form';
-import { InputTextarea } from '../lib/InputTextarea';
-import { Sidebar } from '../lib/Sidebar';
-import { Slider } from '../lib/Slider';
-import { Text } from '../lib/Text';
-import { SignInPrompt } from '../SignInPrompt';
-import s from './ChatInference.module.scss';
-import { ChatThread } from './ChatThread';
+import { handleClientError } from '~/utils/error';
 
 const LOCAL_STORAGE_KEY = 'inference_conversation';
 
@@ -43,7 +42,7 @@ const providers: ComboboxItem[] = [
   { label: 'Hyperbolic', value: 'hyperbolic' },
 ];
 
-export const ChatInference = () => {
+export default function InferencePage() {
   const formRef = useRef<HTMLFormElement | null>(null);
   const form = useZodForm(chatCompletionsModel);
   const chatMutation = api.hub.chat.useMutation();
@@ -52,8 +51,7 @@ export const ChatInference = () => {
   const [conversation, setConversation] = useState<
     z.infer<typeof messageModel>[]
   >([]);
-  const store = useAuthStore();
-  const isAuthenticated = store.isAuthenticated();
+  const isAuthenticated = useAuthStore((store) => store.isAuthenticated);
 
   const [parametersOpenForSmallScreens, setParametersOpenForSmallScreens] =
     useState(false);
@@ -70,17 +68,36 @@ export const ChatInference = () => {
   const onSubmit: SubmitHandler<z.infer<typeof chatCompletionsModel>> = async (
     values,
   ) => {
-    values.messages = [...conversation, ...values.messages];
-    values.stop = ['[INST]'];
+    try {
+      const message = values.messages.at(-1)!;
+      if (!message.content.trim()) return;
 
-    const response = await chatMutation.mutateAsync(values);
+      values.messages = [...conversation, ...values.messages];
+      values.stop = ['[INST]'];
 
-    values.messages = [...values.messages, response.choices[0]!.message];
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(values));
-    setConversation(values.messages);
+      setConversation((current) => [
+        ...current,
+        {
+          content: message.content,
+          role: message.role,
+        },
+      ]);
 
-    form.setValue('messages.0.content', '');
-    form.setFocus('messages.0.content');
+      form.setValue('messages.0.content', '');
+      form.setFocus('messages.0.content');
+
+      const response = await chatMutation.mutateAsync(values);
+
+      values.messages = [
+        ...values.messages,
+        ...response.choices.map((choice) => choice.message),
+      ];
+
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(values));
+      setConversation(values.messages);
+    } catch (error) {
+      handleClientError({ error, title: 'Failed to communicate with model' });
+    }
   };
 
   const onKeyDownContent: KeyboardEventHandler<HTMLTextAreaElement> = (
@@ -109,11 +126,13 @@ export const ChatInference = () => {
   }, [form, provider, models]);
 
   useEffect(() => {
-    const currConv = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (currConv) {
+    const previousConversationRaw = localStorage.getItem(LOCAL_STORAGE_KEY);
+
+    if (previousConversationRaw) {
       try {
-        const conv: unknown = JSON.parse(currConv);
-        const parsed = chatCompletionsModel.parse(conv);
+        const parsed = chatCompletionsModel.parse(
+          JSON.parse(previousConversationRaw),
+        );
         setConversation(parsed.messages);
       } catch (error) {
         console.error(error);
@@ -129,11 +148,7 @@ export const ChatInference = () => {
   }, [isAuthenticated, form]);
 
   return (
-    <Form
-      onSubmit={form.handleSubmit(onSubmit)}
-      className={s.layout}
-      ref={formRef}
-    >
+    <Form stretch onSubmit={form.handleSubmit(onSubmit)} ref={formRef}>
       <Sidebar.Root>
         <Sidebar.Main>
           {isAuthenticated ? (
@@ -254,4 +269,4 @@ export const ChatInference = () => {
       </Sidebar.Root>
     </Form>
   );
-};
+}

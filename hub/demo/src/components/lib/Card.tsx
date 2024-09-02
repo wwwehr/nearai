@@ -11,8 +11,8 @@ type Props = ComponentPropsWithRef<'div'> & {
   target?: ComponentPropsWithRef<'a'>['target'];
   background?: ThemeColor;
   border?: ThemeColor;
-  padding?: 'm' | 'l';
-  gap?: 'm' | 'l';
+  padding?: 's' | 'm' | 'l';
+  gap?: 's' | 'm' | 'l';
 };
 
 export const Card = forwardRef<HTMLDivElement, Props>(
@@ -20,7 +20,7 @@ export const Card = forwardRef<HTMLDivElement, Props>(
     {
       animateIn,
       background = 'white',
-      border = 'sand5',
+      border = 'sand-5',
       className = '',
       gap,
       padding,

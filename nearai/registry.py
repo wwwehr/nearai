@@ -90,7 +90,11 @@ class Registry:
             copyfileobj(result, f)
 
     def download(
-        self, entry_location: Union[str, EntryLocation], force: bool = False, show_progress: bool = False
+        self,
+        entry_location: Union[str, EntryLocation],
+        force: bool = False,
+        show_progress: bool = False,
+        verbose: bool = True,
     ) -> Path:
         """Download entry from the registry locally."""
         if isinstance(entry_location, str):
@@ -100,7 +104,10 @@ class Registry:
 
         if download_path.exists():
             if not force:
-                print(f"Entry {entry_location} already exists at {download_path}. Use --force to overwrite the entry.")
+                if verbose:
+                    print(
+                        f"Entry {entry_location} already exists at {download_path}. Use --force to overwrite the entry."
+                    )
                 return download_path
 
         files = registry.list_files(entry_location)
@@ -212,9 +219,10 @@ class Registry:
 
         Return the relative paths to all files with respect to the root of the entry.
         """
-        return self.api.list_files_v1_registry_list_files_post(
+        result = self.api.list_files_v1_registry_list_files_post(
             BodyListFilesV1RegistryListFilesPost.from_dict(dict(entry_location=entry_location))
         )
+        return [file.filename for file in result]
 
     def list(
         self,
@@ -222,7 +230,8 @@ class Registry:
         category: str,
         tags: str,
         total: int,
-        show_hidden: bool,
+        offset: int,
+        show_all: bool,
         show_latest_version: bool,
     ) -> List[EntryInformation]:
         """List and filter entries in the registry."""
@@ -231,7 +240,8 @@ class Registry:
             category=category,
             tags=tags,
             total=total,
-            show_hidden=show_hidden,
+            offset=offset,
+            show_hidden=show_all,
             show_latest_version=show_latest_version,
         )
 

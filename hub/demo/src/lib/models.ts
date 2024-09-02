@@ -12,7 +12,7 @@ export const authorizationModel = z.object({
 
 export const messageModel = z.object({
   role: z.enum(['user', 'assistant', 'system']),
-  content: z.string().min(1),
+  content: z.string(),
 });
 
 export const chatCompletionsModel = z.object({
@@ -90,8 +90,20 @@ export const revokeNonceModel = z.object({
 });
 
 export const registryEntry = z.object({
+  id: z.number(),
+  category: z.string(),
   namespace: z.string(),
   name: z.string(),
   version: z.string(),
+  description: z.string(),
+  tags: z.string().array(),
+  details: z.record(z.string(), z.unknown()), // TODO: Figure out standard metadata properties
 });
 export const listRegistry = z.array(registryEntry);
+
+export const agentRequestModel = z.object({
+  agent_id: z.string(),
+  new_message: z.string(),
+  environment_id: z.string().nullable().optional(),
+  max_iterations: z.number(),
+});

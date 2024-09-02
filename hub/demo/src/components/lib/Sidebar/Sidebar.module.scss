@@ -1,10 +1,10 @@
 @import '~/styles/variables';
+@import '~/styles/mixins';
 
 .root {
   display: flex;
   align-items: stretch;
   flex-grow: 1;
-  min-height: var(--section-fill-height);
 }
 
 .main {
@@ -12,16 +12,25 @@
   flex-direction: column;
   gap: var(--gap-l);
   padding: var(--gap-l);
+  padding-bottom: 0;
   flex-grow: 1;
   min-width: 0;
+
+  footer {
+    margin-inline: calc(var(--gap-l) * -1);
+  }
 }
 
 .sidebar {
   position: sticky;
   z-index: 250;
   top: var(--header-height);
-  height: var(--section-fill-height);
+  height: 100%;
   max-width: 100%;
+  max-height: var(--section-fill-height);
+  min-width: 0;
+  min-height: 0;
+  flex-shrink: 0;
 
   @media (max-width: $tabletBreakpointMaxWidth) {
     position: fixed;
@@ -41,20 +50,16 @@
   }
 }
 
-.content {
+.sidebarContent {
   width: 360px;
   flex-shrink: 0;
-  background: var(--sand2);
+  background: var(--sand-2);
   overflow: auto;
   scroll-behavior: smooth;
   overscroll-behavior: contain;
   height: 100%;
 
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-  &::-webkit-scrollbar {
-    display: none;
-  }
+  @include hideScrollbar();
 
   @media (max-width: $tabletBreakpointMaxWidth) {
     width: 100vw;
@@ -62,7 +67,7 @@
   }
 }
 
-.contentInner {
+.sidebarContentInner {
   display: flex;
   flex-direction: column;
   gap: var(--gap-l);
@@ -76,12 +81,12 @@
   }
 }
 
-.closeButton {
+.sidebarCloseButton {
   position: absolute;
   top: var(--gap-m);
   right: var(--gap-m);
 
   @media (min-width: $tabletBreakpointMaxWidth) {
-    display: none;
+    display: none !important;
   }
 }

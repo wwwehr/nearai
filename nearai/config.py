@@ -13,6 +13,7 @@ LOCAL_CONFIG_FILE = Path(".nearai") / "config.json"
 REPO_FOLDER = Path(__file__).parent.parent
 PROMPTS_FOLDER = REPO_FOLDER / "nearai" / "prompts"
 ETC_FOLDER = REPO_FOLDER / "etc"
+DEFAULT_PROVIDER = "fireworks"
 
 
 def get_config_path(local: bool = False) -> Path:
@@ -62,7 +63,7 @@ class NearAiHubConfig(BaseModel):
     """
 
     base_url: str = "https://api.near.ai/v1"
-    default_provider: str = "fireworks"
+    default_provider: str = DEFAULT_PROVIDER
     default_model: str = "fireworks::accounts/fireworks/models/llama-v3p1-405b-instruct-long"
     custom_llm_provider: str = "openai"
     login_with_near: Optional[bool] = True

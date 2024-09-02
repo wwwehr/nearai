@@ -28,6 +28,27 @@ def get_registry_folder() -> Path:
     return DATA_FOLDER / REGISTRY_FOLDER
 
 
+def get_namespace(local_path: Path) -> str:
+    """Returns namespace of an item or user namespace."""
+    registry_folder = get_registry_folder()
+
+    try:
+        # Check if the path matches the expected structure
+        relative_path = local_path.relative_to(registry_folder)
+        parts = relative_path.parts
+
+        # If the path has 3 parts (namespace, item_name, version),
+        # return the first part as the namespace
+        if len(parts) == 3:
+            return str(parts[0])
+    except ValueError:
+        # relative_to() raises ValueError if local_path is not relative to registry_folder
+        pass
+
+    # If we couldn't extract a namespace from the path, return the default
+    return CONFIG.auth.account_id
+
+
 class Registry:
     def __init__(self):
         """Create Registry object to interact with the registry programmatically."""
@@ -161,7 +182,7 @@ class Registry:
         with open(metadata_path) as f:
             plain_metadata: Dict[str, Any] = json.load(f)
 
-        namespace = CONFIG.auth.account_id
+        namespace = get_namespace(local_path)
 
         entry_location = EntryLocation.model_validate(
             dict(

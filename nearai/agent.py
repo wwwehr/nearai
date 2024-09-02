@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from nearai.lib import check_metadata
-from nearai.registry import get_registry_folder, registry
+from nearai.registry import get_namespace, get_registry_folder, registry
 
 AGENT_FILENAME = "agent.py"
 
@@ -22,6 +22,7 @@ class Agent(object):
 
         self.path = path
         self.load_agent_metadata()
+        self.namespace = get_namespace(self.path)
 
         temp_dir = os.path.join(tempfile.gettempdir(), str(int(time.time())))
 
@@ -36,6 +37,7 @@ class Agent(object):
         check_metadata(Path(metadata_path))
         with open(metadata_path) as f:
             metadata: Dict[str, Any] = json.load(f)
+            self.metadata = metadata
 
             try:
                 self.name = metadata["name"]

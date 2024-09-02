@@ -44,6 +44,16 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
         ...
 
     @abstractmethod
+    def evaluated_entry_namespace(self) -> str:
+        """Returns namespace of a model or agent to be evaluated."""
+        ...
+
+    @abstractmethod
+    def model_provider(self) -> str:
+        """Returns model provider."""
+        ...
+
+    @abstractmethod
     def solve(self, datum: dict) -> Union[bool, Tuple[bool, Any]]:
         """Solves the task for the given datum."""
         ...

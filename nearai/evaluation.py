@@ -8,22 +8,33 @@ from nearai.solvers import SolverStrategy
 
 EVALUATED_ENTRY_METADATA = "evaluated_entry_metadata"
 
+
 def record_single_score_evaluation(solver_strategy: SolverStrategy, score: float) -> None:
     """Uploads single score evaluation into registry."""
     evaluation_name = solver_strategy.evaluation_name()
     metrics = {evaluation_name: score}
     model = ""
     agent = ""
-    namespace = ""
     version = ""
 
     if model_metadata := solver_strategy.model_metadata():
-        model = model_metadata.get("name", model)
-        version = model_metadata.get("version", version)
+        model = model_metadata.get("name", "")
+        version = model_metadata.get("version", "")
 
     if agent_metadata := solver_strategy.model_metadata():
-        agent = agent_metadata.get("name", agent)
-        version = agent_metadata.get("version", version)
+        agent = agent_metadata.get("name", "")
+        version = agent_metadata.get("version", "")
+
+    upload_evaluation(
+        evaluation_name,
+        metrics,
+        model,
+        agent,
+        solver_strategy.evaluated_entry_namespace(),
+        version,
+        solver_strategy.model_provider(),
+    )
+
 
 def upload_evaluation(
     evaluation_name: str,

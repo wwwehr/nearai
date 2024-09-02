@@ -69,7 +69,7 @@ class RegistryCli:
         folder_name = path.name
 
         with open(metadata_path, "w") as f:
-            metadata = {
+            metadata: Dict[str, Any] = {
                 "name": folder_name,
                 "version": "0.0.1",
                 "description": description,

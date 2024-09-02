@@ -22,7 +22,7 @@ class Agent(object):
 
         self.path = path
         self.load_agent_metadata()
-        self.namespace = get_namespace(self.path)
+        self.namespace = get_namespace(Path(self.path))
 
         temp_dir = os.path.join(tempfile.gettempdir(), str(int(time.time())))
 

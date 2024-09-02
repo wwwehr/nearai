@@ -105,7 +105,7 @@ def upload_evaluation(
 
 def evaluations_table(entries: List[EntryInformation], verbose: bool = False) -> None:
     """Prints table of evaluations."""
-    rows: Dict[Dict[str, str], Dict[str, str]] = {}
+    rows: Dict[tuple[tuple[str, Any], ...], Dict[str, str]] = {}
     metric_names: Set[str] = set()
     for entry in entries:
         evaluation_name = f"{entry.namespace}/{entry.name}/{entry.version}"
@@ -127,6 +127,7 @@ def evaluations_table(entries: List[EntryInformation], verbose: bool = False) ->
             # Initialize the inner dictionary if this key doesn't exist
             if key_tuple not in rows:
                 rows[key_tuple] = {}
+            rows[key_tuple] = {}
 
             # Add all other metrics that are not EVALUATED_ENTRY_METADATA
             for metric_name, metric_value in metrics.items():
@@ -141,8 +142,8 @@ def evaluations_table(entries: List[EntryInformation], verbose: bool = False) ->
         header.append(metric_name)
 
     table = []
-    for row_key, row_metrics in rows.items():
-        row_key = dict(row_key)
+    for row_key_tuple, row_metrics in rows.items():
+        row_key = dict(row_key_tuple)
         row: List[str] = [fill(row_key["model"]), fill(row_key["agent"])]
         if verbose:
             row.append(fill(row_key["namespace"]))

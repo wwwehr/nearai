@@ -46,6 +46,8 @@ def get_namespace(local_path: Path) -> str:
         pass
 
     # If we couldn't extract a namespace from the path, return the default
+    if CONFIG.auth is None:
+        raise ValueError("AuthData is None")
     return CONFIG.auth.account_id
 
 

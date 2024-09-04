@@ -148,13 +148,15 @@ export default function RunAgentPage() {
   }
 
   interface Agent {
-    title?: string;
-    welcome_message?: string;
+    welcome: {
+      title?: string;
+      description?: string;
+    };
   }
 
   const checkAgentHeader = (agent?: Agent): boolean => {
     if (!agent) return false;
-    return Boolean(agent.title ?? agent.welcome_message);
+    return Boolean(agent?.welcome?.title ?? agent.welcome?.description);
   };
 
   const hasAgentHeader = checkAgentHeader(currentResource?.details?.agent);

@@ -20,8 +20,8 @@ class Agent(object):
         self.version: str = ""
         self.env_vars: Dict[str, Any] = {}
 
-        self.title: Optional[str] = None
-        self.welcome_message: Optional[str] = None
+        self.welcome_title: Optional[str] = None
+        self.welcome_description: Optional[str] = None
 
         self.path = path
         self.load_agent_metadata()
@@ -48,10 +48,11 @@ class Agent(object):
 
             details = metadata.get("details", {})
             agent = details.get("agent", {})
+            welcome = agent.get("welcome", {})
 
             self.env_vars = details.get("env_vars", {})
-            self.welcome_message = agent.get("welcome_message")
-            self.title = agent.get("title")
+            self.welcome_title = welcome.get("title")
+            self.welcome_description = welcome.get("description")
 
         if not self.version or not self.name:
             raise ValueError("Both 'version' and 'name' must be non-empty in metadata.")

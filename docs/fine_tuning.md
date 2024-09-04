@@ -89,9 +89,10 @@ poetry run python3 -m nearai benchmark run \
 ```
 
 # meta-llama/Meta-Llama-3-8B-Instruct
-Correct/Seen - 942/1319 - 71.42%
+Correct/Seen - 942/1319 - 71.42% # prompt 1
+Correct/Seen - 942/1319 - 71.87% # prompt 2
 
-# prog
+# fine tuned llama3-8b-instruct
 # fine tune orca-math-word-problems-200k
-Correct/Seen - 748/1319 - 56.71%
-Correct/Seen - 926/1319 - 70.20%
+Correct/Seen - 748/1319 - 56.71% # prompt 1
+Correct/Seen - 926/1319 - 70.20% # prompt 2

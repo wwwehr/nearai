@@ -12,6 +12,7 @@ import {
 import { Controller } from 'react-hook-form';
 import { type z } from 'zod';
 
+import { AgentHeader } from '~/components/AgentHeader';
 import { ChatThread } from '~/components/inference/ChatThread';
 import { BreakpointDisplay } from '~/components/lib/BreakpointDisplay';
 import { Button } from '~/components/lib/Button';
@@ -146,14 +147,28 @@ export default function RunAgentPage() {
     return <PlaceholderSection />;
   }
 
+  interface Agent {
+    title?: string;
+    welcome_message?: string;
+  }
+
+  const checkAgentHeader = (agent?: Agent): boolean => {
+    if (!agent) return false;
+    return Boolean(agent.title ?? agent.welcome_message);
+  };
+
+  const hasAgentHeader = checkAgentHeader(currentResource?.details?.agent);
+
   return (
     <Form stretch onSubmit={form.handleSubmit(onSubmit)} ref={formRef}>
       <Sidebar.Root>
         <Sidebar.Main>
+          {hasAgentHeader && <AgentHeader details={currentResource?.details} />}
+
           {isAuthenticated ? (
             <ChatThread messages={conversation} />
           ) : (
-            <SignInPrompt />
+            <SignInPrompt props={{ showWelcome: !hasAgentHeader }} />
           )}
 
           <Flex direction="column" gap="m">

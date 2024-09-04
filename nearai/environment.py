@@ -417,6 +417,12 @@ class Environment(object):
             base_id = None
         last_message_idx = 0
 
+        if self._agents[0].welcome_message:
+            if self._agents[0].title:
+                print(f"{self._agents[0].title}: {self._agents[0].welcome_message}")
+            else:
+                print(self._agents[0].welcome_message)
+
         def print_messages(last_message_idx: int) -> int:
             messages = self.list_messages()
             for item in messages[last_message_idx:]:

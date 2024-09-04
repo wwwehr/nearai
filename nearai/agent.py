@@ -20,6 +20,9 @@ class Agent(object):
         self.version: str = ""
         self.env_vars: Dict[str, Any] = {}
 
+        self.title: Optional[str] = None
+        self.welcome_message: Optional[str] = None
+
         self.path = path
         self.load_agent_metadata()
 
@@ -43,8 +46,12 @@ class Agent(object):
             except KeyError as e:
                 raise ValueError(f"Missing key in metadata: {e}") from None
 
-            if metadata["details"]:
-                self.env_vars = metadata["details"].get("env_vars", {})
+            details = metadata.get("details", {})
+            agent = details.get("agent", {})
+
+            self.env_vars = details.get("env_vars", {})
+            self.welcome_message = agent.get("welcome_message")
+            self.title = agent.get("title")
 
         if not self.version or not self.name:
             raise ValueError("Both 'version' and 'name' must be non-empty in metadata.")

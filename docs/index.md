@@ -67,7 +67,7 @@ The metadata_template command will create a template for you to fill in.
 nearai registry metadata_template <ITEM_LOCAL_DIRECTORY_PATH> <CATEGORY> <DESCRIPTION>
 ```
 Fill in name, version, category and any other fields for which you have values.
-The current categories are: `model`, `dataset`, `agent`, `environment`.
+The notable categories are: `model`, `dataset`, `agent`.
 
 ```json
 {

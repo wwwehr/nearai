@@ -9,6 +9,7 @@ from datasets import Dataset, DatasetDict  # type: ignore[attr-defined]
 from openapi_client.api.benchmark_api import BenchmarkApi
 from tqdm import tqdm
 
+from nearai.evaluation import record_single_score_evaluation
 from nearai.solvers import SolverStrategy
 
 
@@ -35,7 +36,7 @@ class BenchmarkExecutor:
         self.benchmark_id = benchmark_id
         self.client = BenchmarkApi()
 
-    def run(self, progress: bool = True, max_concurrent: int = 32) -> None:  # noqa: D102
+    def run(self, progress: bool = True, max_concurrent: int = 32, record: bool = False) -> None:  # noqa: D102
         dataset = self.dataset_info.get_dataset()
 
         cache_ = self.client.get_benchmark_result_v1_benchmark_get_result_get(benchmark_id=self.benchmark_id)
@@ -78,6 +79,9 @@ class BenchmarkExecutor:
                         continue
 
         print(f"Final score: {correct}/{total} - {correct/total:.2%}")
+
+        if record:
+            record_single_score_evaluation(self.solver_strategy, round(correct / total * 100, 2))
 
 
 def solve_task(

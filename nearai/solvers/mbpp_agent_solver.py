@@ -1,12 +1,12 @@
 import os
 import random
 import time
-from typing import List, Union
+from typing import Any, Dict, List, Optional, Union
 
 from datasets import Dataset, DatasetDict  # type: ignore[attr-defined]
 
 from nearai.agent import load_agent
-from nearai.config import CONFIG
+from nearai.config import CONFIG, DEFAULT_PROVIDER
 from nearai.environment import Environment
 from nearai.solvers import SolverStrategy
 from nearai.solvers.mbpp_solver import MBPPDatum, get_function_name
@@ -24,8 +24,25 @@ class MBPPSolverAgent(SolverStrategy):
         self.verbose = verbose
         self.num_iterations = num_iterations
 
+    def evaluation_name(self) -> str:  # noqa: D102
+        return "mbpp"
+
     def compatible_datasets(self) -> List[str]:  # noqa: D102
         return ["mbpp"]
+
+    def model_metadata(self) -> Optional[Dict[str, Any]]:  # noqa: D102
+        # TODO: we may want to return the model used by an agent here.
+        return None
+
+    def agent_metadata(self) -> Optional[Dict[str, Any]]:  # noqa: D102
+        return self.agent.metadata
+
+    def evaluated_entry_namespace(self) -> str:  # noqa: D102
+        return self.agent.namespace
+
+    def model_provider(self) -> str:  # noqa: D102
+        # TODO: we may want to return the provider used by an agent here.
+        return DEFAULT_PROVIDER
 
     def solve(self, datum: dict) -> bool:  # noqa: D102
         datum = MBPPDatum(**datum).model_dump()

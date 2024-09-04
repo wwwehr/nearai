@@ -210,6 +210,8 @@ class Registry:
             canonical_name = get_canonical_name(name)
 
             for entry in entries:
+                if entry.name == name and entry.namespace == namespace:
+                    break
                 if (
                     get_canonical_name(entry.name) == canonical_name
                     and get_canonical_name(entry.namespace) == canonical_namespace

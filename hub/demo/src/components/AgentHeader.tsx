@@ -1,10 +1,27 @@
 'use client';
 
-import { useTheme } from 'next-themes';
-
 import { Container } from './lib/Container';
 import { Flex } from './lib/Flex';
 import { Text } from './lib/Text';
+
+const styles = {
+  iconContainer: {
+    maxWidth: '38px',
+    maxHeight: '38px',
+    borderRadius: '100%',
+    overflow: 'hidden',
+    flexShrink: 0,
+    background: '#fff',
+    boxShadow: 'var(--shadow-card-with-outline)',
+    padding: '6px',
+  },
+  icon: {
+    display: 'block',
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  },
+};
 
 interface AgentHeaderProps {
   details?: {
@@ -19,21 +36,13 @@ interface AgentHeaderProps {
 }
 
 export const AgentHeader = ({ details }: AgentHeaderProps) => {
-  const { resolvedTheme, _ } = useTheme();
-
-  const styles = {
-    icon: {
-      maxWidth: '32px',
-      maxHeight: '32px',
-      filter: resolvedTheme === 'dark' ? 'invert(1)' : 'none',
-    },
-  };
-
   return (
     <Container size="s" style={{ margin: 'auto', textAlign: 'center' }}>
       <Flex direction="column" gap="m" align="center">
         {details?.icon && (
-          <img src={details?.icon} style={styles.icon} alt={'Agent'} />
+          <div style={styles.iconContainer}>
+            <img style={styles.icon} src={details.icon} alt={'Agent'} />
+          </div>
         )}
         <Text size="text-l">{details?.agent?.welcome?.title}</Text>
         <Text>{details?.agent?.welcome?.description}</Text>

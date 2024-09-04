@@ -155,12 +155,14 @@ export default function RunAgentPage() {
     };
   }
 
-  const checkAgentHeader = (agent?: Agent): boolean => {
+  const checkAgentHeader = (agent?: Agent | undefined): boolean => {
     if (!agent) return false;
     return Boolean(agent?.welcome?.title ?? agent.welcome?.description);
   };
 
-  const hasAgentHeader = checkAgentHeader(currentResource?.details?.agent);
+  const hasAgentHeader = checkAgentHeader(
+    currentResource?.details?.agent as Agent | undefined,
+  );
 
   return (
     <Form stretch onSubmit={form.handleSubmit(onSubmit)} ref={formRef}>

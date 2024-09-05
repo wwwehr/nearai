@@ -44,15 +44,17 @@ class GSM8KSolverStrategy(SolverStrategy):
                     "role": "system",
                     "content": dedent(
                         """
-                    You are a helpful assistant. You're goal is to answer math questions.
+                    You are a helpful assistant. You're goal is to answer word based math questions.
                     """
                         + "\n\n"
-                        + "                    Here are some examples of math questions and their answers:"
+                        + "Here are some examples of math questions and their answers:"
                         + "\n\n".join(
                             [f"Question: {shot['question']}\nAnswer: {shot['answer']}" for shot in problem_shots]
                         )
                         + "\n\n"
-                        + "Now, answer the next question. Think step by step.\n\n"
+                        + "Now, answer the next question provided in the user prompt. "
+                        + "Think step by step about how to solve the problem. "
+                        + "Then, provide the answer."
                     ),
                 },
                 {"role": "user", "content": datum.question},
@@ -68,16 +70,21 @@ class GSM8KSolverStrategy(SolverStrategy):
                     You are a helpful assistant. You're goal is to answer math questions.
 
                     You have just answered a math question with the following response:
+
+                    --- BEGIN RESPONSE ---
                     {res_output}
+                    --- END RESPONSE ---
 
                     Please refine your answer.
 
-                    Only output the final number as your answer. Nothing else.
+                    Only output the final number *without units* as your answer. Nothing else.
                     """
                     ),
                 },
             ],
         )
+
+        ## cleanup the output
         res_refined_output = res_refined.choices[0].message.content.strip()
         res_refined_output = res_refined_output.replace("$", "").replace(",", "")
         if " " in res_refined_output:
@@ -90,5 +97,7 @@ class GSM8KSolverStrategy(SolverStrategy):
             res_refined_output = str(int(float(res_refined_output)))
         except:
             pass
-        print(res_refined_output, datum.answer)
-        return res_refined_output == datum.answer
+
+        refined_answer = datum.answer.replace("$", "").replace(",", "")
+        print(res_refined_output, refined_answer)
+        return res_refined_output == refined_answer

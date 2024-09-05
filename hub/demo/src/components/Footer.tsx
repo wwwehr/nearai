@@ -1,12 +1,42 @@
+'use client';
+
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
 import s from './Footer.module.scss';
 import { Flex } from './lib/Flex';
 import { Text } from './lib/Text';
 
-export const Footer = () => {
+type Props = {
+  conditional?: boolean;
+};
+
+export const Footer = ({ conditional }: Props) => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    if (!conditional && typeof window !== 'undefined') {
+      const footer = document.querySelector(
+        '[data-conditional-footer="true"]',
+      ) as HTMLElement | null;
+      if (!footer) return;
+      footer.style.display = 'none';
+      return () => {
+        footer.style.display = '';
+      };
+    }
+  }, [conditional]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
-    <footer className={s.footer} id="footer">
+    <footer
+      className={s.footer}
+      data-conditional-footer={conditional}
+      data-hide={conditional && !mounted}
+    >
       <Flex justify="space-between" gap="m" align="center" wrap="wrap">
         <Text size="text-xs">NEAR AI Hub</Text>
 

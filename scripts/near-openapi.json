@@ -475,7 +475,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "type": "string"
+                    "$ref": "#/components/schemas/Filename"
                   },
                   "type": "array",
                   "title": "Response List Files V1 Registry List Files Post"
@@ -540,8 +540,18 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 16,
+              "default": 32,
               "title": "Total"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Offset"
             }
           },
           {
@@ -738,6 +748,382 @@
         }
       }
     },
+    "/v1/benchmark/create": {
+      "get": {
+        "tags": [
+          "benchmark"
+        ],
+        "summary": "Create Benchmark",
+        "operationId": "create_benchmark_v1_benchmark_create_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "benchmark_name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Benchmark Name"
+            }
+          },
+          {
+            "name": "solver_name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Solver Name"
+            }
+          },
+          {
+            "name": "solver_args",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Solver Args"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "title": "Response Create Benchmark V1 Benchmark Create Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/benchmark/get": {
+      "get": {
+        "tags": [
+          "benchmark"
+        ],
+        "summary": "Get Benchmark",
+        "description": "Get the ID of a benchmark given its attributes.\n\nReturn -1 if the benchmark does not exist.",
+        "operationId": "get_benchmark_v1_benchmark_get_get",
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Namespace"
+            }
+          },
+          {
+            "name": "benchmark_name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Benchmark Name"
+            }
+          },
+          {
+            "name": "solver_name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Solver Name"
+            }
+          },
+          {
+            "name": "solver_args",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Solver Args"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "title": "Response Get Benchmark V1 Benchmark Get Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/benchmark/list": {
+      "get": {
+        "tags": [
+          "benchmark"
+        ],
+        "summary": "List Benchmarks",
+        "operationId": "list_benchmarks_v1_benchmark_list_get",
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Namespace"
+            }
+          },
+          {
+            "name": "benchmark_name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Benchmark Name"
+            }
+          },
+          {
+            "name": "solver_name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Solver Name"
+            }
+          },
+          {
+            "name": "solver_args",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Solver Args"
+            }
+          },
+          {
+            "name": "total",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 32,
+              "title": "Total"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BenchmarkOutput"
+                  },
+                  "title": "Response List Benchmarks V1 Benchmark List Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/benchmark/add_result": {
+      "get": {
+        "tags": [
+          "benchmark"
+        ],
+        "summary": "Add Benchmark Result",
+        "operationId": "add_benchmark_result_v1_benchmark_add_result_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "benchmark_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Benchmark Id"
+            }
+          },
+          {
+            "name": "index",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Index"
+            }
+          },
+          {
+            "name": "solved",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "boolean",
+              "title": "Solved"
+            }
+          },
+          {
+            "name": "info",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Info"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/benchmark/get_result": {
+      "get": {
+        "tags": [
+          "benchmark"
+        ],
+        "summary": "Get Benchmark Result",
+        "operationId": "get_benchmark_result_v1_benchmark_get_result_get",
+        "parameters": [
+          {
+            "name": "benchmark_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Benchmark Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BenchmarkResultOutput"
+                  },
+                  "title": "Response Get Benchmark Result V1 Benchmark Get Result Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -757,6 +1143,72 @@
   },
   "components": {
     "schemas": {
+      "BenchmarkOutput": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "namespace": {
+            "type": "string",
+            "title": "Namespace"
+          },
+          "benchmark": {
+            "type": "string",
+            "title": "Benchmark"
+          },
+          "solver": {
+            "type": "string",
+            "title": "Solver"
+          },
+          "args": {
+            "type": "string",
+            "title": "Args"
+          },
+          "solved": {
+            "type": "integer",
+            "title": "Solved"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "namespace",
+          "benchmark",
+          "solver",
+          "args",
+          "solved",
+          "total"
+        ],
+        "title": "BenchmarkOutput"
+      },
+      "BenchmarkResultOutput": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "solved": {
+            "type": "boolean",
+            "title": "Solved"
+          },
+          "info": {
+            "type": "string",
+            "title": "Info"
+          }
+        },
+        "type": "object",
+        "required": [
+          "index",
+          "solved",
+          "info"
+        ],
+        "title": "BenchmarkResultOutput"
+      },
       "Body_download_environment_v1_download_environment_post": {
         "properties": {
           "path": {
@@ -1396,6 +1848,19 @@
           "show_entry"
         ],
         "title": "EntryMetadataInput"
+      },
+      "Filename": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename"
+        ],
+        "title": "Filename"
       },
       "HTTPValidationError": {
         "properties": {

@@ -88,7 +88,7 @@ const tableRows = [
 
 ## Cell Sizes
 
-In the example above, note the use of the `style` prop on some of the `Cell` components. You can get creative with setting `width`, `maxWidth`, or `minWidth` on a cell or its contents (EG: a nested `Text` component). You can even combine the `clampLines` prop of `<Text>` to implement ellipsis text overflow.
+In the example above, note the use of the `style` prop on some of the `Cell` components. You can get creative with setting `width`, `maxWidth`, or `minWidth` on a cell or its content (EG: a nested `Text` component). You can even combine the `clampLines` prop of `<Text>` to implement ellipsis text overflow.
 
 If you have a cell that contains something like a `Button` and you'd like the cell width to match the `Button` width exactly, you can set the `Cell` width to something really small (EG: `1px`). Due to how `<td>` elements determine their width, this will give us the desired result:
 
@@ -162,39 +162,6 @@ Just like regular table cells, you can pass an `onClick()` prop to a `HeadCell` 
   <Table.Row>
     <Table.HeadCell onClick={() => { ... }}>Date</Table.HeadCell>
     <Table.HeadCell>Name</Table.HeadCell>
-  </Table.Row>
-</Table.Head>
-```
-
-## Sortable Header Cells
-
-You can combine the `onClick()` and `sort` props on a `HeadCell` to implement UI for toggling sort order by column. You can implement the actual sorting logic on either the client or API side depending on your needs. The `sort` prop simply renders an arrow icon indicating the current sort direction to the user (as well as indicating that it can be interacted with).
-
-```tsx
-import { useState } from 'react';
-
-type SortType = 'DATE_ASC' | 'DATE_DES' | 'NAME_ASC' | 'NAME_DES';
-
-...
-
-const [sort, setSort] = useState<SortType>('DATE_DES');
-// Apply client side or server side (API) sorting based on "sort" value...
-
-...
-
-<Table.Head>
-  <Table.Row>
-    <Table.HeadCell
-      sort={sort === 'DATE_DES' ? 'descending' : 'ascending'}
-      onClick={() => setSort(sort === 'DATE_DES' ? 'DATE_ASC' : 'DATE_DES')}
-    >
-      Date
-    </Table.HeadCell>
-    <Table.HeadCell
-      sort={sort === 'NAME_DES' ? 'descending' : 'ascending'}
-      onClick={() => setSort(sort === 'NAME_DES' ? 'NAME_ASC' : 'NAME_DES')}>
-      Name
-    </Table.HeadCell>
   </Table.Row>
 </Table.Head>
 ```
@@ -300,4 +267,45 @@ When data is loading for your table, you can use the `PlaceholderRows` component
   {!myTableData && <Table.PlaceholderRows />}
   ...
 </Table.Body>
+```
+
+## Sorting
+
+We can enable more advanced use cases by using the `useTable()` hook. In the below example, the `Agent` and `Creator` header cells will be sortable due to passing the `column` and `sortable` props. The `Version` header cell is an example of a column that wouldn't be sortable.
+
+```tsx
+import { useTable } from '~/components/lib/Table/hooks';
+import { api } from '~/trpc/react';
+
+...
+
+const list = api.hub.listRegistry.useQuery({ category: 'agent' });
+const { sorted, ...tableProps } = useTable({
+  data: list.data,
+  sortColumn: 'name',
+});
+
+...
+
+<Table.Root {...tableProps}>
+  <Table.Head>
+    <Table.Row>
+      <Table.HeadCell column="name" sortable>
+        Agent
+      </Table.HeadCell>
+      <Table.HeadCell column="namespace" sortable>
+        Creator
+      </Table.HeadCell>
+      <Table.HeadCell>Version</Table.HeadCell>
+    </Table.Row>
+  </Table.Head>
+
+  <Table.Body>
+    {!list.data && <Table.PlaceholderRows />}
+
+    {sorted.map((item, index) => (
+      <Table.Row key={index}>...</Table.Row>
+    ))}
+  </Table.Body>
+</Table.Root>
 ```

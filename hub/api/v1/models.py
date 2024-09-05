@@ -14,6 +14,7 @@ DB_HOST = getenv("DATABASE_HOST")
 DB_USER = getenv("DATABASE_USER")
 DB_PASSWORD = getenv("DATABASE_PASSWORD")
 DB_NAME = getenv("DATABASE_NAME")
+STORAGE_TYPE = getenv("STORAGE_TYPE", "file")
 
 
 class RegistryEntry(SQLModel, table=True):
@@ -57,6 +58,26 @@ class Tags(SQLModel, table=True):
     tag: str = Field(primary_key=True)
 
 
+class Benchmark(SQLModel, table=True):
+    __tablename__ = "benchmarks"
+
+    id: int = Field(default=None, primary_key=True)
+    namespace: str = Field(nullable=False)
+    benchmark: str = Field(nullable=False)
+    solver: str = Field(nullable=False)
+    args: str = Field(nullable=False)
+
+
+class BenchmarkResult(SQLModel, table=True):
+    __tablename__ = "benchmark_results"
+
+    id: int = Field(default=None, primary_key=True)
+    benchmark_id: int = Field(nullable=False)
+    index: int = Field(nullable=False)
+    solved: bool = Field(nullable=False)
+    info: Dict = Field(default_factory=dict, sa_column=Column(JSON))
+
+
 engine = create_engine(f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}")
 
 
@@ -64,3 +85,35 @@ engine = create_engine(f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_N
 def get_session() -> Iterator[Session]:
     with Session(engine) as session:
         yield session
+
+
+# Constants for file URI prefixes
+FILE_URI_PREFIX = "file::"
+S3_URI_PREFIX = "s3::"
+
+
+SUPPORTED_MIME_TYPES = {
+    "text/x-c": [".c"],
+    "text/x-c++": [".cpp"],
+    "text/css": [".css"],
+    "text/csv": [".csv"],
+    "text/html": [".html"],
+    "text/x-java": [".java"],
+    "text/javascript": [".js"],
+    "text/markdown": [".md"],
+    "text/x-php": [".php"],
+    "text/x-python": [".py"],
+    "text/x-script.python": [".py"],
+    "text/x-ruby": [".rb"],
+    "text/x-tex": [".tex"],
+    "text/plain": [".txt"],
+    "text/xml": [".xml"],
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": [".a"],
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
+    "application/json": [".json"],
+    "application/pdf": [".pdf"],
+    "application/typescript": [".ts"],
+}
+
+SUPPORTED_TEXT_ENCODINGS = ["utf-8", "utf-16", "ascii"]

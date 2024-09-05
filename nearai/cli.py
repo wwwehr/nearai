@@ -3,6 +3,7 @@ import json
 import os
 import runpy
 import sys
+from collections import OrderedDict
 from dataclasses import asdict
 from pathlib import Path
 from textwrap import fill
@@ -11,12 +12,14 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import boto3
 import fire
 from openapi_client import EntryLocation, EntryMetadataInput
+from openapi_client.api.benchmark_api import BenchmarkApi
 from openapi_client.api.default_api import DefaultApi
 from tabulate import tabulate
 
 from nearai.agent import load_agent
 from nearai.clients.lambda_client import LambdaWrapper
 from nearai.config import CONFIG, update_config
+from nearai.evaluation import evaluations_table
 from nearai.finetune import FinetuneCli
 from nearai.hub import Hub
 from nearai.lib import check_metadata, parse_location
@@ -80,6 +83,7 @@ class RegistryCli:
         category: str = "",
         tags: str = "",
         total: int = 32,
+        offset: int = 0,
         show_all: bool = False,
         show_latest_version: bool = True,
     ) -> None:
@@ -88,7 +92,15 @@ class RegistryCli:
         tags_l = parse_tags(tags)
         tags = ",".join(tags_l)
 
-        entries = registry.list(namespace, category, tags, total + 1, show_all, show_latest_version)
+        entries = registry.list(
+            namespace=namespace,
+            category=category,
+            tags=tags,
+            total=total + 1,
+            offset=offset,
+            show_all=show_all,
+            show_latest_version=show_latest_version,
+        )
 
         more_rows = len(entries) > total
         entries = entries[:total]
@@ -163,6 +175,36 @@ class ConfigCli:
 
 
 class BenchmarkCli:
+    def __init__(self):
+        """Initialize Benchmark API."""
+        self.client = BenchmarkApi()
+
+    def _get_or_create_benchmark(self, benchmark_name: str, solver_name: str, args: Dict[str, Any], force: bool) -> int:
+        if CONFIG.auth is None:
+            print("Please login with `nearai login`")
+            exit(1)
+        namespace = CONFIG.auth.account_id
+
+        # Sort the args to have a consistent representation.
+        solver_args = json.dumps(OrderedDict(sorted(args.items())))
+
+        benchmark_id = self.client.get_benchmark_v1_benchmark_get_get(
+            namespace=namespace,
+            benchmark_name=benchmark_name,
+            solver_name=solver_name,
+            solver_args=solver_args,
+        )
+
+        if benchmark_id == -1 or force:
+            benchmark_id = self.client.create_benchmark_v1_benchmark_create_get(
+                benchmark_name=benchmark_name,
+                solver_name=solver_name,
+                solver_args=solver_args,
+            )
+
+        assert benchmark_id != -1
+        return benchmark_id
+
     def run(
         self,
         dataset: str,
@@ -170,7 +212,9 @@ class BenchmarkCli:
         max_concurrent: int = -1,
         force: bool = False,
         subset: Optional[str] = None,
-        **solver_kwargs: Any,
+        check_compatibility: bool = True,
+        record: bool = False,
+        **solver_args: Any,
     ) -> None:
         """Run benchmark on a dataset with a solver strategy.
 
@@ -181,26 +225,92 @@ class BenchmarkCli:
         from nearai.dataset import load_dataset
         from nearai.solvers import SolverStrategy, SolverStrategyRegistry
 
-        # TODO(db-api): Expose an interface to cache the result of the benchmarks
-        # benchmark_id = db.get_benchmark_id(dataset, solver_strategy, force, subset=subset, **solver_kwargs)
-        benchmark_id = -1
+        args = dict(solver_args)
+        if subset is not None:
+            args["subset"] = subset
 
-        name, subset, dataset = dataset, subset, load_dataset(dataset)
+        benchmark_id = self._get_or_create_benchmark(
+            benchmark_name=dataset,
+            solver_name=solver_strategy,
+            args=args,
+            force=force,
+        )
+
+        name, subset, dataset = dataset, subset, load_dataset(dataset, verbose=False)
 
         solver_strategy_: SolverStrategy | None = SolverStrategyRegistry.get(solver_strategy, None)
         assert (
             solver_strategy
         ), f"Solver strategy {solver_strategy} not found. Available strategies: {list(SolverStrategyRegistry.keys())}"
-        solver_strategy_obj: SolverStrategy = solver_strategy_(dataset_ref=dataset, **solver_kwargs)  # type: ignore
-        assert (
-            name in solver_strategy_obj.compatible_datasets()
-        ), f"Solver strategy {solver_strategy} is not compatible with dataset {name}"
+        solver_strategy_obj: SolverStrategy = solver_strategy_(dataset_ref=dataset, **solver_args)  # type: ignore
+
+        if check_compatibility:
+            assert (
+                name in solver_strategy_obj.compatible_datasets()
+            ), f"Solver strategy {solver_strategy} is not compatible with dataset {name}"
 
         be = BenchmarkExecutor(DatasetInfo(name, subset, dataset), solver_strategy_obj, benchmark_id=benchmark_id)
 
         cpu_count = os.cpu_count()
         max_concurrent = (cpu_count if cpu_count is not None else 1) if max_concurrent < 0 else max_concurrent
-        be.run(max_concurrent=max_concurrent)
+        be.run(max_concurrent=max_concurrent, record=record)
+
+    def list(
+        self,
+        namespace: Optional[str] = None,
+        benchmark: Optional[str] = None,
+        solver: Optional[str] = None,
+        args: Optional[str] = None,
+        total: int = 32,
+        offset: int = 0,
+    ):
+        """List all executed benchmarks."""
+        result = self.client.list_benchmarks_v1_benchmark_list_get(
+            namespace=namespace,
+            benchmark_name=benchmark,
+            solver_name=solver,
+            solver_args=args,
+            total=total,
+            offset=offset,
+        )
+
+        header = ["id", "namespace", "benchmark", "solver", "args", "score", "solved", "total"]
+        table = []
+        for benchmark_output in result:
+            score = 100 * benchmark_output.solved / benchmark_output.total
+            table.append(
+                [
+                    fill(str(benchmark_output.id)),
+                    fill(benchmark_output.namespace),
+                    fill(benchmark_output.benchmark),
+                    fill(benchmark_output.solver),
+                    fill(benchmark_output.args),
+                    fill(f"{score:.2f}%"),
+                    fill(str(benchmark_output.solved)),
+                    fill(str(benchmark_output.total)),
+                ]
+            )
+
+        print(tabulate(table, headers=header, tablefmt="simple_grid"))
+
+
+class EvaluationCli:
+    def table(self, namespace: str = "", tags: str = "", verbose: bool = False) -> None:
+        """Prints table of evaluations."""
+        # Make sure tags is a comma-separated list of tags
+        tags_l = parse_tags(tags)
+        tags = ",".join(tags_l)
+
+        entries = registry.list(
+            namespace=namespace,
+            category="evaluation",
+            tags=tags,
+            total=10000,
+            offset=0,
+            show_all=False,
+            show_latest_version=True,
+        )
+        evaluations_table(entries, verbose)
 
 
 class AgentCli:
@@ -434,6 +544,7 @@ class CLI:
 
         self.config = ConfigCli()
         self.benchmark = BenchmarkCli()
+        self.evaluation = EvaluationCli()
         self.agent = AgentCli()
         self.finetune = FinetuneCli()
         self.tensorboard = TensorboardCli()

@@ -5,15 +5,22 @@ import { ArrowRight } from '@phosphor-icons/react';
 import { signInWithNear } from '~/lib/auth';
 
 import { Button } from './lib/Button';
-import { Card } from './lib/Card';
 import { Container } from './lib/Container';
+import { Flex } from './lib/Flex';
+import { Section } from './lib/Section';
 import { Text } from './lib/Text';
 
-export const SignInPrompt = () => {
+interface SignInPromptProps {
+  props?: {
+    showWelcome?: boolean;
+  };
+}
+
+export const SignInPrompt = ({ props }: SignInPromptProps) => {
   return (
-    <Container size="xs" style={{ margin: 'auto' }}>
-      <Card padding="l" style={{ textAlign: 'center' }}>
-        <Text size="text-l">Welcome</Text>
+    <Container size="s" style={{ margin: 'auto', textAlign: 'center' }}>
+      <Flex direction="column" gap="m" align="center">
+        {props?.showWelcome && <Text size="text-l">Welcome</Text>}
         <Text>Please sign in with your NEAR wallet to continue</Text>
         <Button
           variant="affirmative"
@@ -22,7 +29,15 @@ export const SignInPrompt = () => {
           size="large"
           iconRight={<ArrowRight />}
         />
-      </Card>
+      </Flex>
     </Container>
+  );
+};
+
+export const SignInPromptSection = () => {
+  return (
+    <Section grow="available">
+      <SignInPrompt />
+    </Section>
   );
 };

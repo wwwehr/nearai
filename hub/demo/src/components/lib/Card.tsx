@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { type ComponentPropsWithRef, forwardRef } from 'react';
+import { type ComponentPropsWithRef, forwardRef, type ReactNode } from 'react';
 
 import { type ThemeColor } from '~/utils/theme';
 
@@ -11,16 +11,16 @@ type Props = ComponentPropsWithRef<'div'> & {
   target?: ComponentPropsWithRef<'a'>['target'];
   background?: ThemeColor;
   border?: ThemeColor;
-  padding?: 'm' | 'l';
-  gap?: 'm' | 'l';
+  padding?: 's' | 'm' | 'l';
+  gap?: 's' | 'm' | 'l';
 };
 
 export const Card = forwardRef<HTMLDivElement, Props>(
   (
     {
       animateIn,
-      background = 'white',
-      border = 'sand5',
+      background = 'sand-0',
+      border = 'sand-5',
       className = '',
       gap,
       padding,
@@ -54,6 +54,10 @@ export const Card = forwardRef<HTMLDivElement, Props>(
 );
 
 Card.displayName = 'Card';
+
+export const CardList = ({ children }: { children: ReactNode }) => {
+  return <div className={s.cardList}>{children}</div>;
+};
 
 export const CardThumbnail = ({ alt, src }: { alt: string; src: string }) => {
   return (

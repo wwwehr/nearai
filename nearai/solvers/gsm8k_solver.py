@@ -91,11 +91,11 @@ class GSM8KSolverStrategy(SolverStrategy):
             res_refined_output = res_refined_output.split(" ")[0]
         try:
             res_refined_output = str(int(res_refined_output))
-        except:
+        except Exception:
             pass
         try:
             res_refined_output = str(int(float(res_refined_output)))
-        except:
+        except Exception:
             pass
 
         refined_answer = datum.answer.replace("$", "").replace(",", "")

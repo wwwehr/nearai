@@ -15,7 +15,6 @@ from datasets import load_dataset, concatenate_datasets, DatasetDict
 from transformers import AutoTokenizer
 tokenizer = AutoTokenizer.from_pretrained("meta-llama/Meta-Llama-3-8B-Instruct")
 
-
 ds_math_word_problems = load_dataset("HuggingFaceH4/orca-math-word-problems-200k")
 ds_gsm8k = load_dataset("openai/gsm8k", "main")['train']
 
@@ -101,31 +100,6 @@ poetry run python3 -m nearai finetune start \
     --num_procs 8
 ```
 
-```bash
-nearai finetune start \
-    --model llama-3-8b-instruct \
-    --format llama3-8b \
-    --tokenizer llama-3-8b-instruct/tokenizer.model \
-    --dataset orca_math \
-    --method nearai.finetune.text_completion.dataset \
-    --column question_and_answer \
-    --split train_sft \
-    --num_procs 8
-```
-
-```bash
-nearai finetune start \
-    --model llama-3-8b \
-    --format llama3-8b \
-    --tokenizer llama-3-8b/tokenizer.model \
-    --dataset orca_math_gsm8k_train \
-    --method nearai.finetune.text_completion.dataset \
-    --column question_and_answer \
-    --split train_sft \
-    --num_procs 8
-```
-
-
 To change the configuration of the fine-tuning job, edit `etc/finetune/llama3-8b.yml`.
 
 Included in the output of the command is the path to the fine-tuned model checkpoint. In this case, the path was `~.nearai/finetune/job-2024-08-29_20-58-08-207756662/checkpoint_output`. The path may/will be different based on the time you run the command.
@@ -138,24 +112,8 @@ To serve fine-tuned models, we use [vllm](https://github.com/vllm-project/vllm).
 poetry run python3 -m vllm.entrypoints.openai.api_server \
     --model meta-llama/Meta-Llama-3-8B-Instruct \
     --enable-lora \
-    --lora-modules prog=<path_to_checkpoint> \
+    --lora-modules mynewlora=<path_to_checkpoint> \
     --tensor-parallel 8
-```
-
-
-benchmark dataset 
-
-```python
-from datasets import load_dataset
-ds = load_dataset("openai/gsm8k", "main")
-def exract_answer(x):
-    raw_answer = x["answer"]
-    parsed_answer = raw_answer.split("####")[1].strip()
-    return {
-        "answer": parsed_answer
-    }
-ds = ds.map(exract_answer)
-ds.save_to_disk("gsm8k")
 ```
 
 Now we will run the `gsm8k` benchmark on both the baseline model and the fine-tuned model using `nearai benchmark`. The solvers will call our fine-tuned model and the baseline model through the vllm server.
@@ -165,7 +123,7 @@ poetry run python3 -m nearai benchmark run \
     gsm8k \
     GSM8KSolverStrategy \
     --subset test \
-    --model prog
+    --model mynewlora
 
 poetry run python3 -m nearai benchmark run \
     gsm8k \
@@ -174,13 +132,14 @@ poetry run python3 -m nearai benchmark run \
     --model meta-llama/Meta-Llama-3-8B-Instruct
 ```
 
-And we can see the results of the benchmark.
+And we can see the results of the benchmark. And we can see that the fine-tuned model performs better than the baseline model.
 
+```
 # meta-llama/Meta-Llama-3-8B-Instruct
-Correct/Seen - 942/1319 - 71.42% # prompt 1
-Correct/Seen - 942/1319 - 71.87% # prompt 2
+Correct/Seen - 1061/1319 - 80.44%
 
 # fine tuned llama3-8b-instruct
-# fine tune orca-math-word-problems-200k
-Correct/Seen - 748/1319 - 56.71% # prompt 1
-Correct/Seen - 926/1319 - 70.20% # prompt 2
+Correct/Seen - 966/1319 - 73.24%
+```
+
+From these results, we can see that our fine-tuned model needs improvement to perform better than the baseline model.

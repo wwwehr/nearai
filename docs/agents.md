@@ -106,11 +106,13 @@ The model format can be either `PROVIDER::MODEL` or simply `MODEL`. By default t
    ```json
    "details": {
      "agent": {
-       // All fields below are optional.
-       "model": "llama-v3p1-405b-instruct-long",
-       "model_max_tokens": 16384,
-       "model_provider": "fireworks",
-       "model_temperature": 1.0
+       "defaults": {
+         // All fields below are optional.
+         "model": "llama-v3p1-405b-instruct-long",
+         "model_max_tokens": 16384,
+         "model_provider": "fireworks",
+         "model_temperature": 1.0
+       }
      }
    }
    ```
@@ -174,11 +176,13 @@ response = env.completions_and_run_tools("llama-v3p1-405b-instruct-long", messag
   ],
   "details": {
     "agent": {
-       // All fields below are optional. If not set, default values will be used.
-       "model": "llama-v3p1-405b-instruct-long",
-       "model_max_tokens": 16384,
-       "model_provider": "fireworks",
-       "model_temperature": 1.0
+       "defaults": {
+         // All fields below are optional.
+         "model": "llama-v3p1-405b-instruct-long",
+         "model_max_tokens": 16384,
+         "model_provider": "fireworks",
+         "model_temperature": 1.0
+       }
      }
   },
   "show_entry": true,

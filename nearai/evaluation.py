@@ -144,7 +144,6 @@ def evaluations_table(
             # Initialize the inner dictionary if this key doesn't exist
             if key_tuple not in rows:
                 rows[key_tuple] = {}
-            rows[key_tuple] = {}
 
             # Add all other metrics that are not EVALUATED_ENTRY_METADATA
             for metric_name, metric_value in metrics.items():

@@ -85,7 +85,7 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
         else:
             raise AttributeError("get_custom_tasks is only applicable for Custom scoring method")
 
-    def get_evaluation_metrics(self, tasks_results: List[Union[bool, Tuple[bool, Any]]]) -> Dict[str, Any]:
+    def get_evaluation_metrics(self, tasks_results: List[Tuple[bool, Any]]) -> Dict[str, Any]:
         """Given results for all datums, returns evaluation metrics.
 
         Not used by TrueOrFalseList scoring method.

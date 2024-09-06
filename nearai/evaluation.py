@@ -3,7 +3,6 @@ from pathlib import Path
 from textwrap import fill
 from typing import Any, Dict, List, Set, Tuple
 
-from numpy import sort
 from openapi_client.models.entry_information import EntryInformation
 from tabulate import tabulate
 
@@ -156,7 +155,7 @@ def evaluations_table(
                 rows[key_tuple][metric_name] = str(metric_value)
                 metric_names.add(metric_name)
 
-    _print_metrics_tables(rows, sort(list(metric_names)), num_columns, all_key_columns, metric_name_max_length)
+    _print_metrics_tables(rows, sorted(metric_names), num_columns, all_key_columns, metric_name_max_length)
 
 
 def _is_important_metric(metric_name, metrics) -> bool:

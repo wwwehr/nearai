@@ -24,8 +24,9 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-        cache: "poetry"
-        cache-dependency-path: '**/poetry.lock'
+
+    - name: Install poetry
+      run: pipx install poetry
 
     - name: Get Poetry cache dir
       id: poetry-cache
@@ -38,9 +39,6 @@ jobs:
         key: ${{ runner.os }}-poetry-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
         restore-keys: |
           ${{ runner.os }}-poetry-${{ matrix.python-version }}-
-
-    - name: Install poetry
-      run: pipx install poetry
 
     - name: Install Codespell
       run: pip install codespell

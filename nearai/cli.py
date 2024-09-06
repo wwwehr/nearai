@@ -251,8 +251,8 @@ class BenchmarkCli:
 
         solver_strategy_obj: SolverStrategy = solver_strategy_class(dataset_ref=dataset, **solver_args)  # type: ignore
         if check_compatibility:
-            assert (
-                name in solver_strategy_obj.compatible_datasets()
+            assert name in solver_strategy_obj.compatible_datasets() or any(
+                map(lambda n: n in name, solver_strategy_obj.compatible_datasets())
             ), f"Solver strategy {solver_strategy} is not compatible with dataset {name}"
 
         be = BenchmarkExecutor(DatasetInfo(name, subset, dataset), solver_strategy_obj, benchmark_id=benchmark_id)

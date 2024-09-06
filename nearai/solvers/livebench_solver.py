@@ -151,8 +151,6 @@ class LiveBenchSolverStrategy(SolverStrategy):
                     self.model,
                     messages=[convert_message(msg) for msg in conv],
                     temperature=0.0,
-                    n=1,
-                    stop=["<|eot_id|>"],
                 ),
             )
             output = str(cast(List[Choices], completion_response.choices)[0].message.content)

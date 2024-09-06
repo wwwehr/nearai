@@ -74,8 +74,6 @@ class MMLUSolverStrategy(SolverStrategy):
                     {"role": "system", "content": base_prompt},
                 ],
                 temperature=0.2,
-                n=1,
-                stop=["<|eot_id|>"],
             ),
         )
         response = str(cast(List[Choices], completion_response.choices)[0].message.content)
@@ -96,8 +94,6 @@ class MMLUSolverStrategy(SolverStrategy):
                     {"role": "system", "content": extract_answer_prompt},
                 ],
                 temperature=0.0,
-                n=1,
-                stop=["<|eot_id|>"],
             ),
         )
         response = str(cast(List[Choices], completion_response.choices)[0].message.content)

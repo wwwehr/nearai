@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from nearai.lib import check_metadata
-from nearai.registry import get_registry_folder, registry
+from nearai.registry import get_namespace, get_registry_folder, registry
 
 AGENT_FILENAME = "agent.py"
 
@@ -24,9 +24,12 @@ class Agent(object):
         self.model_provider = ""
         self.model_temperature: Optional[float] = None
         self.model_max_tokens: Optional[int] = None
+        self.welcome_title: Optional[str] = None
+        self.welcome_description: Optional[str] = None
 
         self.path = path
         self.load_agent_metadata()
+        self.namespace = get_namespace(Path(self.path))
 
         temp_dir = os.path.join(tempfile.gettempdir(), str(int(time.time())))
 
@@ -41,6 +44,7 @@ class Agent(object):
         check_metadata(Path(metadata_path))
         with open(metadata_path) as f:
             metadata: Dict[str, Any] = json.load(f)
+            self.metadata = metadata
 
             try:
                 self.name = metadata["name"]
@@ -48,13 +52,19 @@ class Agent(object):
             except KeyError as e:
                 raise ValueError(f"Missing key in metadata: {e}") from None
 
-            if details_metadata := metadata.get("details", None):
-                self.env_vars = details_metadata.get("env_vars", {})
-                if agent_metadata := details_metadata.get("agent", None):
-                    self.model = agent_metadata.get("model", self.model)
-                    self.model_provider = agent_metadata.get("model_provider", self.model_provider)
-                    self.model_temperature = agent_metadata.get("model_temperature", self.model_temperature)
-                    self.model_max_tokens = agent_metadata.get("model_max_tokens", self.model_max_tokens)
+            details = metadata.get("details", {})
+            agent = details.get("agent", {})
+            welcome = agent.get("welcome", {})
+
+            self.env_vars = details.get("env_vars", {})
+            self.welcome_title = welcome.get("title")
+            self.welcome_description = welcome.get("description")
+
+            if agent_metadata := details.get("agent", None):
+                self.model = agent_metadata.get("model", self.model)
+                self.model_provider = agent_metadata.get("model_provider", self.model_provider)
+                self.model_temperature = agent_metadata.get("model_temperature", self.model_temperature)
+                self.model_max_tokens = agent_metadata.get("model_max_tokens", self.model_max_tokens)
 
         if not self.version or not self.name:
             raise ValueError("Both 'version' and 'name' must be non-empty in metadata.")

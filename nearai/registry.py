@@ -19,6 +19,7 @@ from tqdm import tqdm
 #       API client that is used by Registry API.
 from nearai.config import CONFIG, DATA_FOLDER
 from nearai.lib import check_metadata, parse_location
+from nearai.naming import get_canonical_name
 
 REGISTRY_FOLDER = "registry"
 
@@ -26,6 +27,29 @@ REGISTRY_FOLDER = "registry"
 def get_registry_folder() -> Path:
     """Path to local registry."""
     return DATA_FOLDER / REGISTRY_FOLDER
+
+
+def get_namespace(local_path: Path) -> str:
+    """Returns namespace of an item or user namespace."""
+    registry_folder = get_registry_folder()
+
+    try:
+        # Check if the path matches the expected structure
+        relative_path = local_path.relative_to(registry_folder)
+        parts = relative_path.parts
+
+        # If the path has 3 parts (namespace, item_name, version),
+        # return the first part as the namespace
+        if len(parts) == 3:
+            return str(parts[0])
+    except ValueError:
+        # relative_to() raises ValueError if local_path is not relative to registry_folder
+        pass
+
+    # If we couldn't extract a namespace from the path, return the default
+    if CONFIG.auth is None:
+        raise ValueError("AuthData is None")
+    return CONFIG.auth.account_id
 
 
 class Registry:
@@ -161,12 +185,13 @@ class Registry:
         with open(metadata_path) as f:
             plain_metadata: Dict[str, Any] = json.load(f)
 
-        namespace = CONFIG.auth.account_id
+        namespace = get_namespace(local_path)
+        name = plain_metadata.pop("name")
 
         entry_location = EntryLocation.model_validate(
             dict(
                 namespace=namespace,
-                name=plain_metadata.pop("name"),
+                name=name,
                 version=plain_metadata.pop("version"),
             )
         )
@@ -177,6 +202,22 @@ class Registry:
         if source is not None:
             print(f"Only default source is allowed, found: {source}. Remove details._source from metadata.")
             exit(1)
+
+        if self.info(entry_location) is None:
+            # New entry location. Check for similar names in registry.
+            entries = self.list_all_visible()
+            canonical_namespace = get_canonical_name(namespace)
+            canonical_name = get_canonical_name(name)
+
+            for entry in entries:
+                if entry.name == name and entry.namespace == namespace:
+                    break
+                if (
+                    get_canonical_name(entry.name) == canonical_name
+                    and get_canonical_name(entry.namespace) == canonical_namespace
+                ):
+                    print(f"A registry item with a similar name already exists: {entry.namespace}/{entry.name}")
+                    exit(1)
 
         registry.update(entry_location, entry_metadata)
 
@@ -244,6 +285,13 @@ class Registry:
             show_hidden=show_all,
             show_latest_version=show_latest_version,
         )
+
+    def list_all_visible(self) -> List[EntryInformation]:
+        """List all visible entries."""
+        total = 10000
+        entries = self.list("", "", "", total, 0, False, True)
+        assert len(entries) < total
+        return entries
 
 
 registry = Registry()

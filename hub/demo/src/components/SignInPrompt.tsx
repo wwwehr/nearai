@@ -10,11 +10,17 @@ import { Flex } from './lib/Flex';
 import { Section } from './lib/Section';
 import { Text } from './lib/Text';
 
-export const SignInPrompt = () => {
+interface SignInPromptProps {
+  props?: {
+    showWelcome?: boolean;
+  };
+}
+
+export const SignInPrompt = ({ props }: SignInPromptProps) => {
   return (
     <Container size="s" style={{ margin: 'auto', textAlign: 'center' }}>
       <Flex direction="column" gap="m" align="center">
-        <Text size="text-l">Welcome</Text>
+        {props?.showWelcome && <Text size="text-l">Welcome</Text>}
         <Text>Please sign in with your NEAR wallet to continue</Text>
         <Button
           variant="affirmative"

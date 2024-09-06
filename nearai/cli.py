@@ -26,6 +26,7 @@ from nearai.config import (
     DEFAULT_PROVIDER,
     update_config,
 )
+from nearai.evaluation import evaluations_table
 from nearai.finetune import FinetuneCli
 from nearai.hub import Hub
 from nearai.lib import check_metadata, parse_location
@@ -225,6 +226,7 @@ class BenchmarkCli:
         force: bool = False,
         subset: Optional[str] = None,
         check_compatibility: bool = True,
+        record: bool = False,
         **solver_args: Any,
     ) -> None:
         """Run benchmark on a dataset with a solver strategy.
@@ -264,7 +266,7 @@ class BenchmarkCli:
 
         cpu_count = os.cpu_count()
         max_concurrent = (cpu_count if cpu_count is not None else 1) if max_concurrent < 0 else max_concurrent
-        be.run(max_concurrent=max_concurrent)
+        be.run(max_concurrent=max_concurrent, record=record)
 
     def list(
         self,
@@ -303,6 +305,25 @@ class BenchmarkCli:
             )
 
         print(tabulate(table, headers=header, tablefmt="simple_grid"))
+
+
+class EvaluationCli:
+    def table(self, namespace: str = "", tags: str = "", verbose: bool = False) -> None:
+        """Prints table of evaluations."""
+        # Make sure tags is a comma-separated list of tags
+        tags_l = parse_tags(tags)
+        tags = ",".join(tags_l)
+
+        entries = registry.list(
+            namespace=namespace,
+            category="evaluation",
+            tags=tags,
+            total=10000,
+            offset=0,
+            show_all=False,
+            show_latest_version=True,
+        )
+        evaluations_table(entries, verbose)
 
 
 class AgentCli:
@@ -536,6 +557,7 @@ class CLI:
 
         self.config = ConfigCli()
         self.benchmark = BenchmarkCli()
+        self.evaluation = EvaluationCli()
         self.agent = AgentCli()
         self.finetune = FinetuneCli()
         self.tensorboard = TensorboardCli()

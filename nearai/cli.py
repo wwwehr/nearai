@@ -1,104 +1,32 @@
+import importlib.metadata
 import json
 import os
 import runpy
 import sys
-import textwrap
+from collections import OrderedDict
 from dataclasses import asdict
 from pathlib import Path
-from subprocess import check_output, run
-from typing import Any, List, Optional, Tuple, Union
+from textwrap import fill
+from typing import Any, Dict, List, Optional, Tuple, Union
 
+import boto3
 import fire
-import pkg_resources
+from openapi_client import EntryLocation, EntryMetadataInput
+from openapi_client.api.benchmark_api import BenchmarkApi
+from openapi_client.api.default_api import DefaultApi
 from tabulate import tabulate
 
-import nearai
 from nearai.agent import load_agent
-from nearai.benchmark import BenchmarkExecutor, DatasetInfo
-from nearai.config import CONFIG, DATA_FOLDER, update_config
-from nearai.dataset import get_dataset, load_dataset
-from nearai.db import db
-from nearai.environment import Environment
+from nearai.clients.lambda_client import LambdaWrapper
+from nearai.config import CONFIG, update_config
+from nearai.dataset import get_dataset
+from nearai.evaluation import evaluations_table
 from nearai.finetune import FinetuneCli
-from nearai.registry import Registry, agent, dataset, model, registry
-from nearai.solvers import SolverScoringMethod, SolverStrategy, SolverStrategyRegistry
+from nearai.hub import Hub
+from nearai.lib import check_metadata, parse_location
+from nearai.registry import registry
+from nearai.solvers import SolverScoringMethod
 from nearai.tensorboard_feed import TensorboardCli
-
-
-class Host:
-    # SSH destination
-    host: str
-    # URL of the supervisor API
-    endpoint: str
-    # Name of the cluster for this endpoint
-    cluster: str
-
-    def __init__(self, host: str, cluster: str):  # noqa: D107
-        self.host = host
-        url = host.split("@")[1]
-        self.endpoint = f"http://{url}:8000"
-        self.cluster = cluster
-
-
-def parse_hosts(hosts_path: Path) -> List[Host]:
-    hostnames = set()
-    hosts = []
-    with open(hosts_path) as f:
-        for line in f:
-            p = line.find("#")
-            if p != -1:
-                line = line[:p]
-            line = line.strip(" \n")
-            if not line:
-                continue
-            host, cluster = line.split()
-            hostnames.add(host)
-            hosts.append(Host(host, cluster))
-
-    assert len(hostnames) == len(hosts), "Duplicate hosts"
-    return hosts
-
-
-def install(hosts_description: List[Host], skip_install: str) -> None:
-    """Install supervisor on every host.
-
-    Skip nearai installation on the dev machine (skip_install).
-    """
-    from fabric import ThreadingGroup as Group
-
-    hosts_str = [h.host for h in hosts_description]
-    all_hosts = Group(*hosts_str)
-    install_hosts = Group(*[h.host for h in hosts_description if h.host != skip_install])
-
-    # Check we have connection to every host
-    result = all_hosts.run("hostname", hide=True, warn=False)
-    for host, res in sorted(result.items()):
-        stdout = res.stdout.strip(" \n")
-        print(f"Host: {host}, hostname: {stdout}")
-
-    def run_bash_script(name: str) -> None:
-        # Install setup_host.sh script
-        script = nearai.etc(name)
-        assert script.exists(), script
-        install_hosts.put(script, f"/tmp/{name}")
-        install_hosts.run(f"bash /tmp/{name}", warn=False)
-
-    run_bash_script("install_cli.sh")
-
-    nearai_path = "/home/setup/.local/bin/nearai"
-
-    for conn in all_hosts:
-        conn.run(f"{nearai_path} config set supervisor_id {conn.host}")
-
-    all_hosts.run(f"{nearai_path} config set db_user {CONFIG.db_user}")
-    all_hosts.run(f"{nearai_path} config set db_password {CONFIG.db_password}")
-
-    result = all_hosts.run(f"{nearai_path} config get supervisor_id")
-    for host, res in sorted(result.items()):
-        stdout = res.stdout.strip(" \n")
-        print(f"Host: {host}, supervisor_id: {stdout}")
-
-    run_bash_script("setup_supervisor.sh")
 
 
 def parse_tags(tags: Union[str, Tuple[str, ...]]) -> List[str]:
@@ -116,162 +44,122 @@ def parse_tags(tags: Union[str, Tuple[str, ...]]) -> List[str]:
 
 
 class RegistryCli:
-    def __init__(self, registry: Registry):  # noqa: D107
-        self._registry = registry
-
-    def add(self, s3_path: str, description: str, name: Optional[str] = None, tags: str = "", **details: Any) -> None:
-        """Add an item to the registry that was previously uploaded to S3."""
-        tags_l = parse_tags(tags)
-        assert self._registry.exists_in_s3(s3_path), f"Item {s3_path} does not exist in S3"
-        self._registry.add(
-            s3_path=s3_path,
-            author=CONFIG.get_user_name(),
-            description=description,
-            name=name,
-            show_entry=True,
-            tags=tags_l,
-            details=details,
-        )
-
-    def add_tags(self, identifier: int, tags: str) -> None:
-        """Add tags to an item in the registry."""
-        tags_l = parse_tags(tags)
-        self._registry.add_tags(identifier=identifier, tags=tags_l)
-
-    def remove_tag(self, identifier: int, tag: str) -> None:  # noqa: D102
-        self._registry.remove_tag(identifier=identifier, tag=tag)
-
-    def list(self, total: int = 16, show_all: bool = False, verbose: bool = False, tags: str = "") -> None:
-        """List available items."""
-        tags_l = parse_tags(tags)
-
-        header = ["id", "name", "description", "tags"]
-
-        if verbose:
-            header += ["author", "date", "path"]
-
-        table: list[list[Any]] = [header]
-
-        for entry in self._registry.list(tags=tags_l, total=total, show_all=show_all):
-            tags = ", ".join(entry.tags)
-
-            row = [
-                entry.id,
-                (entry.name or entry.path) if not verbose else entry.name,
-                textwrap.fill(entry.description or "", width=50),
-                textwrap.fill(tags, width=20),
-            ]
-
-            if verbose:
-                row += [entry.author, entry.time.strftime("%Y-%m-%d"), entry.path]
-
-            table.append(row)
-
-        print(tabulate(table, headers="firstrow", tablefmt="simple_grid"))
-
-    def update(
-        self,
-        identifier: int,
-        *,
-        author: Optional[str] = None,
-        description: Optional[str] = None,
-        name: Optional[str] = None,
-        details: Optional[dict] = None,
-        show_entry: Optional[bool] = None,
-    ) -> None:
-        """Update item in the registry."""
-        self._registry.update(
-            identifier=identifier,
-            author=author,
-            description=description,
-            name=name,
-            details=details,
-            show_entry=show_entry,
-        )
-
-    def info(self) -> None:
+    def info(self, entry: str) -> None:
         """Show information about an item."""
-        raise NotImplementedError()
+        entry_location = parse_location(entry)
+        metadata = registry.info(entry_location)
 
-    def upload(
+        if metadata is None:
+            print(f"Entry {entry} not found.")
+            return
+
+        print(metadata.model_dump_json(indent=2))
+
+    def metadata_template(self, local_path: str = ".", category: str = "", description: str = ""):
+        """Create a metadata template."""
+        path = Path(local_path)
+
+        metadata_path = path / "metadata.json"
+
+        # Get the name of the folder
+        folder_name = path.name
+
+        with open(metadata_path, "w") as f:
+            json.dump(
+                {
+                    "name": folder_name,
+                    "version": "0.0.1",
+                    "description": description,
+                    "category": category,
+                    "tags": [],
+                    "details": {},
+                    "show_entry": True,
+                },
+                f,
+                indent=2,
+            )
+
+    def list(
         self,
-        path: str,
-        s3_path: str,
-        description: str,
-        name: Optional[str] = None,
-        show_entry: bool = True,
+        namespace: str = "",
+        category: str = "",
         tags: str = "",
-        **details: Any,
+        total: int = 32,
+        offset: int = 0,
+        show_all: bool = False,
+        show_latest_version: bool = True,
     ) -> None:
-        """Upload item to the registry."""
+        """List available items."""
+        # Make sure tags is a comma-separated list of tags
         tags_l = parse_tags(tags)
+        tags = ",".join(tags_l)
 
-        author = CONFIG.get_user_name()
-        self._registry.upload(
-            path=Path(path),
-            s3_path=s3_path,
-            author=author,
-            description=description,
-            name=name,
-            details=details,
-            show_entry=show_entry,
-            tags=tags_l,
+        entries = registry.list(
+            namespace=namespace,
+            category=category,
+            tags=tags,
+            total=total + 1,
+            offset=offset,
+            show_all=show_all,
+            show_latest_version=show_latest_version,
         )
 
-    def download(self, name: str) -> None:
+        more_rows = len(entries) > total
+        entries = entries[:total]
+
+        header = ["entry", "category", "description", "tags"]
+
+        table = []
+        for entry in entries:
+            table.append(
+                [
+                    fill(f"{entry.namespace}/{entry.name}/{entry.version}"),
+                    fill(entry.category, 20),
+                    fill(entry.description, 50),
+                    fill(", ".join(entry.tags), 20),
+                ]
+            )
+
+        if more_rows:
+            table.append(["...", "...", "...", "..."])
+
+        print(tabulate(table, headers=header, tablefmt="simple_grid"))
+
+    def update(self, local_path: str = ".") -> None:
+        """Update metadata of a registry item."""
+        path = Path(local_path)
+
+        if CONFIG.auth is None:
+            print("Please login with `nearai login`")
+            exit(1)
+
+        metadata_path = path / "metadata.json"
+        check_metadata(metadata_path)
+
+        with open(metadata_path) as f:
+            metadata: Dict[str, Any] = json.load(f)
+
+        namespace = CONFIG.auth.account_id
+
+        entry_location = EntryLocation.model_validate(
+            dict(
+                namespace=namespace,
+                name=metadata.pop("name"),
+                version=metadata.pop("version"),
+            )
+        )
+
+        entry_metadata = EntryMetadataInput.model_validate(metadata)
+        result = registry.update(entry_location, entry_metadata)
+        print(json.dumps(result, indent=2))
+
+    def upload(self, local_path: str = ".") -> None:
+        """Upload item to the registry."""
+        registry.upload(Path(local_path), show_progress=True)
+
+    def download(self, entry_location: str, force: bool = False) -> None:
         """Download item."""
-        self._registry.download(name)
-
-
-class SupervisorCli:
-    def install(self) -> None:
-        """Install supervisor service in current machine."""
-        file = nearai.etc("supervisor.service")
-        target = Path("/etc/systemd/system/nearai_supervisor.service")
-        run(["sudo", "cp", str(file), str(target)])
-        run(["sudo", "systemctl", "daemon-reload"])
-
-    def start(self) -> None:
-        """Start installed supervisor service in current machine."""
-        run(["sudo", "systemctl", "restart", "nearai_supervisor"])
-
-    def run(self):
-        """Run supervisor app in debug mode."""
-        from nearai.supervisor import run_supervisor
-
-        run_supervisor()
-
-
-class ServerCli:
-    def install_supervisors(self, hosts: str, skip: str = "") -> None:
-        """Install and start supervisor in every host machine."""
-        hosts_l = parse_hosts(Path(hosts))
-        install(hosts_l, skip)
-
-    def start(self, hosts: str) -> None:  # noqa: D102
-        from nearai.supervisor import SupervisorClient
-
-        parsed_hosts = parse_hosts(Path(hosts))
-        update_config("supervisors", [h.endpoint for h in parsed_hosts])
-
-        db.set_all_supervisors_unavailable()
-
-        for host in parsed_hosts:
-            client = SupervisorClient(host.endpoint)
-            client.init(host.cluster, host.endpoint)
-
-        file = nearai.etc("server.service")
-        target = Path("/etc/systemd/system/nearai_server.service")
-
-        run(["sudo", "cp", str(file), str(target)])
-        run(["sudo", "systemctl", "daemon-reload"])
-        run(["sudo", "systemctl", "restart", "nearai_server"])
-
-    def run(self) -> None:
-        """Run server app in debug mode."""
-        from nearai.server import run_server
-
-        run_server()
+        registry.download(entry_location, force=force, show_progress=True)
 
 
 class ConfigCli:
@@ -289,9 +177,35 @@ class ConfigCli:
 
 
 class BenchmarkCli:
-    def __init__(self, datasets: RegistryCli, models: RegistryCli):  # noqa: D107
-        self.datasets = datasets
-        self.models = models
+    def __init__(self):
+        """Initialize Benchmark API."""
+        self.client = BenchmarkApi()
+
+    def _get_or_create_benchmark(self, benchmark_name: str, solver_name: str, args: Dict[str, Any], force: bool) -> int:
+        if CONFIG.auth is None:
+            print("Please login with `nearai login`")
+            exit(1)
+        namespace = CONFIG.auth.account_id
+
+        # Sort the args to have a consistent representation.
+        solver_args = json.dumps(OrderedDict(sorted(args.items())))
+
+        benchmark_id = self.client.get_benchmark_v1_benchmark_get_get(
+            namespace=namespace,
+            benchmark_name=benchmark_name,
+            solver_name=solver_name,
+            solver_args=solver_args,
+        )
+
+        if benchmark_id == -1 or force:
+            benchmark_id = self.client.create_benchmark_v1_benchmark_create_get(
+                benchmark_name=benchmark_name,
+                solver_name=solver_name,
+                solver_args=solver_args,
+            )
+
+        assert benchmark_id != -1
+        return benchmark_id
 
     def run(
         self,
@@ -300,14 +214,29 @@ class BenchmarkCli:
         max_concurrent: int = -1,
         force: bool = False,
         subset: Optional[str] = None,
-        **solver_kwargs: Any,
+        check_compatibility: bool = True,
+        record: bool = False,
+        **solver_args: Any,
     ) -> None:
         """Run benchmark on a dataset with a solver strategy.
 
         It will cache the results in the database and subsequent runs will pull the results from the cache.
         If force is set to True, it will run the benchmark again and update the cache.
         """
-        benchmark_id = db.get_benchmark_id(dataset, solver_strategy, force, subset=subset, **solver_kwargs)
+        from nearai.benchmark import BenchmarkExecutor, DatasetInfo
+        from nearai.dataset import load_dataset
+        from nearai.solvers import SolverStrategy, SolverStrategyRegistry
+
+        args = dict(solver_args)
+        if subset is not None:
+            args["subset"] = subset
+
+        benchmark_id = self._get_or_create_benchmark(
+            benchmark_name=dataset,
+            solver_name=solver_strategy,
+            args=args,
+            force=force,
+        )
 
         solver_strategy_class: SolverStrategy | None = SolverStrategyRegistry.get(solver_strategy, None)
         assert (
@@ -320,35 +249,93 @@ class BenchmarkCli:
         else:
             dataset = load_dataset(dataset)
 
-        solver_strategy_obj: SolverStrategy = solver_strategy_class(dataset_ref=dataset, **solver_kwargs)  # type: ignore
-        assert (
-            name in solver_strategy_obj.compatible_datasets()
-        ), f"Solver strategy {solver_strategy} is not compatible with dataset {name}"
+        solver_strategy_obj: SolverStrategy = solver_strategy_class(dataset_ref=dataset, **solver_args)  # type: ignore
+        if check_compatibility:
+            assert (
+                name in solver_strategy_obj.compatible_datasets()
+            ), f"Solver strategy {solver_strategy} is not compatible with dataset {name}"
 
         be = BenchmarkExecutor(DatasetInfo(name, subset, dataset), solver_strategy_obj, benchmark_id=benchmark_id)
 
         cpu_count = os.cpu_count()
         max_concurrent = (cpu_count if cpu_count is not None else 1) if max_concurrent < 0 else max_concurrent
-        be.run(max_concurrent=max_concurrent)
+        be.run(max_concurrent=max_concurrent, record=record)
+
+    def list(
+        self,
+        namespace: Optional[str] = None,
+        benchmark: Optional[str] = None,
+        solver: Optional[str] = None,
+        args: Optional[str] = None,
+        total: int = 32,
+        offset: int = 0,
+    ):
+        """List all executed benchmarks."""
+        result = self.client.list_benchmarks_v1_benchmark_list_get(
+            namespace=namespace,
+            benchmark_name=benchmark,
+            solver_name=solver,
+            solver_args=args,
+            total=total,
+            offset=offset,
+        )
+
+        header = ["id", "namespace", "benchmark", "solver", "args", "score", "solved", "total"]
+        table = []
+        for benchmark_output in result:
+            score = 100 * benchmark_output.solved / benchmark_output.total
+            table.append(
+                [
+                    fill(str(benchmark_output.id)),
+                    fill(benchmark_output.namespace),
+                    fill(benchmark_output.benchmark),
+                    fill(benchmark_output.solver),
+                    fill(benchmark_output.args),
+                    fill(f"{score:.2f}%"),
+                    fill(str(benchmark_output.solved)),
+                    fill(str(benchmark_output.total)),
+                ]
+            )
+
+        print(tabulate(table, headers=header, tablefmt="simple_grid"))
 
 
-class EnvironmentCli:
-    def setup(self, dataset: str, task_id: int) -> None:
-        """Setup environment with given task from the dataset."""
-        pass
+class EvaluationCli:
+    def table(self, namespace: str = "", tags: str = "", verbose: bool = False) -> None:
+        """Prints table of evaluations."""
+        # Make sure tags is a comma-separated list of tags
+        tags_l = parse_tags(tags)
+        tags = ",".join(tags_l)
 
+        entries = registry.list(
+            namespace=namespace,
+            category="evaluation",
+            tags=tags,
+            total=10000,
+            offset=0,
+            show_all=False,
+            show_latest_version=True,
+        )
+        evaluations_table(entries, verbose)
+
+
+class AgentCli:
     def inspect(self, path: str) -> None:
         """Inspect environment from given path."""
+        from nearai.environment import Environment
+
         env = Environment(path, [], CONFIG, create_files=False)
         env.inspect()
 
     def save_folder(self, path: str, name: Optional[str] = None) -> None:
         """Saves all subfolders with agent task runs (must contain non-empty chat.txt)."""
+        from nearai.environment import Environment
+
         env = Environment(path, [], CONFIG, create_files=False)
         env.save_folder(name)
 
     def save_from_history(self, name: Optional[str] = None) -> None:
-        """Reads piped history, finds agent task runs, writes start_command.log files, and saves to registry. For detailed usage, run: nearai environment save_from_history --help.
+        """Reads piped history, finds agent task runs, writes start_command.log files, and saves to registry. For detailed usage, run: nearai agent save_from_history --help.
 
         This command:
         1. Finds agent task runs (must contain non-empty chat.txt)
@@ -357,41 +344,93 @@ class EnvironmentCli:
 
         Only 'interactive' is supported.
         Assumes format:
-        ' <line_number>  <program_name> environment interactive <comma_separated_agents> <path> <other_args>'
+        ' <line_number>  <program_name> agent interactive <comma_separated_agents> <path> <other_args>'
         Run:
-        $ history | grep "environment interactive" | sed "s:~:$HOME:g" | nearai environment save_from_history environment_interactive_runs_from_lambda_00
+        $ history | grep "agent interactive" | sed "s:~:$HOME:g" | nearai agent save_from_history environment_interactive_runs_from_lambda_00
         """  # noqa: E501
+        from nearai.environment import Environment
+
         env = Environment("/", [], CONFIG, create_files=False)
         # Read from stdin (piped input)
         lines = sys.stdin.readlines()
         env.save_from_history(lines, name)
 
-    def interactive(self, agents: str, path: str, record_run: str = "true", load_env: str = "") -> None:
+    def interactive(
+        self,
+        agents: str,
+        path: Optional[str] = "",
+        record_run: str = "true",
+        env_vars: Optional[Dict[str, Any]] = None,
+        load_env: str = "",
+        local: bool = False,
+    ) -> None:
         """Runs agent interactively with environment from given path."""
-        _agents = [load_agent(agent) for agent in agents.split(",")]
-        env = Environment(path, _agents, CONFIG)
+        from nearai.environment import Environment
+
+        _agents = [load_agent(agent, local) for agent in agents.split(",")]
+        if not path:
+            if len(_agents) == 1:
+                path = _agents[0].path
+            else:
+                raise ValueError("Local path is required when running multiple agents")
+        env = Environment(path, _agents, CONFIG, env_vars=env_vars)
         env.run_interactive(record_run, load_env)
 
     def task(
         self,
         agents: str,
         task: str,
-        path: str,
+        path: Optional[str] = "",
         max_iterations: int = 10,
         record_run: str = "true",
+        env_vars: Optional[Dict[str, Any]] = None,
         load_env: str = "",
+        local: bool = False,
     ) -> None:
         """Runs agent non interactively with environment from given path."""
-        _agents = [load_agent(agent) for agent in agents.split(",")]
-        env = Environment(path, _agents, CONFIG)
+        from nearai.environment import Environment
+
+        _agents = [load_agent(agent, local) for agent in agents.split(",")]
+        if not path:
+            if len(_agents) == 1:
+                path = _agents[0].path
+            else:
+                raise ValueError("Local path is required when running multiple agents")
+        env = Environment(path, _agents, CONFIG, env_vars=env_vars)
         env.run_task(task, record_run, load_env, max_iterations)
 
-    def run(self, agents: str, task: str, path: str) -> None:
-        """Runs agent in the current environment."""
-        _agents = [load_agent(agent) for agent in agents.split(",")]
-        env = Environment(path, [], CONFIG)
-        env.exec_command("sleep 10")
-        # TODO: Setup server that will allow to interact with agents and environment
+    def run_remote(
+        self,
+        agents: str,
+        new_message: str = "",
+        environment_id: str = "",
+        provider: str = "aws_lambda",
+        params: object = None,
+    ) -> None:
+        """Invoke a Container based AWS lambda function to run agents on a given environment."""
+        if not CONFIG.auth:
+            print("Please login with `nearai login`")
+            return
+        if provider != "aws_lambda":
+            print(f"Provider {provider} is not supported.")
+            return
+        if not params:
+            params = {"max_iterations": 2}
+        wrapper = LambdaWrapper(boto3.client("lambda", region_name="us-east-2"))
+        try:
+            new_environment = wrapper.invoke_function(
+                "agent-runner-docker",
+                {
+                    "agents": agents,
+                    "environment_id": environment_id,
+                    "auth": CONFIG.auth.model_dump(),
+                    "new_message": new_message,
+                    "params": params,
+                },
+            )
+            print(f"Agent run finished. New environment is {new_environment}")
+        except Exception as e:
+            print(f"Error running agent remotely: {e}")
 
 
 class VllmCli:
@@ -410,86 +449,139 @@ class VllmCli:
             sys.argv = original_argv
 
 
+class HubCLI:
+    def chat(self, **kwargs):
+        """Chat with model from NearAI hub.
+
+        Args:
+        ----
+            query (str): User's query to model
+            endpoint (str): NearAI HUB's url
+            model (str): Name of a model
+            provider (str): Name of a provider
+            info (bool): Display system info
+            kwargs (Dict[str, Any]): All cli keyword arguments
+
+        """
+        hub = Hub(CONFIG)
+        hub.chat(kwargs)
+
+
+class LogoutCLI:
+    def __call__(self, **kwargs):
+        """Clear NEAR account auth data."""
+        from nearai.config import load_config_file, save_config_file
+
+        config = load_config_file()
+        if not config.get("auth") or not config["auth"].get("account_id"):
+            print("Auth data does not exist.")
+        else:
+            config.pop("auth", None)
+            save_config_file(config)
+            print("Auth data removed")
+
+
+class LoginCLI:
+    def __call__(self, **kwargs):
+        """Login with NEAR Mainnet account.
+
+        Args:
+        ----
+            remote (bool): Remote login allows signing message with NEAR Account on a remote machine
+            auth_url (str): Url to the auth portal
+            accountId (str): AccountId in .near-credentials folder to signMessage
+            privateKey (str): Private Key to sign a message
+            kwargs (Dict[str, Any]): All cli keyword arguments
+
+        """
+        from nearai.login import generate_and_save_signature, login_with_file_credentials, login_with_near_auth
+
+        remote = kwargs.get("remote", False)
+        account_id = kwargs.get("accountId", None)
+        private_key = kwargs.get("privateKey", None)
+
+        if not remote and account_id and private_key:
+            generate_and_save_signature(account_id, private_key)
+        elif not remote and account_id:
+            login_with_file_credentials(account_id)
+        else:
+            auth_url = kwargs.get("auth_url", "https://auth.near.ai")
+            login_with_near_auth(remote, auth_url)
+
+    def status(self):
+        """Load NEAR account authorization data."""
+        from nearai.login import print_login_status
+
+        print_login_status()
+
+    def save(self, **kwargs):
+        """Save NEAR account authorization data.
+
+        Args:
+        ----
+            accountId (str): Near Account
+            signature (str): Signature
+            publicKey (str): Public Key used to sign
+            callbackUrl (str): Callback Url
+            nonce (str): nonce
+            kwargs (Dict[str, Any]): All cli keyword arguments
+
+        """
+        from nearai.login import update_auth_config
+
+        account_id = kwargs.get("accountId")
+        signature = kwargs.get("signature")
+        public_key = kwargs.get("publicKey")
+        callback_url = kwargs.get("callbackUrl")
+        nonce = kwargs.get("nonce")
+
+        if account_id and signature and public_key and callback_url and nonce:
+            update_auth_config(account_id, signature, public_key, callback_url, nonce)
+        else:
+            print("Missing data")
+
+
 class CLI:
     def __init__(self) -> None:  # noqa: D107
-        self.registry = RegistryCli(registry)
-        self.datasets = RegistryCli(dataset)
-        self.models = RegistryCli(model)
-        self.agents = RegistryCli(agent)
+        self.registry = RegistryCli()
+        self.login = LoginCLI()
+        self.logout = LogoutCLI()
+        self.hub = HubCLI()
 
-        self.supervisor = SupervisorCli()
-        self.server = ServerCli()
         self.config = ConfigCli()
-        self.benchmark = BenchmarkCli(self.datasets, self.models)
-        self.environment = EnvironmentCli()
+        self.benchmark = BenchmarkCli()
+        self.evaluation = EvaluationCli()
+        self.agent = AgentCli()
         self.finetune = FinetuneCli()
         self.tensorboard = TensorboardCli()
         self.vllm = VllmCli()
 
-    def submit(self, command: str, name: str, nodes: int = 1, cluster: str = "truthwatcher") -> None:
-        """Submit task."""
-        from nearai.server import ServerClient
-
-        author = CONFIG.get_user_name()
-
-        client = ServerClient(CONFIG.server_url)
-
-        # Check we can connect to the server
-        client.status()
-
-        # Detect in-progress git action
-        # https://adamj.eu/tech/2023/05/29/git-detect-in-progress-operation/
-        operation = ["CHERRY_PICK_HEAD", "MERGE_HEAD", "REBASE_HEAD", "REVERT_HEAD"]
-        for op in operation:
-            result = run(["git", "rev-parse", "--verify", op], capture_output=True)
-            if result.returncode == 0:
-                print(f"Detected in-progress git operation: {op}")
-                return
-
-        repository_url = check_output(["git", "remote", "-v"]).decode().split("\n")[0].split("\t")[1].split()[0]
-        commit = check_output(["git", "rev-parse", "HEAD"]).decode().strip()
-        diff = check_output(["git", "diff", "HEAD"]).decode()
-
-        submission_result = client.submit(name, repository_url, commit, command, author, diff, nodes, cluster)
-
-        print("experiment id:", submission_result["experiment"]["id"])
-
-    def inference(self) -> None:
-        """Submit inference task."""
-        raise NotImplementedError()
-
     def location(self) -> None:  # noqa: D102
-        print(nearai.cli_path())
+        """Show location where nearai is installed."""
+        from nearai import cli_path
 
-    def version(self) -> None:  # noqa: D102
-        # TODO: Show current commit or tag
-        print(pkg_resources.get_distribution("nearai").version)
+        print(cli_path())
 
-    def update(self) -> None:
-        """Update nearai version."""
-        path = DATA_FOLDER / "nearai"
+    def version(self):
+        """Show nearai version."""
+        print(importlib.metadata.version("nearai"))
 
-        if path.absolute() != nearai.cli_path().absolute():
-            print()
-            print(f"Updating nearai version installed in {path}")
-            print(f"The invoked nearai is in {nearai.cli_path()}")
-            print()
 
-        if path.exists():
-            run(["git", "pull"], cwd=path)
+def check_update():
+    """Check if there is a new version of nearai CLI available."""
+    try:
+        api = DefaultApi()
+        latest = api.version_v1_version_get()
+        current = importlib.metadata.version("nearai")
 
-    def status(self) -> None:
-        """Show status of the cluster."""
-        from nearai.server import ServerClient
+        if latest != current:
+            print(f"New version of nearai CLI available: {latest}. Current version: {current}")
+            print("Run `pip install --upgrade nearai` to update.")
 
-        client = ServerClient(CONFIG.server_url)
-        status = client.status()
-
-        for experiment in status.get("last_experiments", []):
-            experiment["diff_len"] = len(experiment.pop("diff", ""))
-
-        print(json.dumps(status))
+    except Exception as _:
+        pass
 
 
 def main() -> None:
+    check_update()
     fire.Fire(CLI)

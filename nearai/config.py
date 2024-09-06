@@ -1,9 +1,9 @@
 import json
 import os
-from dataclasses import dataclass, field, fields
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, Optional
 
+from openapi_client import ApiClient, Configuration
 from pydantic import BaseModel
 
 DATA_FOLDER = Path.home() / ".nearai"
@@ -13,6 +13,7 @@ LOCAL_CONFIG_FILE = Path(".nearai") / "config.json"
 REPO_FOLDER = Path(__file__).parent.parent
 PROMPTS_FOLDER = REPO_FOLDER / "nearai" / "prompts"
 ETC_FOLDER = REPO_FOLDER / "etc"
+DEFAULT_PROVIDER = "fireworks"
 
 
 def get_config_path(local: bool = False) -> Path:
@@ -45,21 +46,28 @@ def update_config(key: str, value: Any, local: bool = False) -> None:
     save_config_file(config, local)
 
 
-class LLMProviderConfig(BaseModel):
-    base_url: str
-    api_key: str
+class NearAiHubConfig(BaseModel):
+    """NearAiHub Config.
 
+    login_with_near (Optional[bool]): Indicates whether to attempt login using Near Auth.
 
-class LLMConfig(BaseModel):
-    """LLM Config.
+    api_key (Optional[str]): The API key to use if Near Auth is not being utilized
 
-    Providers: {"<provider_name>": {"base_url": "<url>", "api_key": "<api_key>"}}
+    base_url (Optional[str]): NearAI Hub url
 
-    Models: {"<model_name>": "<provider_name>:<model_path>"
+    default_provider (Optional[str]): Default provider name
+
+    default_model (Optional[str]): Default model name
+
+    custom_llm_provider (Optional[str]): provider to be used by litellm proxy
     """
 
-    providers: Dict[str, LLMProviderConfig]
-    models: Dict[str, str]
+    base_url: str = "https://api.near.ai/v1"
+    default_provider: str = DEFAULT_PROVIDER
+    default_model: str = "fireworks::accounts/fireworks/models/llama-v3p1-405b-instruct-long"
+    custom_llm_provider: str = "openai"
+    login_with_near: Optional[bool] = True
+    api_key: Optional[str] = ""
 
     @classmethod
     def from_dict(cls, data: Optional[Dict[str, Any]]) -> Optional["LLMConfig"]:  # noqa: D102
@@ -68,61 +76,73 @@ class LLMConfig(BaseModel):
         return cls(providers={k: LLMProviderConfig(**v) for k, v in data["providers"].items()}, models=data["models"])
 
 
-@dataclass
-class Config:
-    # TODO(#49): move to configuration
-    s3_bucket: str = "kholinar-registry"
-    s3_prefix: str = "registry"
-    supervisors: List[str] = field(default_factory=list)
-    db_user: Optional[str] = None
-    db_password: Optional[str] = None
-    db_host: str = "35.87.119.37"
-    db_port: int = 3306
-    # TODO(#49): move to configuration, rename
-    db_name: str = "jasnah"
-    server_url: str = "http://ai.nearspace.info/cluster"
-    origin: Optional[str] = None
-    user_name: Optional[str] = None
-    user_email: Optional[str] = None
-    supervisor_id: Optional[str] = None
+class AuthData(BaseModel):
+    account_id: str
+    signature: str
+    public_key: str
+    callback_url: str
+    nonce: str
+    recipient: str
+    message: str
 
+    def generate_bearer_token(self):
+        """Generates a JSON-encoded bearer token containing authentication data."""
+        required_keys = {"account_id", "public_key", "signature", "callback_url", "message", "nonce", "recipient"}
+
+        for key in required_keys:
+            if getattr(self, key) is None:
+                raise ValueError(f"Missing required auth data: {key}")
+
+        bearer_data = {key: getattr(self, key) for key in required_keys}
+
+        return json.dumps(bearer_data)
+
+
+class Config(BaseModel):
+    origin: Optional[str] = None
+    api_url: Optional[str] = "https://api.near.ai"
     inference_url: str = "http://localhost:5000/v1/"
     inference_api_key: str = "n/a"
-
-    llm_config_dict: Optional[dict] = None
-
+    nearai_hub: Optional[NearAiHubConfig] = NearAiHubConfig()
     confirm_commands: bool = True
+    auth: Optional[AuthData] = None
 
-    @property
-    def llm_config(self) -> Optional[LLMConfig]:  # noqa: D102
-        return LLMConfig.from_dict(self.llm_config_dict)
+    def update_with(self, extra_config: Dict[str, Any], map_key: Callable[[str], str] = lambda x: x) -> "Config":
+        """Update the config with the given dictionary."""
+        dict_repr = self.model_dump()
+        keys = list(map(map_key, dict_repr.keys()))
 
-    def update_with(  # noqa: D102
-        self, extra_config: Dict[str, Any], map_key: Callable[[str], str] = lambda x: x
-    ) -> None:
-        keys = [f.name for f in fields(self)]
-        for key in map(map_key, keys):
-            value = extra_config.get(key if key != "llm_config_dict" else "llm_config", None)
+        for key in keys:
+            value = extra_config.get(key, None)
 
             if value:
                 # This will skip empty values, even if they are set in the `extra_config`
-                setattr(self, key, value)
+                dict_repr[key] = value
 
-    def get(self, key: str, default: Optional[Any] = None) -> Optional[Any]:  # noqa: D102
+        return Config.model_validate(dict_repr)
+
+    def get(self, key: str, default: Optional[Any] = None) -> Optional[Any]:
+        """Get the value of a key in the config if it exists."""
         return getattr(self, key, default)
-
-    def get_user_name(self) -> str:  # noqa: D102
-        if self.user_name is None:
-            print("Please set user_name with `nearai config set user_name <name>`")
-            exit(1)
-        return self.user_name
 
 
 # Load default configs
 CONFIG = Config()
 # Update config from global config file
-CONFIG.update_with(load_config_file(local=False))
+CONFIG = CONFIG.update_with(load_config_file(local=False))
 # Update config from local config file
-CONFIG.update_with(load_config_file(local=True))
+CONFIG = CONFIG.update_with(load_config_file(local=True))
 # Update config from environment variables
-CONFIG.update_with(dict(os.environ), map_key=str.upper)
+CONFIG = CONFIG.update_with(dict(os.environ), map_key=str.upper)
+
+
+def setup_api_client():
+    kwargs = {"host": CONFIG.api_url}
+    if CONFIG.auth is not None:
+        kwargs["access_token"] = f"Bearer {CONFIG.auth.model_dump_json()}"
+    configuration = Configuration(**kwargs)
+    client = ApiClient(configuration)
+    ApiClient.set_default(client)
+
+
+setup_api_client()

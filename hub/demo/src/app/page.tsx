@@ -1,11 +1,14 @@
-"use client";
+'use client';
 
-import { Chat } from "./_components/chat";
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
-export default function Home() {
-  return (
-    <main>
-        <Chat />
-    </main>
-  );
+export default function HomePage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    void router.replace('/chat');
+  }, [router]);
+
+  return null;
 }

@@ -4,13 +4,13 @@ import random
 from copy import deepcopy
 from datetime import datetime
 from tempfile import TemporaryDirectory
-from typing import List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import httpx as hx
 import tenacity
 
 from nearai.agent import Agent, load_agent
-from nearai.config import CONFIG, DATA_FOLDER, Config
+from nearai.config import CONFIG, DATA_FOLDER, DEFAULT_PROVIDER, Config
 from nearai.dataset import Dataset
 from nearai.environment import Environment
 
@@ -146,8 +146,25 @@ class DDOTSV0Solver(SolverStrategy):
         self.save_snapshots = save_snapshots
         print("Saving trajectories to", self._saved_trajectories)
 
+    def evaluation_name(self) -> str:  # noqa: D102
+        return "ddots"
+
     def compatible_datasets(self) -> List[str]:  # noqa: D102
         return ["ddots_codeforces_small/v0", "datasets/ddots_codeforces_medium_A_B/v0"]
+
+    def model_metadata(self) -> Optional[Dict[str, Any]]:  # noqa: D102
+        # TODO: we may want to return the model used by an agent here.
+        return None
+
+    def agent_metadata(self) -> Optional[Dict[str, Any]]:  # noqa: D102
+        return self.agents[0].metadata
+
+    def evaluated_entry_namespace(self) -> str:  # noqa: D102
+        return self.agents[0].namespace
+
+    def model_provider(self) -> str:  # noqa: D102
+        # TODO: we may want to return the provider used by an agent here.
+        return DEFAULT_PROVIDER
 
     def solve(self, datum: dict) -> bool:  # noqa: D102
         problem_id = datum["problem_id"]

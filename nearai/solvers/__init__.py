@@ -1,6 +1,6 @@
 from abc import ABC, ABCMeta, abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 
 class SolverScoringMethod(Enum):
@@ -36,6 +36,7 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
 
     @property
     def name(self) -> str:
+        """Returns the name of the solver strategy."""
         return type(self).__name__
 
     @SolverStrategyClassProperty
@@ -43,10 +44,39 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
         return SolverScoringMethod.TrueOrFalseList
 
     @abstractmethod
-    def compatible_datasets(self) -> List[str]: ...
+    def evaluation_name(self) -> str:
+        """Returns a unique name for (benchmark, solver) tuple, e.g. 'mbpp' or 'live_bench' or 'mmlu-5-shot'."""
+        ...
 
     @abstractmethod
-    def solve(self, datum: dict) -> Union[bool, Tuple[bool, Any]]: ...
+    def compatible_datasets(self) -> List[str]:
+        """Returns the list of datasets that the solver strategy is compatible with."""
+        ...
+
+    @abstractmethod
+    def model_metadata(self) -> Optional[Dict[str, Any]]:
+        """Returns model metadata that is evaluated or used by an agent."""
+        ...
+
+    @abstractmethod
+    def agent_metadata(self) -> Optional[Dict[str, Any]]:
+        """Returns agent metadata that is evaluated."""
+        ...
+
+    @abstractmethod
+    def evaluated_entry_namespace(self) -> str:
+        """Returns namespace of a model or agent to be evaluated."""
+        ...
+
+    @abstractmethod
+    def model_provider(self) -> str:
+        """Returns model provider."""
+        ...
+
+    @abstractmethod
+    def solve(self, datum: dict) -> Union[bool, Tuple[bool, Any]]:
+        """Solves the task for the given datum."""
+        ...
 
     def get_custom_tasks(self) -> List[dict]:
         if self.scoring_method == SolverScoringMethod.Custom:

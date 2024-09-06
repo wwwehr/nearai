@@ -1,0 +1,93 @@
+@import '~/styles/variables';
+@import '~/styles/mixins';
+
+.root {
+  display: flex;
+  align-items: stretch;
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-l);
+  padding: var(--gap-l);
+  padding-bottom: 0;
+  flex-grow: 1;
+  min-width: 0;
+
+  footer {
+    margin-top: auto;
+    margin-inline: calc(var(--gap-l) * -1);
+  }
+}
+
+.sidebar {
+  position: sticky;
+  z-index: 250;
+  top: var(--header-height);
+  max-width: 100%;
+  max-height: var(--section-fill-height);
+  min-width: 0;
+  min-height: 0;
+  flex-shrink: 0;
+
+  @media (max-width: $tabletBreakpointMaxWidth) {
+    position: fixed;
+    right: 0;
+    box-shadow: 0 0 3rem rgba(0, 0, 0, 0.2);
+    width: 0vw;
+    opacity: 0;
+    transition:
+      width 300ms,
+      opacity 300ms;
+
+    &[data-open-small-screens='true'] {
+      display: flex;
+      width: 100vw;
+      opacity: 1;
+    }
+  }
+}
+
+.sidebarContent {
+  width: 360px;
+  flex-shrink: 0;
+  background: var(--sand-2);
+  overflow: auto;
+  scroll-behavior: smooth;
+  height: 100%;
+
+  @include hideScrollbar();
+
+  @media (max-width: $tabletBreakpointMaxWidth) {
+    width: 100vw;
+    padding-top: 0 !important;
+    overscroll-behavior: contain;
+  }
+}
+
+.sidebarContentInner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-l);
+  padding: var(--gap-l);
+  width: 100%;
+  min-height: 100%;
+  position: relative;
+
+  @media (max-width: $tabletBreakpointMaxWidth) {
+    min-height: calc(100% + 1px);
+  }
+}
+
+.sidebarCloseButton {
+  position: absolute;
+  top: var(--gap-m);
+  right: var(--gap-m);
+
+  @media (min-width: $tabletBreakpointMaxWidth) {
+    display: none !important;
+  }
+}

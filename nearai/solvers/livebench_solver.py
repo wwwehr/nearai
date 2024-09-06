@@ -4,7 +4,7 @@ import json
 import os
 import subprocess
 import time
-from typing import Any, Dict, List, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import shortuuid  # type: ignore
 from litellm import Choices, ModelResponse
@@ -15,8 +15,9 @@ from openai.types.chat import (
 )
 from tqdm import tqdm
 
+from hub.api.near.primitives import get_provider_model
 from nearai.completion import InferenceRouter
-from nearai.config import CONFIG
+from nearai.config import CONFIG, DEFAULT_PROVIDER
 from nearai.solvers import (
     SolverScoringMethod,
     SolverStrategy,
@@ -57,17 +58,33 @@ class LiveBenchSolverStrategy(SolverStrategy):
     """Solver strategy for the live bench dataset."""
 
     def __init__(  # noqa: D107
-        self, dataset_ref: str, model, step: str = "all"
+        self, dataset_ref: str, model: str, step: str = "all"
     ) -> None:
         super().__init__()
         self.dataset_ref = dataset_ref
-        assert CONFIG.llm_config is not None, "LLMConfig is not defined."
-        self.completion_fn = InferenceRouter(CONFIG.llm_config).completions
+        self.completion_fn = InferenceRouter(CONFIG).completions
         self.model = model
         self.step = step
 
+    def evaluation_name(self) -> str:  # noqa: D102
+        return "live_bench"
+
     def compatible_datasets(self) -> List[str]:  # noqa: D102
-        return ["live_bench"]
+        return ["near.ai/live_bench/1.0.0"]
+
+    def model_metadata(self) -> Optional[Dict[str, Any]]:  # noqa: D102
+        return {"name": self.model}
+
+    def agent_metadata(self) -> Optional[Dict[str, Any]]:  # noqa: D102
+        return None
+
+    def evaluated_entry_namespace(self) -> str:  # noqa: D102
+        # Only provider models are supported.
+        return ""
+
+    def model_provider(self) -> str:  # noqa: D102
+        provider, _ = get_provider_model(DEFAULT_PROVIDER, self.model)
+        return provider
 
     def get_custom_tasks(self) -> List[dict]:  # noqa: D102
         return [{"summary": "all"}]

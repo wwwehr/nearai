@@ -6,9 +6,10 @@ from itertools import islice
 from typing import Any, Callable, Dict, Optional, Tuple, Union
 
 from datasets import Dataset, DatasetDict  # type: ignore[attr-defined]
+from openapi_client.api.benchmark_api import BenchmarkApi
 from tqdm import tqdm
 
-from nearai.db import db
+from nearai.evaluation import record_single_score_evaluation
 from nearai.solvers import SolverScoringMethod, SolverStrategy
 
 
@@ -38,20 +39,17 @@ class BenchmarkExecutor:
         self.dataset_info = dataset_info
         self.solver_strategy = solver_strategy
         self.benchmark_id = benchmark_id
+        self.client = BenchmarkApi()
 
-    def run(self, progress: bool = True, max_concurrent: int = 1) -> None:  # noqa: D102
+    def run(self, progress: bool = True, max_concurrent: int = 32, record: bool = False) -> None:  # noqa: D102
         data_tasks = (
             self.dataset_info.get_dataset()
             if self.solver_strategy.scoring_method != SolverScoringMethod.Custom
             else self.solver_strategy.get_custom_tasks()
         )
 
-        cache_map: Dict[SolverScoringMethod, Callable[[], Any]] = {
-            SolverScoringMethod.TrueOrFalseList: lambda: db.get_benchmark_status(self.benchmark_id),
-            SolverScoringMethod.Custom: lambda: db.get_benchmark_results(self.benchmark_id),
-        }
-
-        cache = cache_map[self.solver_strategy.scoring_method]()
+        cache_ = self.client.get_benchmark_result_v1_benchmark_get_result_get(benchmark_id=self.benchmark_id)
+        cache = {result.index: (result.solved, result.info) for result in cache_}
 
         n_true_results = 0
         remaining = len(data_tasks)
@@ -77,10 +75,7 @@ class BenchmarkExecutor:
                     remaining -= 1
 
                     result = completed_future.result()
-                    status = result
-                    info = ""
-                    if isinstance(result, tuple):
-                        status, info = result
+                    status, info = result
                     if status:
                         n_true_results += 1
                     if self.solver_strategy.scoring_method == SolverScoringMethod.TrueOrFalseList:
@@ -98,15 +93,17 @@ class BenchmarkExecutor:
 
         if self.solver_strategy.scoring_method == SolverScoringMethod.TrueOrFalseList:
             print(f"Final score: {n_true_results}/{total} - {n_true_results/total:.2%}")
+            if record:
+                record_single_score_evaluation(self.solver_strategy, round(n_true_results / total * 100, 2))
 
 
 def solve_task(
     benchmark_id: int,
-    cache: Union[Dict[int, bool], Dict[int, Tuple[bool, str]]],
+    cache: Dict[int, Tuple[bool, str]],
     solve_fn: Callable[[Any], Union[bool, Tuple[bool, Any]]],
     index: int,
     datum: Any,
-) -> Union[bool, Tuple[bool, Any]]:
+) -> Tuple[bool, Any]:
     if index in cache:
         return cache[index]
 
@@ -117,6 +114,12 @@ def solve_task(
     if isinstance(result, tuple):
         status, info = result
 
-    db.update_benchmark_result(benchmark_id, index, status, json.dumps(info))
+    client = BenchmarkApi()
+    client.add_benchmark_result_v1_benchmark_add_result_get(
+        benchmark_id=benchmark_id,
+        index=index,
+        solved=result,
+        info=json.dumps(info),
+    )
 
-    return result
+    return (status, info)

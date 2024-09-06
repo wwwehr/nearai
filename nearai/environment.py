@@ -11,16 +11,20 @@ import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from shutil import rmtree
 from typing import Any, Dict, Iterable, List, Optional, Union
 
 import psutil
-from litellm import Choices, CustomStreamWrapper, ModelResponse
+from litellm.types.utils import Choices, ModelResponse
+from litellm.utils import CustomStreamWrapper
 from openai.types.chat import ChatCompletionMessageParam
+from openapi_client import EntryMetadata
 
+import hub.api.near.sign as near
 from nearai.agent import Agent
 from nearai.completion import InferenceRouter
-from nearai.config import Config
-from nearai.db import db
+from nearai.config import AuthData, Config, NearAiHubConfig
+from nearai.lib import plain_location
 from nearai.registry import registry
 from nearai.tool_registry import ToolRegistry
 
@@ -31,17 +35,25 @@ TERMINAL_FILENAME = "terminal.txt"
 
 class Environment(object):
     def __init__(  # noqa: D107
-        self, path: str, agents: List[Agent], config: Config, create_files: bool = True
+        self,
+        path: str,
+        agents: List[Agent],
+        config: Config,
+        create_files: bool = True,
+        env_vars: Optional[Dict[str, Any]] = None,
     ) -> None:
         self._path = path
         self._agents = agents
         self._done = False
         self._config = config
-        assert config.llm_config is not None, "LLMConfig is not defined."
-        self._inference = InferenceRouter(config.llm_config)
-        self._user_name = config.user_name
+        self._inference = InferenceRouter(config)
         self._tools = ToolRegistry()
         self.register_standard_tools()
+        self.env_vars: Dict[str, Any] = env_vars if env_vars else {}
+
+        if self._config.nearai_hub is None:
+            self._config.nearai_hub = NearAiHubConfig()
+
         if create_files:
             os.makedirs(self._path, exist_ok=True)
             open(os.path.join(self._path, CHAT_FILENAME), "a").close()
@@ -52,6 +64,7 @@ class Environment(object):
         return uuid.uuid4().hex
 
     def get_tool_registry(self) -> ToolRegistry:  # noqa: D102
+        """Returns the tool registry, a dictionary of tools that can be called by the agent."""
         return self._tools
 
     def register_standard_tools(self) -> None:  # noqa: D102
@@ -61,15 +74,19 @@ class Environment(object):
         reg.register_tool(self.write_file)
         reg.register_tool(self.request_user_input)
         reg.register_tool(self.list_files)
+        reg.register_tool(self.verify_message)
 
     def add_message(self, role: str, message: str, filename: str = CHAT_FILENAME, **kwargs: Any) -> None:  # noqa: D102
+        """Add a message to the chat file."""
         with open(os.path.join(self._path, filename), "a") as f:
             f.write(json.dumps({"role": role, "content": message, **kwargs}) + DELIMITER)
 
     def list_terminal_commands(self, filename: str = TERMINAL_FILENAME) -> List[Any]:  # noqa: D102
+        """Returns the terminal commands from the terminal file."""
         return self.list_messages(filename)
 
     def list_messages(self, filename: str = CHAT_FILENAME) -> List[Any]:  # noqa: D102
+        """Returns messages from a specified file."""
         path = os.path.join(self._path, filename)
 
         if not os.path.exists(path):
@@ -77,6 +94,14 @@ class Environment(object):
 
         with open(path, "r") as f:
             return [json.loads(message) for message in f.read().split(DELIMITER) if message]
+
+    def verify_message(
+        self, account_id: str, public_key: str, signature: str, message: str, nonce: str, callback_url: str
+    ) -> bool:
+        """Verify user message signed with NEAR Account."""
+        return near.verify_signed_message(
+            account_id, public_key, signature, message, nonce, self._agents[0].name, callback_url
+        )
 
     def list_files(self, path: str) -> List[str]:
         """Lists files in the environment.
@@ -86,6 +111,7 @@ class Environment(object):
         return os.listdir(os.path.join(self._path, path))
 
     def get_path(self) -> str:  # noqa: D102
+        """Returns the path of the current directory."""
         return self._path
 
     def read_file(self, filename: str) -> str:
@@ -174,10 +200,15 @@ class Environment(object):
         return result
 
     def completions(
-        self, model: str, messages: Iterable[ChatCompletionMessageParam], stream: bool = False, **kwargs: Any
+        self,
+        model: str,
+        messages: Iterable[ChatCompletionMessageParam],
+        stream: bool = False,
+        auth: Optional[AuthData] = None,
+        **kwargs: Any,
     ) -> Union[ModelResponse, CustomStreamWrapper]:
         """Returns all completions for given messages using the given model."""
-        return self._inference.completions(model, messages, stream=stream, **kwargs)
+        return self._inference.completions(model, messages, auth=auth, stream=stream, **kwargs)
 
     def completions_and_run_tools(
         self,
@@ -205,9 +236,13 @@ class Environment(object):
                     self.add_message("tool", function_response_json, tool_call_id=tool_call.id, name=function_name)
         return response
 
-    def completion(self, model: str, messages: Iterable[ChatCompletionMessageParam]) -> str:
+    def completion(
+        self, model: str, messages: Iterable[ChatCompletionMessageParam], auth: Dict | Optional[AuthData] = None
+    ) -> str:
         """Returns a completion for the given messages using the given model."""
-        raw_response = self.completions(model, messages)
+        if isinstance(auth, Dict):
+            auth = AuthData(**auth)
+        raw_response = self.completions(model, messages, auth=auth)
         assert isinstance(raw_response, ModelResponse), "Expected ModelResponse"
         response: ModelResponse = raw_response
         assert all(map(lambda choice: isinstance(choice, Choices), response.choices)), "Expected Choices"
@@ -266,29 +301,18 @@ class Environment(object):
         run_name: Optional[str] = None,
     ) -> Optional[bytes]:
         """Save Environment to Registry."""
-        author = self._user_name
-        if not author:
-            print(
-                "Warning: No author specified in config. Run not saved to registry."
-                " To set an author run `nearai config set user_name <YOUR_NAME>`"
-            )
+        if self._config.auth is None:
+            print("Warning: Authentication is not set up. Run not saved to registry. To log in, run `nearai login`")
             return None
 
         agent_name = self._agents[0].name if self._agents else "unknown"
         generated_name = f"environment_run_{agent_name}_{run_id}"
-        if run_name:
-            if db.get_registry_entry_by_identifier(run_name, fail_if_not_found=False):
-                print(
-                    f"Warning: Run with name '{run_name}' already exists in registry. "
-                    f"Using generated name '{generated_name}' instead."
-                )
-                name = generated_name
-            else:
-                name = run_name
-        else:
-            name = generated_name
+        name = run_name or generated_name
 
-        with tempfile.NamedTemporaryFile(suffix=".tar.gz") as f:
+        tempdir = Path(tempfile.mkdtemp())
+        environment_path = tempdir / "environment.tar.gz"
+
+        with open(environment_path, "w+b") as f:
             with tarfile.open(fileobj=f, mode="w:gz") as tar:
                 tar.add(path, arcname=".")
             f.flush()
@@ -296,33 +320,37 @@ class Environment(object):
             snapshot = f.read()
             tar_filename = f.name
 
-            s3_path = f"environments/{run_id}"
             timestamp = datetime.now(timezone.utc).isoformat()
-            description = f"Agent {run_type} run {agent_name} {run_id} {timestamp}"
-            details = {
-                "base_id": base_id,
-                "timestamp": timestamp,
-                "agents": [agent.name for agent in self._agents],
-                "run_id": run_id,
-                "run_type": run_type,
-                "filename": tar_filename,
-            }
-            tags_l = ["environment"]
-            registry_id = registry.upload(
-                path=Path(tar_filename),
-                s3_path=s3_path,
-                author=author,
-                description=description,
-                name=name,
-                details=details,
-                show_entry=True,
-                tags=tags_l,
+
+            entry_location = registry.upload(
+                tempdir,
+                EntryMetadata.from_dict(
+                    {
+                        "name": name,
+                        "version": "0.0.1",
+                        "description": f"Agent {run_type} run {agent_name}",
+                        "category": "environment",
+                        "tags": ["environment"],
+                        "details": {
+                            "base_id": base_id,
+                            "timestamp": timestamp,
+                            "agents": [agent.name for agent in self._agents],
+                            "run_id": run_id,
+                            "run_type": run_type,
+                            "filename": tar_filename,
+                        },
+                        "show_entry": True,
+                    }
+                ),
+                show_progress=True,
             )
-            print(
-                f"Saved environment {registry_id} to registry. To load use flag `--load-env={registry_id}`. "
-                f"or `--load-env={name}`"
-            )
-            return snapshot
+
+            location_str = plain_location(entry_location)
+
+            print(f"Saved environment {entry_location} to registry. To load use flag `--load-env={location_str}`.")
+
+        rmtree(tempdir)
+        return snapshot
 
     def load_snapshot(self, snapshot: bytes) -> None:
         """Load Environment from Snapshot."""
@@ -336,9 +364,12 @@ class Environment(object):
             with tarfile.open(fileobj=f, mode="r:gz") as tar:
                 tar.extractall(self._path)
 
-    def load_from_registry(self, load_env: Union[str, int]) -> str:  # noqa: D102
-        print(f"Loading environment from {load_env} {type(load_env)} to {self._path}")
+    def load_from_registry(self, load_env: str) -> str:  # noqa: D102
+        print(f"Loading environment from {load_env} to {self._path}")
+
         directory = registry.download(load_env)
+        assert directory is not None, "Failed to download environment"
+
         files = os.listdir(directory)
         tarfile_file = next(f for f in files if f.endswith(".tar.gz"))
 
@@ -356,7 +387,12 @@ class Environment(object):
         """Must be called to request input from the user."""
         self.set_next_actor("user")
 
+    def clear_temp_agent_files(self) -> None:  # noqa: D102
+        """Remove temp agent files created to be used in `runpy`."""
+        shutil.rmtree(self._agents[0].temp_dir)
+
     def set_next_actor(self, who: str) -> None:  # noqa: D102
+        """Set the next actor / action in the dialogue."""
         next_action_fn = os.path.join(self._path, ".next_action")
 
         with open(next_action_fn, "w") as f:
@@ -380,6 +416,12 @@ class Environment(object):
         else:
             base_id = None
         last_message_idx = 0
+
+        if self._agents[0].welcome_description:
+            if self._agents[0].welcome_title:
+                print(f"{self._agents[0].welcome_title}: {self._agents[0].welcome_description}")
+            else:
+                print(self._agents[0].welcome_description)
 
         def print_messages(last_message_idx: int) -> int:
             messages = self.list_messages()
@@ -409,6 +451,8 @@ class Environment(object):
                 self.add_message("user", new_message)
 
                 self.set_next_actor("agent")
+
+        self.clear_temp_agent_files()
 
         if record_run:
             run_name = record_run if record_run and record_run != "true" else None

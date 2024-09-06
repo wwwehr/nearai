@@ -1,15 +1,29 @@
 import json
 import time
+from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 
-import tensorboardX
 
-from nearai.db import db
+@dataclass
+class Log:
+    id: int
+    origin: str
+    time: datetime
+    target: str
+    content: str
+
+
+def get_logs(*args, **kwargs) -> List[Log]:
+    # TODO: Logs should be pushed/fetched from the API.
+    raise NotImplementedError()
 
 
 class TensorboardCli:
     def start(self, logdir: str, limit: int = 100, timeout: int = 1) -> None:  # noqa: D102
+        import tensorboardX
+
         experiments: Dict[str, tensorboardX.SummaryWriter] = {}
 
         logdir_path = Path(logdir)
@@ -21,7 +35,7 @@ class TensorboardCli:
 
         while True:
             next_id = int(next_id_path.read_text())
-            result = db.get_logs("tensorboard", next_id, limit)
+            result = get_logs("tensorboard", next_id, limit)
 
             if not result:
                 time.sleep(timeout)

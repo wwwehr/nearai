@@ -1,0 +1,79 @@
+.badge {
+  --badge-color-background: var(--sand-0);
+  --badge-color-text: var(--sand-12);
+  --badge-color-border: var(--sand-6);
+  --badge-color-icon: var(--sand-10);
+
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  min-width: 22px;
+  padding: 0 6px;
+  border-radius: 6px;
+  border: 1px solid var(--badge-color-border);
+  box-shadow: 0px 1px 2px 0px rgba(0, 0, 0, 0.06);
+  font: var(--text-xs);
+  color: var(--badge-color-text);
+  background-color: var(--badge-color-background);
+  white-space: nowrap;
+  flex-shrink: 0;
+  outline: none;
+  transition: all var(--transition-speed);
+
+  &[role='button'] {
+    border-radius: 100px;
+    cursor: pointer;
+    font-weight: 500;
+
+    &:hover {
+      box-shadow: 0px 1px 3px 3px rgba(0, 0, 0, 0.1);
+    }
+    &:focus-visible {
+      box-shadow: 0 0 0 2px var(--violet-5);
+    }
+  }
+
+  &[data-count='true'] {
+    font-weight: 600;
+    border-radius: 100px;
+  }
+
+  &[data-variant='primary'] {
+    --badge-color-background: var(--violet-5);
+    --badge-color-text: var(--violet-12);
+    --badge-color-border: var(--violet-8);
+    --badge-color-icon: var(--violet-10);
+  }
+  &[data-variant='success'] {
+    --badge-color-background: var(--green-4);
+    --badge-color-text: var(--green-12);
+    --badge-color-border: var(--green-7);
+    --badge-color-icon: var(--green-9);
+  }
+  &[data-variant='alert'] {
+    --badge-color-background: var(--red-4);
+    --badge-color-text: var(--red-12);
+    --badge-color-border: var(--red-9);
+    --badge-color-icon: var(--red-11);
+  }
+  &[data-variant='warning'] {
+    --badge-color-background: var(--amber-4);
+    --badge-color-text: var(--amber-12);
+    --badge-color-border: var(--amber-7);
+    --badge-color-icon: var(--amber-11);
+  }
+}
+
+.icon {
+  color: var(--badge-color-icon);
+  width: 16px;
+  height: 16px;
+
+  svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+    stroke: currentColor;
+  }
+}

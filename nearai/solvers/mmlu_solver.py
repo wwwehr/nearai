@@ -1,12 +1,13 @@
-from typing import List, Union, cast
+from typing import Any, Dict, List, Optional, Union, cast
 
 from datasets import Dataset, DatasetDict  # type: ignore[attr-defined]
 from jinja2 import Template
 from litellm import Choices, ModelResponse
 from pydantic import BaseModel
 
+from hub.api.near.primitives import get_provider_model
 from nearai.completion import InferenceRouter
-from nearai.config import CONFIG, PROMPTS_FOLDER
+from nearai.config import CONFIG, DEFAULT_PROVIDER, PROMPTS_FOLDER
 from nearai.solvers import SolverStrategy
 
 
@@ -25,12 +26,28 @@ class MMLUSolverStrategy(SolverStrategy):
     def __init__(self, dataset_ref: Union[Dataset, DatasetDict], model: str) -> None:  # noqa: D107
         super().__init__()
         self.dataset_ref = dataset_ref
-        assert CONFIG.llm_config is not None, "LLMConfig is not defined."
-        self.completion_fn = InferenceRouter(CONFIG.llm_config).completions
+        self.completion_fn = InferenceRouter(CONFIG).completions
         self.model = model
+
+    def evaluation_name(self) -> str:  # noqa: D102
+        return "mmlu"
 
     def compatible_datasets(self) -> List[str]:  # noqa: D102
         return ["mmlu"]
+
+    def model_metadata(self) -> Optional[Dict[str, Any]]:  # noqa: D102
+        return {"name": self.model}
+
+    def agent_metadata(self) -> Optional[Dict[str, Any]]:  # noqa: D102
+        return None
+
+    def evaluated_entry_namespace(self) -> str:  # noqa: D102
+        # Only provider models are supported.
+        return ""
+
+    def model_provider(self) -> str:  # noqa: D102
+        provider, _ = get_provider_model(DEFAULT_PROVIDER, self.model)
+        return provider
 
     def solve(self, datum: dict) -> bool:  # noqa: D102
         datum = MMLUDatum(**datum).model_dump()

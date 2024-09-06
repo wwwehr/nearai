@@ -1,4 +1,5 @@
 # Use this script to download latest live_bench questions, then you can upload them to registry.
+# To run: `python load_questions.py`
 
 from datetime import datetime
 import json

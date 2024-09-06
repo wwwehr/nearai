@@ -1,4 +1,5 @@
 #!/bin/bash
+# This script is run by live bench solver.
 
 # Check if a model parameter is provided
 if [ $# -eq 0 ]; then
@@ -39,6 +40,8 @@ sudo docker run -it -v ~/.nearai:/.nearai pytorch/pytorch:2.0.0-cuda11.7-cudnn8-
     pip install -e .
     pip install transformers
     pip install accelerate
+    pip install nltk
+    python -c 'import nltk; nltk.download(\"punkt_tab\")'
     cd livebench
     mkdir -p data/live_bench
     cp -r /$DATASET_REF/* data/live_bench/

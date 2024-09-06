@@ -1,4 +1,5 @@
 #!/bin/bash
+# This script is run by live bench solver.
 
 if [ $# -eq 0 ]; then
     echo "Error: Please provide a model name as an argument."

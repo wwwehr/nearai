@@ -118,7 +118,7 @@ def solve_task(
     client.add_benchmark_result_v1_benchmark_add_result_get(
         benchmark_id=benchmark_id,
         index=index,
-        solved=result,
+        solved=status,
         info=json.dumps(info),
     )
 

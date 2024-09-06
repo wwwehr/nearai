@@ -63,7 +63,9 @@ class BenchmarkExecutor:
             tasks = iter(executor.submit(task_ctor, index=index, datum=datum) for index, datum in enumerate(data_tasks))
 
             total = len(data_tasks)
-            bar = tqdm(total=total, disable=not progress)
+            bar = tqdm(
+                total=total, disable=not progress or self.solver_strategy.scoring_method == SolverScoringMethod.Custom
+            )
             futures = list(islice(tasks, max_concurrent))
             while futures:
                 completed, ongoing_futures = concurrent.futures.wait(
@@ -108,11 +110,12 @@ def solve_task(
         return cache[index]
 
     result = solve_fn(datum)
-    status = result
+    status = False
     info = ""
-
     if isinstance(result, tuple):
         status, info = result
+    else:
+        status = result
 
     client = BenchmarkApi()
     client.add_benchmark_result_v1_benchmark_add_result_get(

@@ -69,12 +69,6 @@ class NearAiHubConfig(BaseModel):
     login_with_near: Optional[bool] = True
     api_key: Optional[str] = ""
 
-    @classmethod
-    def from_dict(cls, data: Optional[Dict[str, Any]]) -> Optional["LLMConfig"]:  # noqa: D102
-        if data is None:
-            return None
-        return cls(providers={k: LLMProviderConfig(**v) for k, v in data["providers"].items()}, models=data["models"])
-
 
 class AuthData(BaseModel):
     account_id: str

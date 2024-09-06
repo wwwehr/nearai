@@ -301,7 +301,15 @@ class BenchmarkCli:
 
 
 class EvaluationCli:
-    def table(self, namespace: str = "", tags: str = "", verbose: bool = False) -> None:
+    def table(
+        self,
+        namespace: str = "",
+        tags: str = "",
+        all_key_columns: bool = False,
+        all_metrics: bool = False,
+        num_columns: int = 7,
+        metric_name_max_length: int = 30,
+    ) -> None:
         """Prints table of evaluations."""
         # Make sure tags is a comma-separated list of tags
         tags_l = parse_tags(tags)
@@ -316,7 +324,7 @@ class EvaluationCli:
             show_all=False,
             show_latest_version=True,
         )
-        evaluations_table(entries, verbose)
+        evaluations_table(entries, all_key_columns, all_metrics, num_columns, metric_name_max_length)
 
 
 class AgentCli:

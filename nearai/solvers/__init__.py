@@ -79,10 +79,20 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
         ...
 
     def get_custom_tasks(self) -> List[dict]:
+        """Custom tasks for custom benchmark."""
         if self.scoring_method == SolverScoringMethod.Custom:
             raise NotImplementedError("get_custom_tasks must be implemented for Custom scoring method")
         else:
             raise AttributeError("get_custom_tasks is only applicable for Custom scoring method")
+
+    def get_evaluation_metrics(self, tasks_results: List[Union[bool, Tuple[bool, Any]]]) -> Dict[str, Any]:
+        """Given results for all datums, returns evaluation metrics.
+
+        Not used by TrueOrFalseList scoring method.
+        Do not prepend with evaluation_name. If hierarchical, use slashes /.
+        Expected metrics is a dict of scores, e.g.: {"average": <val>, "group/coding": <val>}.
+        """
+        raise NotImplementedError("get_evaluation_metrics not implemented")
 
 
 SolverStrategyRegistry: Dict[str, SolverStrategy] = {}

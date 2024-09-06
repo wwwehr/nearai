@@ -218,3 +218,17 @@ class LiveBenchSolverStrategy(SolverStrategy):
                 result["groups"][key] = float(value)
 
         return True, result
+
+    def get_evaluation_metrics(self, tasks_results: List[Union[bool, Tuple[bool, Any]]]) -> Dict[str, Any]:  # noqa: D102
+        results: Dict[str, Dict[str, Any]] = cast(Tuple[bool, Any], tasks_results[-1])[1]
+        metrics: Dict[str, Any] = {"average": results["groups"]["average"]}
+
+        for group, score in results["groups"].items():
+            if group == "average":
+                continue
+            metrics[f"group/{group}"] = score
+
+        for task, score in results["tasks"].items():
+            metrics[f"task/{task}"] = score
+
+        return metrics

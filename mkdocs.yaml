@@ -132,6 +132,7 @@ nav:
     - Agents: 'agents.md'
     - Building and running a benchmark: 'benchmarking.md'
     - Inference (OpenAI compatible): 'inference.md'
+    - Fine-tuning: 'fine_tuning.md'
     - API Reference: 'api.md'
     - Login with NEAR: 'login.md'
     - Contributing: 'contributing.md'

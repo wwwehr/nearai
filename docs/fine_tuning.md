@@ -119,17 +119,17 @@ poetry run python3 -m vllm.entrypoints.openai.api_server \
 Now we will run the `gsm8k` benchmark on both the baseline model and the fine-tuned model using `nearai benchmark`. The solvers will call our fine-tuned model and the baseline model through the vllm server.
 
 ```sh
-poetry run python3 -m nearai benchmark run \
-    gsm8k \
+python3 -m nearai benchmark run \
+    cmrfrd.near/gsm8k/0.0.2 \
     GSM8KSolverStrategy \
     --subset test \
-    --model mynewlora
+    --model local::meta-llama/Meta-Llama-3-8B-Instruct
 
-poetry run python3 -m nearai benchmark run \
-    gsm8k \
+python3 -m nearai benchmark run \
+    cmrfrd.near/gsm8k/0.0.2 \
     GSM8KSolverStrategy \
     --subset test \
-    --model meta-llama/Meta-Llama-3-8B-Instruct
+    --model local::mynewlora
 ```
 
 And we can see the results of the benchmark. And we can see that the fine-tuned model performs better than the baseline model.

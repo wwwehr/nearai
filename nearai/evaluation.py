@@ -126,7 +126,7 @@ def evaluations_table(
     metric_names: Set[str] = set()
     for entry in entries:
         evaluation_name = f"{entry.namespace}/{entry.name}/{entry.version}"
-        evaluation_path = registry.download(evaluation_name)
+        evaluation_path = registry.download(evaluation_name, verbose=False)
         metrics_path = evaluation_path / "metrics.json"
         with open(metrics_path, "r") as f:
             metrics = json.load(f)

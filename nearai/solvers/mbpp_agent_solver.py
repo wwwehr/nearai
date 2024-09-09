@@ -32,7 +32,7 @@ class MBPPSolverAgent(SolverStrategy):
 
     def model_metadata(self) -> Optional[Dict[str, Any]]:  # noqa: D102
         # TODO: we may want to return the model used by an agent here.
-        return None
+        return {"name": "llama-v3p1-405b-instruct"}
 
     def agent_metadata(self) -> Optional[Dict[str, Any]]:  # noqa: D102
         return self.agent.metadata

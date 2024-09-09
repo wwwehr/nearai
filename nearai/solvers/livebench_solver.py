@@ -2,6 +2,7 @@ import csv
 import glob
 import json
 import os
+import random
 import subprocess
 import time
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
@@ -16,8 +17,10 @@ from openai.types.chat import (
 from tqdm import tqdm
 
 from hub.api.near.primitives import get_provider_model
+from nearai.agent import load_agent
 from nearai.completion import InferenceRouter
 from nearai.config import CONFIG, DEFAULT_PROVIDER
+from nearai.environment import Environment
 from nearai.solvers import (
     SolverScoringMethod,
     SolverStrategy,
@@ -58,12 +61,13 @@ class LiveBenchSolverStrategy(SolverStrategy):
     """Solver strategy for the live bench dataset."""
 
     def __init__(  # noqa: D107
-        self, dataset_ref: str, model: str, step: str = "all"
+        self, dataset_ref: str, agent: str, step: str = "all"
     ) -> None:
         super().__init__()
         self.dataset_ref = dataset_ref
-        self.completion_fn = InferenceRouter(CONFIG).completions
-        self.model = model
+        self.agent_obj = load_agent(agent)
+        self.agent = self.agent_obj.name
+        # TODO: Assert no slashes in evaluated entity name
         self.step = step
 
     def evaluation_name(self) -> str:  # noqa: D102
@@ -73,18 +77,17 @@ class LiveBenchSolverStrategy(SolverStrategy):
         return ["near.ai/live_bench/1.0.0"]
 
     def model_metadata(self) -> Optional[Dict[str, Any]]:  # noqa: D102
-        return {"name": self.model}
+        return {"name": "llama-v3p1-405b-instruct"}
 
     def agent_metadata(self) -> Optional[Dict[str, Any]]:  # noqa: D102
-        return None
+        return self.agent_obj.metadata
 
     def evaluated_entry_namespace(self) -> str:  # noqa: D102
         # Only provider models are supported.
-        return ""
+        return self.agent_obj.namespace
 
     def model_provider(self) -> str:  # noqa: D102
-        provider, _ = get_provider_model(DEFAULT_PROVIDER, self.model)
-        return provider
+        return DEFAULT_PROVIDER
 
     def get_custom_tasks(self) -> List[dict]:  # noqa: D102
         return [{"summary": "all"}]
@@ -116,20 +119,30 @@ class LiveBenchSolverStrategy(SolverStrategy):
         for question_file in list_of_question_files:
             questions = load_questions_jsonl(question_file)
             bench_name = os.path.dirname(question_file).split(str(self.dataset_ref))[-1]
-            answer_file = f"~/.nearai/live_bench_answers/{bench_name}/model_answer/{self.model}.jsonl"
+            answer_file = f"~/.nearai/live_bench_answers/{bench_name}/model_answer/{self.agent}.jsonl"
             print(f"Questions from {question_file}")
             print(f"Output to {answer_file}")
             self.run_eval(questions, answer_file)
 
     def run_eval(self, questions, answer_file) -> None:  # noqa: D102
         answer_file = os.path.expanduser(answer_file)
+        # Load existing answers
+        existing_answers = set()
+        if os.path.exists(answer_file):
+            with open(answer_file, "r") as fin:
+                for line in fin:
+                    answer = json.loads(line)
+                    existing_answers.add(answer["question_id"])
+
         for question in tqdm(questions):
+            if question["question_id"] in existing_answers:
+                continue
             choices = self.answer_question(question)
 
             ans_json = {
                 "question_id": question["question_id"],
                 "answer_id": shortuuid.uuid(),
-                "model_id": self.model,
+                "model_id": self.agent,
                 "choices": choices,
                 "tstamp": time.time(),
             }
@@ -139,23 +152,30 @@ class LiveBenchSolverStrategy(SolverStrategy):
                 fout.write(json.dumps(ans_json) + "\n")
 
     def answer_question(self, question) -> List[dict]:  # noqa: D102
-        conv = []
         # Append system prompt here if needed.
         turns = []
         for qs in question["turns"]:
-            conv.append({"role": "user", "content": qs})
-
-            completion_response = cast(
-                ModelResponse,
-                self.completion_fn(
-                    self.model,
-                    messages=[convert_message(msg) for msg in conv],
-                    temperature=0.0,
-                ),
+            path = os.path.join(
+                "/tmp",
+                "live_bench",
+                str(int(time.time() * 1000)),
+                str(random.randint(0, 1000)),
             )
-            output = str(cast(List[Choices], completion_response.choices)[0].message.content)
+            CONFIG.confirm_commands = False
+            env = Environment(path, [self.agent_obj], CONFIG)
+            task = qs
 
-            conv.append({"role": "assistant", "content": output})
+            env.run_task(task, max_iterations=1)
+            output = ""
+            messages = env.list_messages()
+            i = len(messages)
+            while output == "":
+                i = i - 1
+                if i < 0 or messages[i]["role"] == "user":
+                    break
+                if messages[i]["role"] == "assistant":
+                    output = messages[i]["content"]
+
             turns.append(output)
 
         return [{"index": 0, "turns": turns}]
@@ -168,7 +188,7 @@ class LiveBenchSolverStrategy(SolverStrategy):
 
         try:
             # Run the script without capturing output
-            subprocess.run(["/bin/bash", script_path, self.model, self.dataset_ref], check=True)
+            subprocess.run(["/bin/bash", script_path, self.agent, self.dataset_ref], check=True)
             return True
 
         except subprocess.CalledProcessError as e:
@@ -183,7 +203,7 @@ class LiveBenchSolverStrategy(SolverStrategy):
 
         try:
             # Run the script without capturing output
-            subprocess.run(["/bin/bash", script_path, self.model], check=True)
+            subprocess.run(["/bin/bash", script_path, self.agent], check=True)
 
         except subprocess.CalledProcessError as e:
             print(f"An error occurred while running the script: {e}")
@@ -195,7 +215,7 @@ class LiveBenchSolverStrategy(SolverStrategy):
         file_path = os.path.expanduser(file_path)
         with open(file_path, "r") as f:
             reader = csv.DictReader(f)
-            matching_rows = [row for row in reader if row["model"] == self.model]
+            matching_rows = [row for row in reader if row["model"] == self.agent]
             return matching_rows[-1] if matching_rows else {}  # Get the last matching row
 
     def create_result_dict(self) -> Tuple[bool, dict]:  # noqa: D102

@@ -1,6 +1,9 @@
 import ast
+import os
+import random
 import re
 from itertools import islice
+import time
 from typing import Any, Dict, List, Optional, Union, cast
 
 from datasets import Dataset, DatasetDict  # type: ignore[attr-defined]
@@ -9,8 +12,10 @@ from litellm import Choices, ModelResponse
 from pydantic import BaseModel
 
 from hub.api.near.primitives import get_provider_model
+from nearai.agent import load_agent
 from nearai.completion import InferenceRouter
 from nearai.config import CONFIG, DEFAULT_PROVIDER, PROMPTS_FOLDER
+from nearai.environment import Environment
 from nearai.solvers import SolverStrategy
 
 
@@ -50,11 +55,10 @@ class MBPPSolverStrategy(SolverStrategy):
 
     SHOTS = 3
 
-    def __init__(self, dataset_ref: Union[Dataset, DatasetDict], model: str) -> None:  # noqa: D107
+    def __init__(self, dataset_ref: Union[Dataset, DatasetDict], agent: str) -> None:  # noqa: D107
         super().__init__()
         self.dataset_ref = dataset_ref
-        self.completion_fn = InferenceRouter(CONFIG).completions
-        self.model = model
+        self.agent = load_agent(agent)
 
     def evaluation_name(self) -> str:  # noqa: D102
         return "mbpp"
@@ -63,18 +67,17 @@ class MBPPSolverStrategy(SolverStrategy):
         return ["mbpp"]
 
     def model_metadata(self) -> Optional[Dict[str, Any]]:  # noqa: D102
-        return {"name": self.model}
+        return {"name": "llama-v3p1-405b-instruct"}
 
     def agent_metadata(self) -> Optional[Dict[str, Any]]:  # noqa: D102
-        return None
+        return self.agent.metadata
 
     def evaluated_entry_namespace(self) -> str:  # noqa: D102
         # Only provider models are supported.
-        return ""
+        return self.agent.namespace
 
     def model_provider(self) -> str:  # noqa: D102
-        provider, _ = get_provider_model(DEFAULT_PROVIDER, self.model)
-        return provider
+        return DEFAULT_PROVIDER
 
     def solve(self, datum: dict) -> bool:  # noqa: D102
         datum = MBPPDatum(**datum).model_dump()
@@ -87,17 +90,29 @@ class MBPPSolverStrategy(SolverStrategy):
             example_problems=example_problems,
             challenge_problem=datum,
         )
-        completion_response = cast(
-            ModelResponse,
-            self.completion_fn(
-                self.model,
-                messages=[
-                    {"role": "system", "content": base_prompt},
-                ],
-                temperature=0.0,
-            ),
+
+        path = os.path.join(
+            "/tmp",
+            "mbpp",
+            str(datum["task_id"]),
+            str(int(time.time() * 1000)),
+            str(random.randint(0, 1000)),
         )
-        response = str(cast(List[Choices], completion_response.choices)[0].message.content)
+        CONFIG.confirm_commands = False
+        env = Environment(path, [self.agent], CONFIG)
+        task = base_prompt
+
+        env.run_task(task, max_iterations=1)
+        output = ""
+        messages = env.list_messages()
+        i = len(messages)
+        while output == "":
+            i = i - 1
+            if i < 0 or messages[i]["role"] == "user":
+                break
+            if messages[i]["role"] == "assistant":
+                output = messages[i]["content"]
+        response = output
 
         ## Extract the answer from the response
         extract_answer_prompt = Template(
@@ -106,17 +121,20 @@ class MBPPSolverStrategy(SolverStrategy):
             function_name=function_name,
             answer_text=response,
         )
-        completion_response = cast(
-            ModelResponse,
-            self.completion_fn(
-                self.model,
-                messages=[
-                    {"role": "system", "content": extract_answer_prompt},
-                ],
-                temperature=0.0,
-            ),
-        )
-        response = str(cast(List[Choices], completion_response.choices)[0].message.content)
+        task = extract_answer_prompt
+
+        env = Environment(path, [self.agent], CONFIG)
+        env.run_task(task, max_iterations=1)
+        output = ""
+        messages = env.list_messages()
+        i = len(messages)
+        while output == "":
+            i = i - 1
+            if i < 0 or messages[i]["role"] == "user":
+                break
+            if messages[i]["role"] == "assistant":
+                output = messages[i]["content"]
+        response = output
 
         ## Parse the python code
         python_code_blocks = parse_python_code_block(response) + parse_code_block(response)

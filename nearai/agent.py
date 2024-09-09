@@ -77,6 +77,7 @@ class Agent(object):
         try:
             os.chdir(self.temp_dir)
             sys.path.insert(0, self.temp_dir)
+            # print(f"AGENT_FILENAME: {AGENT_FILENAME}")
             runpy.run_path(AGENT_FILENAME, init_globals=context, run_name="__main__")
         finally:
             os.chdir(original_cwd)

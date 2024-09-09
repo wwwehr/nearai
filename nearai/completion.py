@@ -58,10 +58,11 @@ class InferenceRouter(object):
             custom_llm_provider=self._config.nearai_hub.custom_llm_provider,
             input_cost_per_token=0,
             output_cost_per_token=0,
-            temperature=temperature,
+            temperature=0.0,
             base_url=self._config.nearai_hub.base_url,
             provider=provider,
             api_key=auth_bearer_token,
+            max_tokens=16384,
             **kwargs,
         )
 

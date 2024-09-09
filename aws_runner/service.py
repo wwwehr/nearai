@@ -50,7 +50,6 @@ def handler(event, context):
 
 
 def write_metric(metric_name, value, unit="Milliseconds"):
-    return False
     cloudwatch.put_metric_data(
         Namespace="NearAI",
         MetricData=[
@@ -113,8 +112,13 @@ def run_with_environment(
         with open(f"{PATH}/{ENVIRONMENT_FILENAME}", "wb") as f:
             f.write(file)
             f.flush()
-        with tarfile.open(f"{PATH}/environment.tar.gz", mode="r:gz") as tar:
-            tar.extractall(RUN_PATH)
+
+        try:
+            with tarfile.open(f"{PATH}/environment.tar.gz", mode="r") as tar:
+                tar.extractall(RUN_PATH)
+        except tarfile.ReadError:
+            print("The file is not a valid tar archive.")
+
     env = Environment(RUN_PATH, loaded_agents, near_client, metric_function=write_metric, env_vars=user_env_vars)
     start_time = time.perf_counter()
     run_result = env.run(new_message, record_run, environment_id, max_iterations)

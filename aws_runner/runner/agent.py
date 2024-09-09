@@ -29,6 +29,9 @@ class Agent(object):
             if isinstance(content, dict):
                 content = str(content)
 
+            if isinstance(content, str):
+                content = content.encode("utf-8")
+
             with open(file_path, "wb") as f:
                 with io.BytesIO(content) as byte_stream:
                     shutil.copyfileobj(byte_stream, f)

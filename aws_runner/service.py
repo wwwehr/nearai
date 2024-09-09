@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 import json
 import os
+import shutil
 import tarfile
 import time
 from subprocess import call
-from typing import Optional
+from typing import Optional, List, Any, Dict
 
 import boto3
 from openapi_client.api_client import ApiClient
@@ -49,6 +50,7 @@ def handler(event, context):
 
 
 def write_metric(metric_name, value, unit="Milliseconds"):
+    return False
     cloudwatch.put_metric_data(
         Namespace="NearAI",
         MetricData=[
@@ -64,26 +66,33 @@ def write_metric(metric_name, value, unit="Milliseconds"):
     )
 
 
-def load_agent(client, agent):
+def load_agent(client, agent, agent_env_vars):
+    env_vars = agent_env_vars.get(agent, {})
     start_time = time.perf_counter()
-    agent_code = client.get_agent(agent)
+    agent_files = client.get_agent(agent)
     stop_time = time.perf_counter()
     write_metric("GetAgentFromRegistry_Duration", stop_time - start_time)
-    return Agent(agent, RUN_PATH, agent_code)
+
+    return Agent(path=RUN_PATH, name=agent, agent_files=agent_files, env_vars=env_vars)
+
+
+def clear_temp_agent_files(agents):
+    for agent in agents:
+        if agent.temp_dir and os.path.exists(agent.temp_dir):
+            print("removed agent.temp_dir", agent.temp_dir)
+            shutil.rmtree(agent.temp_dir)
 
 
 def run_with_environment(
-    agents: str,
-    auth: dict,
-    environment_id: str = None,
-    new_message: str = None,
-    params: dict = None,
+    agents: str, auth: dict, environment_id: str = None, new_message: str = None, params: dict = None
 ) -> Optional[str]:
     """Runs agent against environment fetched from id, optionally passing a new message to the environment."""
     params = params or {}
     max_iterations = int(params.get("max_iterations", 2))
     record_run = bool(params.get("record_run", True))
     api_url = str(params.get("api_url", DEFAULT_API_URL))
+    agent_env_vars: dict = params.get("agent_env_vars", {})
+    user_env_vars: dict = params.get("user_env_vars", {})
 
     if api_url != DEFAULT_API_URL:
         print(f"WARNING: Using custom API URL: {api_url}")
@@ -92,7 +101,7 @@ def run_with_environment(
     client = ApiClient(configuration)
     near_client = PartialNearClient(client, auth)
 
-    loaded_agents = [load_agent(near_client, agent) for agent in agents.split(",")]
+    loaded_agents = [load_agent(near_client, agent, agent_env_vars) for agent in agents.split(",")]
 
     if environment_id:
         start_time = time.perf_counter()
@@ -106,10 +115,10 @@ def run_with_environment(
             f.flush()
         with tarfile.open(f"{PATH}/environment.tar.gz", mode="r:gz") as tar:
             tar.extractall(RUN_PATH)
-
-    env = Environment(RUN_PATH, loaded_agents, near_client, metric_function=write_metric)
+    env = Environment(RUN_PATH, loaded_agents, near_client, metric_function=write_metric, env_vars=user_env_vars)
     start_time = time.perf_counter()
     run_result = env.run(new_message, record_run, environment_id, max_iterations)
+    clear_temp_agent_files(loaded_agents)
     stop_time = time.perf_counter()
     write_metric("ExecuteAgentDuration", stop_time - start_time)
     return run_result

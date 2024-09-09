@@ -35,7 +35,6 @@ class Agent(object):
             with open(file_path, "wb") as f:
                 with io.BytesIO(content) as byte_stream:
                     shutil.copyfileobj(byte_stream, f)
-                    print(f"file {file_path} created")
 
         self.temp_dir = temp_dir
 

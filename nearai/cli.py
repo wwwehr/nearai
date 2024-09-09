@@ -307,7 +307,7 @@ class EvaluationCli:
         tags: str = "",
         all_key_columns: bool = False,
         all_metrics: bool = False,
-        num_columns: int = 7,
+        num_columns: int = 6,
         metric_name_max_length: int = 30,
     ) -> None:
         """Prints table of evaluations."""

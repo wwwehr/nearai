@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from datasets import Dataset, DatasetDict  # type: ignore[attr-defined]
 
-from nearai.agent import load_agent
+from nearai.local_agent import load_agent
 from nearai.config import CONFIG, DEFAULT_PROVIDER
 from nearai.environment import Environment
 from nearai.solvers import SolverStrategy

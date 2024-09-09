@@ -8,7 +8,9 @@ to fetch agent code, and to fetch and store environments (store not implemented 
 ## Local testing
 `docker build --platform linux/amd64 --build-arg FRAMEWORK=-base -t nearai-runner:test .`
 
-`docker run --platform linux/amd64 -p 9000:8080 nearai-runner:test`
+`docker run -e AWS_ACCESS_KEY_ID=AKIA3GKJKAOJE2MTNO5U -e AWS_SECRET_ACCESS_KEY=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 --platform linux/amd64 -p 9000:8080 nearai-runner:test `
+
+docker build --platform linux/amd64 --build-arg FRAMEWORK=-base -t nearai-runner:test . && docker run -e AWS_ACCESS_KEY_ID=AKIA3GKJKAOJE2MTNO5U -e AWS_SECRET_ACCESS_KEY=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 --platform linux/amd64 -p 9000:8080 nearai-runner:test
 
 This will start the server on port 9000. To call the server you will need a signedMessage for the auth param.
 ```
@@ -16,7 +18,7 @@ curl "http://localhost:9000/2015-03-31/functions/function/invocations" \
 -d @- <<'EOF'
   {
     "agents": "xela-agent",
-    "environment_id":"environment_run_xela-tools-agent_541869e6753c41538c87cb6f681c6932",
+    "environment_id":"zavodil.near/environment_run_xela-tools-agent_541869e6753c41538c87cb6f681c6932",    
     "auth":"{\"account_id\":\"your_account.near\",
         \"public_key\":\"ed25519:F5DeKFoya9fl35hapvpXxwReoksgi9a677JkniDIFLAW\",
         \"signature\":\"SIGNATURE_FIELD_FROM_A_REAL_SIGNATURE\",
@@ -24,6 +26,7 @@ curl "http://localhost:9000/2015-03-31/functions/function/invocations" \
 EOF
 ```
 
+<<<<<<< Updated upstream
 ## Deployment
 The docker image is built and pushed to the NearAI ECR repository. The image is then deployed to AWS Lambda using the AWS CLI.
 
@@ -36,3 +39,50 @@ Deploy all frameworks to all environments.
 ```shell
 deploy.sh all
 ```
+=======
+curl "http://localhost:9000/2015-03-31/functions/function/invocations" \
+-d @- <<'EOF'
+  {
+    "agents": "zavodil.near/hello-world-agent/1.1",
+    "environment_id":"zavodil.near/environment_run_zavodil.near_hello-world-agent_1.1_ae099f65b6dc4e65a14fa4b27e80767d/0",
+    "auth":"{\"account_id\":\"zavodil.near\",
+        \"public_key\":\"ed25519:HFd5upW3ppKKqwmNNbm56JW7VHXzEoDpwFKuetXLuNSq\",
+        \"nonce\":\"1724247369484\",
+        \"recipient\":\"ai.near\",
+        \"signature\":\"ky3pinddHPY+bgtYgg0R4gWce//03xw/8OWuUn6K7YfHTbdoNcb4Jma9l2hVXK14Q4f5zv25bbR2b5glnyXgCg==\",
+        \"callback_url\":\"http://localhost:53894/capture\",\"message\":\"Welcome to NEAR AI\"}"}
+EOF
+
+curl "http://localhost:9000/2015-03-31/functions/function/invocations" \
+-d @- <<'EOF'
+  {
+    "agents": "zavodil.near/test-env-agent/1",
+    "agent_env_vars": {"zavodil.near/test-env-agent/1": {"key":"123123", "id1":"456456"}},
+    "system_env_vars": {"key":"9999", "id":"8888"},
+    "environment_id":"zavodil.near/environment_run_zavodil.near_hello-world-agent_1.1_ae099f65b6dc4e65a14fa4b27e80767d/0",  
+    "auth":"{\"account_id\":\"zavodil.near\",
+        \"public_key\":\"ed25519:HFd5upW3ppKKqwmNNbm56JW7VHXzEoDpwFKuetXLuNSq\",
+        \"nonce\":\"1724247369484\",
+        \"recipient\":\"ai.near\",
+        \"signature\":\"ky3pinddHPY+bgtYgg0R4gWce//03xw/8OWuUn6K7YfHTbdoNcb4Jma9l2hVXK14Q4f5zv25bbR2b5glnyXgCg==\",
+        \"callback_url\":\"http://localhost:53894/capture\",\"message\":\"Welcome to NEAR AI\"}"}
+EOF
+
+`docker run -e AWS_ACCESS_KEY_ID=YOUR_KEY -e AWS_SECRET_ACCESS_KEY=YOUR_SECRET --platform linux/amd64 -p 9000:8080 nearai-runner:test
+>>>>>>> Stashed changes
+
+
+curl "http://localhost:9000/2015-03-31/functions/function/invocations" \
+-d @- <<'EOF'
+  {
+    "agents": "zavodil.near/test-env-agent/1",
+    "params": {"agent_env_vars": {"zavodil.near/test-env-agent/1": {"key":"123123", "id1":"456456"}},
+                "user_env_vars": {"key1":"9999", "id":"8888"}},
+    "environment_id":"zavodil.near/environment_run_zavodil.near_hello-world-agent_1.1_ae099f65b6dc4e65a14fa4b27e80767d/0",
+    "auth":"{\"account_id\":\"zavodil.near\",
+        \"public_key\":\"ed25519:HFd5upW3ppKKqwmNNbm56JW7VHXzEoDpwFKuetXLuNSq\",
+        \"nonce\":\"1724247369484\",
+        \"recipient\":\"ai.near\",
+        \"signature\":\"ky3pinddHPY+bgtYgg0R4gWce//03xw/8OWuUn6K7YfHTbdoNcb4Jma9l2hVXK14Q4f5zv25bbR2b5glnyXgCg==\",
+        \"callback_url\":\"http://localhost:53894/capture\",\"message\":\"Welcome to NEAR AI\"}"}
+EOF

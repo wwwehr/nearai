@@ -16,7 +16,7 @@ from openapi_client.api.benchmark_api import BenchmarkApi
 from openapi_client.api.default_api import DefaultApi
 from tabulate import tabulate
 
-from nearai.agent import load_agent
+from nearai.local_agent import load_agent
 from nearai.clients.lambda_client import LambdaWrapper
 from nearai.config import CONFIG, update_config
 from nearai.evaluation import evaluations_table

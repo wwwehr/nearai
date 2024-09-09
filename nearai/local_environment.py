@@ -20,6 +20,7 @@ from litellm.utils import CustomStreamWrapper
 from openai.types.chat import ChatCompletionMessageParam
 from openapi_client import EntryMetadata
 
+from aws_runner.agents.environment import Environment
 import hub.api.near.sign as near
 from nearai.local_agent import LocalAgent
 from nearai.completion import InferenceRouter
@@ -33,33 +34,14 @@ CHAT_FILENAME = "chat.txt"
 TERMINAL_FILENAME = "terminal.txt"
 
 
-class Environment(object):
-    def __init__(  # noqa: D107
-        self,
-        path: str,
-        agents: List[LocalAgent],
-        config: Config,
-        create_files: bool = True,
-        env_vars: Optional[Dict[str, Any]] = None,
-        tool_resources: Optional[Dict[str, Any]] = None,
-    ) -> None:
-        self._path = path
-        self._agents = agents
-        self._done = False
+class LocalEnvironment(Environment):
+    def __init__(self, path: str, agents: List[LocalAgent], config: Config, create_files: bool = True,
+                 env_vars: Optional[Dict[str, Any]] = None) -> None:
+        super().__init__(path, agents, config, create_files, env_vars)
         self._config = config
         self._inference = InferenceRouter(config)
-        self._tools = ToolRegistry()
-        self.register_standard_tools()
-        self.env_vars: Dict[str, Any] = env_vars if env_vars else {}
-        self.tool_resources: Dict[str, Any] = tool_resources if tool_resources else {}
-
         if self._config.nearai_hub is None:
             self._config.nearai_hub = NearAiHubConfig()
-
-        if create_files:
-            os.makedirs(self._path, exist_ok=True)
-            open(os.path.join(self._path, CHAT_FILENAME), "a").close()
-        os.chdir(self._path)
 
     @staticmethod
     def _generate_run_id() -> str:
@@ -77,7 +59,6 @@ class Environment(object):
         reg.register_tool(self.request_user_input)
         reg.register_tool(self.list_files)
         reg.register_tool(self.verify_message)
-        reg.register_tool(self.query_vector_store)
 
     def add_message(self, role: str, message: str, filename: str = CHAT_FILENAME, **kwargs: Any) -> None:  # noqa: D102
         """Add a message to the chat file."""
@@ -141,14 +122,6 @@ class Environment(object):
         with open(path, "w") as f:
             f.write(content)
         return f"Successfully wrote {len(content) if content else 0} characters to {filename}"
-
-    def query_vector_store(self, vector_store_id: str, query: str):
-        """Query a vector store.
-
-        vector_store_id: The id of the vector store to query.
-        query: The query to search for.
-        """
-        return self._inference.query_vector_store(vector_store_id, query)
 
     def exec_command(self, command: str) -> Dict[str, Union[str, int]]:
         """Executes a command in the environment and logs the output.

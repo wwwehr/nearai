@@ -4,14 +4,19 @@ import os
 import tarfile
 import time
 from subprocess import call
-from typing import Optional
+from typing import Optional, List, Any, Dict
 
 import boto3
 from openapi_client.api_client import ApiClient
 from openapi_client.configuration import Configuration
 from partial_near_client import PartialNearClient
+
 from runner.agent import Agent
 from runner.environment import ENVIRONMENT_FILENAME, Environment
+
+# from agents.agent import Agent
+# from agents.environment import ENVIRONMENT_FILENAME, Environment
+
 
 cloudwatch = boto3.client("cloudwatch", region_name="us-east-2")
 
@@ -26,6 +31,7 @@ def handler(event, context):
     required_params = ["agents", "auth"]
     agents = event.get("agents")
     auth = event.get("auth")
+
     if not agents or not auth:
         missing = list(filter(lambda x: event.get(x) is (None or ""), required_params))
         return f"Missing required parameters: {missing}"
@@ -38,7 +44,11 @@ def handler(event, context):
 
     params = event.get("params", {})
 
+    print("params", params)
+
     new_environment_registry_id = run_with_environment(agents, auth_object, environment_id, new_message, params)
+    print("run_with_environment", agents)
+
     if not new_environment_registry_id:
         return f"Run not recorded. Ran {agents} agent(s) with generated near client and environment {environment_id}"
 
@@ -64,12 +74,17 @@ def write_metric(metric_name, value, unit="Milliseconds"):
     )
 
 
-def load_agent(client, agent):
+def load_agent(client, agent, agents_env_vars):
     start_time = time.perf_counter()
-    agent_code = client.get_agent(agent)
+    agent_files = client.get_agent(agent)
+    print("agent_files", agent_files)
     stop_time = time.perf_counter()
     write_metric("GetAgentFromRegistry_Duration", stop_time - start_time)
-    return Agent(agent, RUN_PATH, agent_code)
+
+    env_vars = agents_env_vars.get(agent, {})
+    print(f"load_agent: agent {agent} env_vars {env_vars}")
+
+    return Agent(path=RUN_PATH, name=agent, agent_files=agent_files, env_vars=env_vars)
 
 
 def run_with_environment(
@@ -77,13 +92,18 @@ def run_with_environment(
     auth: dict,
     environment_id: str = None,
     new_message: str = None,
-    params: dict = None,
+    params: dict = None
 ) -> Optional[str]:
     """Runs agent against environment fetched from id, optionally passing a new message to the environment."""
     params = params or {}
     max_iterations = int(params.get("max_iterations", 2))
     record_run = bool(params.get("record_run", True))
     api_url = str(params.get("api_url", DEFAULT_API_URL))
+    agents_env_vars: dict = params.get("agent_env_vars", {})
+    user_env_vars: dict = params.get("user_env_vars", {})
+
+    print("loaded params", params)
+    print("loaded agents_env_vars", agents_env_vars)
 
     if api_url != DEFAULT_API_URL:
         print(f"WARNING: Using custom API URL: {api_url}")
@@ -92,7 +112,9 @@ def run_with_environment(
     client = ApiClient(configuration)
     near_client = PartialNearClient(client, auth)
 
-    loaded_agents = [load_agent(near_client, agent) for agent in agents.split(",")]
+    loaded_agents = [load_agent(near_client, agent, agents_env_vars) for agent in agents.split(",")]
+
+    print("loaded_agents env_vars", loaded_agents[0].env_vars)
 
     if environment_id:
         start_time = time.perf_counter()
@@ -107,7 +129,7 @@ def run_with_environment(
         with tarfile.open(f"{PATH}/environment.tar.gz", mode="r:gz") as tar:
             tar.extractall(RUN_PATH)
 
-    env = Environment(RUN_PATH, loaded_agents, near_client, metric_function=write_metric)
+    env = Environment(RUN_PATH, loaded_agents, near_client, metric_function=write_metric, env_vars=user_env_vars)
     start_time = time.perf_counter()
     run_result = env.run(new_message, record_run, environment_id, max_iterations)
     stop_time = time.perf_counter()

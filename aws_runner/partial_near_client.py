@@ -4,14 +4,15 @@ from typing import List
 from openapi_client import (
     BodyDownloadEnvironmentV1DownloadEnvironmentPost,
     BodyDownloadFileV1RegistryDownloadFilePost,
-    BodyUploadMetadataV1RegistryUploadMetadataPost,
+    BodyUploadMetadataV1RegistryUploadMetadataPost, BodyListFilesV1RegistryListFilesPost,
 )
 from openapi_client.api.agents_assistants_api import AgentsAssistantsApi
 from openapi_client.api.default_api import DefaultApi
 from openapi_client.api.registry_api import RegistryApi
 from openapi_client.models.chat_completions_request import ChatCompletionsRequest
 from openapi_client.models.request import Request
-from runner.agent import AGENT_FILENAME
+# from runner.agent import AGENT_FILENAME
+# from agents.agent import AGENT_FILENAME
 from runner.environment import ENVIRONMENT_FILENAME
 
 
@@ -67,10 +68,43 @@ class PartialNearClient:
         )
         return result
 
+    def list_files(self, entry_location: dict) -> List[str]:
+        """List files in from an entry in the registry.
+
+        Return the relative paths to all files with respect to the root of the entry.
+        """
+        api_instance = RegistryApi(self._client)
+        result = api_instance.list_files_v1_registry_list_files_post(
+            BodyListFilesV1RegistryListFilesPost.from_dict(dict(entry_location=entry_location))
+        )
+        return [file.filename for file in result]
+
+    def get_files_from_registry(self, entry_location: dict):
+        """Fetches all files from NearAI registry."""
+        api_instance = RegistryApi(self._client)
+
+        files = self.list_files(entry_location)
+        results = []
+
+        for path in files:
+            result = api_instance.download_file_v1_registry_download_file_post(
+                BodyDownloadFileV1RegistryDownloadFilePost.from_dict(
+                    dict(
+                        entry_location=entry_location,
+                        path=path,
+                    )
+                )
+            )
+            results.append({"filename": path, "content": result})
+        return results
+
     def get_agent(self, identifier):
         """Fetches an agent from NearAI registry."""
+        print("get_agent", identifier)
         entry_location = self.parse_location(identifier)
-        return self.get_file_from_registry(entry_location, AGENT_FILENAME)
+        print("entry_location", entry_location)
+        # return self.get_file_from_registry(entry_location, AGENT_FILENAME)
+        return self.get_files_from_registry(entry_location)
 
     def get_environment(self, env_id):
         """Fetches an environment from NearAI registry."""

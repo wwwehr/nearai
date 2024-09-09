@@ -9,7 +9,9 @@ from typing import Any, Dict, List, Optional, Tuple
 import httpx as hx
 import tenacity
 
-from nearai.agent import Agent, load_agent
+# from nearai.agent import Agent, load_agent
+# from aws_runner.agents.agent import loa
+from nearai.local_agent import LocalAgent, load_agent
 from nearai.config import CONFIG, DATA_FOLDER, DEFAULT_PROVIDER, Config
 from nearai.dataset import Dataset
 from nearai.environment import Environment
@@ -74,7 +76,7 @@ async def submit_problem(problem_id: str, code: str, extension: Extensions) -> s
 
 
 class DDOTSEnvironment(Environment):
-    def __init__(self, agents: List[Agent], problem_id: str, description: str, config: Config):  # noqa: D107
+    def __init__(self, agents: List[LocalAgent], problem_id: str, description: str, config: Config):  # noqa: D107
         self.tdir = TemporaryDirectory()
         super().__init__(self.tdir.name, agents, config)
 

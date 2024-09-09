@@ -10,6 +10,8 @@ RUN pip install -r requirements${FRAMEWORK}.txt
 # Runner code
 COPY service.py partial_near_client.py ${LAMBDA_TASK_ROOT}
 COPY runner ${LAMBDA_TASK_ROOT}/runner
+COPY agents ${LAMBDA_TASK_ROOT}/agents
+
 COPY openapi_client ${LAMBDA_TASK_ROOT}/openapi_client
 
 CMD [ "service.handler" ]

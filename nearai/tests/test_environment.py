@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from nearai.agent import Agent
+from nearai.local_agent import LocalAgent
 from nearai.config import CONFIG
 from nearai.db import db
 from nearai.environment import Environment
@@ -16,7 +16,7 @@ class TestEnvironment(unittest.TestCase):
     def test_save_without_base_id(self):
         test_dir = TEST_DIR
         path = f"{test_dir}/test-agents/test"
-        agent = Agent("test", path, "test")
+        agent = LocalAgent("test", path, "test")
         _agents = [agent]
         env = Environment(path, _agents, CONFIG)
         run_id = env._generate_run_id()
@@ -26,7 +26,7 @@ class TestEnvironment(unittest.TestCase):
     def test_save_with_base_id(self):
         test_dir = TEST_DIR
         path = f"{test_dir}/test-agents/test"
-        agent = Agent("test", path, "test")
+        agent = LocalAgent("test", path, "test")
         _agents = [agent]
         env = Environment(path, _agents, CONFIG)
         run_id = env._generate_run_id()
@@ -40,7 +40,7 @@ class TestEnvironment(unittest.TestCase):
     def test_save_as_name(self):
         test_dir = TEST_DIR
         path = f"{test_dir}/test-agents/test"
-        agent = Agent("test", path, "test")
+        agent = LocalAgent("test", path, "test")
         _agents = [agent]
         env = Environment(path, _agents, CONFIG)
         run_id = env._generate_run_id()
@@ -55,7 +55,7 @@ class TestEnvironment(unittest.TestCase):
                 print(f"Removing {file}")
                 os.remove(os.path.join(path, file))
 
-        agent = Agent("test", path, "test")
+        agent = LocalAgent("test", path, "test")
         _agents = [agent]
         env = Environment(path, _agents, CONFIG)
         env.load_from_registry(str(SAVED_REGISTRY_ID))

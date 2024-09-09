@@ -63,6 +63,7 @@ class LiveBenchSolverStrategy(SolverStrategy):
         super().__init__()
         self.dataset_ref = dataset_ref
         self.completion_fn = InferenceRouter(CONFIG).completions
+        assert "/" not in model
         self.model = model
         self.step = step
 
@@ -123,7 +124,18 @@ class LiveBenchSolverStrategy(SolverStrategy):
 
     def run_eval(self, questions, answer_file) -> None:  # noqa: D102
         answer_file = os.path.expanduser(answer_file)
+
+        # Load existing answers
+        existing_answers = set()
+        if os.path.exists(answer_file):
+            with open(answer_file, "r") as fin:
+                for line in fin:
+                    answer = json.loads(line)
+                    existing_answers.add(answer["question_id"])
+
         for question in tqdm(questions):
+            if question["question_id"] in existing_answers:
+                continue
             choices = self.answer_question(question)
 
             ans_json = {

@@ -96,6 +96,7 @@ def upload_evaluation(
         json.dump(metrics, f, indent=2)
 
     metadata_path = entry_path / "metadata.json"
+    # TODO(#273): Currently that will not update existing evaluation.
     with open(metadata_path, "w") as f:
         json.dump(
             {

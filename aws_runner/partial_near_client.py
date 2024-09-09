@@ -4,8 +4,8 @@ from typing import List
 from openapi_client import (
     BodyDownloadEnvironmentV1DownloadEnvironmentPost,
     BodyDownloadFileV1RegistryDownloadFilePost,
-    BodyUploadMetadataV1RegistryUploadMetadataPost,
     BodyListFilesV1RegistryListFilesPost,
+    BodyUploadMetadataV1RegistryUploadMetadataPost,
 )
 from openapi_client.api.agents_assistants_api import AgentsAssistantsApi
 from openapi_client.api.default_api import DefaultApi

@@ -5,7 +5,7 @@ import shutil
 import tarfile
 import time
 from subprocess import call
-from typing import Optional, List, Any, Dict
+from typing import Optional
 
 import boto3
 from openapi_client.api_client import ApiClient

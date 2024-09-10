@@ -94,6 +94,17 @@ export default function RunAgentPage() {
     }
   }, [chatMutation.trpc.path, environmentName, environmentQuery.data]);
 
+  function getUrlParams() {
+    const searchParams = new URLSearchParams(window.location.search);
+    const params: Record<string, string> = {};
+
+    searchParams.forEach((value, key) => {
+      params[key] = value;
+    });
+
+    return params;
+  }
+
   async function onSubmit(values: z.infer<typeof agentRequestModel>) {
     try {
       if (!values.new_message.trim()) return;
@@ -112,6 +123,14 @@ export default function RunAgentPage() {
 
       form.setValue('new_message', '');
       form.setFocus('new_message');
+
+      values.user_env_vars = getUrlParams();
+      if(currentResource?.details.env_vars) {
+        values.agent_env_vars = {
+          ...values.agent_env_vars ?? {},
+          [values.agent_id]: currentResource?.details?.env_vars ?? {}
+        }
+      }
 
       const response = await chatMutation.mutateAsync(values);
       setEnvironmentName(() => response.environmentId);

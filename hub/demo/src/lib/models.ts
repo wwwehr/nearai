@@ -124,6 +124,8 @@ export const agentRequestModel = z.object({
   new_message: z.string(),
   environment_id: z.string().nullable().optional(),
   max_iterations: z.number(),
+  user_env_vars: z.record(z.string(), z.unknown()).nullable().optional(),
+  agent_env_vars: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
 export const fileModel = z.object({

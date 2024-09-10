@@ -125,11 +125,11 @@ export default function RunAgentPage() {
       form.setFocus('new_message');
 
       values.user_env_vars = getUrlParams();
-      if(currentResource?.details.env_vars) {
+      if (currentResource?.details.env_vars) {
         values.agent_env_vars = {
-          ...values.agent_env_vars ?? {},
-          [values.agent_id]: currentResource?.details?.env_vars ?? {}
-        }
+          ...(values.agent_env_vars ?? {}),
+          [values.agent_id]: currentResource?.details?.env_vars ?? {},
+        };
       }
 
       const response = await chatMutation.mutateAsync(values);

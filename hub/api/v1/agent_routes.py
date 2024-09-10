@@ -87,7 +87,7 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokab
         "api_url": agent_api_url,
         "tool_resources": body.tool_resources,
         "user_env_vars": body.user_env_vars or {},
-        "agent_env_vars": body.agent_env_vars or {}
+        "agent_env_vars": body.agent_env_vars or {},
     }
 
     primary_agent = agents.split(",")[0]

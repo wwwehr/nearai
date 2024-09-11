@@ -17,7 +17,6 @@ from typing import Any, Dict, Iterable, List, Optional, Union, cast
 import psutil
 
 from hub.api.near.primitives import PROVIDER_MODEL_SEP
-from nearai.config import DEFAULT_PROVIDER, DEFAULT_PROVIDER_MODEL
 from runner.agent import Agent
 from runner.tool_registry import ToolRegistry
 
@@ -26,6 +25,11 @@ CHAT_FILENAME = "chat.txt"
 SYSTEM_LOG_FILENAME = "system_log.txt"
 TERMINAL_FILENAME = "terminal.txt"
 ENVIRONMENT_FILENAME = "environment.tar.gz"
+
+# TODO(#290): Add API endpoints for nearai/config defaults
+DEFAULT_PROVIDER = "fireworks"
+DEFAULT_MODEL = "llama-v3p1-405b-instruct-long"
+DEFAULT_PROVIDER_MODEL = f"fireworks::accounts/fireworks/models/{DEFAULT_MODEL}"
 
 
 class Environment(object):

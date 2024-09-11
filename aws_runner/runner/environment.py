@@ -259,7 +259,7 @@ class Environment(object):
         self, messages: Iterable[Any] | str, model: Iterable[Any] | str = "", stream: bool = False, **kwargs: Any
     ) -> Any:
         """Returns all completions for given messages using the given model."""
-        self._run_inference_completions(messages, model, stream, **kwargs)
+        return self._run_inference_completions(messages, model, stream, **kwargs)
 
     # TODO(286): `messages` may be model and `model` may be messages temporarily to support deprecated API.
     def completions_and_run_tools(

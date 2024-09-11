@@ -11,12 +11,24 @@ AGENT_FILENAME = "agent.py"
 
 
 class Agent(object):
-    def __init__(self, name: str, path: str, agent_files: List, env_vars: Dict):  # noqa: D107
-        self.name = name
-        self.path = path
-        # self.code = code
+    def __init__(self, identifier: str, path: str, agent_files: List, user_env_vars: Dict, metadata: Dict):  # noqa: D107
+        name_parts = identifier.split("/")
+        self.namespace = name_parts[0]
+        self.name = name_parts[1]
+        self.version = name_parts[2]
 
-        self.env_vars: Dict[str, Any] = env_vars
+        self.env_vars: Dict[str, Any] = {}
+
+        self.model = ""
+        self.model_provider = ""
+        self.model_temperature: Optional[float] = None
+        self.model_max_tokens: Optional[int] = None
+        self.welcome_title: Optional[str] = None
+        self.welcome_description: Optional[str] = None
+
+        self.path = path
+        self.set_agent_metadata(metadata)
+        self.env_vars.update(user_env_vars)
 
         temp_dir = os.path.join(tempfile.gettempdir(), str(int(time.time())))
         os.makedirs(temp_dir, exist_ok=True)
@@ -36,6 +48,32 @@ class Agent(object):
                     shutil.copyfileobj(byte_stream, f)
 
         self.temp_dir = temp_dir
+
+    def set_agent_metadata(self, metadata) -> None:
+        """Set agent details from metadata."""
+        try:
+            self.name = metadata["name"]
+            self.version = metadata["version"]
+        except KeyError as e:
+            raise ValueError(f"Missing key in metadata: {e}") from None
+
+        details = metadata.get("details", {})
+        agent = details.get("agent", {})
+        welcome = agent.get("welcome", {})
+
+        self.env_vars = details.get("env_vars", {})
+        self.welcome_title = welcome.get("title")
+        self.welcome_description = welcome.get("description")
+
+        if agent_metadata := details.get("agent", None):
+            if defaults := agent_metadata.get("defaults", None):
+                self.model = defaults.get("model", self.model)
+                self.model_provider = defaults.get("model_provider", self.model_provider)
+                self.model_temperature = defaults.get("model_temperature", self.model_temperature)
+                self.model_max_tokens = defaults.get("model_max_tokens", self.model_max_tokens)
+
+        if not self.version or not self.name:
+            raise ValueError("Both 'version' and 'name' must be non-empty in metadata.")
 
     def run(self, env: Any, task: Optional[str] = None) -> None:  # noqa: D102
         if not os.path.exists(os.path.join(self.temp_dir, AGENT_FILENAME)):

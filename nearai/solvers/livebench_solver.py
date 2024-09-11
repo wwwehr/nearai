@@ -128,6 +128,9 @@ class LiveBenchSolverStrategy(SolverStrategy):
         # Load existing answers
         existing_answers = set()
         if os.path.exists(answer_file):
+            print(
+                f"Answer file {answer_file} exists. Will skip already answered questions. Delete this file if that is not intended."  # noqa: E501
+            )
             with open(answer_file, "r") as fin:
                 for line in fin:
                     answer = json.loads(line)

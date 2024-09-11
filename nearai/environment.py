@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 import os
 import re
 import shlex
@@ -89,12 +90,24 @@ class Environment(object):
         with open(os.path.join(self._path, filename), "a") as f:
             f.write(json.dumps({"role": role, "content": message, **kwargs}) + DELIMITER)
 
-    def add_system_log(self, log: str) -> None:
-        """Add system log."""
-        if self.print_system_log:
-            print(f"[system log] {log}")
-        with open(os.path.join(self._path, SYSTEM_LOG_FILENAME), "a") as f:
-            f.write(log + "\n")
+    def add_system_log(self, log: str, level: int = logging.INFO) -> None:
+        """Add system log with timestamp and log level."""
+        logger = logging.getLogger("system_logger")
+        if not logger.handlers:
+            # Configure the logger if it hasn't been set up yet
+            logger.setLevel(logging.DEBUG)
+            file_handler = logging.FileHandler(os.path.join(self._path, SYSTEM_LOG_FILENAME))
+            formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+            file_handler.setFormatter(formatter)
+            logger.addHandler(file_handler)
+
+            if self.print_system_log:
+                console_handler = logging.StreamHandler()
+                console_handler.setFormatter(formatter)
+                logger.addHandler(console_handler)
+
+        # Log the message
+        logger.log(level, log)
 
     def _add_agent_start_system_log(self, agent_idx: int) -> None:
         """Add agent start system log."""
@@ -105,9 +118,9 @@ class Environment(object):
             self._last_used_model = model
             message += f" that will connect to {model}"
             if agent.model_temperature:
-                message += ", temperature={agent.model_temperature}"
+                message += f", temperature={agent.model_temperature}"
             if agent.model_max_tokens:
-                message += ", max_tokens={agent.model_max_tokens}"
+                message += f", max_tokens={agent.model_max_tokens}"
         self.add_system_log(message)
 
     def list_terminal_commands(self, filename: str = TERMINAL_FILENAME) -> List[Any]:
@@ -261,9 +274,11 @@ class Environment(object):
     ) -> Union[ModelResponse, CustomStreamWrapper]:
         """Run inference completions for given parameters."""
         if isinstance(messages, str):
-            self.add_system_log("Deprecated completions call. Pass `messages` as a first parameter.")
-            model = cast(str, messages)
-            messages = cast(Iterable[ChatCompletionMessageParam], model)
+            self.add_system_log("Deprecated completions call. Pass `messages` as a first parameter.", logging.WARNING)
+            messages_or_model = messages
+            model_or_messages = model
+            model = cast(str, messages_or_model)
+            messages = cast(Iterable[ChatCompletionMessageParam], model_or_messages)
         else:
             model = cast(str, model)
             messages = cast(Iterable[ChatCompletionMessageParam], messages)

@@ -219,16 +219,36 @@ reprocess the previous response and follow up about travel to Paris.
 ```
 
 ## Running an agent through the API
-Agents can be run through the `/agent/runs` endpoint. You will need to pass a signed message to authenticate.
+Agents can be run through the `/agent/runs` endpoint. 
+You will need to pass a signed message to authenticate. This example uses the credentials written by `nearai login` to
+your `~/.nearai/config.json` file.
 
+```shell
+auth_json=$(jq -c '.auth' ~/.nearai/config.json);
+
+curl "https://api.near.ai/v1/agent/runs" \
+      -X POST \
+      --header 'Content-Type: application/json' \
+      --header "Authorization: Bearer $auth_json" \
+-d @- <<'EOF'
+  {
+    "agent_id": "flatirons.near/xela-agent/5",
+    "new_message":"Build a backgammon game",
+    "max_iterations": "2"
+  }
+EOF
+```
+
+The full message will look like this. An `environment_id` param can also be passed to continue a previous run. 
 ```shell
 curl "https://api.near.ai/v1/agent/runs" \
       -X POST \
       --header 'Content-Type: application/json' \
-      --header 'Authorization: Bearer {"account_id":"flatirons.near","public_key":"ed25519:F5DeKFoyF1CQ6wG6jYaXxwQeoksgi8a677JkniDBGBTB","signature":"kfiH7AStKrBaMXzwpE50yQ2TRTxksID9tNVEdazxtegEu6rwH6x575smcAJPAUfTtlT2l7xwXtapQkxd+vFUAg==","callback_url":"http://localhost:3000/","message":"Welcome to NEAR AI Hub!","recipient":"ai.near","nonce":"00000000000000000005722050769950"}' \
+      --header 'Authorization: Bearer {"account_id":"your_account.near","public_key":"ed25519:YOUR_PUBLIC_KEY","signature":"A_REAL_SIGNATURE","callback_url":"https://app.near.ai/","message":"Welcome to NEAR AI Hub!","recipient":"ai.near","nonce":"A_UNIQUE_NONCE_FOR_THIS_SIGNATURE"}' \
 -d @- <<'EOF'
   {
     "agent_id": "flatirons.near/xela-agent/5",
+    "environment_id": "a_previous_environment_id",
     "new_message":"Build a backgammon game", 
     "max_iterations": "2"
   }

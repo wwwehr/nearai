@@ -14,11 +14,20 @@ Base framework `docker build -f aws_runner/Dockerfile --platform linux/amd64 --b
 
 LangGraph framework `docker build -f aws_runner/Dockerfile --platform linux/amd64 --build-arg FRAMEWORK=-langgraph -t nearai-runner:test .`
 
-`docker run --platform linux/amd64 -p 9000:8080 nearai-runner:test` will start the server on port 9000. 
+This will start the server on port 9000.
 
 To call the server you will need a signedMessage for the auth param.
+Then you can call the server with the following curl command.
 
+```shell
+auth_json=$(jq -c '.auth' ~/.nearai/config.json  | sed 's/"/\\"/g');
+args='{"agents": "flatirons.near/example-travel-agent/1", "auth": "'; args+=$auth_json; args+='"}'
+curl "http://localhost:9000/2015-03-31/functions/function/invocations" -d $args
 ```
+
+If you want to specify the auth argument inline it should look like this (but with your credentials). This example
+also includes an environment_id param for loading a previous environment.
+```shell
 curl "http://localhost:9000/2015-03-31/functions/function/invocations" \
 -d @- <<'EOF'
   {
@@ -27,7 +36,7 @@ curl "http://localhost:9000/2015-03-31/functions/function/invocations" \
     "auth":"{\"account_id\":\"your_account.near\",
         \"public_key\":\"ed25519:F5DeKFoya9fl35hapvpXxwReoksgi9a677JkniDIFLAW\",
         \"signature\":\"SIGNATURE_FIELD_FROM_A_REAL_SIGNATURE\",
-        \"callback_url\":\"https://demo.near.ai/auth/login\",\"message\":\"Welcome to NEAR Talkbot app\"}"}
+        \"callback_url\":\"https://app.near.ai/",\"message\":\"Welcome to NEAR Talkbot app\"}"}
 EOF
 ```
 

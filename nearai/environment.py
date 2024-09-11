@@ -296,7 +296,7 @@ class Environment(object):
             **kwargs,
         )
 
-    # TODO(286): `messages`` may be model and `model` may be messages temporarily to support deprecated API.
+    # TODO(286): `messages` may be model and `model` may be messages temporarily to support deprecated API.
     def completions(
         self,
         messages: Iterable[ChatCompletionMessageParam] | str,
@@ -308,7 +308,7 @@ class Environment(object):
         """Returns all completions for given messages using the given model."""
         return self._run_inference_completions(messages, model, stream, auth, **kwargs)
 
-    # TODO(286): `messages`` may be model and `model` may be messages temporarily to support deprecated API.
+    # TODO(286): `messages` may be model and `model` may be messages temporarily to support deprecated API.
     def completions_and_run_tools(
         self,
         messages: Iterable[ChatCompletionMessageParam] | str,
@@ -335,7 +335,7 @@ class Environment(object):
                     self.add_message("tool", function_response_json, tool_call_id=tool_call.id, name=function_name)
         return response
 
-    # TODO(286): `messages`` may be model and `model` may be messages temporarily to support deprecated API.
+    # TODO(286): `messages` may be model and `model` may be messages temporarily to support deprecated API.
     def completion(
         self,
         messages: Iterable[ChatCompletionMessageParam] | str,
@@ -354,7 +354,7 @@ class Environment(object):
         assert response_message, "No completions returned"
         return response_message
 
-    # TODO(286): `messages`` may be model and `model` may be messages temporarily to support deprecated API.
+    # TODO(286): `messages` may be model and `model` may be messages temporarily to support deprecated API.
     def completion_and_run_tools(
         self,
         messages: Iterable[ChatCompletionMessageParam] | str,

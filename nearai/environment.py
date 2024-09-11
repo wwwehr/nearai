@@ -12,7 +12,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from shutil import rmtree
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any, Dict, Iterable, List, Optional, Union, cast
 
 import psutil
 from litellm.types.utils import Choices, ModelResponse
@@ -44,7 +44,7 @@ class Environment(object):
         create_files: bool = True,
         env_vars: Optional[Dict[str, Any]] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
-        print_system_log: bool = True,
+        print_system_log: bool = False,
     ) -> None:
         self._path = path
         self._agents = agents
@@ -95,6 +95,20 @@ class Environment(object):
             print(f"[system log] {log}")
         with open(os.path.join(self._path, SYSTEM_LOG_FILENAME), "a") as f:
             f.write(log + "\n")
+
+    def _add_agent_start_system_log(self, agent_idx: int) -> None:
+        """Add agent start system log."""
+        agent = self._agents[agent_idx]
+        message = f"Starting an agent {agent.name}"
+        if agent.model != "":
+            model = self.get_model_for_inference(agent.model)
+            self._last_used_model = model
+            message += f" that will connect to {model}"
+            if agent.model_temperature:
+                message += ", temperature={agent.model_temperature}"
+            if agent.model_max_tokens:
+                message += ", max_tokens={agent.model_max_tokens}"
+        self.add_system_log(message)
 
     def list_terminal_commands(self, filename: str = TERMINAL_FILENAME) -> List[Any]:
         """Returns the terminal commands from the terminal file."""
@@ -239,20 +253,20 @@ class Environment(object):
 
     def _run_inference_completions(
         self,
-        messages_or_model: Union[Iterable[ChatCompletionMessageParam], str],
-        model_or_messages: Union[Iterable[ChatCompletionMessageParam], str],
+        messages: Iterable[ChatCompletionMessageParam] | str,
+        model: Iterable[ChatCompletionMessageParam] | str,
         stream: bool,
         auth: Optional[AuthData],
         **kwargs: Any,
     ) -> Union[ModelResponse, CustomStreamWrapper]:
         """Run inference completions for given parameters."""
-        if isinstance(messages_or_model, str):
+        if isinstance(messages, str):
             self.add_system_log("Deprecated completions call. Pass `messages` as a first parameter.")
-            model = messages_or_model
-            messages = model_or_messages
+            model = cast(str, messages)
+            messages = cast(Iterable[ChatCompletionMessageParam], model)
         else:
-            model = model_or_messages
-            messages = messages_or_model
+            model = cast(str, model)
+            messages = cast(Iterable[ChatCompletionMessageParam], messages)
         model = self.get_model_for_inference(model)
         if model != self._last_used_model:
             self._last_used_model = model
@@ -267,34 +281,11 @@ class Environment(object):
             **kwargs,
         )
 
-    def _run_deprecated_inference_completions(
-        self,
-        model: str,
-        messages: Iterable[ChatCompletionMessageParam],
-        stream: bool,
-        auth: Optional[AuthData],
-        **kwargs: Any,
-    ) -> Union[ModelResponse, CustomStreamWrapper]:
-        """Run inference completions for given parameters. Deprecated."""
-        self.add_system_log("This completions call is deprecated. Pass `messages` as a first param.")
-        model = self.get_model_for_inference(model)
-        if model != self._last_used_model:
-            self._last_used_model = model
-            print(f"Connecting to {model}")
-        return self._inference.completions(
-            model,
-            messages,
-            auth=auth,
-            stream=stream,
-            temperature=self._agents[0].model_temperature if self._agents else None,
-            max_tokens=self._agents[0].model_max_tokens if self._agents else None,
-            **kwargs,
-        )
-
+    # TODO(286): `messages`` may be model and `model` may be messages temporarily to support deprecated API.
     def completions(
         self,
-        messages: Iterable[ChatCompletionMessageParam],
-        model: str = "",
+        messages: Iterable[ChatCompletionMessageParam] | str,
+        model: Iterable[ChatCompletionMessageParam] | str = "",
         stream: bool = False,
         auth: Optional[AuthData] = None,
         **kwargs: Any,
@@ -302,10 +293,11 @@ class Environment(object):
         """Returns all completions for given messages using the given model."""
         return self._run_inference_completions(messages, model, stream, auth, **kwargs)
 
+    # TODO(286): `messages`` may be model and `model` may be messages temporarily to support deprecated API.
     def completions_and_run_tools(
         self,
-        messages: Iterable[ChatCompletionMessageParam],
-        model: str = "",
+        messages: Iterable[ChatCompletionMessageParam] | str,
+        model: Iterable[ChatCompletionMessageParam] | str = "",
         tools: Optional[List] = None,
         **kwargs: Any,
     ) -> ModelResponse:
@@ -328,8 +320,12 @@ class Environment(object):
                     self.add_message("tool", function_response_json, tool_call_id=tool_call.id, name=function_name)
         return response
 
+    # TODO(286): `messages`` may be model and `model` may be messages temporarily to support deprecated API.
     def completion(
-        self, messages: Iterable[ChatCompletionMessageParam], model: str = "", auth: Dict | Optional[AuthData] = None
+        self,
+        messages: Iterable[ChatCompletionMessageParam] | str,
+        model: Iterable[ChatCompletionMessageParam] | str = "",
+        auth: Dict | Optional[AuthData] = None,
     ) -> str:
         """Returns a completion for the given messages using the given model."""
         if isinstance(auth, Dict):
@@ -343,10 +339,11 @@ class Environment(object):
         assert response_message, "No completions returned"
         return response_message
 
+    # TODO(286): `messages`` may be model and `model` may be messages temporarily to support deprecated API.
     def completion_and_run_tools(
         self,
-        messages: Iterable[ChatCompletionMessageParam],
-        model: str = "",
+        messages: Iterable[ChatCompletionMessageParam] | str,
+        model: Iterable[ChatCompletionMessageParam] | str = "",
         tools: Optional[List] = None,
         **kwargs: Any,
     ) -> str:
@@ -511,6 +508,8 @@ class Environment(object):
             base_id = None
         last_message_idx = 0
 
+        self._add_agent_start_system_log(agent_idx=0)
+
         if self._agents[0].welcome_description:
             if self._agents[0].welcome_title:
                 print(f"{self._agents[0].welcome_title}: {self._agents[0].welcome_description}")
@@ -566,6 +565,8 @@ class Environment(object):
         else:
             base_id = None
         iteration = 0
+
+        self._add_agent_start_system_log(agent_idx=0)
 
         if task:
             self.add_message("user", task)

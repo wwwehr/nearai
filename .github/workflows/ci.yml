@@ -13,6 +13,7 @@ on:
 jobs:
   pipeline:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       matrix:
         python-version: ["3.9", "3.10", "3.11"]
@@ -60,6 +61,9 @@ jobs:
 
     - name: Type Check
       run: ./scripts/type_check.sh
+
+    - name: Run Tests
+      run: ./scripts/test.sh
 
     - name: Build Site
       run: ./scripts/build_mkdocs.sh

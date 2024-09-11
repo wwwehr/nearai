@@ -96,9 +96,16 @@ mkdocs-exclude = "^1.0.2"
 mkdocs-material = { extras = ["imaging"], version = "^9.5.31" }
 mkdocs-simple-hooks = "^0.1.5"
 
+[tool.poetry.group.test.dependencies]
+pytest = "^8.3.3"
+pytest-random-order = "^1.1.1"
+
+[tool.pytest.ini_options]
+addopts = "--random-order"
+norecursedirs = ["hub", "dist", "docs"]
+
 [tool.poetry.scripts]
 nearai = "nearai.cli:main"
-
 
 [tool.commitizen]
 name = "cz_conventional_commits"
@@ -164,6 +171,8 @@ line-ending = "auto"
 strict = false
 exclude = [
     "tests",
+    "test/**/*_test.py",
+    "test/**/test_*.py",
     "venv",
     ".venv",
     ".vscode",

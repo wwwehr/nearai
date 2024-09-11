@@ -82,7 +82,9 @@ class InferenceRouter(object):
         if max_tokens is None:
             max_tokens = DEFAULT_MODEL_MAX_TOKENS
 
+        # NOTE(#246): this is to disable "Provider List" messages.
         litellm.suppress_debug_info = True
+
         self._endpoint = lambda model, messages, stream, temperature, max_tokens, **kwargs: litellm_completion(
             model,
             messages,

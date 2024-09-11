@@ -23,15 +23,15 @@ class PartialNearClient:
         self.entry_location_pattern = re.compile("^(?P<namespace>[^/]+)/(?P<name>[^/]+)/(?P<version>[^/]+)$")
         self.auth = auth
 
-    def completions(self, model, messages, stream=False, temperature=None, **kwargs):
+    def completions(self, model, messages, stream=False, temperature=None, max_tokens=None, **kwargs):
         """Calls NearAI Api to return all completions for given messages using the given model."""
         api_instance = DefaultApi(self._client)
         chat_completions_request = ChatCompletionsRequest(
-            # todo move model mappings into hub
-            model="fireworks::accounts/fireworks/models/llama-v3p1-405b-instruct-long",
+            model=model,
             messages=messages,
             stream=stream,
             temperature=temperature,
+            max_tokens=max_tokens,
             **kwargs,
         )
         request = Request(actual_instance=chat_completions_request, anyof_schema_1_validator=chat_completions_request)

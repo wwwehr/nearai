@@ -16,7 +16,6 @@ from typing import Any, Dict, Iterable, List, Optional, Union, cast
 
 import psutil
 
-from hub.api.near.primitives import PROVIDER_MODEL_SEP
 from runner.agent import Agent
 from runner.tool_registry import ToolRegistry
 
@@ -30,6 +29,7 @@ ENVIRONMENT_FILENAME = "environment.tar.gz"
 DEFAULT_PROVIDER = "fireworks"
 DEFAULT_MODEL = "llama-v3p1-405b-instruct-long"
 DEFAULT_PROVIDER_MODEL = f"fireworks::accounts/fireworks/models/{DEFAULT_MODEL}"
+PROVIDER_MODEL_SEP = "::"
 
 
 class Environment(object):

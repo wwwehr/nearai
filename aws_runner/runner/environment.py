@@ -22,6 +22,7 @@ from runner.tool_registry import ToolRegistry
 DELIMITER = "\n"
 CHAT_FILENAME = "chat.txt"
 SYSTEM_LOG_FILENAME = "system_log.txt"
+AGENT_LOG_FILENAME = "agent_log.txt"
 TERMINAL_FILENAME = "terminal.txt"
 ENVIRONMENT_FILENAME = "environment.tar.gz"
 
@@ -95,6 +96,20 @@ class Environment(object):
                 console_handler = logging.StreamHandler()
                 console_handler.setFormatter(formatter)
                 logger.addHandler(console_handler)
+
+        # Log the message
+        logger.log(level, log)
+
+    def add_agent_log(self, log: str, level: int = logging.INFO) -> None:
+        """Add agent log with timestamp and log level."""
+        logger = logging.getLogger("agent_logger")
+        if not logger.handlers:
+            # Configure the logger if it hasn't been set up yet
+            logger.setLevel(logging.DEBUG)
+            file_handler = logging.FileHandler(os.path.join(self._path, AGENT_LOG_FILENAME))
+            formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+            file_handler.setFormatter(formatter)
+            logger.addHandler(file_handler)
 
         # Log the message
         logger.log(level, log)

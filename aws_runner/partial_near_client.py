@@ -4,6 +4,7 @@ from typing import List
 from openapi_client import (
     BodyDownloadEnvironmentV1DownloadEnvironmentPost,
     BodyDownloadFileV1RegistryDownloadFilePost,
+    BodyDownloadMetadataV1RegistryDownloadMetadataPost,
     BodyListFilesV1RegistryListFilesPost,
     BodyUploadMetadataV1RegistryUploadMetadataPost,
 )
@@ -23,15 +24,15 @@ class PartialNearClient:
         self.entry_location_pattern = re.compile("^(?P<namespace>[^/]+)/(?P<name>[^/]+)/(?P<version>[^/]+)$")
         self.auth = auth
 
-    def completions(self, model, messages, stream=False, temperature=None, **kwargs):
+    def completions(self, model, messages, stream=False, temperature=None, max_tokens=None, **kwargs):
         """Calls NearAI Api to return all completions for given messages using the given model."""
         api_instance = DefaultApi(self._client)
         chat_completions_request = ChatCompletionsRequest(
-            # todo move model mappings into hub
-            model="fireworks::accounts/fireworks/models/llama-v3p1-405b-instruct-long",
+            model=model,
             messages=messages,
             stream=stream,
             temperature=temperature,
+            max_tokens=max_tokens,
             **kwargs,
         )
         request = Request(actual_instance=chat_completions_request, anyof_schema_1_validator=chat_completions_request)
@@ -96,6 +97,15 @@ class PartialNearClient:
             )
             results.append({"filename": path, "content": result})
         return results
+
+    def get_agent_metadata(self, identifier: str) -> dict:
+        """Fetches metadata for an agent from NearAI registry."""
+        api_instance = RegistryApi(self._client)
+        entry_location = self.parse_location(identifier)
+        result = api_instance.download_metadata_v1_registry_download_metadata_post(
+            BodyDownloadMetadataV1RegistryDownloadMetadataPost.from_dict(dict(entry_location=entry_location))
+        )
+        return result.to_dict()
 
     def get_agent(self, identifier):
         """Fetches an agent from NearAI registry."""

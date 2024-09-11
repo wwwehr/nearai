@@ -14,6 +14,10 @@ REPO_FOLDER = Path(__file__).parent.parent
 PROMPTS_FOLDER = REPO_FOLDER / "nearai" / "prompts"
 ETC_FOLDER = REPO_FOLDER / "etc"
 DEFAULT_PROVIDER = "fireworks"
+DEFAULT_MODEL = "llama-v3p1-405b-instruct-long"
+DEFAULT_PROVIDER_MODEL = f"fireworks::accounts/fireworks/models/{DEFAULT_MODEL}"
+DEFAULT_MODEL_TEMPERATURE = 1.0
+DEFAULT_MODEL_MAX_TOKENS = 16384
 
 
 def get_config_path(local: bool = False) -> Path:
@@ -64,7 +68,7 @@ class NearAiHubConfig(BaseModel):
 
     base_url: str = "https://api.near.ai/v1"
     default_provider: str = DEFAULT_PROVIDER
-    default_model: str = "fireworks::accounts/fireworks/models/llama-v3p1-405b-instruct-long"
+    default_model: str = DEFAULT_PROVIDER_MODEL
     custom_llm_provider: str = "openai"
     login_with_near: Optional[bool] = True
     api_key: Optional[str] = ""

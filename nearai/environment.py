@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 import os
 import re
 import shlex
@@ -12,7 +13,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from shutil import rmtree
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any, Dict, Iterable, List, Optional, Union, cast
 
 import psutil
 from litellm.types.utils import Choices, ModelResponse
@@ -21,15 +22,17 @@ from openai.types.chat import ChatCompletionMessageParam
 from openapi_client import EntryMetadata
 
 import hub.api.near.sign as near
+from hub.api.near.primitives import PROVIDER_MODEL_SEP
 from nearai.agent import Agent
 from nearai.completion import InferenceRouter
-from nearai.config import AuthData, Config, NearAiHubConfig
+from nearai.config import DEFAULT_PROVIDER, DEFAULT_PROVIDER_MODEL, AuthData, Config, NearAiHubConfig
 from nearai.lib import plain_location
 from nearai.registry import registry
 from nearai.tool_registry import ToolRegistry
 
 DELIMITER = "\n"
 CHAT_FILENAME = "chat.txt"
+SYSTEM_LOG_FILENAME = "system_log.txt"
 TERMINAL_FILENAME = "terminal.txt"
 
 
@@ -42,6 +45,7 @@ class Environment(object):
         create_files: bool = True,
         env_vars: Optional[Dict[str, Any]] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
+        print_system_log: bool = False,
     ) -> None:
         self._path = path
         self._agents = agents
@@ -51,7 +55,9 @@ class Environment(object):
         self._tools = ToolRegistry()
         self.register_standard_tools()
         self.env_vars: Dict[str, Any] = env_vars if env_vars else {}
+        self._last_used_model = ""
         self.tool_resources: Dict[str, Any] = tool_resources if tool_resources else {}
+        self.print_system_log = print_system_log
 
         if self._config.nearai_hub is None:
             self._config.nearai_hub = NearAiHubConfig()
@@ -79,16 +85,49 @@ class Environment(object):
         reg.register_tool(self.verify_message)
         reg.register_tool(self.query_vector_store)
 
-    def add_message(self, role: str, message: str, filename: str = CHAT_FILENAME, **kwargs: Any) -> None:  # noqa: D102
+    def add_message(self, role: str, message: str, filename: str = CHAT_FILENAME, **kwargs: Any) -> None:
         """Add a message to the chat file."""
         with open(os.path.join(self._path, filename), "a") as f:
             f.write(json.dumps({"role": role, "content": message, **kwargs}) + DELIMITER)
 
-    def list_terminal_commands(self, filename: str = TERMINAL_FILENAME) -> List[Any]:  # noqa: D102
+    def add_system_log(self, log: str, level: int = logging.INFO) -> None:
+        """Add system log with timestamp and log level."""
+        logger = logging.getLogger("system_logger")
+        if not logger.handlers:
+            # Configure the logger if it hasn't been set up yet
+            logger.setLevel(logging.DEBUG)
+            file_handler = logging.FileHandler(os.path.join(self._path, SYSTEM_LOG_FILENAME))
+            formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+            file_handler.setFormatter(formatter)
+            logger.addHandler(file_handler)
+
+            if self.print_system_log:
+                console_handler = logging.StreamHandler()
+                console_handler.setFormatter(formatter)
+                logger.addHandler(console_handler)
+
+        # Log the message
+        logger.log(level, log)
+
+    def _add_agent_start_system_log(self, agent_idx: int) -> None:
+        """Add agent start system log."""
+        agent = self._agents[agent_idx]
+        message = f"Starting an agent {agent.name}"
+        if agent.model != "":
+            model = self.get_model_for_inference(agent.model)
+            self._last_used_model = model
+            message += f" that will connect to {model}"
+            if agent.model_temperature:
+                message += f", temperature={agent.model_temperature}"
+            if agent.model_max_tokens:
+                message += f", max_tokens={agent.model_max_tokens}"
+        self.add_system_log(message)
+
+    def list_terminal_commands(self, filename: str = TERMINAL_FILENAME) -> List[Any]:
         """Returns the terminal commands from the terminal file."""
         return self.list_messages(filename)
 
-    def list_messages(self, filename: str = CHAT_FILENAME) -> List[Any]:  # noqa: D102
+    def list_messages(self, filename: str = CHAT_FILENAME) -> List[Any]:
         """Returns messages from a specified file."""
         path = os.path.join(self._path, filename)
 
@@ -210,26 +249,75 @@ class Environment(object):
             f.write(json.dumps(result) + DELIMITER)
         return result
 
+    def get_model_for_inference(self, model: str = "") -> str:
+        """Returns 'provider::model_full_path' or 'model_short_name' if provider is default or not given."""
+        provider = self._agents[0].model_provider if self._agents else ""
+        if model == "":
+            model = self._agents[0].model if self._agents else ""
+        if model == "":
+            return DEFAULT_PROVIDER_MODEL
+
+        # TODO(#225): convert model_short_name -> model_full_path before passing to AI Hub.
+        # Until it's not implemented assume the model given from metadata for not default provider
+        # is already model_full_path, or model_short_name as used by fireworks.
+        if provider == "" or provider == DEFAULT_PROVIDER:
+            return model
+        return provider + PROVIDER_MODEL_SEP + model
+
+    def _run_inference_completions(
+        self,
+        messages: Iterable[ChatCompletionMessageParam] | str,
+        model: Iterable[ChatCompletionMessageParam] | str,
+        stream: bool,
+        auth: Optional[AuthData],
+        **kwargs: Any,
+    ) -> Union[ModelResponse, CustomStreamWrapper]:
+        """Run inference completions for given parameters."""
+        if isinstance(messages, str):
+            self.add_system_log("Deprecated completions call. Pass `messages` as a first parameter.", logging.WARNING)
+            messages_or_model = messages
+            model_or_messages = model
+            model = cast(str, messages_or_model)
+            messages = cast(Iterable[ChatCompletionMessageParam], model_or_messages)
+        else:
+            model = cast(str, model)
+            messages = cast(Iterable[ChatCompletionMessageParam], messages)
+        model = self.get_model_for_inference(model)
+        if model != self._last_used_model:
+            self._last_used_model = model
+            self.add_system_log(f"Connecting to {model}")
+        return self._inference.completions(
+            model,
+            messages,
+            auth=auth,
+            stream=stream,
+            temperature=self._agents[0].model_temperature if self._agents else None,
+            max_tokens=self._agents[0].model_max_tokens if self._agents else None,
+            **kwargs,
+        )
+
+    # TODO(286): `messages` may be model and `model` may be messages temporarily to support deprecated API.
     def completions(
         self,
-        model: str,
-        messages: Iterable[ChatCompletionMessageParam],
+        messages: Iterable[ChatCompletionMessageParam] | str,
+        model: Iterable[ChatCompletionMessageParam] | str = "",
         stream: bool = False,
         auth: Optional[AuthData] = None,
         **kwargs: Any,
     ) -> Union[ModelResponse, CustomStreamWrapper]:
         """Returns all completions for given messages using the given model."""
-        return self._inference.completions(model, messages, auth=auth, stream=stream, **kwargs)
+        return self._run_inference_completions(messages, model, stream, auth, **kwargs)
 
+    # TODO(286): `messages` may be model and `model` may be messages temporarily to support deprecated API.
     def completions_and_run_tools(
         self,
-        model: str,
-        messages: Iterable[ChatCompletionMessageParam],
+        messages: Iterable[ChatCompletionMessageParam] | str,
+        model: Iterable[ChatCompletionMessageParam] | str = "",
         tools: Optional[List] = None,
         **kwargs: Any,
     ) -> ModelResponse:
         """Returns all completions for given messages using the given model and runs tools."""
-        raw_response = self._inference.completions(model, messages, stream=False, tools=tools, **kwargs)
+        raw_response = self._run_inference_completions(messages, model, stream=False, tools=tools, **kwargs)
         assert isinstance(raw_response, ModelResponse), "Expected ModelResponse"
         response: ModelResponse = raw_response
         assert all(map(lambda choice: isinstance(choice, Choices), response.choices)), "Expected Choices"
@@ -247,13 +335,17 @@ class Environment(object):
                     self.add_message("tool", function_response_json, tool_call_id=tool_call.id, name=function_name)
         return response
 
+    # TODO(286): `messages` may be model and `model` may be messages temporarily to support deprecated API.
     def completion(
-        self, model: str, messages: Iterable[ChatCompletionMessageParam], auth: Dict | Optional[AuthData] = None
+        self,
+        messages: Iterable[ChatCompletionMessageParam] | str,
+        model: Iterable[ChatCompletionMessageParam] | str = "",
+        auth: Dict | Optional[AuthData] = None,
     ) -> str:
         """Returns a completion for the given messages using the given model."""
         if isinstance(auth, Dict):
             auth = AuthData(**auth)
-        raw_response = self.completions(model, messages, auth=auth)
+        raw_response = self.completions(messages, model, auth=auth)
         assert isinstance(raw_response, ModelResponse), "Expected ModelResponse"
         response: ModelResponse = raw_response
         assert all(map(lambda choice: isinstance(choice, Choices), response.choices)), "Expected Choices"
@@ -262,15 +354,16 @@ class Environment(object):
         assert response_message, "No completions returned"
         return response_message
 
+    # TODO(286): `messages` may be model and `model` may be messages temporarily to support deprecated API.
     def completion_and_run_tools(
         self,
-        model: str,
-        messages: Iterable[ChatCompletionMessageParam],
+        messages: Iterable[ChatCompletionMessageParam] | str,
+        model: Iterable[ChatCompletionMessageParam] | str = "",
         tools: Optional[List] = None,
         **kwargs: Any,
     ) -> str:
         """Returns a completion for the given messages using the given model and runs tools."""
-        completion_tools_response = self.completions_and_run_tools(model, messages, tools, **kwargs)
+        completion_tools_response = self.completions_and_run_tools(messages, model, tools, **kwargs)
         assert all(
             map(lambda choice: isinstance(choice, Choices), completion_tools_response.choices)
         ), "Expected Choices"
@@ -430,6 +523,8 @@ class Environment(object):
             base_id = None
         last_message_idx = 0
 
+        self._add_agent_start_system_log(agent_idx=0)
+
         if self._agents[0].welcome_description:
             if self._agents[0].welcome_title:
                 print(f"{self._agents[0].welcome_title}: {self._agents[0].welcome_description}")
@@ -485,6 +580,8 @@ class Environment(object):
         else:
             base_id = None
         iteration = 0
+
+        self._add_agent_start_system_log(agent_idx=0)
 
         if task:
             self.add_message("user", task)

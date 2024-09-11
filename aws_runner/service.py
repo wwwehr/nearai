@@ -74,8 +74,9 @@ def load_agent(client, agent, agent_env_vars):
     agent_files = client.get_agent(agent)
     stop_time = time.perf_counter()
     write_metric("GetAgentFromRegistry_Duration", stop_time - start_time)
+    agent_metadata = client.get_agent_metadata(agent)
 
-    return Agent(path=RUN_PATH, name=agent, agent_files=agent_files, env_vars=env_vars)
+    return Agent(agent, RUN_PATH, agent_files, env_vars, agent_metadata)
 
 
 def clear_temp_agent_files(agents):

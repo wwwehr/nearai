@@ -159,6 +159,10 @@ env.get_tool_registry().register_tool(my_tool)
 response = env.completions_and_run_tools("llama-v3p1-405b-instruct-long", messages, tools=get_tool_registry().get_all_tools())
 ```
 
+### Logging
+* [`add_system_log`](api.md#nearai.environment.Environment.add_system_log): adds a system or environment log that is then saved into "system_log.txt".
+* [`add_agent_log`](api.md#nearai.environment.Environment.add_system_log): any agent logs may go here. Saved into "agent_log.txt".
+
 ## Uploading an agent
  * You need a folder with an `agent.py` file in it, `~/.nearai/registry/example_agent` in this example. 
  * The agent may consist of additional files in the folder.

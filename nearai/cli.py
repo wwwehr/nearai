@@ -259,8 +259,8 @@ class BenchmarkCli:
         solver_strategy_obj: SolverStrategy = solver_strategy_(dataset_ref=dataset, **solver_args)  # type: ignore
 
         if check_compatibility:
-            assert (
-                name in solver_strategy_obj.compatible_datasets()
+            assert name in solver_strategy_obj.compatible_datasets() or any(
+                map(lambda n: n in name, solver_strategy_obj.compatible_datasets())
             ), f"Solver strategy {solver_strategy} is not compatible with dataset {name}"
 
         be = BenchmarkExecutor(DatasetInfo(name, subset, dataset), solver_strategy_obj, benchmark_id=benchmark_id)
@@ -371,6 +371,8 @@ class AgentCli:
         env_vars: Optional[Dict[str, Any]] = None,
         load_env: str = "",
         local: bool = False,
+        tool_resources: Optional[Dict[str, Any]] = None,
+        print_system_log: bool = True,
     ) -> None:
         """Runs agent interactively with environment from given path."""
         from nearai.environment import Environment
@@ -381,7 +383,15 @@ class AgentCli:
                 path = _agents[0].path
             else:
                 raise ValueError("Local path is required when running multiple agents")
-        env = Environment(path, _agents, CONFIG, env_vars=env_vars)
+        env = Environment(
+            path,
+            _agents,
+            CONFIG,
+            env_vars=env_vars,
+            tool_resources=tool_resources,
+            print_system_log=print_system_log,
+        )
+
         env.run_interactive(record_run, load_env)
 
     def task(

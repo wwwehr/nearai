@@ -62,6 +62,7 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
 SolverStrategyRegistry: Dict[str, SolverStrategy] = {}
 
 from nearai.solvers.ddot_v0_solver import DDOTSV0Solver  # noqa: E402
+from nearai.solvers.gsm8k_solver import GSM8KSolverStrategy  # noqa: E402
 from nearai.solvers.hellaswag_solver import HellaswagSolverStrategy  # noqa: E402
 from nearai.solvers.mbpp_agent_solver import MBPPSolverAgent  # noqa: E402
 from nearai.solvers.mbpp_solver import MBPPSolverStrategy  # noqa: E402
@@ -74,4 +75,5 @@ __all__ = [
     "MBPPSolverAgent",
     "MMLUSolverStrategy",
     "HellaswagSolverStrategy",
+    "GSM8KSolverStrategy",
 ]

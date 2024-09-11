@@ -1,4 +1,5 @@
-from typing import Optional
+from os import getenv
+from typing import Any, Dict, Optional
 
 import boto3
 from fastapi import APIRouter, Body, Depends, HTTPException, Response
@@ -7,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from hub.api.v1.auth import AuthToken, revokable_auth
 from hub.api.v1.models import RegistryEntry
-from hub.api.v1.registry import S3_BUCKET, get
+from hub.api.v1.registry import S3_BUCKET, EntryLocation, get
 
 s3 = boto3.client("s3")
 
@@ -49,6 +50,10 @@ class CreateThreadAndRunRequest(BaseModel):
         True,
         description="Whether to record the run in the registry.",
     )
+    tool_resources: Optional[Dict[str, Any]] = Field(
+        None,
+        description="A dictionary of tool resources to use for the run.",
+    )
 
 
 @v1_router.post("/threads/runs", tags=["Agents", "Assistants"])  # OpenAI compatibility
@@ -61,26 +66,48 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokab
     if not body.agent_id and not body.assistant_id:
         raise HTTPException(status_code=400, detail="Missing required parameters: agent_id or assistant_id")
 
-    agents = body.agent_id or body.assistant_id
+    agents = body.agent_id or body.assistant_id or ""
     environment_id = body.environment_id or body.thread
     new_message = body.new_message
+
+    runner = _runner_for_env()
+    agent_api_url = getenv("API_URL", "https://api.near.ai")
+
     params = {
         "max_iterations": body.max_iterations,
         "record_run": body.record_run,
+        "api_url": agent_api_url,
+        "tool_resources": body.tool_resources,
     }
 
-    wrapper = LambdaWrapper(boto3.client("lambda", region_name="us-east-2"))
-    result = wrapper.invoke_function(
-        "agent-runner-docker",
-        {
-            "agents": agents,
-            "environment_id": environment_id,
-            "auth": auth.model_dump(),
-            "new_message": new_message,
-            "params": params,
-        },
-    )
-    return result
+    primary_agent = agents.split(",")[0]
+    agent_entry = get(EntryLocation.from_str(primary_agent))
+    if not agent_entry:
+        raise HTTPException(status_code=404, detail=f"Agent '{primary_agent}' not found in the registry.")
+    entry_details = agent_entry.details
+    agent_details = entry_details.get("agent", {})
+    framework = agent_details.get("framework", "base")
+
+    if framework == "prompt":
+        raise HTTPException(status_code=400, detail="Prompt only agents are not implemented yet.")
+    else:
+        function_name = f"{runner}-{framework.lower()}"
+        if agent_api_url != "https://api.near.ai":
+            print(f"Passing agent API URL: {agent_api_url}")
+        print(f"Running function {function_name} with: agents={agents}, environment_id={environment_id}, ")
+
+        wrapper = LambdaWrapper(boto3.client("lambda", region_name="us-east-2"))
+        result = wrapper.invoke_function(
+            function_name,
+            {
+                "agents": agents,
+                "environment_id": environment_id,
+                "auth": auth.model_dump(),
+                "new_message": new_message,
+                "params": params,
+            },
+        )
+        return result
 
 
 @v1_router.post(
@@ -92,3 +119,11 @@ def download_environment(entry: RegistryEntry = Depends(get), path: str = Body()
     file = s3.get_object(Bucket=S3_BUCKET, Key=entry.get_key(path))
     headers = {"Content-Disposition": "attachment; filename=environment.tar.gz"}
     return Response(file["Body"].read(), headers=headers, media_type="application/gzip")
+
+
+def _runner_for_env():
+    env = getenv("SERVER_ENVIRONMENT", "local")
+    if env == "production":
+        return "production-agent-runner"
+    else:
+        return "staging-agent-runner"

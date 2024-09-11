@@ -31,6 +31,7 @@ from nearai.tool_registry import ToolRegistry
 
 DELIMITER = "\n"
 CHAT_FILENAME = "chat.txt"
+SYSTEM_LOG_FILENAME = "system_log.txt"
 TERMINAL_FILENAME = "terminal.txt"
 
 
@@ -42,6 +43,8 @@ class Environment(object):
         config: Config,
         create_files: bool = True,
         env_vars: Optional[Dict[str, Any]] = None,
+        tool_resources: Optional[Dict[str, Any]] = None,
+        print_system_log: bool = True,
     ) -> None:
         self._path = path
         self._agents = agents
@@ -52,6 +55,8 @@ class Environment(object):
         self.register_standard_tools()
         self.env_vars: Dict[str, Any] = env_vars if env_vars else {}
         self._last_used_model = ""
+        self.tool_resources: Dict[str, Any] = tool_resources if tool_resources else {}
+        self.print_system_log = print_system_log
 
         if self._config.nearai_hub is None:
             self._config.nearai_hub = NearAiHubConfig()
@@ -77,17 +82,25 @@ class Environment(object):
         reg.register_tool(self.request_user_input)
         reg.register_tool(self.list_files)
         reg.register_tool(self.verify_message)
+        reg.register_tool(self.query_vector_store)
 
-    def add_message(self, role: str, message: str, filename: str = CHAT_FILENAME, **kwargs: Any) -> None:  # noqa: D102
+    def add_message(self, role: str, message: str, filename: str = CHAT_FILENAME, **kwargs: Any) -> None:
         """Add a message to the chat file."""
         with open(os.path.join(self._path, filename), "a") as f:
             f.write(json.dumps({"role": role, "content": message, **kwargs}) + DELIMITER)
 
-    def list_terminal_commands(self, filename: str = TERMINAL_FILENAME) -> List[Any]:  # noqa: D102
+    def add_system_log(self, log: str) -> None:
+        """Add system log."""
+        if self.print_system_log:
+            print(f"[system log] {log}")
+        with open(os.path.join(self._path, SYSTEM_LOG_FILENAME), "a") as f:
+            f.write(log + "\n")
+
+    def list_terminal_commands(self, filename: str = TERMINAL_FILENAME) -> List[Any]:
         """Returns the terminal commands from the terminal file."""
         return self.list_messages(filename)
 
-    def list_messages(self, filename: str = CHAT_FILENAME) -> List[Any]:  # noqa: D102
+    def list_messages(self, filename: str = CHAT_FILENAME) -> List[Any]:
         """Returns messages from a specified file."""
         path = os.path.join(self._path, filename)
 
@@ -140,6 +153,14 @@ class Environment(object):
         with open(path, "w") as f:
             f.write(content)
         return f"Successfully wrote {len(content) if content else 0} characters to {filename}"
+
+    def query_vector_store(self, vector_store_id: str, query: str):
+        """Query a vector store.
+
+        vector_store_id: The id of the vector store to query.
+        query: The query to search for.
+        """
+        return self._inference.query_vector_store(vector_store_id, query)
 
     def exec_command(self, command: str) -> Dict[str, Union[str, int]]:
         """Executes a command in the environment and logs the output.
@@ -218,13 +239,44 @@ class Environment(object):
 
     def _run_inference_completions(
         self,
-        messages: Iterable[ChatCompletionMessageParam],
-        model: str,
+        messages_or_model: Union[Iterable[ChatCompletionMessageParam], str],
+        model_or_messages: Union[Iterable[ChatCompletionMessageParam], str],
         stream: bool,
         auth: Optional[AuthData],
         **kwargs: Any,
     ) -> Union[ModelResponse, CustomStreamWrapper]:
         """Run inference completions for given parameters."""
+        if isinstance(messages_or_model, str):
+            self.add_system_log("Deprecated completions call. Pass `messages` as a first parameter.")
+            model = messages_or_model
+            messages = model_or_messages
+        else:
+            model = model_or_messages
+            messages = messages_or_model
+        model = self.get_model_for_inference(model)
+        if model != self._last_used_model:
+            self._last_used_model = model
+            self.add_system_log(f"Connecting to {model}")
+        return self._inference.completions(
+            model,
+            messages,
+            auth=auth,
+            stream=stream,
+            temperature=self._agents[0].model_temperature if self._agents else None,
+            max_tokens=self._agents[0].model_max_tokens if self._agents else None,
+            **kwargs,
+        )
+
+    def _run_deprecated_inference_completions(
+        self,
+        model: str,
+        messages: Iterable[ChatCompletionMessageParam],
+        stream: bool,
+        auth: Optional[AuthData],
+        **kwargs: Any,
+    ) -> Union[ModelResponse, CustomStreamWrapper]:
+        """Run inference completions for given parameters. Deprecated."""
+        self.add_system_log("This completions call is deprecated. Pass `messages` as a first param.")
         model = self.get_model_for_inference(model)
         if model != self._last_used_model:
             self._last_used_model = model
@@ -429,7 +481,9 @@ class Environment(object):
 
     def clear_temp_agent_files(self) -> None:  # noqa: D102
         """Remove temp agent files created to be used in `runpy`."""
-        shutil.rmtree(self._agents[0].temp_dir)
+        for agent in self._agents:
+            if agent.temp_dir and os.path.exists(agent.temp_dir):
+                shutil.rmtree(agent.temp_dir)
 
     def set_next_actor(self, who: str) -> None:  # noqa: D102
         """Set the next actor / action in the dialogue."""

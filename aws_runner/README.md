@@ -8,13 +8,13 @@ to fetch agent code, and to fetch and store environments (store not implemented 
 ## Local testing
 __Docker must be run from the root of the repository so the Dockerfile can pull in openapi_client.__
 
-Note the dash before the framework names and after the environment names.
+Note the dash before the framework name when passing a framework. The deploy script adds the dash but here it must be added manually.
 
 Base framework `docker build -f aws_runner/Dockerfile --platform linux/amd64 --build-arg -t nearai-runner:test .`
 
 LangGraph framework `docker build -f aws_runner/Dockerfile --platform linux/amd64 --build-arg FRAMEWORK=-langgraph -t nearai-runner:test .`
 
-This will start the server on port 9000.
+Then `docker run --platform linux/amd64 -p 9000:8080 nearai-runner:test` will start the server on port 9000. 
 
 To call the server you will need a signedMessage for the auth param.
 Then you can call the server with the following curl command.
@@ -51,4 +51,16 @@ FRAMEWORK=langgraph ENV=production deploy.sh
 Deploy all frameworks to all environments.
 ```shell
 deploy.sh all
+```
+
+## Running against staging
+A local api can use the staging or other remote runner environments by setting the server environment in hub/.env. 
+This requires that you have appropriate system credentials for the runner environment 
+(i.e. that you are yourself running remote runner environments).
+
+Usually you would want to also allow the remote runner to call back to your local api to save the resulting environment.
+To do this set up a tunnel to your local machine using ngrok or a similar service and set the API_URL in the hub/.env file.
+```shell
+SERVER_ENVIRONMENT=staging
+API_URL=https://YOUR-ENDPOINT.ngrok.io
 ```

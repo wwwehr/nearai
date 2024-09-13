@@ -26,11 +26,13 @@ from nearai.config import (
     DEFAULT_PROVIDER,
     update_config,
 )
+from nearai.dataset import get_dataset
 from nearai.evaluation import evaluation_table, print_evaluation_table
 from nearai.finetune import FinetuneCli
 from nearai.hub import Hub
 from nearai.lib import check_metadata, parse_location, parse_tags
 from nearai.registry import registry
+from nearai.solvers import SolverScoringMethod
 from nearai.tensorboard_feed import TensorboardCli
 
 
@@ -236,14 +238,18 @@ class BenchmarkCli:
             force=force,
         )
 
-        name, subset, dataset = dataset, subset, load_dataset(dataset, verbose=False)
-
-        solver_strategy_: SolverStrategy | None = SolverStrategyRegistry.get(solver_strategy, None)
+        solver_strategy_class: SolverStrategy | None = SolverStrategyRegistry.get(solver_strategy, None)
         assert (
-            solver_strategy
+            solver_strategy_class
         ), f"Solver strategy {solver_strategy} not found. Available strategies: {list(SolverStrategyRegistry.keys())}"
-        solver_strategy_obj: SolverStrategy = solver_strategy_(dataset_ref=dataset, **solver_args)  # type: ignore
 
+        name = dataset
+        if solver_strategy_class.scoring_method == SolverScoringMethod.Custom:
+            dataset = str(get_dataset(dataset))
+        else:
+            dataset = load_dataset(dataset)
+
+        solver_strategy_obj: SolverStrategy = solver_strategy_class(dataset_ref=dataset, **solver_args)  # type: ignore
         if check_compatibility:
             assert name in solver_strategy_obj.compatible_datasets() or any(
                 map(lambda n: n in name, solver_strategy_obj.compatible_datasets())

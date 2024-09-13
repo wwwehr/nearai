@@ -24,7 +24,7 @@ class EvaluationTable(BaseModel):
     important_columns: List[str]
 
 
-@v1_router.get("/list")
+@v1_router.get("/table")
 async def table() -> EvaluationTable:
     rows, columns, important_columns = evaluation_table()
     list_rows = [

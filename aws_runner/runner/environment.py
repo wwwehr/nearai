@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 import os
 import shlex
 import shutil
@@ -11,7 +12,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any, Dict, Iterable, List, Optional, Union, cast
 
 import psutil
 
@@ -20,8 +21,16 @@ from runner.tool_registry import ToolRegistry
 
 DELIMITER = "\n"
 CHAT_FILENAME = "chat.txt"
+SYSTEM_LOG_FILENAME = "system_log.txt"
+AGENT_LOG_FILENAME = "agent_log.txt"
 TERMINAL_FILENAME = "terminal.txt"
 ENVIRONMENT_FILENAME = "environment.tar.gz"
+
+# TODO(#290): Add API endpoints for nearai/config defaults
+DEFAULT_PROVIDER = "fireworks"
+DEFAULT_MODEL = "llama-v3p1-405b-instruct-long"
+DEFAULT_PROVIDER_MODEL = f"fireworks::accounts/fireworks/models/{DEFAULT_MODEL}"
+PROVIDER_MODEL_SEP = "::"
 
 
 class Environment(object):
@@ -33,6 +42,8 @@ class Environment(object):
         server_url: str = "https://api.near.ai",
         create_files: bool = True,
         metric_function=None,
+        env_vars: Optional[Dict[str, Any]] = None,
+        print_system_log: bool = False,
     ):
         self._path = path
         self._agents = agents
@@ -42,6 +53,10 @@ class Environment(object):
         self._metric_function = metric_function
         self._tools = ToolRegistry()
         self.register_standard_tools()
+        self.env_vars: Dict[str, Any] = env_vars if env_vars else {}
+        self._last_used_model = ""
+        self.print_system_log = print_system_log
+
         if create_files:
             os.makedirs(self._path, exist_ok=True)
             open(os.path.join(self._path, CHAT_FILENAME), "a").close()
@@ -65,6 +80,53 @@ class Environment(object):
     def add_message(self, role: str, message: str, filename: str = CHAT_FILENAME, **kwargs: Any) -> None:  # noqa: D102
         with open(os.path.join(self._path, filename), "a") as f:
             f.write(json.dumps({"role": role, "content": message, **kwargs}) + DELIMITER)
+
+    def add_system_log(self, log: str, level: int = logging.INFO) -> None:
+        """Add system log with timestamp and log level."""
+        logger = logging.getLogger("system_logger")
+        if not logger.handlers:
+            # Configure the logger if it hasn't been set up yet
+            logger.setLevel(logging.DEBUG)
+            file_handler = logging.FileHandler(os.path.join(self._path, SYSTEM_LOG_FILENAME))
+            formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+            file_handler.setFormatter(formatter)
+            logger.addHandler(file_handler)
+
+            if self.print_system_log:
+                console_handler = logging.StreamHandler()
+                console_handler.setFormatter(formatter)
+                logger.addHandler(console_handler)
+
+        # Log the message
+        logger.log(level, log)
+
+    def add_agent_log(self, log: str, level: int = logging.INFO) -> None:
+        """Add agent log with timestamp and log level."""
+        logger = logging.getLogger("agent_logger")
+        if not logger.handlers:
+            # Configure the logger if it hasn't been set up yet
+            logger.setLevel(logging.DEBUG)
+            file_handler = logging.FileHandler(os.path.join(self._path, AGENT_LOG_FILENAME))
+            formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+            file_handler.setFormatter(formatter)
+            logger.addHandler(file_handler)
+
+        # Log the message
+        logger.log(level, log)
+
+    def _add_agent_start_system_log(self, agent_idx: int) -> None:
+        """Add agent start system log."""
+        agent = self._agents[agent_idx]
+        message = f"Starting an agent {agent.name}"
+        if agent.model != "":
+            model = self.get_model_for_inference(agent.model)
+            self._last_used_model = model
+            message += f" that will connect to {model}"
+            if agent.model_temperature:
+                message += f", temperature={agent.model_temperature}"
+            if agent.model_max_tokens:
+                message += f", max_tokens={agent.model_max_tokens}"
+        self.add_system_log(message)
 
     def list_terminal_commands(self, filename: str = TERMINAL_FILENAME) -> List[Any]:  # noqa: D102
         return self.list_messages(filename)
@@ -114,7 +176,10 @@ class Environment(object):
         return f"Successfully wrote {len(content) if content else 0} characters to {filename}"
 
     def exec_command(self, command: str) -> Dict[str, str]:
-        """Executes a command in the environment and logs the output."""
+        """Executes a command in the environment and logs the output.
+
+        command: The command to execute.
+        """
         try:
             process = subprocess.Popen(
                 shlex.split(command),
@@ -159,24 +224,74 @@ class Environment(object):
             f.write(json.dumps(result) + DELIMITER)
         return result
 
-    def completions(self, model: str, messages: Iterable[Any], stream: bool = False, **kwargs: Any) -> Any:
-        """Returns all completions for given messages using the given model."""
-        return self._client.completions(model, messages, stream=stream, **kwargs)
+    def get_model_for_inference(self, model: str = "") -> str:
+        """Returns 'provider::model_full_path' or 'model_short_name' if provider is default or not given."""
+        provider = self._agents[0].model_provider if self._agents else ""
+        if model == "":
+            model = self._agents[0].model if self._agents else ""
+        if model == "":
+            return DEFAULT_PROVIDER_MODEL
 
+        # TODO(#225): convert model_short_name -> model_full_path before passing to AI Hub.
+        # Until it's not implemented assume the model given from metadata for not default provider
+        # is already model_full_path, or model_short_name as used by fireworks.
+        if provider == "" or provider == DEFAULT_PROVIDER:
+            return model
+        return provider + PROVIDER_MODEL_SEP + model
+
+    def _run_inference_completions(
+        self,
+        messages: Iterable[Any] | str,
+        model: Iterable[Any] | str,
+        stream: bool,
+        **kwargs: Any,
+    ) -> Any:
+        """Run inference completions for given parameters."""
+        if isinstance(messages, str):
+            self.add_system_log("Deprecated completions call. Pass `messages` as a first parameter.", logging.WARNING)
+            messages_or_model = messages
+            model_or_messages = model
+            model = cast(str, messages_or_model)
+            messages = cast(Iterable[Any], model_or_messages)
+        else:
+            model = cast(str, model)
+            messages = cast(Iterable[Any], messages)
+        model = self.get_model_for_inference(model)
+        if model != self._last_used_model:
+            self._last_used_model = model
+            self.add_system_log(f"Connecting to {model}")
+        return self._client.completions(
+            model,
+            messages,
+            stream=stream,
+            temperature=self._agents[0].model_temperature if self._agents else None,
+            max_tokens=self._agents[0].model_max_tokens if self._agents else None,
+            **kwargs,
+        )
+
+    # TODO(286): `messages` may be model and `model` may be messages temporarily to support deprecated API.
+    def completions(
+        self, messages: Iterable[Any] | str, model: Iterable[Any] | str = "", stream: bool = False, **kwargs: Any
+    ) -> Any:
+        """Returns all completions for given messages using the given model."""
+        return self._run_inference_completions(messages, model, stream, **kwargs)
+
+    # TODO(286): `messages` may be model and `model` may be messages temporarily to support deprecated API.
     def completions_and_run_tools(
         self,
-        model: str,
-        messages: Iterable[Any],
+        messages: Iterable[Any] | str,
+        model: Iterable[Any] | str,
         tools: Optional[List] = None,
         **kwargs: Any,
     ) -> Any:
         """Returns all completions for given messages using the given model and runs tools."""
         stream = kwargs.get("stream", False)
-        response = self._client.completions(model, messages, stream=stream, tools=tools, **kwargs)
-        response_message = response.choices[0].message
-        if hasattr(response_message, "tool_calls") and response_message.tool_calls:
-            for tool_call in response_message.tool_calls:
-                function_name = tool_call.function.name
+        response = self._run_inference_completions(messages, model, stream=stream, tools=tools, **kwargs)
+        response_message = response["choices"][0]["message"]
+
+        if hasattr(response_message, "tool_calls") and response_message["tool_calls"]:
+            for tool_call in response_message["tool_calls"]:
+                function_name = tool_call["function.name"]
                 assert function_name, "Tool call must have a function name"
                 function_args = json.loads(tool_call.function.arguments)
                 function_response = self._tools.call_tool(function_name, **function_args)
@@ -186,17 +301,19 @@ class Environment(object):
                     self.add_message("tool", function_response_json, tool_call_id=tool_call.id, name=function_name)
         return response
 
-    def completion(self, model: str, messages: Iterable[Any]) -> str:
+    # TODO(286): `messages` may be model and `model` may be messages temporarily to support deprecated API.
+    def completion(self, messages: Iterable[Any] | str, model: Iterable[Any] | str = "") -> str:
         """Returns a completion for the given messages using the given model."""
         result = self.completions(model, messages)
         response_message = result["choices"][0]["message"]["content"]
         assert response_message, "No completions returned"
         return response_message
 
+    # TODO(286): `messages` may be model and `model` may be messages temporarily to support deprecated API.
     def completion_and_run_tools(
         self,
-        model: str,
-        messages: Iterable[Any],
+        messages: Iterable[Any] | str,
+        model: Iterable[Any] | str,
         tools: Optional[List] = None,
         **kwargs: Any,
     ) -> str:
@@ -335,6 +452,8 @@ class Environment(object):
         run_id = self._generate_run_id()
         base_id = load_env
         iteration = 0
+
+        self._add_agent_start_system_log(agent_idx=0)
 
         self.set_next_actor("agent")
 

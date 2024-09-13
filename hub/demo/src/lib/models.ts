@@ -97,7 +97,24 @@ export const registryEntry = z.object({
   version: z.string(),
   description: z.string(),
   tags: z.string().array(),
-  details: z.record(z.string(), z.unknown()), // TODO: Figure out standard metadata properties
+  details: z.intersection(
+    z
+      .object({
+        agent: z
+          .object({
+            welcome: z
+              .object({
+                title: z.string(),
+                description: z.string(),
+              })
+              .partial(),
+          })
+          .partial(),
+        icon: z.string(),
+      })
+      .partial(),
+    z.record(z.string(), z.unknown()),
+  ),
 });
 
 export const listRegistry = z.array(registryEntry);
@@ -107,6 +124,8 @@ export const agentRequestModel = z.object({
   new_message: z.string(),
   environment_id: z.string().nullable().optional(),
   max_iterations: z.number(),
+  user_env_vars: z.record(z.string(), z.unknown()).nullable().optional(),
+  agent_env_vars: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
 export const fileModel = z.object({

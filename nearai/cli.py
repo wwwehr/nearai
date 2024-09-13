@@ -18,7 +18,14 @@ from tabulate import tabulate
 
 from nearai.agent import load_agent
 from nearai.clients.lambda_client import LambdaWrapper
-from nearai.config import CONFIG, update_config
+from nearai.config import (
+    CONFIG,
+    DEFAULT_MODEL,
+    DEFAULT_MODEL_MAX_TOKENS,
+    DEFAULT_MODEL_TEMPERATURE,
+    DEFAULT_PROVIDER,
+    update_config,
+)
 from nearai.dataset import get_dataset
 from nearai.evaluation import evaluations_table
 from nearai.finetune import FinetuneCli
@@ -65,19 +72,26 @@ class RegistryCli:
         folder_name = path.name
 
         with open(metadata_path, "w") as f:
-            json.dump(
-                {
-                    "name": folder_name,
-                    "version": "0.0.1",
-                    "description": description,
-                    "category": category,
-                    "tags": [],
-                    "details": {},
-                    "show_entry": True,
-                },
-                f,
-                indent=2,
-            )
+            metadata: Dict[str, Any] = {
+                "name": folder_name,
+                "version": "0.0.1",
+                "description": description,
+                "category": category,
+                "tags": [],
+                "details": {},
+                "show_entry": True,
+            }
+
+            if category == "agent":
+                metadata["details"]["agent"] = {}
+                metadata["details"]["agent"]["defaults"] = {
+                    "model": DEFAULT_MODEL,
+                    "model_provider": DEFAULT_PROVIDER,
+                    "model_temperature": DEFAULT_MODEL_TEMPERATURE,
+                    "model_max_tokens": DEFAULT_MODEL_MAX_TOKENS,
+                }
+
+            json.dump(metadata, f, indent=2)
 
     def list(
         self,
@@ -371,6 +385,8 @@ class AgentCli:
         env_vars: Optional[Dict[str, Any]] = None,
         load_env: str = "",
         local: bool = False,
+        tool_resources: Optional[Dict[str, Any]] = None,
+        print_system_log: bool = True,
     ) -> None:
         """Runs agent interactively with environment from given path."""
         from nearai.environment import Environment
@@ -381,7 +397,15 @@ class AgentCli:
                 path = _agents[0].path
             else:
                 raise ValueError("Local path is required when running multiple agents")
-        env = Environment(path, _agents, CONFIG, env_vars=env_vars)
+        env = Environment(
+            path,
+            _agents,
+            CONFIG,
+            env_vars=env_vars,
+            tool_resources=tool_resources,
+            print_system_log=print_system_log,
+        )
+
         env.run_interactive(record_run, load_env)
 
     def task(

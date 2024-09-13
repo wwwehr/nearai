@@ -12,7 +12,7 @@ import {
 import { Controller } from 'react-hook-form';
 import { type z } from 'zod';
 
-import { AgentHeader } from '~/components/AgentHeader';
+import { AgentWelcome } from '~/components/AgentWelcome';
 import { ChatThread } from '~/components/inference/ChatThread';
 import { BreakpointDisplay } from '~/components/lib/BreakpointDisplay';
 import { Button } from '~/components/lib/Button';
@@ -94,6 +94,17 @@ export default function RunAgentPage() {
     }
   }, [chatMutation.trpc.path, environmentName, environmentQuery.data]);
 
+  function getUrlParams() {
+    const searchParams = new URLSearchParams(window.location.search);
+    const params: Record<string, string> = {};
+
+    searchParams.forEach((value, key) => {
+      params[key] = value;
+    });
+
+    return params;
+  }
+
   async function onSubmit(values: z.infer<typeof agentRequestModel>) {
     try {
       if (!values.new_message.trim()) return;
@@ -112,6 +123,14 @@ export default function RunAgentPage() {
 
       form.setValue('new_message', '');
       form.setFocus('new_message');
+
+      values.user_env_vars = getUrlParams();
+      if (currentResource?.details.env_vars) {
+        values.agent_env_vars = {
+          ...(values.agent_env_vars ?? {}),
+          [values.agent_id]: currentResource?.details?.env_vars ?? {},
+        };
+      }
 
       const response = await chatMutation.mutateAsync(values);
       setEnvironmentName(() => response.environmentId);
@@ -148,33 +167,14 @@ export default function RunAgentPage() {
     return <PlaceholderSection />;
   }
 
-  interface Agent {
-    welcome: {
-      title?: string;
-      description?: string;
-    };
-  }
-
-  const checkAgentHeader = (agent?: Agent | undefined): boolean => {
-    if (!agent) return false;
-    return Boolean(agent?.welcome?.title ?? agent.welcome?.description);
-  };
-
-  const hasAgentHeader = checkAgentHeader(
-    currentResource?.details?.agent as Agent | undefined,
-  );
-
   return (
     <Form stretch onSubmit={form.handleSubmit(onSubmit)} ref={formRef}>
       <Sidebar.Root>
         <Sidebar.Main>
-          {hasAgentHeader && <AgentHeader details={currentResource?.details} />}
-
-          {isAuthenticated ? (
-            <ChatThread messages={conversation} />
-          ) : (
-            <SignInPrompt props={{ showWelcome: !hasAgentHeader }} />
-          )}
+          <ChatThread
+            messages={conversation}
+            welcomeMessage={<AgentWelcome details={currentResource.details} />}
+          />
 
           <Flex direction="column" gap="m">
             <InputTextarea
@@ -184,30 +184,33 @@ export default function RunAgentPage() {
               {...form.register('new_message')}
             />
 
-            <Flex align="start" gap="m">
-              <Text size="text-xs" style={{ marginRight: 'auto' }}>
-                <b>Shift + Enter</b> to add a new line
-              </Text>
+            {isAuthenticated ? (
+              <Flex align="start" gap="m">
+                <Text size="text-xs" style={{ marginRight: 'auto' }}>
+                  <b>Shift + Enter</b> to add a new line
+                </Text>
 
-              <BreakpointDisplay show="sidebar-small-screen">
+                <BreakpointDisplay show="sidebar-small-screen">
+                  <Button
+                    label="Edit Parameters"
+                    icon={<Gear weight="bold" />}
+                    size="small"
+                    fill="outline"
+                    onClick={() => setParametersOpenForSmallScreens(true)}
+                  />
+                </BreakpointDisplay>
+
                 <Button
-                  label="Edit Parameters"
-                  icon={<Gear weight="bold" />}
+                  label="Send Message"
+                  type="submit"
+                  icon={<ArrowRight weight="bold" />}
                   size="small"
-                  fill="outline"
-                  onClick={() => setParametersOpenForSmallScreens(true)}
+                  loading={chatMutation.isPending}
                 />
-              </BreakpointDisplay>
-
-              <Button
-                label="Send Message"
-                type="submit"
-                icon={<ArrowRight weight="bold" />}
-                size="small"
-                disabled={!isAuthenticated}
-                loading={chatMutation.isPending}
-              />
-            </Flex>
+              </Flex>
+            ) : (
+              <SignInPrompt />
+            )}
           </Flex>
         </Sidebar.Main>
 
@@ -308,7 +311,7 @@ export default function RunAgentPage() {
                 max={20}
                 min={1}
                 step={1}
-                assistive="The maximum number of iterations to run the agent for."
+                assistive="The maximum number of iterations to run the agent for, usually 1. Each iteration will loop back through your agent allowing it to act and reflect on LLM results."
                 {...field}
               />
             )}

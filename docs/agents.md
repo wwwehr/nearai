@@ -29,7 +29,7 @@ nearai agent interactive example_agent /tmp/example_agent_run_1 --local
 ```python
 # In local interactive mode, the first user input is collected before the agent runs.
 prompt = {"role": "system", "content": "You are a travel agent that helps users plan trips."}
-result = env.completion('llama-v3p1-405b-instruct-long', [prompt] + env.list_messages())
+result = env.completion([prompt] + env.list_messages())
 env.add_message("agent", result)
 env.request_user_input()
 ```
@@ -102,8 +102,20 @@ Your agent will receive an `env` object that has the following methods:
 
   * [`request_user_input`](api.md#nearai.environment.Environment.request_user_input): tell the agent that it is the user's turn, stop iterating.
   * [`completion`](api.md#nearai.environment.Environment.completion): request inference completions from a provider and model.
-The model format can be either `PROVIDER::MODEL` or simply `MODEL`. By default the provider is `Fireworks` and the model is `llama-v3p1-405b-instruct-long`.
-
+The model format can be either `PROVIDER::MODEL` or simply `MODEL`. By default the provider is `fireworks` and the model is `llama-v3p1-405b-instruct-long`. The model can be passed into `completion` function or as an agent metadata:
+   ```json
+   "details": {
+     "agent": {
+       "defaults": {
+         // All fields below are optional.
+         "model": "llama-v3p1-405b-instruct-long",
+         "model_max_tokens": 16384,
+         "model_provider": "fireworks",
+         "model_temperature": 1.0
+       }
+     }
+   }
+   ```
   * [`list_messages`](api.md#nearai.environment.Environment.list_messages): returns the list of messages in the conversation. 
 You have full control to add and remove messages from this list.
   * [`add_message`](api.md#nearai.environment.Environment.add_message): adds a message to the conversation. Arguments are role and content.
@@ -147,6 +159,10 @@ env.get_tool_registry().register_tool(my_tool)
 response = env.completions_and_run_tools("llama-v3p1-405b-instruct-long", messages, tools=get_tool_registry().get_all_tools())
 ```
 
+### Logging
+* [`add_system_log`](api.md#nearai.environment.Environment.add_system_log): adds a system or environment log that is then saved into "system_log.txt".
+* [`add_agent_log`](api.md#nearai.environment.Environment.add_system_log): any agent logs may go here. Saved into "agent_log.txt".
+
 ## Uploading an agent
  * You need a folder with an `agent.py` file in it, `~/.nearai/registry/example_agent` in this example. 
  * The agent may consist of additional files in the folder.
@@ -162,10 +178,20 @@ response = env.completions_and_run_tools("llama-v3p1-405b-instruct-long", messag
     "python",
     "travel"
   ],
-  "details": {},
+  "details": {
+    "agent": {
+       "defaults": {
+         // All fields below are optional.
+         "model": "llama-v3p1-405b-instruct-long",
+         "model_max_tokens": 16384,
+         "model_provider": "fireworks",
+         "model_temperature": 1.0
+       }
+     }
+  },
   "show_entry": true,
   "name": "example-travel-agent",
-  "version": "5"
+  "version": "0.0.5"
 }
 ```
 
@@ -193,16 +219,36 @@ reprocess the previous response and follow up about travel to Paris.
 ```
 
 ## Running an agent through the API
-Agents can be run through the `/agent/runs` endpoint. You will need to pass a signed message to authenticate.
+Agents can be run through the `/agent/runs` endpoint. 
+You will need to pass a signed message to authenticate. This example uses the credentials written by `nearai login` to
+your `~/.nearai/config.json` file.
 
+```shell
+auth_json=$(jq -c '.auth' ~/.nearai/config.json);
+
+curl "https://api.near.ai/v1/agent/runs" \
+      -X POST \
+      --header 'Content-Type: application/json' \
+      --header "Authorization: Bearer $auth_json" \
+-d @- <<'EOF'
+  {
+    "agent_id": "flatirons.near/xela-agent/5",
+    "new_message":"Build a backgammon game",
+    "max_iterations": "2"
+  }
+EOF
+```
+
+The full message will look like this. An `environment_id` param can also be passed to continue a previous run. 
 ```shell
 curl "https://api.near.ai/v1/agent/runs" \
       -X POST \
       --header 'Content-Type: application/json' \
-      --header 'Authorization: Bearer {"account_id":"flatirons.near","public_key":"ed25519:F5DeKFoyF1CQ6wG6jYaXxwQeoksgi8a677JkniDBGBTB","signature":"kfiH7AStKrBaMXzwpE50yQ2TRTxksID9tNVEdazxtegEu6rwH6x575smcAJPAUfTtlT2l7xwXtapQkxd+vFUAg==","callback_url":"http://localhost:3000/","message":"Welcome to NEAR AI Hub!","recipient":"ai.near","nonce":"00000000000000000005722050769950"}' \
+      --header 'Authorization: Bearer {"account_id":"your_account.near","public_key":"ed25519:YOUR_PUBLIC_KEY","signature":"A_REAL_SIGNATURE","callback_url":"https://app.near.ai/","message":"Welcome to NEAR AI Hub!","recipient":"ai.near","nonce":"A_UNIQUE_NONCE_FOR_THIS_SIGNATURE"}' \
 -d @- <<'EOF'
   {
     "agent_id": "flatirons.near/xela-agent/5",
+    "environment_id": "a_previous_environment_id",
     "new_message":"Build a backgammon game", 
     "max_iterations": "2"
   }

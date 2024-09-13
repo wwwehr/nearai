@@ -171,8 +171,6 @@ line-ending = "auto"
 strict = false
 exclude = [
     "tests",
-    "test/**/*_test.py",
-    "test/**/test_*.py",
     "venv",
     ".venv",
     ".vscode",

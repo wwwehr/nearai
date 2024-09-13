@@ -1124,6 +1124,37 @@
         }
       }
     },
+    "/v1/evaluation/table": {
+      "get": {
+        "tags": [
+          "evaluation"
+        ],
+        "summary": "Get Evaluation Table",
+        "operationId": "get_evaluation_table_v1_evaluation_table_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationTable"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -1208,6 +1239,36 @@
           "info"
         ],
         "title": "BenchmarkResultOutput"
+      },
+      "EvaluationTable": {
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "important_columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["rows", "columns", "important_columns"],
+        "title": "EvaluationTable"
       },
       "Body_download_environment_v1_download_environment_post": {
         "properties": {

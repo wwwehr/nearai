@@ -1,16 +1,11 @@
-from os import getenv
 from typing import Dict, List
 
-import boto3
 from dotenv import load_dotenv
 from fastapi import APIRouter
 from nearai.evaluation import evaluation_table
 from pydantic import BaseModel
 
 load_dotenv()
-S3_BUCKET = getenv("S3_BUCKET")
-
-s3 = boto3.client("s3")
 
 v1_router = APIRouter(
     prefix="/evaluation",

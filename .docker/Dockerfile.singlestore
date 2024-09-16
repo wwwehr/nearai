@@ -1,0 +1,9 @@
+FROM ghcr.io/singlestore-labs/singlestoredb-dev:latest
+
+USER root
+RUN echo "CREATE DATABASE IF NOT EXISTS hub;" > /init.sql
+
+USER singlestore
+
+## example connection with memsql
+# memsql -h 127.0.0.1 -u root -p change-me -e "CREATE DATABASE IF NOT EXISTS hub;"

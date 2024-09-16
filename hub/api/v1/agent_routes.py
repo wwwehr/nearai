@@ -10,7 +10,8 @@ from hub.api.v1.auth import AuthToken, revokable_auth
 from hub.api.v1.models import RegistryEntry
 from hub.api.v1.registry import S3_BUCKET, EntryLocation, get
 
-s3 = boto3.client("s3")
+S3_ENDPOINT = getenv("S3_ENDPOINT")
+s3 = boto3.client("s3", endpoint_url=S3_ENDPOINT)
 
 v1_router = APIRouter(
     tags=["agents, assistants"],

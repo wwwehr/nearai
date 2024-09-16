@@ -7,7 +7,7 @@ from collections import OrderedDict
 from dataclasses import asdict
 from pathlib import Path
 from textwrap import fill
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, Optional
 
 import boto3
 import fire
@@ -27,27 +27,13 @@ from nearai.config import (
     update_config,
 )
 from nearai.dataset import get_dataset
-from nearai.evaluation import evaluations_table
+from nearai.evaluation import evaluation_table, print_evaluation_table
 from nearai.finetune import FinetuneCli
 from nearai.hub import Hub
-from nearai.lib import check_metadata, parse_location
+from nearai.lib import check_metadata, parse_location, parse_tags
 from nearai.registry import registry
 from nearai.solvers import SolverScoringMethod
 from nearai.tensorboard_feed import TensorboardCli
-
-
-def parse_tags(tags: Union[str, Tuple[str, ...]]) -> List[str]:
-    if not tags:
-        return []
-
-    elif isinstance(tags, tuple):
-        return list(tags)
-
-    elif isinstance(tags, str):
-        return tags.split(",")
-
-    else:
-        raise ValueError(f"Invalid tags argument: {tags}")
 
 
 class RegistryCli:
@@ -327,20 +313,10 @@ class EvaluationCli:
         metric_name_max_length: int = 30,
     ) -> None:
         """Prints table of evaluations."""
-        # Make sure tags is a comma-separated list of tags
-        tags_l = parse_tags(tags)
-        tags = ",".join(tags_l)
-
-        entries = registry.list(
-            namespace=namespace,
-            category="evaluation",
-            tags=tags,
-            total=10000,
-            offset=0,
-            show_all=False,
-            show_latest_version=True,
+        rows, columns, important_columns = evaluation_table(namespace, tags)
+        print_evaluation_table(
+            rows, columns, important_columns, all_key_columns, all_metrics, num_columns, metric_name_max_length
         )
-        evaluations_table(entries, all_key_columns, all_metrics, num_columns, metric_name_max_length)
 
 
 class AgentCli:

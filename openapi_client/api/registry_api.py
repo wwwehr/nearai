@@ -911,41 +911,41 @@ class RegistryApi:
         # process the path parameters
         # process the query parameters
         if namespace is not None:
-
+            
             _query_params.append(('namespace', namespace))
-
+            
         if category is not None:
-
+            
             _query_params.append(('category', category))
-
+            
         if tags is not None:
-
+            
             _query_params.append(('tags', tags))
-
+            
         if total is not None:
-
+            
             _query_params.append(('total', total))
-
+            
         if offset is not None:
-
+            
             _query_params.append(('offset', offset))
-
+            
         if show_hidden is not None:
-
+            
             _query_params.append(('show_hidden', show_hidden))
-
+            
         if show_latest_version is not None:
-
+            
             _query_params.append(('show_latest_version', show_latest_version))
-
+            
         if starred_by is not None:
-
+            
             _query_params.append(('starred_by', starred_by))
-
+            
         if star_point_of_view is not None:
-
+            
             _query_params.append(('star_point_of_view', star_point_of_view))
-
+            
         # process the header parameters
         # process the form parameters
         # process the body parameter
@@ -1856,3 +1856,5 @@ class RegistryApi:
             _host=_host,
             _request_auth=_request_auth
         )
+
+

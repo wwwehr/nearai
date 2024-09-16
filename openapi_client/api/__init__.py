@@ -8,4 +8,5 @@ from openapi_client.api.benchmark_api import BenchmarkApi
 from openapi_client.api.default_api import DefaultApi
 from openapi_client.api.evaluation_api import EvaluationApi
 from openapi_client.api.registry_api import RegistryApi
+from openapi_client.api.stars_api import StarsApi
 

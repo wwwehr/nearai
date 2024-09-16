@@ -23,6 +23,6 @@ class EvaluationTable(BaseModel):
 async def table() -> EvaluationTable:
     rows, columns, important_columns = evaluation_table()
     list_rows = [
-        {**dict(key_tuple), **{m: metrics[m] for m in columns if metrics[m]}} for key_tuple, metrics in rows.items()
+        {**dict(key_tuple), **{m: metrics[m] for m in columns if metrics.get(m)}} for key_tuple, metrics in rows.items()
     ]
     return EvaluationTable(rows=list_rows, columns=columns, important_columns=important_columns)

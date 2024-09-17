@@ -1,7 +1,7 @@
 import json
 import re
 from functools import cached_property
-from typing import Dict, Optional, Tuple, cast
+from typing import Dict, List, Optional, Tuple, cast
 
 import requests
 
@@ -24,7 +24,9 @@ def get_provider_model(provider: Optional[str], model: str) -> Tuple[Optional[st
 
     """
     if PROVIDER_MODEL_SEP in model:
-        return model.split(PROVIDER_MODEL_SEP)
+        parts = model.split(PROVIDER_MODEL_SEP)
+        assert len(parts) == 2
+        return parts[0], parts[1]
     return provider, model
 
 
@@ -53,6 +55,8 @@ class ProviderModels:
     @cached_property
     def provider_models(self) -> Dict[NamespacedName, Dict[str, str]]:
         """Returns a mapping canonical->provider->model_full_name."""
+        if CONFIG.nearai_hub is None:
+            raise ValueError("Missing NearAI Hub config")
         base_url = CONFIG.nearai_hub.base_url
         auth = CONFIG.auth
 
@@ -69,7 +73,7 @@ class ProviderModels:
             response.raise_for_status()  # This will raise an HTTPError for bad responses
 
             models = response.json()
-            result = {}
+            result: Dict[NamespacedName, Dict[str, str]] = {}
             for model in models["data"]:
                 provider, namespaced_model = get_provider_namespaced_model(model["id"])
                 namespaced_model = namespaced_model.canonical()
@@ -87,15 +91,15 @@ class ProviderModels:
     def registry_models(self) -> Dict[NamespacedName, NamespacedName]:
         """Returns a mapping canonical->name."""
         entries = registry.list_all_visible(category="model")
-        result = ""
+        result: Dict[NamespacedName, NamespacedName] = {}
         for entry in entries:
             namespaced_name = NamespacedName(name=entry.name, namespace=entry.namespace)
-            canonical_namespace_name = namespaced_name.canonical()
-            if canonical_namespace_name in result:
+            canonical_namespaced_name = namespaced_name.canonical()
+            if canonical_namespaced_name in result:
                 raise ValueError(
-                    f"Duplicate registry entry for model {namespaced_name}, canonical {canonical_namespace_name}"
+                    f"Duplicate registry entry for model {namespaced_name}, canonical {canonical_namespaced_name}"
                 )
-            registry[canonical_namespace_name] = namespaced_name
+            result[canonical_namespaced_name] = namespaced_name
         return result
 
     def available_provider_matches(self, model: NamespacedName) -> Dict[str, str]:
@@ -129,6 +133,20 @@ class ProviderModels:
                 f"Requested provider {provider} for model {model} does not match matched_provider {matched_provider}"
             )
         return matched_provider, available_matches[matched_provider]
+
+    def get_unregistered_common_provider_models(self, limit: Optional[int] = None) -> List[str]:
+        """Returns unregistered provider models with default namespace."""
+        result: List[str] = []
+        for namespaced_name, available_matches in self.provider_models.items():
+            if limit and len(result) >= limit:
+                break
+            if namespaced_name.namespace != "" or namespaced_name in self.registry_models:
+                continue
+            provider_model = available_matches.get(DEFAULT_PROVIDER) or next(iter(available_matches.values()))
+            _, model = get_provider_namespaced_model(provider_model)
+            assert model.namespace == ""
+            result.append(model.name)
+        return result
 
 
 provider_models = ProviderModels()

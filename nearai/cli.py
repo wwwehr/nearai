@@ -11,6 +11,7 @@ from typing import Any, Dict, Optional
 
 import boto3
 import fire
+from hub.api.v1.registry import EntryInformation
 from openapi_client import EntryLocation, EntryMetadataInput
 from openapi_client.api.benchmark_api import BenchmarkApi
 from openapi_client.api.default_api import DefaultApi
@@ -113,6 +114,23 @@ class RegistryCli:
             show_latest_version=show_latest_version,
             starred_by=star,
         )
+        # if category == "model" and len(entries) < total and namespace == "" and tags == "" and star == "":
+        #     provider_models_list = provider_models.get_unregistered_common_provider_models(total - len(entries))
+        #     for provider_model in provider_models_list:
+        #         entries.append(
+        #             EntryInformation(
+        #                 id=0,
+        #                 namespace="",
+        #                 name=provider_model,
+        #                 version="",
+        #                 category="model",
+        #                 description="",
+        #                 details={},
+        #                 tags=[],
+        #                 num_stars=0,
+        #                 starred_by_point_of_view=False,
+        #             )
+        #         )
 
         more_rows = len(entries) > total
         entries = entries[:total]

@@ -442,22 +442,22 @@ async def list_entries(
 
         entries_info.sort(key=lambda x: x.id, reverse=True)
 
-        # if category == "model" and len(entries_info) < total and namespace == "" and tags == "" and starred_by == "":
-        #     provider_models_list = provider_models.get_unregistered_common_provider_models(total - len(entries_info))
-        #     for provider_model in provider_models_list:
-        #         entries_info.append(
-        #             EntryInformation(
-        #                 id=0,
-        #                 namespace="",
-        #                 name=provider_model,
-        #                 version="",
-        #                 category="model",
-        #                 description="",
-        #                 details={},
-        #                 tags=[],
-        #                 num_stars=0,
-        #                 starred_by_point_of_view=False,
-        #             )
-        #         )
+        if category == "model" and len(entries_info) < total and namespace == "" and tags == "" and starred_by == "":
+            provider_models_list = provider_models.get_unregistered_common_provider_models(total - len(entries_info))
+            for provider_model in provider_models_list:
+                entries_info.append(
+                    EntryInformation(
+                        id=0,
+                        namespace="",
+                        name=provider_model,
+                        version="",
+                        category="model",
+                        description="",
+                        details={},
+                        tags=[],
+                        num_stars=0,
+                        starred_by_point_of_view=False,
+                    )
+                )
 
         return entries_info

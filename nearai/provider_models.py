@@ -134,8 +134,8 @@ class ProviderModels:
             )
         return matched_provider, available_matches[matched_provider]
 
-    def get_unregistered_common_provider_models(self, limit: Optional[int] = None) -> List[str]:
-        """Returns unregistered provider models with default namespace."""
+    def get_unregistered_common_provider_models(self, limit: Optional[int] = None) -> List[Tuple[str, str]]:
+        """Returns unregistered provider models (model_short_name, model_full_name) with default namespace."""
         result: List[str] = []
         for namespaced_name, available_matches in self.provider_models.items():
             if limit and len(result) >= limit:
@@ -145,7 +145,7 @@ class ProviderModels:
             provider_model = available_matches.get(DEFAULT_PROVIDER) or next(iter(available_matches.values()))
             _, model = get_provider_namespaced_model(provider_model)
             assert model.namespace == ""
-            result.append(model.name)
+            result.append((model.name, provider_model))
         return result
 
 

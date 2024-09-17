@@ -444,15 +444,15 @@ async def list_entries(
 
         if category == "model" and len(entries_info) < total and namespace == "" and tags == "" and starred_by == "":
             provider_models_list = provider_models.get_unregistered_common_provider_models(total - len(entries_info))
-            for provider_model in provider_models_list:
+            for short_name, full_name in provider_models_list:
                 entries_info.append(
                     EntryInformation(
                         id=0,
                         namespace="",
-                        name=provider_model,
+                        name=short_name,
                         version="",
                         category="model",
-                        description="",
+                        description=full_name,
                         details={},
                         tags=[],
                         num_stars=0,

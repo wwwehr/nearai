@@ -2,14 +2,14 @@
 
 import { type z } from 'zod';
 
-import { type registryEntry } from '~/lib/models';
+import { type registryEntryModel } from '~/lib/models';
 
 import { Container } from './lib/Container';
 import { Flex } from './lib/Flex';
 import { Text } from './lib/Text';
 
 type Props = {
-  details: z.infer<typeof registryEntry>['details'];
+  details: z.infer<typeof registryEntryModel>['details'];
 };
 
 export const AgentWelcome = ({ details }: Props) => {

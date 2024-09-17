@@ -11,13 +11,13 @@ import { Flex } from '~/components/lib/Flex';
 import { Text } from '~/components/lib/Text';
 import { Tooltip } from '~/components/lib/Tooltip';
 import { StarButton } from '~/components/StarButton';
-import { type registryEntry } from '~/lib/models';
+import { type registryEntryModel } from '~/lib/models';
 import { CATEGORY_LABELS } from '~/utils/category';
 
 import { ImageIcon } from './lib/ImageIcon';
 
 type Props = {
-  item: z.infer<typeof registryEntry>;
+  item: z.infer<typeof registryEntryModel>;
 };
 
 export const ResourceCard = ({ item }: Props) => {

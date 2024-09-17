@@ -3,7 +3,7 @@ import { type CSSProperties, useEffect, useState } from 'react';
 import { type z } from 'zod';
 
 import { signInWithNear } from '~/lib/auth';
-import { type registryEntry } from '~/lib/models';
+import { type registryEntryModel } from '~/lib/models';
 import { useAuthStore } from '~/stores/auth';
 import { api } from '~/trpc/react';
 
@@ -14,7 +14,7 @@ import { Tooltip } from './lib/Tooltip';
 import s from './StarButton.module.scss';
 
 type Props = {
-  item: z.infer<typeof registryEntry> | undefined;
+  item: z.infer<typeof registryEntryModel> | undefined;
   style?: CSSProperties;
   variant: 'simple' | 'detailed';
 };

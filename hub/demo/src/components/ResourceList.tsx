@@ -25,10 +25,10 @@ type Props = {
 };
 
 export const ResourceList = ({ category, title }: Props) => {
-  const listQuery = api.hub.registryEntries.useQuery({ category });
+  const entriesQuery = api.hub.registryEntries.useQuery({ category });
 
   const { searched, searchQuery, setSearchQuery } = useRegistryEntriesSearch(
-    listQuery.data,
+    entriesQuery.data,
   );
 
   const { sorted, ...tableProps } = useTable({
@@ -51,9 +51,9 @@ export const ResourceList = ({ category, title }: Props) => {
       >
         <Text as="h1" size="text-2xl">
           {title}{' '}
-          {listQuery.data && (
+          {entriesQuery.data && (
             <Text as="span" size="text-2xl" color="sand-10" weight={400}>
-              ({listQuery.data.length})
+              ({entriesQuery.data.length})
             </Text>
           )}
         </Text>
@@ -70,7 +70,7 @@ export const ResourceList = ({ category, title }: Props) => {
       <Table.Root
         {...tableProps}
         setSort={(value) => {
-          void listQuery.refetch();
+          void entriesQuery.refetch();
           tableProps.setSort(value);
         }}
       >
@@ -96,7 +96,7 @@ export const ResourceList = ({ category, title }: Props) => {
         </Table.Head>
 
         <Table.Body>
-          {!listQuery.data && <Table.PlaceholderRows />}
+          {!entriesQuery.data && <Table.PlaceholderRows />}
 
           {sorted.map((item, index) => (
             <Table.Row key={index}>

@@ -51,7 +51,7 @@ export const listModelsModel = z.object({
   provider: z.string(),
 });
 
-export const oneModelModel = z.object({
+export const modelModel = z.object({
   id: z.string(),
   created: z.number(),
   object: z.string(),
@@ -63,12 +63,12 @@ export const oneModelModel = z.object({
   context_length: z.number().nullable().optional(),
 });
 
-export const listModelsResponseModel = z.object({
-  data: z.array(oneModelModel),
+export const modelsModel = z.object({
+  data: z.array(modelModel),
   object: z.string(),
 });
 
-export const challengeResponseModel = z.object({
+export const challengeModel = z.object({
   challenge: z.string(),
 });
 
@@ -82,14 +82,14 @@ export const nonceModel = z.object({
   first_seen_at: z.string(),
 });
 
-export const listNoncesModel = z.array(nonceModel);
+export const noncesModel = z.array(nonceModel);
 
 export const revokeNonceModel = z.object({
   nonce: z.string().regex(/^\d{32}$/),
   auth: z.string(),
 });
 
-export const registryEntry = z.object({
+export const registryEntryModel = z.object({
   id: z.number(),
   category: z.string(),
   namespace: z.string(),
@@ -127,7 +127,7 @@ export const registryEntry = z.object({
   ),
 });
 
-export const registryEntries = z.array(registryEntry);
+export const registryEntriesModel = z.array(registryEntryModel);
 
 export const chatWithAgentModel = z.object({
   agent_id: z.string(),
@@ -142,4 +142,4 @@ export const fileModel = z.object({
   filename: z.string(),
 });
 
-export const listFiles = fileModel.array();
+export const filesModel = fileModel.array();

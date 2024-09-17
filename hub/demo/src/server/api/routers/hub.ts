@@ -7,12 +7,12 @@ import {
   chatModel,
   chatResponseModel,
   chatWithAgentModel,
-  listFiles,
-  listModelsResponseModel,
-  listNoncesModel,
+  filesModel,
   type messageModel,
-  type registryEntries,
-  registryEntry,
+  modelsModel,
+  noncesModel,
+  type registryEntriesModel,
+  registryEntryModel,
   revokeNonceModel,
 } from '~/lib/models';
 import {
@@ -164,6 +164,17 @@ export const hubRouter = createTRPCRouter({
       return await downloadEnvironment(input.environmentId);
     }),
 
+  evaluations: publicProcedure.query(async () => {
+    const response = await fetch(`${env.ROUTER_URL}/evaluation/table`, {
+      method: 'GET',
+    });
+
+    const data: unknown = await response.json();
+    if (!response.ok) throw data;
+
+    return data;
+  }),
+
   file: publicProcedure
     .input(
       z.object({
@@ -212,7 +223,7 @@ export const hubRouter = createTRPCRouter({
     )
     .query(async ({ input }) => {
       const list = await fetchWithZod(
-        listFiles,
+        filesModel,
         `${env.ROUTER_URL}/registry/list_files`,
         {
           method: 'POST',
@@ -242,13 +253,13 @@ export const hubRouter = createTRPCRouter({
     const response = await fetch(url);
     const data: unknown = await response.json();
 
-    return listModelsResponseModel.parse(data);
+    return modelsModel.parse(data);
   }),
 
   nonces: protectedProcedure.query(async ({ ctx }) => {
     const url = env.ROUTER_URL + '/nonce/list';
 
-    const nonces = await fetchWithZod(listNoncesModel, url, {
+    const nonces = await fetchWithZod(noncesModel, url, {
       headers: {
         Authorization: ctx.authorization,
       },
@@ -308,9 +319,9 @@ export const hubRouter = createTRPCRouter({
         of throwing an error for the entire list.
       */
 
-      const list: z.infer<typeof registryEntries> = data
+      const list: z.infer<typeof registryEntriesModel> = data
         .map((item) => {
-          const parsed = registryEntry.safeParse(item);
+          const parsed = registryEntryModel.safeParse(item);
           return parsed.data;
         })
         .filter((entry) => !!entry);
@@ -396,7 +407,7 @@ export const hubRouter = createTRPCRouter({
         namespace: z.string(),
         name: z.string(),
         version: z.string(),
-        metadata: registryEntry.partial(),
+        metadata: registryEntryModel.partial(),
       }),
     )
     .mutation(

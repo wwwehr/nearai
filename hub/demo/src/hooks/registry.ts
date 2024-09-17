@@ -2,7 +2,7 @@ import { useParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { type z } from 'zod';
 
-import { type registryEntries } from '~/lib/models';
+import { type registryEntriesModel } from '~/lib/models';
 import { type RegistryCategory } from '~/server/api/routers/hub';
 import { api } from '~/trpc/react';
 
@@ -40,7 +40,7 @@ export function useCurrentRegistryEntry(category: RegistryCategory) {
 }
 
 export function useRegistryEntriesSearch(
-  data: z.infer<typeof registryEntries> | undefined,
+  data: z.infer<typeof registryEntriesModel> | undefined,
 ) {
   const [searchQuery, setSearchQuery] = useState('');
   const searchQueryDebounced = useDebouncedValue(searchQuery, 150);

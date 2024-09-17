@@ -284,7 +284,6 @@ class Environment(object):
         messages: Iterable[ChatCompletionMessageParam] | str,
         model: Iterable[ChatCompletionMessageParam] | str,
         stream: bool,
-        auth: Optional[AuthData],
         **kwargs: Any,
     ) -> Union[ModelResponse, CustomStreamWrapper]:
         """Run inference completions for given parameters."""
@@ -304,7 +303,6 @@ class Environment(object):
         return self._inference.completions(
             model,
             messages,
-            auth=auth,
             stream=stream,
             temperature=self._agents[0].model_temperature if self._agents else None,
             max_tokens=self._agents[0].model_max_tokens if self._agents else None,
@@ -317,11 +315,10 @@ class Environment(object):
         messages: Iterable[ChatCompletionMessageParam] | str,
         model: Iterable[ChatCompletionMessageParam] | str = "",
         stream: bool = False,
-        auth: Optional[AuthData] = None,
         **kwargs: Any,
     ) -> Union[ModelResponse, CustomStreamWrapper]:
         """Returns all completions for given messages using the given model."""
-        return self._run_inference_completions(messages, model, stream, auth, **kwargs)
+        return self._run_inference_completions(messages, model, stream, **kwargs)
 
     # TODO(286): `messages` may be model and `model` may be messages temporarily to support deprecated API.
     def completions_and_run_tools(

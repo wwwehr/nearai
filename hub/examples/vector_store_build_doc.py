@@ -1,4 +1,4 @@
-import chardet
+import chardet # type: ignore
 import json
 import openai
 import os
@@ -16,6 +16,9 @@ CONFIG = Config()
 # Update config from global config file
 config_data = load_config_file(local=False)
 CONFIG = CONFIG.update_with(config_data)
+if CONFIG.api_url is None:
+    raise ValueError("CONFIG.api_url is None")
+
 base_url = CONFIG.api_url + "v1"
 
 client = openai.OpenAI(base_url=base_url, api_key=json.dumps(config_data["auth"]))
@@ -106,13 +109,13 @@ if vs_id is None:
     vs_id = vs.id
 
 
-def process_vector_results(results: List[List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
+def process_vector_results(results) -> List[Dict[str, Any]]:
     flattened_results = [item for sublist in results for item in sublist]
     # print("flattened_results", flattened_results)
     return flattened_results[:20]
 
 
-def generate_llm_response(messages: List[Dict[str, Any]], processed_results: List[Dict[str, Any]]) -> str:
+def generate_llm_response(messages, processed_results):
     system_prompt = """
     You're an AI assistant that writes technical documentation. You can search a vector store for information relevant
     to the user's query.

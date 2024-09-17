@@ -94,7 +94,7 @@
   outline: none;
   font: var(--text-s);
   cursor: pointer;
-  transition: all var(--transition-speed);
+  transition: var(--transitions);
 
   [data-icon][data-color='current'] {
     color: var(--sand-10) !important;
@@ -123,7 +123,7 @@
   display: flex;
   align-items: center;
   transform: rotate(0deg);
-  transition: all var(--transition-speed);
+  transition: var(--transitions);
   opacity: 0.5;
   margin-left: auto;
 

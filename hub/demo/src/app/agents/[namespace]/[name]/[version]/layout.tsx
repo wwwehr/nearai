@@ -24,7 +24,7 @@ import {
   useCurrentRegistryEntry,
   useRegistryEntryParams,
 } from '~/hooks/registry';
-import { CATEGORY_LABELS } from '~/utils/category';
+import { CATEGORY_LABELS } from '~/lib/category';
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   const pathSegments = usePathname().split('/');

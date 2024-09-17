@@ -7,6 +7,7 @@ import {
   chatModel,
   chatResponseModel,
   chatWithAgentModel,
+  evaluationsTableModel,
   filesModel,
   type messageModel,
   modelsModel,
@@ -165,14 +166,27 @@ export const hubRouter = createTRPCRouter({
     }),
 
   evaluations: publicProcedure.query(async () => {
-    const response = await fetch(`${env.ROUTER_URL}/evaluation/table`, {
-      method: 'GET',
+    const evaluations = await fetchWithZod(
+      evaluationsTableModel,
+      `${env.ROUTER_URL}/evaluation/table`,
+    );
+
+    const infoColumns = ['agent', 'model', 'namespace', 'version', 'provider'];
+    const benchmarkColumns = evaluations.columns.filter(
+      (column) => !infoColumns.includes(column),
+    );
+
+    evaluations.rows.forEach((row) => {
+      if (row.agent && row.namespace && row.version) {
+        row.agentPath = `${row.namespace}/${row.agent}/${row.version}`;
+      }
     });
 
-    const data: unknown = await response.json();
-    if (!response.ok) throw data;
-
-    return data;
+    return {
+      benchmarkColumns,
+      infoColumns,
+      results: evaluations.rows,
+    };
   }),
 
   file: publicProcedure

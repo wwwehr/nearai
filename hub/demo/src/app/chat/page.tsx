@@ -24,25 +24,16 @@ import { Text } from '~/components/lib/Text';
 import { Messages } from '~/components/Messages';
 import { SignInPrompt } from '~/components/SignInPrompt';
 import { ThreadsSidebar } from '~/components/ThreadsSidebar';
+import { useChatModels } from '~/hooks/chat';
 import { useZodForm } from '~/hooks/form';
-import { useListModels } from '~/hooks/queries';
 import { chatModel, type messageModel } from '~/lib/models';
+import { PROVIDER_OPTIONS } from '~/lib/providers';
+import { ROLE_OPTIONS } from '~/lib/roles';
 import { useAuthStore } from '~/stores/auth';
 import { api } from '~/trpc/react';
 import { handleClientError } from '~/utils/error';
 
 const LOCAL_STORAGE_KEY = 'inference_conversation';
-
-const roleOptions: ComboboxOption[] = [
-  { label: 'User', value: 'user' },
-  { label: 'Assistant', value: 'assistant' },
-  { label: 'System', value: 'system' },
-];
-
-const providerOptions: ComboboxOption[] = [
-  { label: 'Fireworks', value: 'fireworks' },
-  { label: 'Hyperbolic', value: 'hyperbolic' },
-];
 
 export default function InferencePage() {
   const router = useRouter();
@@ -50,7 +41,7 @@ export default function InferencePage() {
   const form = useZodForm(chatModel);
   const chatMutation = api.hub.chat.useMutation();
   const provider = form.watch('provider');
-  const models = useListModels(provider);
+  const models = useChatModels(provider);
   const [conversation, setConversation] = useState<
     z.infer<typeof messageModel>[]
   >([]);
@@ -223,7 +214,7 @@ export default function InferencePage() {
             defaultValue="fireworks"
             name="provider"
             render={({ field }) => (
-              <Combobox label="Provider" items={providerOptions} {...field} />
+              <Combobox label="Provider" items={PROVIDER_OPTIONS} {...field} />
             )}
           />
 
@@ -241,7 +232,7 @@ export default function InferencePage() {
             defaultValue="user"
             name="messages.0.role"
             render={({ field }) => (
-              <Combobox label="Role" items={roleOptions} {...field} />
+              <Combobox label="Role" items={ROLE_OPTIONS} {...field} />
             )}
           />
 

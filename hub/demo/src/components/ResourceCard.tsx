@@ -12,7 +12,7 @@ import { Text } from '~/components/lib/Text';
 import { Tooltip } from '~/components/lib/Tooltip';
 import { StarButton } from '~/components/StarButton';
 import { type registryEntryModel } from '~/lib/models';
-import { CATEGORY_LABELS } from '~/utils/category';
+import { CATEGORY_LABELS } from '~/lib/category';
 
 import { ImageIcon } from './lib/ImageIcon';
 

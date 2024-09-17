@@ -18,8 +18,8 @@ import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 
 import { signInWithNear } from '~/lib/auth';
+import { CATEGORY_LABELS } from '~/lib/category';
 import { useAuthStore } from '~/stores/auth';
-import { CATEGORY_LABELS } from '~/utils/category';
 
 import { BreakpointDisplay } from './lib/BreakpointDisplay';
 import { Button } from './lib/Button';

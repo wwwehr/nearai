@@ -4,7 +4,7 @@ import { api } from '~/trpc/react';
 
 const PROVIDER_MODEL_SEP = '::';
 
-export function useListModels(provider: string) {
+export function useChatModels(provider: string) {
   const models = api.hub.models.useQuery();
 
   return useQuery({

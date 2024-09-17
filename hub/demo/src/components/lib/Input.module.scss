@@ -188,7 +188,7 @@
   width: var(--input-icon-size);
   height: var(--input-icon-size);
   pointer-events: none;
-  transition: all var(--transition-speed);
+  transition: var(--transitions);
   color: var(--input-color-icon);
 
   svg {

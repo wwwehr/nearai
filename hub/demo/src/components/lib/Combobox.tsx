@@ -1,6 +1,6 @@
 'use client';
 
-import { CaretDown, CheckCircle, Circle } from '@phosphor-icons/react';
+import { CaretDown, CheckCircle, Circle, Plus } from '@phosphor-icons/react';
 import { useCombobox } from 'downshift';
 import type { CSSProperties, FocusEventHandler, ReactElement } from 'react';
 import { useMemo, useRef } from 'react';
@@ -31,6 +31,7 @@ type BaseProps = {
   items: ComboboxOption[];
   label?: string;
   maxDropdownHeight?: string;
+  mode?: 'radio-select' | 'filter';
   name: string;
   noneLabel?: string;
   onBlur?: (event: unknown) => void;
@@ -54,7 +55,10 @@ type ConditionalProps =
 type Props = BaseProps & ConditionalProps;
 
 export const Combobox = forwardRef<HTMLInputElement, Props>(
-  ({ allowCustomInput, allowNone, noneLabel, ...props }, ref) => {
+  (
+    { allowCustomInput, allowNone, mode = 'radio-select', noneLabel, ...props },
+    ref,
+  ) => {
     const noneItem = useMemo(() => {
       const item: ComboboxOption = {
         label: noneLabel ?? 'None',
@@ -128,22 +132,30 @@ export const Combobox = forwardRef<HTMLInputElement, Props>(
             }, Actual value type: ${typeof newValue}`,
           );
         }
+
+        // if (mode === 'filter') {
+        //   setInputValue('');
+        // }
       },
     });
 
     const onBlur: FocusEventHandler<HTMLInputElement> = (event) => {
-      if (allowCustomInput) {
-        if (!event.target.value) {
+      if (mode === 'filter') {
+        setInputValue('');
+      } else {
+        if (allowCustomInput) {
+          if (!event.target.value) {
+            setInputValue(
+              internalCurrentValueBeforeFocus.current?.toString() ?? '',
+            );
+          }
+        } else {
           setInputValue(
-            internalCurrentValueBeforeFocus.current?.toString() ?? '',
+            combobox.selectedItem?.label ??
+              combobox.selectedItem?.value.toString() ??
+              '',
           );
         }
-      } else {
-        setInputValue(
-          combobox.selectedItem?.label ??
-            combobox.selectedItem?.value.toString() ??
-            '',
-        );
       }
 
       props.onBlur && props.onBlur(event);
@@ -213,6 +225,7 @@ export const Combobox = forwardRef<HTMLInputElement, Props>(
         className={s.wrapper}
         data-open={combobox.isOpen && !forceOverrideClosed}
         data-number={props.number}
+        data-mode={mode}
         style={props.style}
       >
         <div className={s.innerWrapper}>
@@ -238,7 +251,11 @@ export const Combobox = forwardRef<HTMLInputElement, Props>(
                   className={s.toggleButton}
                   {...combobox.getToggleButtonProps()}
                 >
-                  <SvgIcon icon={<CaretDown weight="bold" />} />
+                  <SvgIcon
+                    icon={
+                      mode === 'filter' ? <Plus /> : <CaretDown weight="bold" />
+                    }
+                  />
                 </button>
 
                 <ul
@@ -256,16 +273,20 @@ export const Combobox = forwardRef<HTMLInputElement, Props>(
                       key={item.value}
                       {...combobox.getItemProps({ item, index })}
                     >
-                      {combobox.selectedItem?.value === item.value ? (
-                        <SvgIcon
-                          icon={<CheckCircle weight="duotone" />}
-                          color="green-9"
-                        />
-                      ) : (
-                        <SvgIcon
-                          icon={<Circle weight="duotone" />}
-                          color="sand-10"
-                        />
+                      {mode === 'radio-select' && (
+                        <>
+                          {combobox.selectedItem?.value === item.value ? (
+                            <SvgIcon
+                              icon={<CheckCircle weight="duotone" />}
+                              color="green-9"
+                            />
+                          ) : (
+                            <SvgIcon
+                              icon={<Circle weight="duotone" />}
+                              color="sand-10"
+                            />
+                          )}
+                        </>
                       )}
 
                       {item.label ?? item.value}

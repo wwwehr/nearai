@@ -19,7 +19,7 @@ import { useProfileParams } from '~/hooks/profile';
 import { useQueryParams } from '~/hooks/url';
 import { type RegistryCategory } from '~/server/api/routers/hub';
 import { api } from '~/trpc/react';
-import { CATEGORY_LABELS } from '~/utils/category';
+import { CATEGORY_LABELS } from '~/lib/category';
 import { toTitleCase } from '~/utils/string';
 
 const categories: RegistryCategory[] = [

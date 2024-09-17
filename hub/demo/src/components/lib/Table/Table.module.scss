@@ -134,7 +134,7 @@
 
 .row {
   width: 100%;
-  transition: all var(--transition-speed);
+  transition: var(--transitions);
 
   &[data-clickable='true'] {
     cursor: pointer;
@@ -156,7 +156,7 @@
   white-space: nowrap;
   text-transform: uppercase;
   background: linear-gradient(var(--sand-0) 85%, transparent);
-  transition: all var(--transition-speed);
+  transition: var(--transitions);
 
   &[data-clickable='true'] {
     cursor: pointer;
@@ -186,7 +186,7 @@
 .cell {
   padding: var(--table-half-padding);
   vertical-align: middle;
-  transition: all var(--transition-speed);
+  transition: var(--transitions);
   font: var(--text-s);
 
   &:first-child {

@@ -80,4 +80,8 @@
     font: var(--text-xs);
     color: var(--sand-11);
   }
+  &[data-size='text-2xs'] {
+    font: var(--text-2xs);
+    color: var(--sand-11);
+  }
 }

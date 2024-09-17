@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { parseStringOrNumber } from '~/utils/number';
+
 export const authorizationModel = z.object({
   account_id: z.string(),
   public_key: z.string(),
@@ -143,3 +145,24 @@ export const fileModel = z.object({
 });
 
 export const filesModel = fileModel.array();
+
+export const evaluationTableRowModel = z.intersection(
+  z.object({
+    agent: z.string(),
+    agentPath: z.string().optional(),
+    model: z.string(),
+    namespace: z.string(),
+    provider: z.string(),
+    version: z.string(),
+  }),
+  z.record(
+    z.string(),
+    z.preprocess(parseStringOrNumber, z.string().or(z.number())),
+  ),
+);
+
+export const evaluationsTableModel = z.object({
+  columns: z.string().array(),
+  important_columns: z.string().array(),
+  rows: evaluationTableRowModel.array(),
+});

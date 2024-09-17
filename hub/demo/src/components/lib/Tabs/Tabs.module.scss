@@ -56,7 +56,7 @@
   color: var(--tabs-color-text);
   cursor: pointer;
   user-select: none;
-  transition: all var(--transition-speed);
+  transition: var(--transitions);
 
   &:hover {
     --tabs-color-icon: var(--sand-12);
@@ -89,7 +89,7 @@
   width: var(--tabs-size-icon);
   height: var(--tabs-size-icon);
   color: var(--tabs-color-icon);
-  transition: all var(--transition-speed);
+  transition: var(--transitions);
 
   svg {
     display: block;

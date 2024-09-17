@@ -8,9 +8,9 @@ from jinja2 import Template
 from litellm import Choices, ModelResponse
 from pydantic import BaseModel
 
-from hub.api.near.primitives import get_provider_model
 from nearai.completion import InferenceRouter
-from nearai.config import CONFIG, DEFAULT_PROVIDER, PROMPTS_FOLDER
+from nearai.config import CONFIG, PROMPTS_FOLDER
+from nearai.provider_models import provider_models
 from nearai.solvers import SolverStrategy
 
 
@@ -73,7 +73,8 @@ class MBPPSolverStrategy(SolverStrategy):
         return ""
 
     def model_provider(self) -> str:  # noqa: D102
-        provider, _ = get_provider_model(DEFAULT_PROVIDER, self.model)
+        # TODO(#311): create a better helper method.
+        provider, _ = provider_models.match_provider_model(self.model)
         return provider
 
     def solve(self, datum: dict) -> bool:  # noqa: D102

@@ -1,5 +1,7 @@
 import re
 
+from nearai.config import DEFAULT_NAMESPACE
+
 
 def get_canonical_name(name: str) -> str:
     """Returns a name that can be used for matching entities.
@@ -31,3 +33,32 @@ def get_canonical_name(name: str) -> str:
     # Convert 'metallama' to 'llama'
     name = name.replace("metallama", "llama")
     return name
+
+
+class NamespacedName:
+    def __init__(self, name: str, namespace: str = ""):  # noqa: D107
+        self.name = name
+        self.namespace = namespace
+
+    def __eq__(self, other):  # noqa: D105
+        if not isinstance(other, NamespacedName):
+            return NotImplemented
+        return self.name == other.name and self.namespace == other.namespace
+
+    def __hash__(self):  # noqa: D105
+        return hash((self.name, self.namespace))
+
+    def __str__(self):  # noqa: D105
+        if self.namespace:
+            return f"{self.namespace}/{self.name}"
+        return self.name
+
+    def __repr__(self):  # noqa: D105
+        return f"NamespacedName(name='{self.name}', namespace='{self.namespace}')"
+
+    def canonical(self) -> "NamespacedName":  # noqa: D105
+        """Returns canonical NamespacedName."""
+        return NamespacedName(
+            name=get_canonical_name(self.name),
+            namespace=get_canonical_name(self.namespace) if self.namespace != DEFAULT_NAMESPACE else "",
+        )

@@ -31,6 +31,8 @@ from nearai.evaluation import evaluation_table, print_evaluation_table
 from nearai.finetune import FinetuneCli
 from nearai.hub import Hub
 from nearai.lib import check_metadata, parse_location, parse_tags
+from nearai.naming import NamespacedName
+from nearai.provider_models import provider_models
 from nearai.registry import registry
 from nearai.solvers import SolverScoringMethod
 from nearai.tensorboard_feed import TensorboardCli
@@ -47,6 +49,12 @@ class RegistryCli:
             return
 
         print(metadata.model_dump_json(indent=2))
+        if metadata.category == "model":
+            available_provider_matches = provider_models.available_provider_matches(
+                NamespacedName(name=metadata.name, namespace=entry_location.namespace)
+            )
+            if len(available_provider_matches) > 0:
+                print(f"Available provider matches: {available_provider_matches}")
 
     def metadata_template(self, local_path: str = ".", category: str = "", description: str = ""):
         """Create a metadata template."""

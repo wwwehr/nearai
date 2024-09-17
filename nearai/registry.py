@@ -288,10 +288,12 @@ class Registry:
             starred_by=starred_by,
         )
 
-    def list_all_visible(self) -> List[EntryInformation]:
+    def list_all_visible(self, category: str = "") -> List[EntryInformation]:
         """List all visible entries."""
         total = 10000
-        entries = self.list("", "", "", total, 0, False, True)
+        entries = self.list(
+            namespace="", category=category, tags="", total=total, offset=0, show_all=False, show_latest_version=True
+        )
         assert len(entries) < total
         return entries
 

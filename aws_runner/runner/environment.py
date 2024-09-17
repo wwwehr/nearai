@@ -232,9 +232,7 @@ class Environment(object):
         if model == "":
             return DEFAULT_PROVIDER_MODEL
 
-        # TODO(#225): convert model_short_name -> model_full_path before passing to AI Hub.
-        # Until it's not implemented assume the model given from metadata for not default provider
-        # is already model_full_path, or model_short_name as used by fireworks.
+        # TODO(#312): On CLI we do 'model_short_name' -> 'provider::model_full_path' here.
         if provider == "" or provider == DEFAULT_PROVIDER:
             return model
         return provider + PROVIDER_MODEL_SEP + model

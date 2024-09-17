@@ -11,9 +11,9 @@ SAVED_REGISTRY_ID = 81  # this is a valid registry id of a previous test run con
 
 
 class TestEnvironment(unittest.TestCase):
-    """Integration tests for saving and loading Environments"""
+    """Integration tests for saving and loading Environments."""
 
-    def test_save_without_base_id(self):
+    def test_save_without_base_id(self):  # noqa: D102
         test_dir = TEST_DIR
         path = f"{test_dir}/test-agents/test"
         agent = Agent("test", path, "test")
@@ -23,7 +23,7 @@ class TestEnvironment(unittest.TestCase):
 
         assert env.save_to_registry("test", run_id) is not None
 
-    def test_save_with_base_id(self):
+    def test_save_with_base_id(self):  # noqa: D102
         test_dir = TEST_DIR
         path = f"{test_dir}/test-agents/test"
         agent = Agent("test", path, "test")
@@ -37,7 +37,7 @@ class TestEnvironment(unittest.TestCase):
         assert registry_entry is not None
         assert registry_entry.details[0]["base_id"] == "unittest-save"
 
-    def test_save_as_name(self):
+    def test_save_as_name(self):  # noqa: D102
         test_dir = TEST_DIR
         path = f"{test_dir}/test-agents/test"
         agent = Agent("test", path, "test")
@@ -47,7 +47,7 @@ class TestEnvironment(unittest.TestCase):
 
         assert env.save_to_registry("test", run_id, None, "unittest-base") is not None
 
-    def test_load_by_registry_id(self):
+    def test_load_by_registry_id(self):  # noqa: D102
         test_dir = TEST_DIR
         path = f"{test_dir}/test-agents/test"
         if os.path.exists(path):

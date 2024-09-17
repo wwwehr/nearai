@@ -8,8 +8,8 @@ from litellm import completion as litellm_completion
 from openai import OpenAI
 from openai.types.chat import ChatCompletion, ChatCompletionMessageParam
 
-from hub.api.near.primitives import get_provider_model
 from hub.api.v1.sql import SimilaritySearch
+from nearai.provider_models import provider_models
 
 from .config import CONFIG, DEFAULT_MODEL_MAX_TOKENS, DEFAULT_MODEL_TEMPERATURE, AuthData, Config, NearAiHubConfig
 
@@ -72,7 +72,7 @@ class InferenceRouter(object):
         """
         if self._config.nearai_hub is None:
             raise ValueError("Missing NearAI Hub config")
-        provider, _ = get_provider_model(self._config.nearai_hub.default_provider, model)
+        provider, model = provider_models.match_provider_model(model)
 
         auth_bearer_token = self.get_auth_str(auth)
 

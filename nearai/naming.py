@@ -35,6 +35,26 @@ def get_canonical_name(name: str) -> str:
     return name
 
 
+def create_registry_name(name: str) -> str:
+    """Formats `name` for a suitable registry name."""
+    # Convert to lowercase
+    name = name.lower()
+    # Convert '.' between digits to 'p'
+    name = re.sub(r"(\d)\.(\d)", r"\1p\2", name)
+    # Convert '<digit>v<digit>' -> '<digit>-<digit>'
+    name = re.sub(r"(\d)v(\d)", r"\1-\2", name)
+    # Convert '<not letter>v<digit>' -> '<not letter><digit>'
+    name = re.sub(r"(^|[^a-z])v(\d)", r"\1\2", name)
+    # Replace non-alphanumeric characters between digits with '-'
+    name = re.sub(r"(\d)[^a-z0-9]+(\d)", r"\1-\2", name)
+    # Remove remaining non-alphanumeric characters, except '-'
+    name = re.sub(r"[^a-z0-9-]", "", name)
+    # Convert 'metallama' or 'meta-llama' to 'llama'
+    name = name.replace("metallama", "llama")
+    name = name.replace("meta-llama", "llama")
+    return name
+
+
 class NamespacedName:
     def __init__(self, name: str, namespace: str = ""):  # noqa: D107
         self.name = name

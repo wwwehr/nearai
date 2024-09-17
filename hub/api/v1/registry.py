@@ -10,7 +10,6 @@ import botocore.exceptions
 from dotenv import load_dotenv
 from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
-from nearai.provider_models import provider_models
 from pydantic import AfterValidator, BaseModel
 from sqlmodel import delete, select, text
 
@@ -441,23 +440,5 @@ async def list_entries(
             entry.tags = q_tags_dict[entry.id]
 
         entries_info.sort(key=lambda x: x.id, reverse=True)
-
-        if category == "model" and len(entries_info) < total and namespace == "" and tags == "" and starred_by == "":
-            provider_models_list = provider_models.get_unregistered_common_provider_models(total - len(entries_info))
-            for short_name, full_name in provider_models_list:
-                entries_info.append(
-                    EntryInformation(
-                        id=0,
-                        namespace="",
-                        name=short_name,
-                        version="",
-                        category="model",
-                        description=full_name,
-                        details={},
-                        tags=[],
-                        num_stars=0,
-                        starred_by_point_of_view=False,
-                    )
-                )
 
         return entries_info

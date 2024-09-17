@@ -23,6 +23,7 @@ from nearai.config import (
     DEFAULT_MODEL,
     DEFAULT_MODEL_MAX_TOKENS,
     DEFAULT_MODEL_TEMPERATURE,
+    DEFAULT_NAMESPACE,
     DEFAULT_PROVIDER,
     update_config,
 )
@@ -31,9 +32,9 @@ from nearai.evaluation import evaluation_table, print_evaluation_table
 from nearai.finetune import FinetuneCli
 from nearai.hub import Hub
 from nearai.lib import check_metadata, parse_location, parse_tags
-from nearai.naming import NamespacedName
-from nearai.provider_models import provider_models
-from nearai.registry import registry
+from nearai.naming import NamespacedName, create_registry_name
+from nearai.provider_models import get_provider_namespaced_model, provider_models
+from nearai.registry import get_registry_folder, registry
 from nearai.solvers import SolverScoringMethod
 from nearai.tensorboard_feed import TensorboardCli
 
@@ -54,7 +55,17 @@ class RegistryCli:
                 NamespacedName(name=metadata.name, namespace=entry_location.namespace)
             )
             if len(available_provider_matches) > 0:
-                print(f"Available provider matches: {available_provider_matches}")
+                header = ["provider", "name"]
+
+                table = []
+                for provider, name in available_provider_matches.items():
+                    table.append(
+                        [
+                            fill(provider),
+                            fill(name),
+                        ]
+                    )
+                print(tabulate(table, headers=header, tablefmt="simple_grid"))
 
     def metadata_template(self, local_path: str = ".", category: str = "", description: str = ""):
         """Create a metadata template."""
@@ -135,6 +146,13 @@ class RegistryCli:
 
         print(tabulate(table, headers=header, tablefmt="simple_grid"))
 
+        if category == "model" and len(entries) < total and namespace == "" and tags == "" and star == "":
+            unregistered_common_provider_models = provider_models.get_unregistered_common_provider_models()
+            if len(unregistered_common_provider_models):
+                print(
+                    f"There are unregistered common provider models: {unregistered_common_provider_models}. Run 'nearai registry upload-unregistered-common-provider-models' to update registry."  # noqa: E501
+                )
+
     def update(self, local_path: str = ".") -> None:
         """Update metadata of a registry item."""
         path = Path(local_path)
@@ -162,6 +180,55 @@ class RegistryCli:
         entry_metadata = EntryMetadataInput.model_validate(metadata)
         result = registry.update(entry_location, entry_metadata)
         print(json.dumps(result, indent=2))
+
+    def upload_unregistered_common_provider_models(self, dry_run: bool = True) -> None:
+        """Creates new registry items for unregistered common provider models."""
+        provider_matches_list = provider_models.get_unregistered_common_provider_models()
+        if len(provider_matches_list) == 0:
+            print("No new models to upload.")
+            return
+
+        print("Going to create new registry items:")
+        header = ["entry", "description"]
+        table = []
+        paths = []
+        for provider_matches in provider_matches_list:
+            provider_model = provider_matches.get(DEFAULT_PROVIDER) or next(iter(provider_matches.values()))
+            _, model = get_provider_namespaced_model(provider_model)
+            assert model.namespace == ""
+            model.name = create_registry_name(model.name)
+            model.namespace = DEFAULT_NAMESPACE
+            version = "1.0.0"
+            description = " & ".join(provider_matches.values())
+            table.append(
+                [
+                    fill(f"{model.namespace}/{model.name}/{version}"),
+                    fill(description, 50),
+                ]
+            )
+
+            path = get_registry_folder() / model.namespace / model.name / version
+            path.mkdir(parents=True, exist_ok=True)
+            paths.append(path)
+            metadata_path = path / "metadata.json"
+            with open(metadata_path, "w") as f:
+                metadata: Dict[str, Any] = {
+                    "name": model.name,
+                    "version": version,
+                    "description": description,
+                    "category": "model",
+                    "tags": [],
+                    "details": {},
+                    "show_entry": True,
+                }
+                json.dump(metadata, f, indent=2)
+
+        print(tabulate(table, headers=header, tablefmt="simple_grid"))
+        if dry_run:
+            print("Please verify, then repeat the command with --dry_run=False")
+        else:
+            for path in paths:
+                self.upload(str(path))
 
     def upload(self, local_path: str = ".") -> None:
         """Upload item to the registry."""

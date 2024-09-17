@@ -134,18 +134,13 @@ class ProviderModels:
             )
         return matched_provider, available_matches[matched_provider]
 
-    def get_unregistered_common_provider_models(self, limit: Optional[int] = None) -> List[Tuple[str, str]]:
-        """Returns unregistered provider models (model_short_name, model_full_name) with default namespace."""
-        result: List[Tuple[str, str]] = []
+    def get_unregistered_common_provider_models(self) -> List[Dict[str, str]]:
+        """Returns provider matches for unregistered provider models with default namespace."""
+        result: List[Dict[str, str]] = []
         for namespaced_name, available_matches in self.provider_models.items():
-            if limit and len(result) >= limit:
-                break
             if namespaced_name.namespace != "" or namespaced_name in self.registry_models:
                 continue
-            provider_model = available_matches.get(DEFAULT_PROVIDER) or next(iter(available_matches.values()))
-            _, model = get_provider_namespaced_model(provider_model)
-            assert model.namespace == ""
-            result.append((model.name, provider_model))
+            result.append(available_matches)
         return result
 
 

@@ -33,7 +33,8 @@ export const ResourceList = ({ category, title }: Props) => {
 
   const { sorted, ...tableProps } = useTable({
     data: searched,
-    sortColumn: 'name',
+    sortColumn: 'num_stars',
+    sortOrder: 'DESCENDING',
   });
 
   return (
@@ -66,7 +67,13 @@ export const ResourceList = ({ category, title }: Props) => {
         />
       </Grid>
 
-      <Table.Root {...tableProps}>
+      <Table.Root
+        {...tableProps}
+        setSort={(value) => {
+          void listQuery.refetch();
+          tableProps.setSort(value);
+        }}
+      >
         <Table.Head>
           <Table.Row>
             <Table.HeadCell column="name" sortable>

@@ -18,6 +18,7 @@ DEFAULT_MODEL = "llama-v3p1-405b-instruct-long"
 DEFAULT_PROVIDER_MODEL = f"fireworks::accounts/fireworks/models/{DEFAULT_MODEL}"
 DEFAULT_MODEL_TEMPERATURE = 1.0
 DEFAULT_MODEL_MAX_TOKENS = 16384
+DEFAULT_NAMESPACE = "near.ai"
 
 
 def get_config_path(local: bool = False) -> Path:

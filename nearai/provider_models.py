@@ -136,7 +136,7 @@ class ProviderModels:
 
     def get_unregistered_common_provider_models(self, limit: Optional[int] = None) -> List[Tuple[str, str]]:
         """Returns unregistered provider models (model_short_name, model_full_name) with default namespace."""
-        result: List[str] = []
+        result: List[Tuple[str, str]] = []
         for namespaced_name, available_matches in self.provider_models.items():
             if limit and len(result) >= limit:
                 break

@@ -441,6 +441,7 @@ async def list_entries(
             entry.tags = q_tags_dict[entry.id]
 
         entries_info.sort(key=lambda x: x.id, reverse=True)
+        # DEBUGGING
         entries_info = []
 
         if category == "model" and len(entries_info) < total and namespace == "" and tags == "" and starred_by == "":

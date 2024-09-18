@@ -17,9 +17,9 @@ import { Text } from '~/components/lib/Text';
 import { ResourceCard } from '~/components/ResourceCard';
 import { useProfileParams } from '~/hooks/profile';
 import { useQueryParams } from '~/hooks/url';
+import { REGISTRY_CATEGORY_LABELS } from '~/lib/registry';
 import { type RegistryCategory } from '~/server/api/routers/hub';
 import { api } from '~/trpc/react';
-import { CATEGORY_LABELS } from '~/lib/category';
 import { toTitleCase } from '~/utils/string';
 
 const categories: RegistryCategory[] = [
@@ -97,7 +97,7 @@ export default function ProfilePage() {
                   checked={queryParams.category === category}
                   onChange={() => updateQueryPath({ category: category })}
                 />
-                <Text>{CATEGORY_LABELS[category].label}</Text>
+                <Text>{REGISTRY_CATEGORY_LABELS[category].label}</Text>
                 <Badge
                   label={
                     allPublished.filter((item) => item.category === category)
@@ -154,7 +154,8 @@ export default function ProfilePage() {
               <Button
                 label={`Filter (${
                   queryParams.category
-                    ? CATEGORY_LABELS[queryParams.category]?.label ?? 'Unknown'
+                    ? REGISTRY_CATEGORY_LABELS[queryParams.category]?.label ??
+                      'Unknown'
                     : 'All'
                 })`}
                 iconLeft={<SlidersHorizontal weight="bold" />}

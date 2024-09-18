@@ -1,7 +1,7 @@
 'use client';
 
 import { CodeBlock, Play } from '@phosphor-icons/react';
-import Link from 'next/link';
+import { type ReactNode } from 'react';
 import { type z } from 'zod';
 
 import { Badge } from '~/components/lib/Badge';
@@ -12,44 +12,56 @@ import { Text } from '~/components/lib/Text';
 import { Tooltip } from '~/components/lib/Tooltip';
 import { StarButton } from '~/components/StarButton';
 import { type registryEntryModel } from '~/lib/models';
-import { CATEGORY_LABELS } from '~/lib/category';
+import {
+  primaryUrlForRegistryItem,
+  REGISTRY_CATEGORY_LABELS,
+} from '~/lib/registry';
 
+import { ConditionalLink } from './lib/ConditionalLink';
 import { ImageIcon } from './lib/ImageIcon';
 
 type Props = {
   item: z.infer<typeof registryEntryModel>;
+  linksOpenNewTab?: boolean;
+  footer?: ReactNode;
 };
 
-export const ResourceCard = ({ item }: Props) => {
-  const icon = CATEGORY_LABELS[item.category]?.icon;
-  const baseUrl = `/agents/${item.namespace}/${item.name}/${item.version}`;
+export const ResourceCard = ({ item, linksOpenNewTab, footer }: Props) => {
+  const icon = REGISTRY_CATEGORY_LABELS[item.category]?.icon;
+  const primaryUrl = primaryUrlForRegistryItem(item);
+  const target = linksOpenNewTab ? '_blank' : undefined;
 
   return (
     <Card gap="m">
       <Flex gap="s" align="center">
-        <Link href={baseUrl}>
+        <ConditionalLink href={primaryUrl}>
           <ImageIcon
             src={item.details.icon}
             alt={item.name}
             fallbackIcon={icon}
           />
-        </Link>
+        </ConditionalLink>
 
         <Flex gap="none" direction="column">
-          <Link href={baseUrl} style={{ zIndex: 1, position: 'relative' }}>
+          <ConditionalLink
+            href={primaryUrl}
+            target={target}
+            style={{ zIndex: 1, position: 'relative' }}
+          >
             <Text size="text-base" weight={600} color="sand-12">
               {item.name}
             </Text>
-          </Link>
+          </ConditionalLink>
 
-          <Link
+          <ConditionalLink
             href={`/profiles/${item.namespace}`}
-            style={{ marginTop: '-0.4rem' }}
+            target={target}
+            style={{ marginTop: '-0.1rem' }}
           >
             <Text size="text-xs" weight={400}>
               @{item.namespace}
             </Text>
-          </Link>
+          </ConditionalLink>
         </Flex>
       </Flex>
 
@@ -57,7 +69,9 @@ export const ResourceCard = ({ item }: Props) => {
 
       <Flex gap="s" align="center">
         <Badge
-          label={CATEGORY_LABELS[item.category]?.label ?? item.category}
+          label={
+            REGISTRY_CATEGORY_LABELS[item.category]?.label ?? item.category
+          }
           variant="neutral"
         />
 
@@ -75,7 +89,8 @@ export const ResourceCard = ({ item }: Props) => {
                 icon={<CodeBlock weight="duotone" />}
                 size="small"
                 fill="ghost"
-                href={`${baseUrl}/source`}
+                target={target}
+                href={`${primaryUrl}/source`}
               />
             </Tooltip>
 
@@ -85,12 +100,15 @@ export const ResourceCard = ({ item }: Props) => {
                 icon={<Play weight="duotone" />}
                 size="small"
                 fill="ghost"
-                href={`${baseUrl}/run`}
+                target={target}
+                href={`${primaryUrl}/run`}
               />
             </Tooltip>
           </>
         )}
       </Flex>
+
+      {footer}
     </Card>
   );
 };

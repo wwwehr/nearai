@@ -7,6 +7,10 @@
     display: inline;
   }
 
+  a:has(&) {
+    line-height: 0;
+  }
+
   [role='button']:hover > &,
   [role='button']:focus-visible > &,
   button:hover > &,

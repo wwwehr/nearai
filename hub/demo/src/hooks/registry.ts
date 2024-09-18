@@ -5,6 +5,7 @@ import { type z } from 'zod';
 import { type registryEntriesModel } from '~/lib/models';
 import { type RegistryCategory } from '~/server/api/routers/hub';
 import { api } from '~/trpc/react';
+import { wordsMatchFuzzySearch } from '~/utils/search';
 
 import { useDebouncedValue } from './debounce';
 
@@ -48,20 +49,12 @@ export function useRegistryEntriesSearch(
   const searched = useMemo(() => {
     if (!data || !searchQueryDebounced) return data;
 
-    return data.filter((item) => {
-      const itemWords = [item.namespace, item.name, ...item.tags].map((word) =>
-        word.toLowerCase().replace(/[^a-zA-Z0-9]/g, ''),
-      );
-      const queryWords = searchQueryDebounced
-        .split(' ')
-        .map((word) => word.toLowerCase().replace(/[^a-zA-Z0-9]/g, ''));
-
-      const matches = queryWords.every((queryWord) =>
-        itemWords.find((itemWord) => itemWord.indexOf(queryWord) > -1),
-      );
-
-      return matches;
-    });
+    return data.filter((item) =>
+      wordsMatchFuzzySearch(
+        [item.namespace, item.name, ...item.tags],
+        searchQueryDebounced,
+      ),
+    );
   }, [data, searchQueryDebounced]);
 
   return {

@@ -37,6 +37,7 @@ export const registryCategory = z.enum([
   'benchmark',
   'dataset',
   'environment',
+  'evaluation',
   'model',
 ]);
 export type RegistryCategory = z.infer<typeof registryCategory>;
@@ -168,8 +169,11 @@ export const hubRouter = createTRPCRouter({
   evaluations: publicProcedure.query(async () => {
     const evaluations = await fetchWithZod(
       evaluationsTableModel,
-      `${env.ROUTER_URL}/evaluation/table`,
+      // `${env.ROUTER_URL}/evaluation/table`,
+      `http://127.0.0.1:8081/v1/evaluation/table`,
     );
+
+    console.warn('TODO: Revert back to ROUTER_URL');
 
     const infoColumns = ['agent', 'model', 'namespace', 'version', 'provider'];
     const benchmarkColumns = evaluations.columns.filter(

@@ -1,10 +1,17 @@
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
-export function useQueryParams<const T extends string[]>(names: T) {
+export function useQueryParams<const T extends string[]>(
+  names: T,
+  options?: {
+    persistNames?: T[number][];
+  },
+) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const persistKey = `useQueryParams-${pathname}`;
+  const [hasRestoredPersistance, setHasRestoredPersistance] = useState(false);
 
   const createQueryPath = useCallback(
     (updatedParams: Partial<Record<T[number], string | undefined>>) => {
@@ -29,6 +36,7 @@ export function useQueryParams<const T extends string[]>(names: T) {
       mode: 'push' | 'replace' = 'push',
     ) => {
       const path = createQueryPath(updatedParams);
+
       if (mode === 'replace') {
         router.replace(path);
       } else {
@@ -49,7 +57,43 @@ export function useQueryParams<const T extends string[]>(names: T) {
     });
 
     return params as Partial<Record<T[number], string>>;
-  }, [names, searchParams]);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  useEffect(() => {
+    try {
+      if (options?.persistNames) {
+        const persistedQueryParams = JSON.parse(
+          localStorage.getItem(persistKey) ?? '{}',
+        ) as Partial<Record<T[number], string>>;
+
+        updateQueryPath(
+          {
+            ...persistedQueryParams,
+            ...queryParams,
+          },
+          'replace',
+        );
+      }
+    } catch (error) {
+      localStorage.removeItem(persistKey);
+      console.error(error);
+    }
+
+    setHasRestoredPersistance(true);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [updateQueryPath]);
+
+  useEffect(() => {
+    if (options?.persistNames && hasRestoredPersistance) {
+      console.log('set');
+      localStorage.setItem(persistKey, JSON.stringify(queryParams));
+    }
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryParams]);
 
   return {
     createQueryPath,

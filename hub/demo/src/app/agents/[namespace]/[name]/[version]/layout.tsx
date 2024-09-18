@@ -24,7 +24,7 @@ import {
   useCurrentRegistryEntry,
   useRegistryEntryParams,
 } from '~/hooks/registry';
-import { CATEGORY_LABELS } from '~/lib/category';
+import { REGISTRY_CATEGORY_LABELS } from '~/lib/registry';
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   const pathSegments = usePathname().split('/');
@@ -58,7 +58,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 size="l"
                 src={currentResource?.details.icon}
                 alt={name}
-                fallbackIcon={CATEGORY_LABELS.agent.icon}
+                fallbackIcon={REGISTRY_CATEGORY_LABELS.agent.icon}
               />
 
               <Flex gap="none" direction="column" align="start">
@@ -82,7 +82,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                     <Dropdown.Content>
                       <Dropdown.Section>
                         <Dropdown.SectionContent>
-                          <Text size="text-xs" weight={600} uppercase>
+                          <Text size="text-xs" weight={500} uppercase>
                             Versions
                           </Text>
                         </Dropdown.SectionContent>
@@ -102,7 +102,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
                 <Link
                   href={`/profiles/${namespace}`}
-                  style={{ marginTop: '-0.25rem' }}
+                  style={{ marginTop: '-0.1rem' }}
                 >
                   <Text size="text-s" weight={500}>
                     @{namespace}

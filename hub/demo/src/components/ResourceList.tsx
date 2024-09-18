@@ -14,6 +14,11 @@ import { useTable } from '~/components/lib/Table/hooks';
 import { Text } from '~/components/lib/Text';
 import { Tooltip } from '~/components/lib/Tooltip';
 import { useRegistryEntriesSearch } from '~/hooks/registry';
+import {
+  benchmarkEvaluationsUrlForRegistryItem,
+  primaryUrlForRegistryItem,
+  REGISTRY_CATEGORY_LABELS,
+} from '~/lib/registry';
 import { type RegistryCategory } from '~/server/api/routers/hub';
 import { api } from '~/trpc/react';
 
@@ -91,7 +96,7 @@ export const ResourceList = ({ category, title }: Props) => {
             >
               Stars
             </Table.HeadCell>
-            {category === 'agent' && <Table.HeadCell />}
+            <Table.HeadCell />
           </Table.Row>
         </Table.Head>
 
@@ -100,22 +105,24 @@ export const ResourceList = ({ category, title }: Props) => {
 
           {sorted.map((item, index) => (
             <Table.Row key={index}>
-              {category === 'agent' ? (
-                <Table.Cell
-                  href={`/agents/${item.namespace}/${item.name}/${item.version}`}
-                  style={{ width: '20rem' }}
-                >
-                  <Text size="text-s" weight={500} color="sand-12">
+              <Table.Cell
+                href={primaryUrlForRegistryItem(item)}
+                style={{ width: '20rem' }}
+              >
+                <Flex direction="column">
+                  <Text
+                    size="text-s"
+                    weight={500}
+                    color="sand-12"
+                    clickableHighlight
+                  >
                     {item.name}
                   </Text>
-                </Table.Cell>
-              ) : (
-                <Table.Cell style={{ width: '20rem' }}>
-                  <Text size="text-s" weight={500} color="sand-12">
-                    {item.name}
+                  <Text size="text-xs" clampLines={1}>
+                    {item.description}
                   </Text>
-                </Table.Cell>
-              )}
+                </Flex>
+              </Table.Cell>
 
               <Table.Cell href={`/profiles/${item.namespace}`}>
                 <Text size="text-s" weight={500}>
@@ -139,31 +146,45 @@ export const ResourceList = ({ category, title }: Props) => {
                 <StarButton item={item} variant="simple" />
               </Table.Cell>
 
-              {category === 'agent' && (
-                <Table.Cell style={{ width: '1px' }}>
-                  <Flex align="center" gap="xs">
-                    <Tooltip asChild content="View Source">
+              <Table.Cell style={{ width: '1px' }}>
+                <Flex align="center" gap="xs">
+                  {benchmarkEvaluationsUrlForRegistryItem(item) && (
+                    <Tooltip asChild content="View Benchmark Evaluations">
                       <Button
-                        label="View Source"
-                        icon={<CodeBlock weight="duotone" />}
+                        label="View Benchmark Evaluations"
+                        icon={REGISTRY_CATEGORY_LABELS.evaluation.icon}
                         size="small"
                         fill="ghost"
-                        href={`/agents/${item.namespace}/${item.name}/${item.version}/source`}
+                        href={benchmarkEvaluationsUrlForRegistryItem(item)}
                       />
                     </Tooltip>
+                  )}
 
-                    <Tooltip asChild content="Run Agent">
-                      <Button
-                        label="Run"
-                        icon={<Play weight="duotone" />}
-                        size="small"
-                        fill="ghost"
-                        href={`/agents/${item.namespace}/${item.name}/${item.version}/run`}
-                      />
-                    </Tooltip>
-                  </Flex>
-                </Table.Cell>
-              )}
+                  {category === 'agent' && (
+                    <>
+                      <Tooltip asChild content="View Source">
+                        <Button
+                          label="View Source"
+                          icon={<CodeBlock weight="duotone" />}
+                          size="small"
+                          fill="ghost"
+                          href={`/agents/${item.namespace}/${item.name}/${item.version}/source`}
+                        />
+                      </Tooltip>
+
+                      <Tooltip asChild content="Run Agent">
+                        <Button
+                          label="Run"
+                          icon={<Play weight="duotone" />}
+                          size="small"
+                          fill="ghost"
+                          href={`/agents/${item.namespace}/${item.name}/${item.version}/run`}
+                        />
+                      </Tooltip>
+                    </>
+                  )}
+                </Flex>
+              </Table.Cell>
             </Table.Row>
           ))}
         </Table.Body>

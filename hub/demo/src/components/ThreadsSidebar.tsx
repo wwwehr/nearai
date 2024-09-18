@@ -194,7 +194,7 @@ export const ThreadsSidebar = ({
                     <Dropdown.Content sideOffset={0}>
                       <Dropdown.Section>
                         <Dropdown.SectionContent>
-                          <Text size="text-xs" weight={600} uppercase>
+                          <Text size="text-xs" weight={500} uppercase>
                             Thread
                           </Text>
                         </Dropdown.SectionContent>

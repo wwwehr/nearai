@@ -7,16 +7,18 @@
   --table-focus-outline: 4px solid var(--violet-5);
 
   width: 100%;
-  min-width: min-content;
+  // min-width: min-content;
+  min-width: 0;
+  overflow: auto;
   padding: 0 var(--table-half-padding) var(--table-half-padding);
   border-radius: var(--table-border-radius);
   background: var(--sand-0);
   box-shadow: var(--shadow-card-with-outline);
 
-  @media (max-width: $tabletBreakpointMaxWidth) {
-    min-width: 0;
-    overflow: auto;
-  }
+  // @media (max-width: $tabletBreakpointMaxWidth) {
+  // min-width: 0;
+  // overflow: auto;
+  // }
 }
 
 .table {
@@ -69,14 +71,14 @@
     }
   }
 
-  &[data-sticky='true'] {
-    position: sticky;
-    top: var(--header-height);
+  // &[data-sticky='true'] {
+  //   position: sticky;
+  //   top: var(--header-height);
 
-    @media (max-width: $tabletBreakpointMaxWidth) {
-      position: static;
-    }
-  }
+  //   @media (max-width: $tabletBreakpointMaxWidth) {
+  //     position: static;
+  //   }
+  // }
 }
 
 .foot {
@@ -95,29 +97,29 @@
     padding-top: calc(var(--table-half-padding) * 2);
   }
 
-  &[data-sticky='true'] {
-    position: sticky;
-    bottom: 0;
+  // &[data-sticky='true'] {
+  //   position: sticky;
+  //   bottom: 0;
 
-    td,
-    th {
-      border-top-left-radius: 0 !important;
-      border-top-right-radius: 0 !important;
-      background: linear-gradient(
-        to top,
-        var(--sand-0) 50%,
-        transparent
-      ) !important;
+  //   td,
+  //   th {
+  //     border-top-left-radius: 0 !important;
+  //     border-top-right-radius: 0 !important;
+  //     background: linear-gradient(
+  //       to top,
+  //       var(--sand-0) 50%,
+  //       transparent
+  //     ) !important;
 
-      &:empty {
-        display: none;
-      }
-    }
+  //     &:empty {
+  //       display: none;
+  //     }
+  //   }
 
-    @media (max-width: $tabletBreakpointMaxWidth) {
-      position: static;
-    }
-  }
+  //   @media (max-width: $tabletBreakpointMaxWidth) {
+  //     position: static;
+  //   }
+  // }
 }
 
 .body {

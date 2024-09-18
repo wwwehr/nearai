@@ -26,6 +26,7 @@ DEFAULT_NAMESPACE_WRITE_ACCESS_LIST = [
     "pierre-dev.near",
     "alomonos.near",
     "flatirons.near",
+    "calebjacob.near",
 ]
 
 load_dotenv()

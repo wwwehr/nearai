@@ -2,42 +2,38 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://docs.near.ai/</loc>
-         <lastmod>2024-09-16</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2024-09-18</lastmod>
     </url>
     <url>
          <loc>https://docs.near.ai/agents/</loc>
-         <lastmod>2024-09-16</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2024-09-18</lastmod>
     </url>
     <url>
          <loc>https://docs.near.ai/api/</loc>
-         <lastmod>2024-09-16</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2024-09-18</lastmod>
     </url>
     <url>
          <loc>https://docs.near.ai/benchmarking/</loc>
-         <lastmod>2024-09-16</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2024-09-18</lastmod>
     </url>
     <url>
          <loc>https://docs.near.ai/contributing/</loc>
-         <lastmod>2024-09-16</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2024-09-18</lastmod>
     </url>
     <url>
          <loc>https://docs.near.ai/fine_tuning/</loc>
-         <lastmod>2024-09-16</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2024-09-18</lastmod>
     </url>
     <url>
          <loc>https://docs.near.ai/inference/</loc>
-         <lastmod>2024-09-16</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2024-09-18</lastmod>
     </url>
     <url>
          <loc>https://docs.near.ai/login/</loc>
-         <lastmod>2024-09-16</lastmod>
-         <changefreq>daily</changefreq>
+         <lastmod>2024-09-18</lastmod>
+    </url>
+    <url>
+         <loc>https://docs.near.ai/vector-stores/</loc>
+         <lastmod>2024-09-18</lastmod>
     </url>
 </urlset>

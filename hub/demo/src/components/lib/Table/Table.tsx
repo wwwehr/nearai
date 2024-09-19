@@ -226,19 +226,19 @@ export const HeadCell = forwardRef<HTMLTableCellElement, HeadCellProps>(
       if (!sortable || !column || !sort || !setSort) return;
 
       if (
-        (columnHasActiveSort && sort.order === 'ASCENDING') ||
+        (columnHasActiveSort && sort.order === 'DESCENDING') ||
         (!columnHasActiveSort &&
           typeof sortable === 'object' &&
-          sortable.startingOrder === 'DESCENDING')
+          sortable.startingOrder === 'ASCENDING')
       ) {
         setSort({
           column,
-          order: 'DESCENDING',
+          order: 'ASCENDING',
         });
       } else {
         setSort({
           column,
-          order: 'ASCENDING',
+          order: 'DESCENDING',
         });
       }
     };

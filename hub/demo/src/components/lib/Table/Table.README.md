@@ -279,7 +279,7 @@ import { api } from '~/trpc/react';
 
 ...
 
-const entries = api.hub.entries.useQuery({ category: 'agent' });
+const entriesQuery = api.hub.entries.useQuery({ category: 'agent' });
 const { sorted, ...tableProps } = useTable({
   data: entries.data,
   sortColumn: 'name',

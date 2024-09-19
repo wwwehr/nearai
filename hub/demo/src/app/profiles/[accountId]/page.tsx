@@ -33,12 +33,12 @@ export default function ProfilePage() {
   const [sidebarOpenForSmallScreens, setSidebarOpenForSmallScreens] =
     useState(false);
 
-  const entries = api.hub.entries.useQuery({
+  const entriesQuery = api.hub.entries.useQuery({
     namespace: starred ? undefined : accountId,
     starredBy: starred ? accountId : undefined,
   });
 
-  const allPublished = entries.data?.filter((item) =>
+  const allPublished = entriesQuery.data?.filter((item) =>
     categories.includes(item.category as EntryCategory),
   );
 
@@ -110,6 +110,7 @@ export default function ProfilePage() {
 
           <Flex gap="m" align="center">
             <Text size="text-xs">Sort by:</Text>
+
             <Dropdown.Root>
               <Dropdown.Trigger asChild>
                 <Badge

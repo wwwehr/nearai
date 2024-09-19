@@ -101,9 +101,9 @@ export const EntriesTable = ({ category, title }: Props) => {
         </Table.Head>
 
         <Table.Body>
-          {!entriesQuery.data && <Table.PlaceholderRows />}
+          {!sorted && <Table.PlaceholderRows />}
 
-          {sorted.map((entry, index) => (
+          {sorted?.map((entry, index) => (
             <Table.Row key={index}>
               <Table.Cell
                 href={primaryUrlForEntry(entry)}
@@ -124,8 +124,11 @@ export const EntriesTable = ({ category, title }: Props) => {
                 </Flex>
               </Table.Cell>
 
-              <Table.Cell href={`/profiles/${entry.namespace}`}>
-                <Text size="text-s" weight={500}>
+              <Table.Cell
+                href={`/profiles/${entry.namespace}`}
+                style={{ maxWidth: '12rem' }}
+              >
+                <Text size="text-s" weight={500} clampLines={1}>
                   {entry.namespace}
                 </Text>
               </Table.Cell>

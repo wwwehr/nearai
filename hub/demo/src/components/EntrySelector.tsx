@@ -100,11 +100,7 @@ export const EntrySelector = ({
 
           {!searched.length && (
             <Card>
-              {searchQuery ? (
-                <Text>No matching results. Try a different search?</Text>
-              ) : (
-                <Text>No options exist yet.</Text>
-              )}
+              <Text>No matching results. Try a different search?</Text>
             </Card>
           )}
         </CardList>

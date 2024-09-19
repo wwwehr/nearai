@@ -77,13 +77,14 @@ export default function EvaluationsPage() {
 
     if (!evaluations || !searchQueryDebounced) return evaluations;
 
-    return evaluations.filter((entry) =>
+    return evaluations.filter((evaluation) =>
       wordsMatchFuzzySearch(
         [
-          entry.namespace,
-          entry.agentPath ?? entry.agent,
-          entry.provider,
-          entry.model,
+          evaluation.namespace,
+          evaluation.agentPath ?? evaluation.agent,
+          evaluation.provider,
+          evaluation.model,
+          evaluation.version,
         ],
         searchQueryDebounced,
       ),
@@ -92,7 +93,7 @@ export default function EvaluationsPage() {
 
   const { sorted, ...tableProps } = useTable({
     data: searched,
-    sortColumn: 'live_bench/average',
+    sortColumn: STANDARD_BENCHMARK_COLUMNS[0]!,
     sortOrder: 'DESCENDING',
   });
 
@@ -222,10 +223,7 @@ export default function EvaluationsPage() {
                         <Text size="text-s" weight={500} color="sand-12">
                           {benchmark.name} {benchmark.version}
                         </Text>
-                        <Link
-                          href={`/profiles/${benchmark.namespace}`}
-                          target="_blank"
-                        >
+                        <Link href={`/profiles/${benchmark.namespace}`}>
                           <Text size="text-xs">@{benchmark.namespace}</Text>
                         </Link>
                       </Flex>
@@ -309,117 +307,7 @@ export default function EvaluationsPage() {
             />
           </Grid>
 
-          <Table.Root {...tableProps}>
-            <Table.Head>
-              <Table.Row>
-                <Table.HeadCell
-                  column="model"
-                  sortable
-                  style={{ minWidth: '12rem' }}
-                >
-                  Model
-                </Table.HeadCell>
-
-                <Table.HeadCell column="provider" sortable>
-                  Provider
-                </Table.HeadCell>
-
-                <Table.HeadCell
-                  column="agentPath"
-                  sortable
-                  style={{ minWidth: '15rem' }}
-                >
-                  Agent
-                </Table.HeadCell>
-
-                {selectedBenchmarkColumns.map((column) => (
-                  <Table.HeadCell column={column} sortable key={column}>
-                    <Flex
-                      as="span"
-                      direction="column"
-                      style={{ textTransform: 'none' }}
-                    >
-                      {column.includes('/') && (
-                        <Text
-                          as="span"
-                          size="text-2xs"
-                          color="current"
-                          style={{
-                            marginBottom: '-0.1rem',
-                            display: 'inline-block',
-                          }}
-                        >
-                          {column.split('/').slice(0, -1).join('/')}/
-                        </Text>
-                      )}
-                      <Text
-                        as="span"
-                        size="text-s"
-                        weight={600}
-                        color="current"
-                      >
-                        {column.split('/').at(-1)}
-                      </Text>
-                    </Flex>
-                  </Table.HeadCell>
-                ))}
-              </Table.Row>
-            </Table.Head>
-
-            <Table.Body>
-              {!evaluationsQuery.data && <Table.PlaceholderRows />}
-
-              {sorted.map((evaluation, index) => (
-                <Table.Row key={index}>
-                  <Table.Cell>
-                    <Text size="text-s">{evaluation.model}</Text>
-                  </Table.Cell>
-
-                  <Table.Cell>
-                    <Text size="text-s">{evaluation.provider}</Text>
-                  </Table.Cell>
-
-                  {evaluation.agentPath ? (
-                    <Table.Cell href={`/agents/${evaluation.agentPath}`}>
-                      <Text size="text-s" weight={500} color="sand-12">
-                        {evaluation.agentPath}
-                      </Text>
-                    </Table.Cell>
-                  ) : (
-                    <Table.Cell>
-                      <Text size="text-xs" color="sand-8">
-                        --
-                      </Text>
-                    </Table.Cell>
-                  )}
-
-                  {selectedBenchmarkColumns.map((column) => (
-                    <Table.Cell key={column}>
-                      <Tooltip content={column}>
-                        {typeof evaluation[column] === 'number' ? (
-                          <Text size="text-s" color="sand-12">
-                            {evaluation[column]}%
-                          </Text>
-                        ) : (
-                          <>
-                            {evaluation[column] ? (
-                              <Text size="text-s">{evaluation[column]}</Text>
-                            ) : (
-                              <Text size="text-xs" color="sand-8">
-                                --
-                              </Text>
-                            )}
-                          </>
-                        )}
-                      </Tooltip>
-                    </Table.Cell>
-                  ))}
-                </Table.Row>
-              ))}
-            </Table.Body>
-          </Table.Root>
-
-          {evaluationsQuery.data && sorted.length === 0 && (
+          {sorted?.length === 0 ? (
             <>
               {searchQuery ? (
                 <Text>No matching results. Try a different search?</Text>
@@ -427,6 +315,116 @@ export default function EvaluationsPage() {
                 <Text>No evaluations exist yet.</Text>
               )}
             </>
+          ) : (
+            <Table.Root {...tableProps}>
+              <Table.Head>
+                <Table.Row>
+                  <Table.HeadCell
+                    column="model"
+                    sortable
+                    style={{ minWidth: '12rem' }}
+                  >
+                    Model
+                  </Table.HeadCell>
+
+                  <Table.HeadCell column="provider" sortable>
+                    Provider
+                  </Table.HeadCell>
+
+                  <Table.HeadCell
+                    column="agentPath"
+                    sortable
+                    style={{ minWidth: '15rem' }}
+                  >
+                    Agent
+                  </Table.HeadCell>
+
+                  {selectedBenchmarkColumns.map((column) => (
+                    <Table.HeadCell column={column} sortable key={column}>
+                      <Flex
+                        as="span"
+                        direction="column"
+                        style={{ textTransform: 'none' }}
+                      >
+                        {column.includes('/') && (
+                          <Text
+                            as="span"
+                            size="text-2xs"
+                            color="current"
+                            style={{
+                              marginBottom: '-0.1rem',
+                              display: 'inline-block',
+                            }}
+                          >
+                            {column.split('/').slice(0, -1).join('/')}/
+                          </Text>
+                        )}
+                        <Text
+                          as="span"
+                          size="text-s"
+                          weight={600}
+                          color="current"
+                        >
+                          {column.split('/').at(-1)}
+                        </Text>
+                      </Flex>
+                    </Table.HeadCell>
+                  ))}
+                </Table.Row>
+              </Table.Head>
+
+              <Table.Body>
+                {!sorted && <Table.PlaceholderRows />}
+
+                {sorted?.map((evaluation, index) => (
+                  <Table.Row key={index}>
+                    <Table.Cell>
+                      <Text size="text-s">{evaluation.model}</Text>
+                    </Table.Cell>
+
+                    <Table.Cell>
+                      <Text size="text-s">{evaluation.provider}</Text>
+                    </Table.Cell>
+
+                    {evaluation.agentPath ? (
+                      <Table.Cell href={`/agents/${evaluation.agentPath}`}>
+                        <Text size="text-s" weight={500} color="sand-12">
+                          {evaluation.agentPath}
+                        </Text>
+                      </Table.Cell>
+                    ) : (
+                      <Table.Cell>
+                        <Text size="text-xs" color="sand-8">
+                          --
+                        </Text>
+                      </Table.Cell>
+                    )}
+
+                    {selectedBenchmarkColumns.map((column) => (
+                      <Table.Cell key={column}>
+                        <Tooltip content={column}>
+                          {typeof evaluation[column] === 'number' ? (
+                            <Text size="text-s" color="sand-12">
+                              {evaluation[column]}%
+                            </Text>
+                          ) : (
+                            <>
+                              {evaluation[column] ? (
+                                <Text size="text-s">{evaluation[column]}</Text>
+                              ) : (
+                                <Text size="text-xs" color="sand-8">
+                                  --
+                                </Text>
+                              )}
+                            </>
+                          )}
+                        </Tooltip>
+                      </Table.Cell>
+                    ))}
+                  </Table.Row>
+                ))}
+              </Table.Body>
+            </Table.Root>
           )}
         </Sidebar.Main>
       </Sidebar.Root>

@@ -22,13 +22,15 @@ export function useEntryParams() {
 export function useCurrentEntry(category: EntryCategory) {
   const { namespace, name, version } = useEntryParams();
 
-  const entries = api.hub.entries.useQuery({
+  const entriesQuery = api.hub.entries.useQuery({
     category,
     namespace,
     showLatestVersion: false,
   });
 
-  const currentVersions = entries.data?.filter((item) => item.name === name);
+  const currentVersions = entriesQuery.data?.filter(
+    (item) => item.name === name,
+  );
 
   const currentEntry = currentVersions?.find(
     (item) => item.version === version,
@@ -36,6 +38,7 @@ export function useCurrentEntry(category: EntryCategory) {
 
   return {
     currentEntry,
+    currentEntryIsHidden: !!entriesQuery.data && !currentEntry,
     currentVersions,
   };
 }

@@ -5,12 +5,12 @@ import { api } from '~/trpc/react';
 const PROVIDER_MODEL_SEP = '::';
 
 export function useChatModels(provider: string) {
-  const models = api.hub.models.useQuery();
+  const modelsQuery = api.hub.models.useQuery();
 
   return useQuery({
     queryKey: ['models', provider],
     queryFn: () => {
-      const m = models.data?.data
+      const m = modelsQuery.data?.data
         .map((m) => {
           if (!m.supports_chat) {
             return null;
@@ -28,6 +28,6 @@ export function useChatModels(provider: string) {
 
       return m;
     },
-    enabled: !!models.data,
+    enabled: !!modelsQuery.data,
   });
 }

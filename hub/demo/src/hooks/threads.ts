@@ -22,7 +22,7 @@ export function useThreads() {
   const accountId = useAuthStore((store) => store.auth?.account_id);
   const utils = api.useUtils();
 
-  const entry = api.hub.entries.useQuery(
+  const entriesQuery = api.hub.entries.useQuery(
     {
       category: 'environment',
       namespace: accountId,
@@ -34,7 +34,7 @@ export function useThreads() {
 
   const setThreadEnvironmentData = useCallback(
     (id: number, data: Partial<RouterOutputs['hub']['entries'][number]>) => {
-      const environments = [...(entry.data ?? [])].map((environment) => {
+      const environments = [...(entriesQuery.data ?? [])].map((environment) => {
         if (environment.id === id) {
           return {
             ...environment,
@@ -53,19 +53,19 @@ export function useThreads() {
         environments,
       );
     },
-    [accountId, utils, entry.data],
+    [accountId, utils, entriesQuery.data],
   );
 
   const threads = useMemo(() => {
     const result: Thread[] = [];
     if (!accountId) return [];
-    if (!entry.data) return;
+    if (!entriesQuery.data) return;
 
     // If an environment has a nullish `base_id`, it's a parent (the start of a thread)
-    const parents = entry.data.filter(
+    const parents = entriesQuery.data.filter(
       (environment) => !environment.details.base_id,
     );
-    const children = entry.data.filter(
+    const children = entriesQuery.data.filter(
       (environment) => !!environment.details.base_id,
     );
 
@@ -110,12 +110,12 @@ export function useThreads() {
     }
 
     return result;
-  }, [accountId, entry.data]);
+  }, [accountId, entriesQuery.data]);
 
   return {
     setThreadEnvironmentData,
     threads,
-    threadsQuery: entry,
+    threadsQuery: entriesQuery,
   };
 }
 

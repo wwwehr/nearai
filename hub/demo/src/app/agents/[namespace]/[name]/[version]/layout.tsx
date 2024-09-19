@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { type ReactNode } from 'react';
 
+import { ErrorSection } from '~/components/ErrorSection';
 import { Badge } from '~/components/lib/Badge';
 import { Dropdown } from '~/components/lib/Dropdown';
 import { Flex } from '~/components/lib/Flex';
@@ -26,7 +27,8 @@ import { ENTRY_CATEGORY_LABELS } from '~/lib/entries';
 export default function RootLayout({ children }: { children: ReactNode }) {
   const pathSegments = usePathname().split('/');
   const { namespace, name, version } = useEntryParams();
-  const { currentEntry, currentVersions } = useCurrentEntry('agent');
+  const { currentEntry, currentEntryIsHidden, currentVersions } =
+    useCurrentEntry('agent');
   const baseUrl = `/agents/${namespace}/${name}`;
   let activeTab: 'overview' | 'run' | 'source' = 'overview';
 
@@ -34,6 +36,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     activeTab = 'run';
   } else if (pathSegments.at(-1) === 'source') {
     activeTab = 'source';
+  }
+
+  if (currentEntryIsHidden) {
+    return <ErrorSection error="404" />;
   }
 
   return (

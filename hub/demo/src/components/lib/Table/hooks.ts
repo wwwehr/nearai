@@ -23,9 +23,9 @@ export function useTable<T extends Record<string, unknown>[] | undefined>({
     order: sortOrder,
   });
 
-  const sorted = [...(data ?? [])];
+  const sorted = data ? [...data] : undefined;
 
-  sorted.sort((a, b) => {
+  sorted?.sort((a, b) => {
     const valueA = parseStringOrNumber(a[sort.column]);
     const valueB = parseStringOrNumber(b[sort.column]);
 

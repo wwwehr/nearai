@@ -24,7 +24,7 @@ export const StarButton = ({ entry, style, variant = 'simple' }: Props) => {
   const [starred, setStarred] = useState(false);
   const [count, setCount] = useState(0);
   const [clicked, setClicked] = useState(false);
-  const mutation = api.hub.starEntry.useMutation();
+  const starMutation = api.hub.starEntry.useMutation();
   const visuallyStarred = isAuthenticated && starred;
 
   useEffect(() => {
@@ -58,7 +58,7 @@ export const StarButton = ({ entry, style, variant = 'simple' }: Props) => {
     if (starred) {
       setStarred(false);
       setCount((value) => Math.max(0, value - 1));
-      mutation.mutate({
+      starMutation.mutate({
         action: 'remove',
         name: entry.name,
         namespace: entry.namespace,
@@ -66,7 +66,7 @@ export const StarButton = ({ entry, style, variant = 'simple' }: Props) => {
     } else {
       setStarred(true);
       setCount((value) => value + 1);
-      mutation.mutate({
+      starMutation.mutate({
         action: 'add',
         name: entry.name,
         namespace: entry.namespace,

@@ -79,7 +79,7 @@ class Agent(object):
         if not os.path.exists(os.path.join(self.temp_dir, AGENT_FILENAME)):
             raise ValueError("Agent run error: {AGENT_FILENAME} does not exist")
 
-        # combine agent's env_vars and user's env_vars
+        # combine agent's env_vars and user's env_vars. User's env_vars has priority
         total_env_vars = {**self.env_vars, **env.env_vars}
 
         # save os env vars

@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from enum import Enum
 from os import getenv
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Set, Tuple
 
 import pymysql
 import pymysql.cursors
@@ -106,7 +106,8 @@ class SqlClient:
         cursor.execute(query)
         return cursor.fetchone()
 
-    def add_user_usage(self, account_id: str, query: str, response: str, model: str, provider: str, endpoint: str):  # noqa: D102
+    def add_user_usage(self, account_id: str, query: str, response: str, model: str, provider: str,
+                       endpoint: str):  # noqa: D102
         # Escape single quotes in query and response strings
         query = query.replace("'", "''")
         response = response.replace("'", "''")
@@ -115,11 +116,13 @@ class SqlClient:
         self.db.cursor().execute(query)
         self.db.commit()
 
+    # TODO check if it has sql injection
     def get_user_usage(self, account_id: str):  # noqa: D102
         query = f"SELECT * FROM completions WHERE account_id = '{account_id}'"
         return self.__fetch_all(query)
 
-    def store_nonce(self, account_id: str, nonce: bytes, message: str, recipient: str, callback_url: Optional[str]):  # noqa: D102
+    def store_nonce(self, account_id: str, nonce: bytes, message: str, recipient: str,
+                    callback_url: Optional[str]):  # noqa: D102
         logging.info(f"Storing nonce {nonce.decode()} for account {account_id}")
         query = """
         INSERT INTO nonces (nonce, account_id, message, recipient, callback_url, nonce_status)
@@ -154,13 +157,13 @@ class SqlClient:
         self.db.commit()
 
     def create_vector_store(
-        self,
-        account_id: str,
-        name: str,
-        file_ids: List[str],
-        expires_after: Optional[Dict[str, Any]] = None,
-        chunking_strategy: Optional[Dict[str, Any]] = None,
-        metadata: Optional[Dict[str, str]] = None,
+            self,
+            account_id: str,
+            name: str,
+            file_ids: List[str],
+            expires_after: Optional[Dict[str, Any]] = None,
+            chunking_strategy: Optional[Dict[str, Any]] = None,
+            metadata: Optional[Dict[str, str]] = None,
     ) -> str:
         """Create a new vector store.
 
@@ -246,15 +249,15 @@ class SqlClient:
         return [VectorStore(**x) for x in self.__fetch_all(query)]
 
     def create_file(
-        self,
-        account_id: str,
-        file_uri: str,
-        purpose: str,
-        filename: str,
-        content_type: str,
-        file_size: int,
-        encoding: Optional[str] = None,
-        embedding_status: Optional[Literal["in_progress", "completed"]] = None,
+            self,
+            account_id: str,
+            file_uri: str,
+            purpose: str,
+            filename: str,
+            content_type: str,
+            file_size: int,
+            encoding: Optional[str] = None,
+            embedding_status: Optional[Literal["in_progress", "completed"]] = None,
     ) -> str:
         """Add file details to the vector store.
 
@@ -328,7 +331,7 @@ class SqlClient:
         return VectorStoreFile(**result) if result else None
 
     def update_files_in_vector_store(
-        self, vector_store_id: str, file_ids: List[str], account_id: str
+            self, vector_store_id: str, file_ids: List[str], account_id: str
     ) -> Optional[VectorStore]:
         """Update the files associated with a vector store.
 
@@ -350,7 +353,7 @@ class SqlClient:
         return self.get_vector_store(vector_store_id)
 
     def store_embedding(
-        self, id: str, vector_store_id: str, file_id: str, chunk_index: int, chunk_text: str, embedding: List[float]
+            self, id: str, vector_store_id: str, file_id: str, chunk_index: int, chunk_text: str, embedding: List[float]
     ):
         """Store an embedding for a chunk of text.
 
@@ -433,7 +436,7 @@ class SqlClient:
         self.db.commit()
 
     def similarity_search(
-        self, vector_store_id: str, query_embedding: List[float], limit: int = 10
+            self, vector_store_id: str, query_embedding: List[float], limit: int = 10
     ) -> List[SimilaritySearch]:
         """Perform a similarity search in the vector store.
 
@@ -496,3 +499,130 @@ class SqlClient:
             logger.error(f"Error deleting vector store and its embeddings: {str(e)}")
             self.db.rollback()
             return False
+
+    def create_hub_secret(
+            self,
+            owner_namespace: str,
+            namespace: str,
+            name: str,
+            key: str,
+            value: str,
+            version: Optional[str] = "",
+            description: Optional[str] = "",
+            category: Optional[str] = "agent"
+    ) -> str:
+        """
+        """
+
+        query = """
+        INSERT INTO hub_secrets (`owner_namespace`, `namespace`, `name`, `version`, `key`, `value`, `description`, `category`)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """
+
+        cursor = self.db.cursor()
+        try:
+            cursor.execute(
+                query,
+                (
+                    owner_namespace,
+                    namespace,
+                    name,
+                    version,
+                    key,
+                    value,
+                    description,
+                    category
+                ),
+            )
+            self.db.commit()
+        except TypeError as e:
+            if "dict can not be used as parameter" in str(e):
+                raise ValueError(
+                    "Invalid data type in parameters. Ensure all dictionary values are JSON serializable."
+                ) from e
+            raise
+
+    def remove_hub_secret(
+            self,
+            owner_namespace: str,
+            namespace: str,
+            name: str,
+            key: str,
+            version: Optional[str] = "",
+            category: Optional[str] = "agent"
+    ) -> None:
+        """
+        """
+
+        query = """
+        DELETE FROM hub_secrets
+        WHERE `owner_namespace` = %s
+          AND `namespace` = %s
+          AND `name` = %s
+          AND `key` = %s
+          AND `category` = %s
+        """
+
+        parameters = (owner_namespace, namespace, name, key, category, version)
+
+        cursor = self.db.cursor()
+        try:
+            cursor.execute(query, parameters)
+            self.db.commit()
+        except Exception as e:
+            self.db.rollback()
+            raise RuntimeError("Hub secret removal error: " + str(e)) from e
+
+
+    def get_user_secrets(self, owner_namespace: str, limit: int = 100, offset: int = 0) -> dict[Any, Any]:  # noqa: D102
+        query = """
+            SELECT `namespace`, `name`, `version`, `description`, `key`, `value`, `category`
+            FROM `hub_secrets` 
+            WHERE `owner_namespace`= %s 
+             LIMIT %s OFFSET %s
+        """
+
+        cursor = self.db.cursor(pymysql.cursors.DictCursor)
+        cursor.execute(query, [owner_namespace, limit, offset])
+        result = cursor.fetchall()
+
+        return result
+
+    def get_agent_secrets(self, owner_namespace: str,
+                         namespace: str,
+                         name: str,
+                         version: str) -> tuple[dict[Any, Any], dict[Any, Any]]:  # noqa: D102
+        query = """
+            SELECT `owner_namespace`, `key`, `value` 
+            FROM `hub_secrets` 
+            WHERE `owner_namespace` IN %s 
+              AND `namespace` = %s 
+              AND `name` = %s
+              AND (`version` = %s OR `version` IS NULL OR version = '')
+              AND category = 'agent'
+        """
+        # check both owner secret and agent author's secret
+        owner_namespaces = [owner_namespace, namespace]
+        params = [tuple(owner_namespaces), namespace, name, version]
+
+        cursor = self.db.cursor(pymysql.cursors.DictCursor)
+        cursor.execute(query, params)
+        result = cursor.fetchall()
+
+        final_query = query % tuple(map(lambda x: f"'{x}'" if isinstance(x, str) else x, params))
+
+        print("Final SQL Query:")
+        print(final_query)
+
+        agent_secrets = {}
+        user_secrets = {}
+        for secret in result:
+            print("secret", secret, secret["owner_namespace"], owner_namespace)
+            if secret["owner_namespace"] == owner_namespace:
+                user_secrets[secret["key"]] = secret["value"]
+            else:
+                agent_secrets[secret["key"]] = secret["value"]
+
+        print("agent_secrets", agent_secrets)
+        print("user_secrets", user_secrets)
+        return agent_secrets, user_secrets

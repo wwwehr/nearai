@@ -10,6 +10,8 @@ from hub.api.v1.auth import AuthToken, revokable_auth
 from hub.api.v1.models import RegistryEntry
 from hub.api.v1.registry import S3_BUCKET, EntryLocation, get
 
+from hub.api.v1.sql import SqlClient
+
 s3 = boto3.client("s3")
 
 v1_router = APIRouter(
@@ -74,6 +76,11 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokab
     if not body.agent_id and not body.assistant_id:
         raise HTTPException(status_code=400, detail="Missing required parameters: agent_id or assistant_id")
 
+    import logging
+    v1_router = APIRouter()
+    db = SqlClient()
+    logger = logging.getLogger(__name__)
+
     agents = body.agent_id or body.assistant_id or ""
     environment_id = body.environment_id or body.thread
     new_message = body.new_message
@@ -81,17 +88,30 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokab
     runner = _runner_for_env()
     agent_api_url = getenv("API_URL", "https://api.near.ai")
 
+    primary_agent = agents.split(",")[0]
+    agent_entry = get(EntryLocation.from_str(primary_agent))
+
+    # read secret for a primary agent only
+    (agent_secrets, user_secrets) = db.get_agent_secrets(auth.account_id, agent_entry.namespace, agent_entry.name, agent_entry.version)
+
+    agent_env_vars = body.agent_env_vars or {}
+    # agent vars from metadata has lower priority then agent secret
+    agent_env_vars[primary_agent] = {**agent_env_vars[primary_agent], **agent_secrets}
+
+    # user vars from url has higher priority then user secret
+    user_env_vars = {**user_secrets, **(body.user_env_vars or {})}
+
     params = {
         "max_iterations": body.max_iterations,
         "record_run": body.record_run,
         "api_url": agent_api_url,
         "tool_resources": body.tool_resources,
-        "user_env_vars": body.user_env_vars or {},
-        "agent_env_vars": body.agent_env_vars or {},
+        "user_env_vars": user_env_vars,
+        "agent_env_vars": agent_env_vars,
     }
 
-    primary_agent = agents.split(",")[0]
-    agent_entry = get(EntryLocation.from_str(primary_agent))
+    print(params)
+
     if not agent_entry:
         raise HTTPException(status_code=404, detail=f"Agent '{primary_agent}' not found in the registry.")
     entry_details = agent_entry.details

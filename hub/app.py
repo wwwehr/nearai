@@ -15,6 +15,7 @@ from hub.api.v1.registry import v1_router as registry_router
 from hub.api.v1.routes import v1_router
 from hub.api.v1.stars import v1_router as stars_router
 from hub.api.v1.vector_stores import vector_stores_router
+from hub.api.v1.hub_secrets import hub_secrets_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -41,6 +42,7 @@ app.include_router(vector_stores_router, prefix="/v1")
 app.include_router(files_router, prefix="/v1")
 app.include_router(evaluation_router, prefix="/v1")
 app.include_router(stars_router, prefix="/v1")
+app.include_router(hub_secrets_router, prefix="/v1")
 
 
 @app.get("/health")

@@ -74,7 +74,7 @@ export function benchmarkEvaluationsUrlForEntry(
       break;
 
     case 'benchmark':
-      url = `/evaluations?benchmarks=${entry.id}`;
+      url = `/evaluations?benchmarks=${encodeURIComponent(idForEntry(entry))}`;
       break;
 
     case 'model':
@@ -83,4 +83,8 @@ export function benchmarkEvaluationsUrlForEntry(
   }
 
   return url;
+}
+
+export function idForEntry(entry: z.infer<typeof entryModel>) {
+  return `${entry.namespace}/${entry.name}/${entry.version}`;
 }

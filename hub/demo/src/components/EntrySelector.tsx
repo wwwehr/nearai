@@ -7,6 +7,7 @@ import { type z } from 'zod';
 import { Flex } from '~/components/lib/Flex';
 import { Input } from '~/components/lib/Input';
 import { useEntriesSearch } from '~/hooks/entries';
+import { idForEntry } from '~/lib/entries';
 import { type entryModel } from '~/lib/models';
 import { type EntryCategory } from '~/server/api/routers/hub';
 import { api } from '~/trpc/react';
@@ -25,7 +26,7 @@ export type EntrySelectorOnSelectHandler = (
 type Props = {
   category: EntryCategory;
   description?: string;
-  selectedIds: number[];
+  selectedIds: string[];
   onSelect: EntrySelectorOnSelectHandler;
 };
 
@@ -76,7 +77,7 @@ export const EntrySelector = ({
               key={entry.id}
               footer={
                 <div>
-                  {selectedIds.includes(entry.id) ? (
+                  {selectedIds.includes(idForEntry(entry)) ? (
                     <Button
                       iconLeft={<Minus />}
                       label="Remove"

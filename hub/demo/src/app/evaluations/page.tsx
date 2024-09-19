@@ -27,6 +27,7 @@ import { Tooltip } from '~/components/lib/Tooltip';
 import { useDebouncedValue } from '~/hooks/debounce';
 import { useQueryParams } from '~/hooks/url';
 import { STANDARD_BENCHMARK_COLUMNS } from '~/lib/benchmarks';
+import { idForEntry } from '~/lib/entries';
 import { type entryModel } from '~/lib/models';
 import { api } from '~/trpc/react';
 import { wordsMatchFuzzySearch } from '~/utils/search';
@@ -49,9 +50,7 @@ export default function EvaluationsPage() {
   });
 
   const selectedBenchmarkIds = useMemo(() => {
-    return queryParams.benchmarks
-      ? queryParams.benchmarks.split(',').map((id) => parseInt(id))
-      : [];
+    return queryParams.benchmarks ? queryParams.benchmarks.split(',') : [];
   }, [queryParams.benchmarks]);
 
   const selectedBenchmarkColumns = useMemo(() => {
@@ -68,7 +67,7 @@ export default function EvaluationsPage() {
 
   const selectedBenchmarks = useMemo(() => {
     return benchmarksQuery.data?.filter((entry) =>
-      selectedBenchmarkIds.includes(entry.id),
+      selectedBenchmarkIds.includes(idForEntry(entry)),
     );
   }, [benchmarksQuery.data, selectedBenchmarkIds]);
 
@@ -144,19 +143,16 @@ export default function EvaluationsPage() {
     updateQueryPath({ columns: columns.join(',') }, 'replace');
   };
 
-  const onSelectBenchmark: EntrySelectorOnSelectHandler = (
-    benchmark,
-    selected,
-  ) => {
+  const onSelectBenchmark: EntrySelectorOnSelectHandler = (entry, selected) => {
     let ids = [...selectedBenchmarkIds];
     let columns = queryParams.columns?.split(',') ?? [];
-    const relatedColumns = columnsForBenchmark(benchmark);
+    const relatedColumns = columnsForBenchmark(entry);
 
     if (selected) {
-      ids.push(benchmark.id);
+      ids.push(idForEntry(entry));
       columns = [...new Set([...columns, ...relatedColumns])];
     } else {
-      ids = ids.filter((id) => id !== benchmark.id);
+      ids = ids.filter((id) => id !== idForEntry(entry));
       columns = columns.filter((column) => !relatedColumns.includes(column));
     }
 

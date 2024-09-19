@@ -10,6 +10,7 @@ import pymysql
 import pymysql.cursors
 from dotenv import load_dotenv
 from pydantic import BaseModel, RootModel
+from shared.models import SimilaritySearch
 
 load_dotenv()
 
@@ -70,12 +71,6 @@ class VectorStoreFile(BaseModel):
     created_at: datetime
     updated_at: datetime
     embedding_status: Optional[Literal["in_progress", "completed"]]
-
-
-class SimilaritySearch(BaseModel):
-    file_id: str
-    chunk_text: str
-    distance: float
 
 
 class SqlClient:

@@ -2,7 +2,7 @@ import json
 import re
 from collections import defaultdict
 from os import getenv
-from typing import Annotated, Any, Dict, List
+from typing import Any, Dict, List
 
 import boto3
 import botocore
@@ -10,11 +10,25 @@ import botocore.exceptions
 from dotenv import load_dotenv
 from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
-from pydantic import AfterValidator, BaseModel
+from nearai.config import DEFAULT_NAMESPACE
+from pydantic import BaseModel
 from sqlmodel import delete, select, text
 
 from hub.api.v1.auth import AuthToken, revokable_auth
+from hub.api.v1.entry_location import EntryLocation, valid_identifier
 from hub.api.v1.models import RegistryEntry, Tags, get_session
+
+DEFAULT_NAMESPACE_WRITE_ACCESS_LIST = [
+    "spensa2.near",
+    "marcelo.near",
+    "vadim.near",
+    "root.near",
+    "cmrfrd.near",
+    "pierre-dev.near",
+    "alomonos.near",
+    "flatirons.near",
+    "calebjacob.near",
+]
 
 load_dotenv()
 S3_BUCKET = getenv("S3_BUCKET")
@@ -27,18 +41,6 @@ v1_router = APIRouter(
 )
 
 
-identifier_pattern = re.compile(r"^[a-zA-Z0-9_\-.]+$")
-
-
-def valid_identifier(identifier: str) -> str:
-    result = identifier_pattern.match(identifier)
-    if result is None:
-        raise HTTPException(
-            status_code=400, detail=f"Invalid identifier: {repr(identifier)}. Should match {identifier_pattern.pattern}"
-        )
-    return result[0]
-
-
 tag_pattern = re.compile(r"^[a-zA-Z0-9_\-]+$")
 
 
@@ -49,32 +51,6 @@ def valid_tag(tag: str) -> str:
     return result[0]
 
 
-class EntryLocation(BaseModel):
-    namespace: Annotated[str, AfterValidator(valid_identifier)]
-    name: Annotated[str, AfterValidator(valid_identifier)]
-    version: Annotated[str, AfterValidator(valid_identifier)]
-
-    @staticmethod
-    def from_str(entry: str) -> "EntryLocation":
-        """Create a location from a string in the format namespace/name/version."""
-        pattern = re.compile("^(?P<namespace>[^/]+)/(?P<name>[^/]+)/(?P<version>[^/]+)$")
-        match = pattern.match(entry)
-
-        if match is None:
-            raise ValueError(f"Invalid entry format: {entry}. Should have the format <namespace>/<name>/<version>")
-
-        return EntryLocation(
-            namespace=match.group("namespace"),
-            name=match.group("name"),
-            version=match.group("version"),
-        )
-
-    @classmethod
-    def as_form(cls, namespace: str = Form(...), name: str = Form(...), version: str = Form(...)):
-        """Create a location from form data."""
-        return cls(namespace=namespace, name=name, version=version)
-
-
 def with_write_access(use_forms=False):
     default = Depends(EntryLocation.as_form) if use_forms else Body()
 
@@ -83,12 +59,15 @@ def with_write_access(use_forms=False):
         auth: AuthToken = Depends(revokable_auth),
     ) -> EntryLocation:
         """Check the user has write access to the entry."""
-        if auth.account_id != entry_location.namespace:
-            raise HTTPException(
-                status_code=403,
-                detail=f"Unauthorized. Namespace: {entry_location.namespace} != Account: {auth.account_id}",
-            )
-        return entry_location
+        if auth.account_id == entry_location.namespace:
+            return entry_location
+        if entry_location.namespace == DEFAULT_NAMESPACE:
+            if auth.account_id in DEFAULT_NAMESPACE_WRITE_ACCESS_LIST:
+                return entry_location
+        raise HTTPException(
+            status_code=403,
+            detail=f"Unauthorized. Namespace: {entry_location.namespace} != Account: {auth.account_id}",
+        )
 
     return fn_with_write_access
 

@@ -120,7 +120,7 @@ async def remove_hub_secret(
     logger.info(f"Hub secret removed successfully")
 
 
-@hub_secrets_router.post("/get_user_secrets")
+@hub_secrets_router.get("/get_user_secrets")
 async def get_user_secrets(
     request: GetUserHubSecret, background_tasks: BackgroundTasks, auth: AuthToken = Depends(revokable_auth)
 ):

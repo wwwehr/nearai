@@ -18,7 +18,7 @@ import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 
 import { signInWithNear } from '~/lib/auth';
-import { REGISTRY_CATEGORY_LABELS } from '~/lib/registry';
+import { ENTRY_CATEGORY_LABELS } from '~/lib/entries';
 import { useAuthStore } from '~/stores/auth';
 
 import { BreakpointDisplay } from './lib/BreakpointDisplay';
@@ -34,27 +34,27 @@ const navItems = [
   {
     label: 'Agents',
     path: '/agents',
-    icon: REGISTRY_CATEGORY_LABELS.agent.icon,
+    icon: ENTRY_CATEGORY_LABELS.agent.icon,
   },
   {
     label: 'Models',
     path: '/models',
-    icon: REGISTRY_CATEGORY_LABELS.model.icon,
+    icon: ENTRY_CATEGORY_LABELS.model.icon,
   },
   {
     label: 'Datasets',
     path: '/datasets',
-    icon: REGISTRY_CATEGORY_LABELS.dataset.icon,
+    icon: ENTRY_CATEGORY_LABELS.dataset.icon,
   },
   {
     label: 'Benchmarks',
     path: '/benchmarks',
-    icon: REGISTRY_CATEGORY_LABELS.benchmark.icon,
+    icon: ENTRY_CATEGORY_LABELS.benchmark.icon,
   },
   {
     label: 'Evaluations',
     path: '/evaluations',
-    icon: REGISTRY_CATEGORY_LABELS.evaluation.icon,
+    icon: ENTRY_CATEGORY_LABELS.evaluation.icon,
   },
   {
     label: 'Chat',

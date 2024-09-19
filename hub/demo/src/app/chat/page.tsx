@@ -205,7 +205,7 @@ export default function InferencePage() {
           openForSmallScreens={parametersOpenForSmallScreens}
           setOpenForSmallScreens={setParametersOpenForSmallScreens}
         >
-          <Text size="text-xs" weight={500} uppercase>
+          <Text size="text-xs" weight={600} uppercase>
             Parameters
           </Text>
 

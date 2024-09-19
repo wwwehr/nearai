@@ -20,16 +20,13 @@ import { SvgIcon } from '~/components/lib/SvgIcon';
 import { Tabs } from '~/components/lib/Tabs';
 import { Text } from '~/components/lib/Text';
 import { StarButton } from '~/components/StarButton';
-import {
-  useCurrentRegistryEntry,
-  useRegistryEntryParams,
-} from '~/hooks/registry';
-import { REGISTRY_CATEGORY_LABELS } from '~/lib/registry';
+import { useCurrentEntry, useEntryParams } from '~/hooks/entries';
+import { ENTRY_CATEGORY_LABELS } from '~/lib/entries';
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   const pathSegments = usePathname().split('/');
-  const { namespace, name, version } = useRegistryEntryParams();
-  const { currentResource, currentVersions } = useCurrentRegistryEntry('agent');
+  const { namespace, name, version } = useEntryParams();
+  const { currentEntry, currentVersions } = useCurrentEntry('agent');
   const baseUrl = `/agents/${namespace}/${name}`;
   let activeTab: 'overview' | 'run' | 'source' = 'overview';
 
@@ -56,9 +53,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <Flex align="center" gap="m">
               <ImageIcon
                 size="l"
-                src={currentResource?.details.icon}
+                src={currentEntry?.details.icon}
                 alt={name}
-                fallbackIcon={REGISTRY_CATEGORY_LABELS.agent.icon}
+                fallbackIcon={ENTRY_CATEGORY_LABELS.agent.icon}
               />
 
               <Flex gap="none" direction="column" align="start">
@@ -82,17 +79,17 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                     <Dropdown.Content>
                       <Dropdown.Section>
                         <Dropdown.SectionContent>
-                          <Text size="text-xs" weight={500} uppercase>
+                          <Text size="text-xs" weight={600} uppercase>
                             Versions
                           </Text>
                         </Dropdown.SectionContent>
 
-                        {currentVersions?.map((item) => (
+                        {currentVersions?.map((entry) => (
                           <Dropdown.Item
-                            href={`${baseUrl}/${item.version}`}
-                            key={item.version}
+                            href={`${baseUrl}/${entry.version}`}
+                            key={entry.version}
                           >
-                            {item.version}
+                            {entry.version}
                           </Dropdown.Item>
                         ))}
                       </Dropdown.Section>
@@ -112,7 +109,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </Flex>
           </Flex>
 
-          <StarButton item={currentResource} variant="detailed" />
+          <StarButton entry={currentEntry} variant="detailed" />
         </Flex>
 
         <Tabs.Root value={activeTab}>
@@ -135,7 +132,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </Tabs.Root>
       </Section>
 
-      {!currentResource && <PlaceholderSection />}
+      {!currentEntry && <PlaceholderSection />}
 
       {children}
     </>

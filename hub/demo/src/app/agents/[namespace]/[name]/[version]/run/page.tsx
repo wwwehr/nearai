@@ -21,11 +21,8 @@ import { Text } from '~/components/lib/Text';
 import { Messages } from '~/components/Messages';
 import { SignInPrompt } from '~/components/SignInPrompt';
 import { ThreadsSidebar } from '~/components/ThreadsSidebar';
+import { useCurrentEntry, useEntryParams } from '~/hooks/entries';
 import { useZodForm } from '~/hooks/form';
-import {
-  useCurrentRegistryEntry,
-  useRegistryEntryParams,
-} from '~/hooks/registry';
 import { useThreads } from '~/hooks/threads';
 import { useQueryParams } from '~/hooks/url';
 import { chatWithAgentModel } from '~/lib/models';
@@ -37,9 +34,9 @@ import { formatBytes } from '~/utils/number';
 import { getQueryParams } from '~/utils/url';
 
 export default function RunAgentPage() {
-  const { currentResource } = useCurrentRegistryEntry('agent');
+  const { currentEntry } = useCurrentEntry('agent');
   const isAuthenticated = useAuthStore((store) => store.isAuthenticated);
-  const { namespace, name, version } = useRegistryEntryParams();
+  const { namespace, name, version } = useEntryParams();
   const { queryParams, updateQueryPath } = useQueryParams(['environmentId']);
   const environmentId = queryParams.environmentId ?? '';
   const chatMutation = api.hub.chatWithAgent.useMutation();
@@ -100,10 +97,10 @@ export default function RunAgentPage() {
       form.setValue('new_message', '');
 
       values.user_env_vars = getQueryParams();
-      if (currentResource?.details.env_vars) {
+      if (currentEntry?.details.env_vars) {
         values.agent_env_vars = {
           ...(values.agent_env_vars ?? {}),
-          [values.agent_id]: currentResource?.details?.env_vars ?? {},
+          [values.agent_id]: currentEntry?.details?.env_vars ?? {},
         };
       }
 
@@ -158,16 +155,16 @@ export default function RunAgentPage() {
   }, [environment, environmentId, environmentQuery]);
 
   useEffect(() => {
-    if (currentResource && isAuthenticated) {
+    if (currentEntry && isAuthenticated) {
       form.setFocus('new_message');
     }
-  }, [environmentId, currentResource, isAuthenticated, form]);
+  }, [environmentId, currentEntry, isAuthenticated, form]);
 
   useEffect(() => {
     setThreadsOpenForSmallScreens(false);
   }, [environmentId]);
 
-  if (!currentResource) return null;
+  if (!currentEntry) return null;
 
   return (
     <Form stretch onSubmit={form.handleSubmit(onSubmit)} ref={formRef}>
@@ -183,7 +180,7 @@ export default function RunAgentPage() {
             loading={environmentQuery.isLoading}
             messages={environment?.conversation ?? []}
             threadId={agentId}
-            welcomeMessage={<AgentWelcome details={currentResource.details} />}
+            welcomeMessage={<AgentWelcome details={currentEntry.details} />}
           />
 
           <Sidebar.MainStickyFooter>
@@ -240,7 +237,7 @@ export default function RunAgentPage() {
           openForSmallScreens={parametersOpenForSmallScreens}
           setOpenForSmallScreens={setParametersOpenForSmallScreens}
         >
-          <Text size="text-xs" weight={500} uppercase>
+          <Text size="text-xs" weight={600} uppercase>
             Output
           </Text>
 
@@ -281,7 +278,7 @@ export default function RunAgentPage() {
 
           <HR />
 
-          <Text size="text-xs" weight={500} uppercase>
+          <Text size="text-xs" weight={600} uppercase>
             Parameters
           </Text>
 

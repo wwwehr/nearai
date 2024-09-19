@@ -91,7 +91,7 @@ export const revokeNonceModel = z.object({
   auth: z.string(),
 });
 
-export const registryEntryModel = z.object({
+export const entryModel = z.object({
   id: z.number(),
   category: z.string(),
   namespace: z.string(),
@@ -129,7 +129,7 @@ export const registryEntryModel = z.object({
   ),
 });
 
-export const registryEntriesModel = z.array(registryEntryModel);
+export const entriesModel = z.array(entryModel);
 
 export const chatWithAgentModel = z.object({
   agent_id: z.string(),

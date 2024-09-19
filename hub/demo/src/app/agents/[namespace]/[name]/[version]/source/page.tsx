@@ -14,10 +14,7 @@ import {
 } from '~/components/lib/Placeholder';
 import { Sidebar } from '~/components/lib/Sidebar';
 import { Text } from '~/components/lib/Text';
-import {
-  useCurrentRegistryEntry,
-  useRegistryEntryParams,
-} from '~/hooks/registry';
+import { useCurrentEntry, useEntryParams } from '~/hooks/entries';
 import { useQueryParams } from '~/hooks/url';
 import { api } from '~/trpc/react';
 import { copyTextToClipboard } from '~/utils/clipboard';
@@ -26,8 +23,8 @@ const METADATA_FILE_PATH = 'metadata.json';
 
 export default function AgentSourcePage() {
   const { createQueryPath, queryParams } = useQueryParams(['file']);
-  const { currentResource } = useCurrentRegistryEntry('agent');
-  const params = useRegistryEntryParams();
+  const { currentEntry } = useCurrentEntry('agent');
+  const params = useEntryParams();
   const filePathsQuery = api.hub.filePaths.useQuery(params);
   const activeFilePath = queryParams.file ?? filePathsQuery.data?.[0] ?? '';
   const fileQuery = api.hub.file.useQuery(
@@ -44,7 +41,7 @@ export default function AgentSourcePage() {
     activeFilePath === fileQuery.data?.path ? fileQuery.data : undefined;
   if (activeFilePath === METADATA_FILE_PATH) {
     openedFile = {
-      content: JSON.stringify(currentResource?.details ?? '{}', null, 2),
+      content: JSON.stringify(currentEntry?.details ?? '{}', null, 2),
       path: METADATA_FILE_PATH,
     };
   }
@@ -53,7 +50,7 @@ export default function AgentSourcePage() {
     setSidebarOpenForSmallScreens(false);
   }, [queryParams.file]);
 
-  if (!currentResource) return null;
+  if (!currentEntry) return null;
 
   return (
     <>
@@ -62,7 +59,7 @@ export default function AgentSourcePage() {
           openForSmallScreens={sidebarOpenForSmallScreens}
           setOpenForSmallScreens={setSidebarOpenForSmallScreens}
         >
-          <Text size="text-xs" weight={500} uppercase>
+          <Text size="text-xs" weight={600} uppercase>
             Files
           </Text>
 

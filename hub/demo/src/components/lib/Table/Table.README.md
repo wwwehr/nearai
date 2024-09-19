@@ -279,9 +279,9 @@ import { api } from '~/trpc/react';
 
 ...
 
-const list = api.hub.registryEntries.useQuery({ category: 'agent' });
+const entries = api.hub.entries.useQuery({ category: 'agent' });
 const { sorted, ...tableProps } = useTable({
-  data: list.data,
+  data: entries.data,
   sortColumn: 'name',
 });
 

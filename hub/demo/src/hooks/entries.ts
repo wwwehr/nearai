@@ -2,14 +2,14 @@ import { useParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { type z } from 'zod';
 
-import { type registryEntriesModel } from '~/lib/models';
-import { type RegistryCategory } from '~/server/api/routers/hub';
+import { type entriesModel } from '~/lib/models';
+import { type EntryCategory } from '~/server/api/routers/hub';
 import { api } from '~/trpc/react';
 import { wordsMatchFuzzySearch } from '~/utils/search';
 
 import { useDebouncedValue } from './debounce';
 
-export function useRegistryEntryParams() {
+export function useEntryParams() {
   const { namespace, name, version } = useParams();
 
   return {
@@ -19,29 +19,29 @@ export function useRegistryEntryParams() {
   };
 }
 
-export function useCurrentRegistryEntry(category: RegistryCategory) {
-  const { namespace, name, version } = useRegistryEntryParams();
+export function useCurrentEntry(category: EntryCategory) {
+  const { namespace, name, version } = useEntryParams();
 
-  const list = api.hub.registryEntries.useQuery({
+  const entries = api.hub.entries.useQuery({
     category,
     namespace,
     showLatestVersion: false,
   });
 
-  const currentVersions = list.data?.filter((item) => item.name === name);
+  const currentVersions = entries.data?.filter((item) => item.name === name);
 
-  const currentResource = currentVersions?.find(
+  const currentEntry = currentVersions?.find(
     (item) => item.version === version,
   );
 
   return {
-    currentResource,
+    currentEntry,
     currentVersions,
   };
 }
 
-export function useRegistryEntriesSearch(
-  data: z.infer<typeof registryEntriesModel> | undefined,
+export function useEntriesSearch(
+  data: z.infer<typeof entriesModel> | undefined,
 ) {
   const [searchQuery, setSearchQuery] = useState('');
   const searchQueryDebounced = useDebouncedValue(searchQuery, 150);

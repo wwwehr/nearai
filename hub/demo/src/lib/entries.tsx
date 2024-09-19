@@ -9,13 +9,13 @@ import {
 import { type ReactElement } from 'react';
 import { type z } from 'zod';
 
-import { type RegistryCategory } from '~/server/api/routers/hub';
+import { type EntryCategory } from '~/server/api/routers/hub';
 
-import { type registryEntryModel } from './models';
+import { type entryModel } from './models';
 
-export const REGISTRY_CATEGORY_LABELS: Record<
+export const ENTRY_CATEGORY_LABELS: Record<
   // eslint-disable-next-line @typescript-eslint/ban-types
-  RegistryCategory | (string & {}),
+  EntryCategory | (string & {}),
   {
     icon: ReactElement;
     label: string;
@@ -47,40 +47,38 @@ export const REGISTRY_CATEGORY_LABELS: Record<
   },
 };
 
-export function primaryUrlForRegistryItem(
-  item: z.infer<typeof registryEntryModel>,
-) {
+export function primaryUrlForEntry(entry: z.infer<typeof entryModel>) {
   let url: string | undefined;
 
-  switch (item.category as RegistryCategory) {
+  switch (entry.category as EntryCategory) {
     case 'agent':
-      url = `/agents/${item.namespace}/${item.name}/${item.version}`;
+      url = `/agents/${entry.namespace}/${entry.name}/${entry.version}`;
       break;
 
     case 'benchmark':
-      url = benchmarkEvaluationsUrlForRegistryItem(item);
+      url = benchmarkEvaluationsUrlForEntry(entry);
       break;
   }
 
   return url;
 }
 
-export function benchmarkEvaluationsUrlForRegistryItem(
-  item: z.infer<typeof registryEntryModel>,
+export function benchmarkEvaluationsUrlForEntry(
+  entry: z.infer<typeof entryModel>,
 ) {
   let url: string | undefined;
 
-  switch (item.category as RegistryCategory) {
+  switch (entry.category as EntryCategory) {
     case 'agent':
-      url = `/evaluations?search=${encodeURIComponent(`${item.namespace}/${item.name}`)}`;
+      url = `/evaluations?search=${encodeURIComponent(`${entry.namespace}/${entry.name}`)}`;
       break;
 
     case 'benchmark':
-      url = `/evaluations?benchmarks=${item.id}`;
+      url = `/evaluations?benchmarks=${entry.id}`;
       break;
 
     case 'model':
-      url = `/evaluations?search=${encodeURIComponent(`${item.name}`)}`;
+      url = `/evaluations?search=${encodeURIComponent(`${entry.name}`)}`;
       break;
   }
 

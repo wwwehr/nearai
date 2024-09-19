@@ -3,7 +3,7 @@ import { type CSSProperties, useEffect, useState } from 'react';
 import { type z } from 'zod';
 
 import { signInWithNear } from '~/lib/auth';
-import { type registryEntryModel } from '~/lib/models';
+import { type entryModel } from '~/lib/models';
 import { useAuthStore } from '~/stores/auth';
 import { api } from '~/trpc/react';
 
@@ -14,31 +14,31 @@ import { Tooltip } from './lib/Tooltip';
 import s from './StarButton.module.scss';
 
 type Props = {
-  item: z.infer<typeof registryEntryModel> | undefined;
+  entry: z.infer<typeof entryModel> | undefined;
   style?: CSSProperties;
   variant: 'simple' | 'detailed';
 };
 
-export const StarButton = ({ item, style, variant = 'simple' }: Props) => {
+export const StarButton = ({ entry, style, variant = 'simple' }: Props) => {
   const isAuthenticated = useAuthStore((store) => store.isAuthenticated);
   const [starred, setStarred] = useState(false);
   const [count, setCount] = useState(0);
   const [clicked, setClicked] = useState(false);
-  const mutation = api.hub.starRegistryEntry.useMutation();
+  const mutation = api.hub.starEntry.useMutation();
   const visuallyStarred = isAuthenticated && starred;
 
   useEffect(() => {
-    setCount(item?.num_stars ?? 0);
+    setCount(entry?.num_stars ?? 0);
     setClicked(false);
-  }, [item]);
+  }, [entry]);
 
   useEffect(() => {
-    setStarred(!!item?.starred_by_point_of_view);
+    setStarred(!!entry?.starred_by_point_of_view);
     setClicked(false);
-  }, [item]);
+  }, [entry]);
 
   const toggleStar = () => {
-    if (!item) return;
+    if (!entry) return;
 
     if (!isAuthenticated) {
       openToast({
@@ -60,16 +60,16 @@ export const StarButton = ({ item, style, variant = 'simple' }: Props) => {
       setCount((value) => Math.max(0, value - 1));
       mutation.mutate({
         action: 'remove',
-        name: item.name,
-        namespace: item.namespace,
+        name: entry.name,
+        namespace: entry.namespace,
       });
     } else {
       setStarred(true);
       setCount((value) => value + 1);
       mutation.mutate({
         action: 'add',
-        name: item.name,
-        namespace: item.namespace,
+        name: entry.name,
+        namespace: entry.namespace,
       });
     }
   };

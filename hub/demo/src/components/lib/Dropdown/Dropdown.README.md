@@ -18,7 +18,7 @@ import { Button, Dropdown, SvgIcon } from '~/components/lib/Dropdown';
   <Dropdown.Content>
     <Dropdown.Section>
       <Dropdown.SectionContent>
-        <Text size="text-xs" weight={500}>Section One</Text>
+        <Text size="text-xs" weight={600}>Section One</Text>
       </Dropdown.SectionContent>
 
       <Dropdown.Item>
@@ -34,7 +34,7 @@ import { Button, Dropdown, SvgIcon } from '~/components/lib/Dropdown';
 
     <Dropdown.Section>
       <Dropdown.SectionContent>
-        <Text size="text-xs" weight={500}>Section One</Text>
+        <Text size="text-xs" weight={600}>Section One</Text>
       </Dropdown.SectionContent>
 
       <Dropdown.Item>Simple Item 1</Dropdown.Item>

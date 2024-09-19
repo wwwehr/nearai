@@ -13,26 +13,26 @@ import { Table } from '~/components/lib/Table';
 import { useTable } from '~/components/lib/Table/hooks';
 import { Text } from '~/components/lib/Text';
 import { Tooltip } from '~/components/lib/Tooltip';
-import { useRegistryEntriesSearch } from '~/hooks/registry';
+import { useEntriesSearch } from '~/hooks/entries';
 import {
-  benchmarkEvaluationsUrlForRegistryItem,
-  primaryUrlForRegistryItem,
-  REGISTRY_CATEGORY_LABELS,
-} from '~/lib/registry';
-import { type RegistryCategory } from '~/server/api/routers/hub';
+  benchmarkEvaluationsUrlForEntry,
+  ENTRY_CATEGORY_LABELS,
+  primaryUrlForEntry,
+} from '~/lib/entries';
+import { type EntryCategory } from '~/server/api/routers/hub';
 import { api } from '~/trpc/react';
 
 import { StarButton } from './StarButton';
 
 type Props = {
-  category: RegistryCategory;
+  category: EntryCategory;
   title: string;
 };
 
-export const ResourceList = ({ category, title }: Props) => {
-  const entriesQuery = api.hub.registryEntries.useQuery({ category });
+export const EntriesTable = ({ category, title }: Props) => {
+  const entriesQuery = api.hub.entries.useQuery({ category });
 
-  const { searched, searchQuery, setSearchQuery } = useRegistryEntriesSearch(
+  const { searched, searchQuery, setSearchQuery } = useEntriesSearch(
     entriesQuery.data,
   );
 
@@ -103,10 +103,10 @@ export const ResourceList = ({ category, title }: Props) => {
         <Table.Body>
           {!entriesQuery.data && <Table.PlaceholderRows />}
 
-          {sorted.map((item, index) => (
+          {sorted.map((entry, index) => (
             <Table.Row key={index}>
               <Table.Cell
-                href={primaryUrlForRegistryItem(item)}
+                href={primaryUrlForEntry(entry)}
                 style={{ width: '20rem' }}
               >
                 <Flex direction="column">
@@ -116,46 +116,46 @@ export const ResourceList = ({ category, title }: Props) => {
                     color="sand-12"
                     clickableHighlight
                   >
-                    {item.name}
+                    {entry.name}
                   </Text>
                   <Text size="text-xs" clampLines={1}>
-                    {item.description}
+                    {entry.description}
                   </Text>
                 </Flex>
               </Table.Cell>
 
-              <Table.Cell href={`/profiles/${item.namespace}`}>
+              <Table.Cell href={`/profiles/${entry.namespace}`}>
                 <Text size="text-s" weight={500}>
-                  {item.namespace}
+                  {entry.namespace}
                 </Text>
               </Table.Cell>
 
               <Table.Cell>
-                <Text size="text-s">{item.version}</Text>
+                <Text size="text-s">{entry.version}</Text>
               </Table.Cell>
 
               <Table.Cell>
                 <Flex wrap="wrap" gap="xs" style={{ width: '15rem' }}>
-                  {item.tags.map((tag) => (
+                  {entry.tags.map((tag) => (
                     <Badge label={tag} variant="neutral" key={tag} />
                   ))}
                 </Flex>
               </Table.Cell>
 
               <Table.Cell style={{ width: '1px' }}>
-                <StarButton item={item} variant="simple" />
+                <StarButton entry={entry} variant="simple" />
               </Table.Cell>
 
               <Table.Cell style={{ width: '1px' }}>
                 <Flex align="center" gap="xs">
-                  {benchmarkEvaluationsUrlForRegistryItem(item) && (
+                  {benchmarkEvaluationsUrlForEntry(entry) && (
                     <Tooltip asChild content="View Benchmark Evaluations">
                       <Button
                         label="View Benchmark Evaluations"
-                        icon={REGISTRY_CATEGORY_LABELS.evaluation.icon}
+                        icon={ENTRY_CATEGORY_LABELS.evaluation.icon}
                         size="small"
                         fill="ghost"
-                        href={benchmarkEvaluationsUrlForRegistryItem(item)}
+                        href={benchmarkEvaluationsUrlForEntry(entry)}
                       />
                     </Tooltip>
                   )}
@@ -168,7 +168,7 @@ export const ResourceList = ({ category, title }: Props) => {
                           icon={<CodeBlock weight="duotone" />}
                           size="small"
                           fill="ghost"
-                          href={`/agents/${item.namespace}/${item.name}/${item.version}/source`}
+                          href={`/agents/${entry.namespace}/${entry.name}/${entry.version}/source`}
                         />
                       </Tooltip>
 
@@ -178,7 +178,7 @@ export const ResourceList = ({ category, title }: Props) => {
                           icon={<Play weight="duotone" />}
                           size="small"
                           fill="ghost"
-                          href={`/agents/${item.namespace}/${item.name}/${item.version}/run`}
+                          href={`/agents/${entry.namespace}/${entry.name}/${entry.version}/run`}
                         />
                       </Tooltip>
                     </>

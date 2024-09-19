@@ -1,11 +1,16 @@
 'use client';
 
-import { Eye, Minus, Plus } from '@phosphor-icons/react';
+import { Eye, Minus, Plus, Table as TableIcon } from '@phosphor-icons/react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { type ChangeEventHandler, useEffect, useMemo, useState } from 'react';
 import { type z } from 'zod';
 
+import {
+  EntrySelector,
+  type EntrySelectorOnSelectHandler,
+} from '~/components/EntrySelector';
+import { BreakpointDisplay } from '~/components/lib/BreakpointDisplay';
 import { Button } from '~/components/lib/Button';
 import { Card, CardList } from '~/components/lib/Card';
 import { Checkbox, CheckboxGroup } from '~/components/lib/Checkbox';
@@ -19,23 +24,12 @@ import { Table } from '~/components/lib/Table';
 import { useTable } from '~/components/lib/Table/hooks';
 import { Text } from '~/components/lib/Text';
 import { Tooltip } from '~/components/lib/Tooltip';
-import {
-  ResourceListSelector,
-  type ResourceListSelectorOnSelectItemHandler,
-} from '~/components/ResourceListSelector';
 import { useDebouncedValue } from '~/hooks/debounce';
 import { useQueryParams } from '~/hooks/url';
 import { STANDARD_BENCHMARK_COLUMNS } from '~/lib/benchmarks';
-import { type registryEntryModel } from '~/lib/models';
+import { type entryModel } from '~/lib/models';
 import { api } from '~/trpc/react';
 import { wordsMatchFuzzySearch } from '~/utils/search';
-
-/*
-  TODO:
-
-  - Add evaluation summary table to agent details summary page (with CTA to view evaluations page)
-  - Come up with solution for sticky table header since position sticky won't be an option anymore
-*/
 
 export default function EvaluationsPage() {
   const { updateQueryPath, queryParams } = useQueryParams([
@@ -50,7 +44,7 @@ export default function EvaluationsPage() {
   const searchQueryDebounced = useDebouncedValue(searchQuery, 150);
 
   const evaluationsQuery = api.hub.evaluations.useQuery();
-  const benchmarksQuery = api.hub.registryEntries.useQuery({
+  const benchmarksQuery = api.hub.entries.useQuery({
     category: 'benchmark',
   });
 
@@ -73,8 +67,8 @@ export default function EvaluationsPage() {
   }, [queryParams.columns, selectedBenchmarkIds]);
 
   const selectedBenchmarks = useMemo(() => {
-    return benchmarksQuery.data?.filter((item) =>
-      selectedBenchmarkIds.includes(item.id),
+    return benchmarksQuery.data?.filter((entry) =>
+      selectedBenchmarkIds.includes(entry.id),
     );
   }, [benchmarksQuery.data, selectedBenchmarkIds]);
 
@@ -83,13 +77,13 @@ export default function EvaluationsPage() {
 
     if (!evaluations || !searchQueryDebounced) return evaluations;
 
-    return evaluations.filter((item) =>
+    return evaluations.filter((entry) =>
       wordsMatchFuzzySearch(
         [
-          item.namespace,
-          item.agentPath ?? item.agent,
-          item.provider,
-          item.model,
+          entry.namespace,
+          entry.agentPath ?? entry.agent,
+          entry.provider,
+          entry.model,
         ],
         searchQueryDebounced,
       ),
@@ -102,9 +96,7 @@ export default function EvaluationsPage() {
     sortOrder: 'DESCENDING',
   });
 
-  const columnsForBenchmark = (
-    benchmark: z.infer<typeof registryEntryModel>,
-  ) => {
+  const columnsForBenchmark = (benchmark: z.infer<typeof entryModel>) => {
     if (!evaluationsQuery.data) return [];
 
     const columns = evaluationsQuery.data.benchmarkColumns.filter(
@@ -120,7 +112,7 @@ export default function EvaluationsPage() {
   };
 
   const toggleAllColumnsForBenchmark = (
-    benchmark: z.infer<typeof registryEntryModel>,
+    benchmark: z.infer<typeof entryModel>,
   ) => {
     let columns = queryParams.columns?.split(',') ?? [];
     const relatedColumns = columnsForBenchmark(benchmark);
@@ -151,7 +143,7 @@ export default function EvaluationsPage() {
     updateQueryPath({ columns: columns.join(',') }, 'replace');
   };
 
-  const onSelectBenchmark: ResourceListSelectorOnSelectItemHandler = (
+  const onSelectBenchmark: EntrySelectorOnSelectHandler = (
     benchmark,
     selected,
   ) => {
@@ -200,7 +192,7 @@ export default function EvaluationsPage() {
           setOpenForSmallScreens={setSidebarIsOpenForSmallerScreens}
         >
           <Flex align="center" gap="s">
-            <Text size="text-xs" weight={500} uppercase>
+            <Text size="text-xs" weight={600} uppercase>
               Benchmarks
             </Text>
 
@@ -216,87 +208,70 @@ export default function EvaluationsPage() {
             </Tooltip>
           </Flex>
 
+          <Text size="text-s">
+            Include benchmarks to view specific evaluation metrics (columns).
+          </Text>
+
           {selectedBenchmarks ? (
-            <>
-              {selectedBenchmarks.length > 0 ? (
-                <Sidebar.SidebarContentBleed>
-                  <CardList>
-                    {selectedBenchmarks.map((benchmark) => (
-                      <Card padding="m" background="sand-2" key={benchmark.id}>
-                        <Flex gap="xs">
-                          <Flex
-                            direction="column"
-                            style={{ marginRight: 'auto' }}
-                          >
-                            <Text size="text-s" weight={500} color="sand-12">
-                              {benchmark.name} {benchmark.version}
-                            </Text>
-                            <Link
-                              href={`/profiles/${benchmark.namespace}`}
-                              target="_blank"
-                            >
-                              <Text size="text-xs">@{benchmark.namespace}</Text>
-                            </Link>
-                          </Flex>
+            <Sidebar.SidebarContentBleed>
+              <CardList>
+                {selectedBenchmarks.map((benchmark) => (
+                  <Card padding="m" background="sand-2" key={benchmark.id}>
+                    <Flex gap="xs">
+                      <Flex direction="column" style={{ marginRight: 'auto' }}>
+                        <Text size="text-s" weight={500} color="sand-12">
+                          {benchmark.name} {benchmark.version}
+                        </Text>
+                        <Link
+                          href={`/profiles/${benchmark.namespace}`}
+                          target="_blank"
+                        >
+                          <Text size="text-xs">@{benchmark.namespace}</Text>
+                        </Link>
+                      </Flex>
 
-                          <Tooltip asChild content="Toggle all columns">
-                            <Button
-                              label="Toggle all columns"
-                              icon={<Eye weight="duotone" />}
-                              size="x-small"
-                              fill="ghost"
-                              onClick={() =>
-                                toggleAllColumnsForBenchmark(benchmark)
-                              }
-                            />
-                          </Tooltip>
+                      <Tooltip asChild content="Toggle all columns">
+                        <Button
+                          label="Toggle all columns"
+                          icon={<Eye weight="duotone" />}
+                          size="x-small"
+                          fill="ghost"
+                          onClick={() =>
+                            toggleAllColumnsForBenchmark(benchmark)
+                          }
+                        />
+                      </Tooltip>
 
-                          <Tooltip asChild content="Remove benchmark">
-                            <Button
-                              label="Remove benchmark"
-                              icon={<Minus />}
-                              size="x-small"
-                              fill="ghost"
-                              onClick={() =>
-                                onSelectBenchmark(benchmark, false)
-                              }
-                            />
-                          </Tooltip>
+                      <Tooltip asChild content="Remove benchmark">
+                        <Button
+                          label="Remove benchmark"
+                          icon={<Minus />}
+                          size="x-small"
+                          fill="ghost"
+                          onClick={() => onSelectBenchmark(benchmark, false)}
+                        />
+                      </Tooltip>
+                    </Flex>
+
+                    <CheckboxGroup name="columns">
+                      {columnsForBenchmark(benchmark).map((column) => (
+                        <Flex as="label" align="center" gap="s" key={column}>
+                          <Checkbox
+                            name={`columns-${column}`}
+                            value={column}
+                            checked={selectedBenchmarkColumns.includes(column)}
+                            onChange={onFilteredBenchmarkColumnChange}
+                          />
+                          <Text as="span" size="text-s" color="sand-12">
+                            {column.replace(`${benchmark.name}/`, '')}
+                          </Text>
                         </Flex>
-
-                        <CheckboxGroup name="columns">
-                          {columnsForBenchmark(benchmark).map((column) => (
-                            <Flex
-                              as="label"
-                              align="center"
-                              gap="s"
-                              key={column}
-                            >
-                              <Checkbox
-                                name={`columns-${column}`}
-                                value={column}
-                                checked={selectedBenchmarkColumns.includes(
-                                  column,
-                                )}
-                                onChange={onFilteredBenchmarkColumnChange}
-                              />
-                              <Text as="span" size="text-xs" color="sand-12">
-                                {column.replace(`${benchmark.name}/`, '')}
-                              </Text>
-                            </Flex>
-                          ))}
-                        </CheckboxGroup>
-                      </Card>
-                    ))}
-                  </CardList>
-                </Sidebar.SidebarContentBleed>
-              ) : (
-                <Text size="text-s">
-                  Include benchmarks to view specific evaluation metrics
-                  (columns).
-                </Text>
-              )}
-            </>
+                      ))}
+                    </CheckboxGroup>
+                  </Card>
+                ))}
+              </CardList>
+            </Sidebar.SidebarContentBleed>
           ) : (
             <PlaceholderStack />
           )}
@@ -309,9 +284,21 @@ export default function EvaluationsPage() {
             gap="m"
             phone={{ columns: '1fr' }}
           >
-            <Text as="h1" size="text-2xl">
-              Evaluations
-            </Text>
+            <Flex align="center" gap="m">
+              <Text as="h1" size="text-2xl">
+                Evaluations
+              </Text>
+
+              <BreakpointDisplay show="sidebar-small-screen">
+                <Button
+                  label="Edit Benchmarks"
+                  icon={<TableIcon />}
+                  size="small"
+                  fill="outline"
+                  onClick={() => setSidebarIsOpenForSmallerScreens(true)}
+                />
+              </BreakpointDisplay>
+            </Flex>
 
             <Input
               type="search"
@@ -382,20 +369,20 @@ export default function EvaluationsPage() {
             <Table.Body>
               {!evaluationsQuery.data && <Table.PlaceholderRows />}
 
-              {sorted.map((item, index) => (
+              {sorted.map((evaluation, index) => (
                 <Table.Row key={index}>
                   <Table.Cell>
-                    <Text size="text-s">{item.model}</Text>
+                    <Text size="text-s">{evaluation.model}</Text>
                   </Table.Cell>
 
                   <Table.Cell>
-                    <Text size="text-s">{item.provider}</Text>
+                    <Text size="text-s">{evaluation.provider}</Text>
                   </Table.Cell>
 
-                  {item.agentPath ? (
-                    <Table.Cell href={`/agents/${item.agentPath}`}>
+                  {evaluation.agentPath ? (
+                    <Table.Cell href={`/agents/${evaluation.agentPath}`}>
                       <Text size="text-s" weight={500} color="sand-12">
-                        {item.agentPath}
+                        {evaluation.agentPath}
                       </Text>
                     </Table.Cell>
                   ) : (
@@ -409,14 +396,14 @@ export default function EvaluationsPage() {
                   {selectedBenchmarkColumns.map((column) => (
                     <Table.Cell key={column}>
                       <Tooltip content={column}>
-                        {typeof item[column] === 'number' ? (
+                        {typeof evaluation[column] === 'number' ? (
                           <Text size="text-s" color="sand-12">
-                            {item[column]}%
+                            {evaluation[column]}%
                           </Text>
                         ) : (
                           <>
-                            {item[column] ? (
-                              <Text size="text-s">{item[column]}</Text>
+                            {evaluation[column] ? (
+                              <Text size="text-s">{evaluation[column]}</Text>
                             ) : (
                               <Text size="text-xs" color="sand-8">
                                 --
@@ -449,11 +436,11 @@ export default function EvaluationsPage() {
         onOpenChange={setBenchmarkSelectorIsOpen}
       >
         <Dialog.Content title="Benchmarks" align="stretch">
-          <ResourceListSelector
+          <EntrySelector
             category="benchmark"
             description="Select benchmarks to include in the evaluations table."
             selectedIds={selectedBenchmarkIds}
-            onSelectItem={onSelectBenchmark}
+            onSelect={onSelectBenchmark}
           />
         </Dialog.Content>
       </Dialog.Root>

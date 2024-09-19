@@ -6,39 +6,39 @@ import { type z } from 'zod';
 
 import { Flex } from '~/components/lib/Flex';
 import { Input } from '~/components/lib/Input';
-import { useRegistryEntriesSearch } from '~/hooks/registry';
-import { type registryEntryModel } from '~/lib/models';
-import { type RegistryCategory } from '~/server/api/routers/hub';
+import { useEntriesSearch } from '~/hooks/entries';
+import { type entryModel } from '~/lib/models';
+import { type EntryCategory } from '~/server/api/routers/hub';
 import { api } from '~/trpc/react';
 
+import { EntryCard } from './EntryCard';
 import { Button } from './lib/Button';
 import { Card, CardList } from './lib/Card';
 import { PlaceholderStack } from './lib/Placeholder';
 import { Text } from './lib/Text';
-import { ResourceCard } from './ResourceCard';
 
-export type ResourceListSelectorOnSelectItemHandler = (
-  item: z.infer<typeof registryEntryModel>,
+export type EntrySelectorOnSelectHandler = (
+  item: z.infer<typeof entryModel>,
   selected: boolean,
 ) => unknown;
 
 type Props = {
-  category: RegistryCategory;
+  category: EntryCategory;
   description?: string;
   selectedIds: number[];
-  onSelectItem: ResourceListSelectorOnSelectItemHandler;
+  onSelect: EntrySelectorOnSelectHandler;
 };
 
-export const ResourceListSelector = ({
+export const EntrySelector = ({
   category,
   description,
   selectedIds,
-  onSelectItem,
+  onSelect,
 }: Props) => {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
-  const entriesQuery = api.hub.registryEntries.useQuery({ category });
+  const entriesQuery = api.hub.entries.useQuery({ category });
 
-  const { searched, searchQuery, setSearchQuery } = useRegistryEntriesSearch(
+  const { searched, searchQuery, setSearchQuery } = useEntriesSearch(
     entriesQuery.data,
   );
 
@@ -69,20 +69,20 @@ export const ResourceListSelector = ({
 
       {searched ? (
         <CardList>
-          {searched.map((item) => (
-            <ResourceCard
+          {searched.map((entry) => (
+            <EntryCard
               linksOpenNewTab
-              item={item}
-              key={item.id}
+              entry={entry}
+              key={entry.id}
               footer={
                 <div>
-                  {selectedIds.includes(item.id) ? (
+                  {selectedIds.includes(entry.id) ? (
                     <Button
                       iconLeft={<Minus />}
                       label="Remove"
                       variant="secondary"
                       size="small"
-                      onClick={() => onSelectItem(item, false)}
+                      onClick={() => onSelect(entry, false)}
                     />
                   ) : (
                     <Button
@@ -90,7 +90,7 @@ export const ResourceListSelector = ({
                       label="Include"
                       variant="affirmative"
                       size="small"
-                      onClick={() => onSelectItem(item, true)}
+                      onClick={() => onSelect(entry, true)}
                     />
                   )}
                 </div>

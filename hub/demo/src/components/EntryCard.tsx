@@ -11,24 +11,21 @@ import { Flex } from '~/components/lib/Flex';
 import { Text } from '~/components/lib/Text';
 import { Tooltip } from '~/components/lib/Tooltip';
 import { StarButton } from '~/components/StarButton';
-import { type registryEntryModel } from '~/lib/models';
-import {
-  primaryUrlForRegistryItem,
-  REGISTRY_CATEGORY_LABELS,
-} from '~/lib/registry';
+import { ENTRY_CATEGORY_LABELS, primaryUrlForEntry } from '~/lib/entries';
+import { type entryModel } from '~/lib/models';
 
 import { ConditionalLink } from './lib/ConditionalLink';
 import { ImageIcon } from './lib/ImageIcon';
 
 type Props = {
-  item: z.infer<typeof registryEntryModel>;
+  entry: z.infer<typeof entryModel>;
   linksOpenNewTab?: boolean;
   footer?: ReactNode;
 };
 
-export const ResourceCard = ({ item, linksOpenNewTab, footer }: Props) => {
-  const icon = REGISTRY_CATEGORY_LABELS[item.category]?.icon;
-  const primaryUrl = primaryUrlForRegistryItem(item);
+export const EntryCard = ({ entry, linksOpenNewTab, footer }: Props) => {
+  const icon = ENTRY_CATEGORY_LABELS[entry.category]?.icon;
+  const primaryUrl = primaryUrlForEntry(entry);
   const target = linksOpenNewTab ? '_blank' : undefined;
 
   return (
@@ -36,8 +33,8 @@ export const ResourceCard = ({ item, linksOpenNewTab, footer }: Props) => {
       <Flex gap="s" align="center">
         <ConditionalLink href={primaryUrl}>
           <ImageIcon
-            src={item.details.icon}
-            alt={item.name}
+            src={entry.details.icon}
+            alt={entry.name}
             fallbackIcon={icon}
           />
         </ConditionalLink>
@@ -49,39 +46,37 @@ export const ResourceCard = ({ item, linksOpenNewTab, footer }: Props) => {
             style={{ zIndex: 1, position: 'relative' }}
           >
             <Text size="text-base" weight={600} color="sand-12">
-              {item.name}
+              {entry.name}
             </Text>
           </ConditionalLink>
 
           <ConditionalLink
-            href={`/profiles/${item.namespace}`}
+            href={`/profiles/${entry.namespace}`}
             target={target}
             style={{ marginTop: '-0.1rem' }}
           >
             <Text size="text-xs" weight={400}>
-              @{item.namespace}
+              @{entry.namespace}
             </Text>
           </ConditionalLink>
         </Flex>
       </Flex>
 
-      {item.description && <Text size="text-s">{item.description}</Text>}
+      {entry.description && <Text size="text-s">{entry.description}</Text>}
 
       <Flex gap="s" align="center">
         <Badge
-          label={
-            REGISTRY_CATEGORY_LABELS[item.category]?.label ?? item.category
-          }
+          label={ENTRY_CATEGORY_LABELS[entry.category]?.label ?? entry.category}
           variant="neutral"
         />
 
         <Tooltip content="Latest Version">
-          <Badge label={item.version} variant="neutral" />
+          <Badge label={entry.version} variant="neutral" />
         </Tooltip>
 
-        <StarButton item={item} variant="simple" />
+        <StarButton entry={entry} variant="simple" />
 
-        {item.category === 'agent' && (
+        {entry.category === 'agent' && (
           <>
             <Tooltip asChild content="View Source">
               <Button

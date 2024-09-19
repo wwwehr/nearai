@@ -1,7 +1,7 @@
 'use client';
 
-import { ResourceList } from '~/components/ResourceList';
+import { EntriesTable } from '~/components/EntriesTable';
 
 export default function ModelsListPage() {
-  return <ResourceList category="model" title="Models" />;
+  return <EntriesTable category="model" title="Models" />;
 }

@@ -9,7 +9,13 @@ import type {
   MouseEventHandler,
   ReactNode,
 } from 'react';
-import { createContext, forwardRef, useContext } from 'react';
+import {
+  createContext,
+  forwardRef,
+  useContext,
+  useEffect,
+  useRef,
+} from 'react';
 
 import { Flex } from '../Flex';
 import { Placeholder } from '../Placeholder';
@@ -27,9 +33,79 @@ type RootProps = {
 const TableContext = createContext<RootProps | undefined>(undefined);
 
 export const Root = forwardRef<HTMLTableElement, RootProps>((props, ref) => {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+
+    const headerHeightPixels = parseInt(
+      getComputedStyle(document.body)
+        .getPropertyValue('--header-height')
+        .replace('px', ''),
+    );
+
+    let thead: HTMLElement | null = null;
+    let tfoot: HTMLElement | null = null;
+
+    function positionStickyElements() {
+      /*
+        Due to the table having overflow scroll to handle wide columns, 
+        we can't rely on CSS "position: sticky" for the table header and 
+        footer elements. So that's why we need a JS solution.
+      */
+
+      if (!root) return;
+
+      if (!thead) {
+        thead = root.querySelector('thead');
+        tfoot = root.querySelector('tfoot');
+      }
+
+      if (thead?.getAttribute('data-sticky') === 'true') {
+        const top = Math.max(
+          0,
+          (root.getBoundingClientRect().top - headerHeightPixels) * -1,
+        );
+
+        thead.style.top = `${top}px`;
+      }
+
+      if (tfoot?.getAttribute('data-sticky') === 'true') {
+        const bottom = Math.max(
+          0,
+          root.getBoundingClientRect().bottom - window.innerHeight,
+        );
+
+        tfoot.style.bottom = `${bottom}px`;
+      }
+    }
+
+    window.addEventListener('scroll', positionStickyElements, {
+      passive: true,
+    });
+
+    const observer = new MutationObserver(() => {
+      positionStickyElements();
+    });
+
+    observer.observe(root, {
+      attributes: false,
+      childList: true,
+      subtree: true,
+    });
+
+    positionStickyElements();
+
+    return () => {
+      window.removeEventListener('scroll', positionStickyElements);
+      observer.disconnect();
+    };
+  }, []);
+
   return (
     <TableContext.Provider value={props}>
-      <div className={`${s.root} ${props.className}`}>
+      <div className={`${s.root} ${props.className}`} ref={rootRef}>
         <table className={s.table} ref={ref}>
           {props.children}
         </table>
@@ -40,22 +116,13 @@ export const Root = forwardRef<HTMLTableElement, RootProps>((props, ref) => {
 Root.displayName = 'Root';
 
 type HeadProps = ComponentPropsWithRef<'thead'> & {
-  header?: ReactNode;
   sticky?: boolean;
 };
 
 export const Head = forwardRef<HTMLTableSectionElement, HeadProps>(
-  ({ children, header, sticky = true, ...props }, ref) => {
+  ({ children, sticky = true, ...props }, ref) => {
     return (
       <thead className={s.head} data-sticky={sticky} ref={ref} {...props}>
-        {header && (
-          <tr className={s.row}>
-            <td className={s.headCustomCell} colSpan={10000}>
-              {header}
-            </td>
-          </tr>
-        )}
-
         {children}
       </thead>
     );
@@ -220,11 +287,12 @@ HeadCell.displayName = 'HeadCell';
 type CellProps = ComponentPropsWithRef<'td'> & {
   disabled?: boolean;
   href?: string;
+  spanAllColumns?: boolean;
   target?: HTMLAttributeAnchorTarget;
 };
 
 export const Cell = forwardRef<HTMLTableCellElement, CellProps>(
-  ({ children, disabled, href, target, ...props }, ref) => {
+  ({ children, disabled, href, spanAllColumns, target, ...props }, ref) => {
     const clickable = !!props.onClick;
     const isButton = !!props.onClick && !href;
     const role = isButton ? 'button' : undefined;
@@ -251,6 +319,7 @@ export const Cell = forwardRef<HTMLTableCellElement, CellProps>(
         tabIndex={tabIndex}
         ref={ref}
         {...props}
+        colSpan={spanAllColumns ? 10_000 : props.colSpan}
         onKeyDown={onKeyDown}
       >
         {href ? (

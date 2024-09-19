@@ -19,10 +19,12 @@
 }
 
 .mainContent {
+  --section-padding-x: var(--gap-l);
+  --section-padding-y: var(--gap-l);
   display: flex;
   flex-direction: column;
   gap: var(--gap-l);
-  padding: var(--gap-l);
+  padding: var(--section-padding-y) var(--section-padding-x);
   flex-grow: 1;
 }
 

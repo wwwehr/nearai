@@ -45,7 +45,7 @@ export const EntryEvaluationsTable = ({ entry }: Props) => {
         });
         break;
       default:
-        console.warn(
+        console.error(
           `Unimplemented entry category for EntryEvaluationsTable: ${entry.category}`,
         );
     }

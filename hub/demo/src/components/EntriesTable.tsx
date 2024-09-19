@@ -107,7 +107,7 @@ export const EntriesTable = ({ category, title }: Props) => {
             <Table.Row key={index}>
               <Table.Cell
                 href={primaryUrlForEntry(entry)}
-                style={{ width: '20rem' }}
+                style={{ minWidth: '10rem', maxWidth: '20rem' }}
               >
                 <Flex direction="column">
                   <Text
@@ -126,7 +126,7 @@ export const EntriesTable = ({ category, title }: Props) => {
 
               <Table.Cell
                 href={`/profiles/${entry.namespace}`}
-                style={{ maxWidth: '12rem' }}
+                style={{ minWidth: '8rem', maxWidth: '12rem' }}
               >
                 <Text size="text-s" weight={500} clampLines={1}>
                   {entry.namespace}
@@ -137,8 +137,8 @@ export const EntriesTable = ({ category, title }: Props) => {
                 <Text size="text-s">{entry.version}</Text>
               </Table.Cell>
 
-              <Table.Cell>
-                <Flex wrap="wrap" gap="xs" style={{ width: '15rem' }}>
+              <Table.Cell style={{ maxWidth: '14rem', overflow: 'hidden' }}>
+                <Flex gap="xs">
                   {entry.tags.map((tag) => (
                     <Badge label={tag} variant="neutral" key={tag} />
                   ))}

@@ -7,7 +7,6 @@
   --table-focus-outline: 4px solid var(--violet-5);
 
   width: 100%;
-  // min-width: min-content;
   min-width: 0;
   overflow: auto;
   padding: 0 var(--table-half-padding) var(--table-half-padding);
@@ -15,10 +14,15 @@
   background: var(--sand-0);
   box-shadow: var(--shadow-card-with-outline);
 
-  // @media (max-width: $tabletBreakpointMaxWidth) {
-  // min-width: 0;
-  // overflow: auto;
-  // }
+  &:has(.foot) {
+    padding-bottom: 0;
+  }
+
+  @media (max-width: $tabletBreakpointMaxWidth) {
+    margin-inline: calc(var(--section-padding-x) * -1);
+    width: auto;
+    border-radius: 0;
+  }
 }
 
 .table {
@@ -31,32 +35,6 @@
   width: 100%;
   z-index: 105;
   position: relative;
-
-  td,
-  th {
-    &::after {
-      content: '';
-      display: block;
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      height: 1px;
-      background: var(--sand-4);
-    }
-
-    &:first-child {
-      &::after {
-        left: var(--table-half-padding);
-      }
-    }
-
-    &:last-child {
-      &::after {
-        right: var(--table-half-padding);
-      }
-    }
-  }
 
   tr:first-child td,
   tr:first-child th {
@@ -71,55 +49,33 @@
     }
   }
 
-  // &[data-sticky='true'] {
-  //   position: sticky;
-  //   top: var(--header-height);
-
-  //   @media (max-width: $tabletBreakpointMaxWidth) {
-  //     position: static;
-  //   }
-  // }
+  &[data-test='true'] {
+    position: fixed;
+    top: 100px;
+  }
 }
 
 .foot {
   width: 100%;
   z-index: 100;
   position: relative;
-  backdrop-filter: blur(6px);
 
   td,
   th {
-    background: var(--sand-0) !important;
+    padding-block: calc(var(--table-half-padding) * 2);
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+
+    &::before {
+      content: '';
+      display: block;
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, var(--sand-0) 85%, transparent);
+      opacity: 0.9;
+      z-index: -1;
+    }
   }
-
-  tr:first-child td,
-  tr:first-child th {
-    padding-top: calc(var(--table-half-padding) * 2);
-  }
-
-  // &[data-sticky='true'] {
-  //   position: sticky;
-  //   bottom: 0;
-
-  //   td,
-  //   th {
-  //     border-top-left-radius: 0 !important;
-  //     border-top-right-radius: 0 !important;
-  //     background: linear-gradient(
-  //       to top,
-  //       var(--sand-0) 50%,
-  //       transparent
-  //     ) !important;
-
-  //     &:empty {
-  //       display: none;
-  //     }
-  //   }
-
-  //   @media (max-width: $tabletBreakpointMaxWidth) {
-  //     position: static;
-  //   }
-  // }
 }
 
 .body {
@@ -176,13 +132,6 @@
       }
     }
   }
-}
-
-.headCustomCell {
-  position: relative;
-  padding: var(--table-half-padding);
-  padding-bottom: calc(var(--table-half-padding) * 2) !important;
-  background: var(--sand-0);
 }
 
 .cell {

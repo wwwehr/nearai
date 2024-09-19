@@ -188,36 +188,6 @@ By default, the `Header` uses sticky positioning that accounts for our main floa
 <Table.Head sticky={false}>...</Table.Head>
 ```
 
-Sometimes you might need to adjust the `top` positioning if your page doesn't render our main header:
-
-```tsx
-<Table.Head style={{ top: 0 }}>...</Table.Head>
-```
-
-## Custom Header
-
-You can include custom content in the header at the top of the table using the `header` prop on `Table.Head`:
-
-```tsx
-<Table.Root>
-  <Table.Head
-    header={
-      <Flex align="center" gap="m">
-        <FeatherIcon icon="sun" />
-        <H5>My Cool Table</H5>
-        <Button size="s" color="primaryBorder">
-          <FeatherIcon icon="sliders" />
-          Filter
-        </Button>
-      </Flex>
-    }
-  >
-    ...
-  </Table.Head>
-  <Table.Body>...</Table.Body>
-</Table.Root>
-```
-
 ## Footer
 
 You can use `Table.Foot` to create a sticky footer with more table data:

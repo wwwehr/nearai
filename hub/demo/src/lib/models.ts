@@ -161,6 +161,7 @@ export const evaluationTableRowModel = z.intersection(
     agent: z.string(),
     agentPath: z.string().optional(),
     model: z.string(),
+    modelPath: z.string().optional(),
     namespace: z.string(),
     provider: z.string(),
     version: z.string(),

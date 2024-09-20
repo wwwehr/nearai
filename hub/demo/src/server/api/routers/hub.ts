@@ -231,8 +231,11 @@ export const hubRouter = createTRPCRouter({
     );
 
     evaluations.rows.forEach((row) => {
-      if (row.agent && row.namespace && row.version) {
-        row.agentPath = `${row.namespace}/${row.agent}/${row.version}`;
+      if (row.namespace && row.version) {
+        row.modelPath = `${row.namespace}/${row.model}/${row.version}`;
+        if (row.agent) {
+          row.agentPath = `${row.namespace}/${row.agent}/${row.version}`;
+        }
       }
     });
 

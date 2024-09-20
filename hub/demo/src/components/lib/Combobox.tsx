@@ -31,7 +31,6 @@ type BaseProps = {
   items: ComboboxOption[];
   label?: string;
   maxDropdownHeight?: string;
-  mode?: 'radio-select' | 'filter';
   name: string;
   noneLabel?: string;
   onBlur?: (event: unknown) => void;
@@ -55,10 +54,7 @@ type ConditionalProps =
 type Props = BaseProps & ConditionalProps;
 
 export const Combobox = forwardRef<HTMLInputElement, Props>(
-  (
-    { allowCustomInput, allowNone, mode = 'radio-select', noneLabel, ...props },
-    ref,
-  ) => {
+  ({ allowCustomInput, allowNone, noneLabel, ...props }, ref) => {
     const noneItem = useMemo(() => {
       const item: ComboboxOption = {
         label: noneLabel ?? 'None',
@@ -132,30 +128,22 @@ export const Combobox = forwardRef<HTMLInputElement, Props>(
             }, Actual value type: ${typeof newValue}`,
           );
         }
-
-        // if (mode === 'filter') {
-        //   setInputValue('');
-        // }
       },
     });
 
     const onBlur: FocusEventHandler<HTMLInputElement> = (event) => {
-      if (mode === 'filter') {
-        setInputValue('');
-      } else {
-        if (allowCustomInput) {
-          if (!event.target.value) {
-            setInputValue(
-              internalCurrentValueBeforeFocus.current?.toString() ?? '',
-            );
-          }
-        } else {
+      if (allowCustomInput) {
+        if (!event.target.value) {
           setInputValue(
-            combobox.selectedItem?.label ??
-              combobox.selectedItem?.value.toString() ??
-              '',
+            internalCurrentValueBeforeFocus.current?.toString() ?? '',
           );
         }
+      } else {
+        setInputValue(
+          combobox.selectedItem?.label ??
+            combobox.selectedItem?.value.toString() ??
+            '',
+        );
       }
 
       props.onBlur && props.onBlur(event);
@@ -225,7 +213,6 @@ export const Combobox = forwardRef<HTMLInputElement, Props>(
         className={s.wrapper}
         data-open={combobox.isOpen && !forceOverrideClosed}
         data-number={props.number}
-        data-mode={mode}
         style={props.style}
       >
         <div className={s.innerWrapper}>
@@ -251,11 +238,7 @@ export const Combobox = forwardRef<HTMLInputElement, Props>(
                   className={s.toggleButton}
                   {...combobox.getToggleButtonProps()}
                 >
-                  <SvgIcon
-                    icon={
-                      mode === 'filter' ? <Plus /> : <CaretDown weight="bold" />
-                    }
-                  />
+                  <SvgIcon icon={<CaretDown weight="bold" />} />
                 </button>
 
                 <ul
@@ -273,20 +256,16 @@ export const Combobox = forwardRef<HTMLInputElement, Props>(
                       key={item.value}
                       {...combobox.getItemProps({ item, index })}
                     >
-                      {mode === 'radio-select' && (
-                        <>
-                          {combobox.selectedItem?.value === item.value ? (
-                            <SvgIcon
-                              icon={<CheckCircle weight="duotone" />}
-                              color="green-9"
-                            />
-                          ) : (
-                            <SvgIcon
-                              icon={<Circle weight="duotone" />}
-                              color="sand-10"
-                            />
-                          )}
-                        </>
+                      {combobox.selectedItem?.value === item.value ? (
+                        <SvgIcon
+                          icon={<CheckCircle weight="duotone" />}
+                          color="green-9"
+                        />
+                      ) : (
+                        <SvgIcon
+                          icon={<Circle weight="duotone" />}
+                          color="sand-10"
+                        />
                       )}
 
                       {item.label ?? item.value}

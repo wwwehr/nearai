@@ -89,7 +89,7 @@
   cursor: pointer;
   transition: var(--transitions);
 
-  [data-open='true'][data-mode='radio-select'] & {
+  [data-open='true'] & {
     transform: rotate(180deg);
   }
 }

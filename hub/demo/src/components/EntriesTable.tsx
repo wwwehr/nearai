@@ -1,7 +1,6 @@
 'use client';
 
 import { CodeBlock, Play } from '@phosphor-icons/react';
-import Head from 'next/head';
 
 import { Badge } from '~/components/lib/Badge';
 import { Button } from '~/components/lib/Button';
@@ -19,7 +18,7 @@ import {
   ENTRY_CATEGORY_LABELS,
   primaryUrlForEntry,
 } from '~/lib/entries';
-import { type EntryCategory } from '~/server/api/routers/hub';
+import { type EntryCategory } from '~/lib/models';
 import { api } from '~/trpc/react';
 
 import { StarButton } from './StarButton';
@@ -44,10 +43,6 @@ export const EntriesTable = ({ category, title }: Props) => {
 
   return (
     <Section>
-      <Head>
-        <title>{title}</title>
-      </Head>
-
       <Grid
         columns="1fr 20rem"
         align="center"
@@ -151,9 +146,9 @@ export const EntriesTable = ({ category, title }: Props) => {
               <Table.Cell style={{ width: '1px' }}>
                 <Flex align="center" gap="xs">
                   {benchmarkEvaluationsUrlForEntry(entry) && (
-                    <Tooltip asChild content="View Benchmark Evaluations">
+                    <Tooltip asChild content="View Evaluations">
                       <Button
-                        label="View Benchmark Evaluations"
+                        label="View Evaluations"
                         icon={ENTRY_CATEGORY_LABELS.evaluation.icon}
                         size="small"
                         fill="ghost"
@@ -176,7 +171,7 @@ export const EntriesTable = ({ category, title }: Props) => {
 
                       <Tooltip asChild content="Run Agent">
                         <Button
-                          label="Run"
+                          label="Run Agent"
                           icon={<Play weight="duotone" />}
                           size="small"
                           fill="ghost"

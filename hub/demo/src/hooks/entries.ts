@@ -2,8 +2,7 @@ import { useParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { type z } from 'zod';
 
-import { type entriesModel } from '~/lib/models';
-import { type EntryCategory } from '~/server/api/routers/hub';
+import { type entriesModel, type EntryCategory } from '~/lib/models';
 import { api } from '~/trpc/react';
 import { wordsMatchFuzzySearch } from '~/utils/search';
 

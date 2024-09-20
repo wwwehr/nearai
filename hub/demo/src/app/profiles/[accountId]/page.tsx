@@ -18,7 +18,7 @@ import { Text } from '~/components/lib/Text';
 import { useProfileParams } from '~/hooks/profile';
 import { useQueryParams } from '~/hooks/url';
 import { ENTRY_CATEGORY_LABELS } from '~/lib/entries';
-import { type EntryCategory } from '~/server/api/routers/hub';
+import { type EntryCategory } from '~/lib/models';
 import { api } from '~/trpc/react';
 import { toTitleCase } from '~/utils/string';
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { BookOpenText, CodeBlock, Play } from '@phosphor-icons/react';
+import { BookOpenText } from '@phosphor-icons/react';
 import { type ReactNode } from 'react';
 
 import { EntryDetailsLayout } from '~/components/EntryDetailsLayout';
@@ -9,22 +9,12 @@ import { ENTRY_CATEGORY_LABELS } from '~/lib/entries';
 export default function EntryLayout({ children }: { children: ReactNode }) {
   return (
     <EntryDetailsLayout
-      category="agent"
+      category="benchmark"
       tabs={[
         {
           path: '',
           label: 'Overview',
           icon: <BookOpenText fill="bold" />,
-        },
-        {
-          path: '/source',
-          label: 'Source',
-          icon: <CodeBlock fill="bold" />,
-        },
-        {
-          path: '/run',
-          label: 'Run',
-          icon: <Play fill="bold" />,
         },
         {
           path: '/evaluations',

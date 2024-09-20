@@ -33,7 +33,7 @@ import { handleClientError } from '~/utils/error';
 import { formatBytes } from '~/utils/number';
 import { getQueryParams } from '~/utils/url';
 
-export default function RunAgentPage() {
+export default function EntryRunPage() {
   const { currentEntry } = useCurrentEntry('agent');
   const isAuthenticated = useAuthStore((store) => store.isAuthenticated);
   const { namespace, name, version } = useEntryParams();

@@ -21,7 +21,7 @@ import { copyTextToClipboard } from '~/utils/clipboard';
 
 const METADATA_FILE_PATH = 'metadata.json';
 
-export default function AgentSourcePage() {
+export default function EntrySourcePage() {
   const { createQueryPath, queryParams } = useQueryParams(['file']);
   const { currentEntry } = useCurrentEntry('agent');
   const params = useEntryParams();

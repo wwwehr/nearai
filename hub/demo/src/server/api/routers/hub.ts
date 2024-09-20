@@ -8,6 +8,7 @@ import {
   chatResponseModel,
   chatWithAgentModel,
   type entriesModel,
+  entryCategory,
   entryModel,
   evaluationsTableModel,
   filesModel,
@@ -31,16 +32,6 @@ type RegistryFile = {
   size: number;
   headerOffset: number;
 };
-
-export const entryCategory = z.enum([
-  'agent',
-  'benchmark',
-  'dataset',
-  'environment',
-  'evaluation',
-  'model',
-]);
-export type EntryCategory = z.infer<typeof entryCategory>;
 
 async function downloadEnvironment(environmentId: string) {
   const url = `${env.ROUTER_URL}/registry/download_file`;
@@ -230,7 +221,8 @@ export const hubRouter = createTRPCRouter({
   evaluations: publicProcedure.query(async () => {
     const evaluations = await fetchWithZod(
       evaluationsTableModel,
-      `${env.ROUTER_URL}/evaluation/table`,
+      // `${env.ROUTER_URL}/evaluation/table`,
+      `http://127.0.0.1:8081/v1/evaluation/table`,
     );
 
     const infoColumns = ['agent', 'model', 'namespace', 'version', 'provider'];

@@ -8,8 +8,7 @@ import { Flex } from '~/components/lib/Flex';
 import { Input } from '~/components/lib/Input';
 import { useEntriesSearch } from '~/hooks/entries';
 import { idForEntry } from '~/lib/entries';
-import { type entryModel } from '~/lib/models';
-import { type EntryCategory } from '~/server/api/routers/hub';
+import { type EntryCategory, type entryModel } from '~/lib/models';
 import { api } from '~/trpc/react';
 
 import { EntryCard } from './EntryCard';

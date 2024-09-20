@@ -91,9 +91,19 @@ export const revokeNonceModel = z.object({
   auth: z.string(),
 });
 
+export const entryCategory = z.enum([
+  'agent',
+  'benchmark',
+  'dataset',
+  'environment',
+  'evaluation',
+  'model',
+]);
+export type EntryCategory = z.infer<typeof entryCategory>;
+
 export const entryModel = z.object({
   id: z.number(),
-  category: z.string(),
+  category: entryCategory,
   namespace: z.string(),
   name: z.string(),
   version: z.string(),

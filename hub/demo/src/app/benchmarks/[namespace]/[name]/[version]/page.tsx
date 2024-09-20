@@ -7,7 +7,7 @@ import { Text } from '~/components/lib/Text';
 import { useCurrentEntry } from '~/hooks/entries';
 
 export default function EntryDetailsPage() {
-  const { currentEntry } = useCurrentEntry('agent');
+  const { currentEntry } = useCurrentEntry('benchmark');
 
   if (!currentEntry) return null;
 

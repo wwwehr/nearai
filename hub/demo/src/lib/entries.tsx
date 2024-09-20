@@ -9,9 +9,7 @@ import {
 import { type ReactElement } from 'react';
 import { type z } from 'zod';
 
-import { type EntryCategory } from '~/server/api/routers/hub';
-
-import { type entryModel } from './models';
+import { type EntryCategory, type entryModel } from './models';
 
 export const ENTRY_CATEGORY_LABELS: Record<
   // eslint-disable-next-line @typescript-eslint/ban-types
@@ -56,7 +54,15 @@ export function primaryUrlForEntry(entry: z.infer<typeof entryModel>) {
       break;
 
     case 'benchmark':
-      url = benchmarkEvaluationsUrlForEntry(entry);
+      url = `/benchmarks/${entry.namespace}/${entry.name}/${entry.version}`;
+      break;
+
+    case 'dataset':
+      url = `/datasets/${entry.namespace}/${entry.name}/${entry.version}`;
+      break;
+
+    case 'model':
+      url = `/models/${entry.namespace}/${entry.name}/${entry.version}`;
       break;
   }
 
@@ -70,15 +76,15 @@ export function benchmarkEvaluationsUrlForEntry(
 
   switch (entry.category as EntryCategory) {
     case 'agent':
-      url = `/evaluations?search=${encodeURIComponent(`${entry.namespace}/${entry.name}`)}`;
+      url = `${primaryUrlForEntry(entry)}/evaluations`;
       break;
 
     case 'benchmark':
-      url = `/evaluations?benchmarks=${encodeURIComponent(idForEntry(entry))}`;
+      url = `${primaryUrlForEntry(entry)}/evaluations`;
       break;
 
     case 'model':
-      url = `/evaluations?search=${encodeURIComponent(`${entry.name}`)}`;
+      url = `${primaryUrlForEntry(entry)}/evaluations`;
       break;
   }
 

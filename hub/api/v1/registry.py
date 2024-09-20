@@ -156,7 +156,7 @@ async def download_file_async(
     entry: RegistryEntry = Depends(get),
     path: str = Body(),
 ):
-    return download_file(entry, path)
+    return StreamingResponse(download_file(entry, path).iter_chunks())
 
 
 def download_file(
@@ -179,7 +179,7 @@ def download_file(
 
     # https://stackoverflow.com/a/71126498/4950797
     object = s3.get_object(Bucket=bucket, Key=key)
-    return StreamingResponse(object["Body"].iter_chunks())
+    return object["Body"]
 
 
 @v1_router.post("/upload_metadata")

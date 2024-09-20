@@ -72,7 +72,7 @@ class Agent(object):
 
     def run(self, env: Any, task: Optional[str] = None) -> None:  # noqa: D102
         if not os.path.exists(os.path.join(self.path, AGENT_FILENAME)):
-            raise ValueError("Agent run error: {AGENT_FILENAME} does not exist")
+            raise ValueError(f"Agent run error: {AGENT_FILENAME} does not exist")
 
         # combine agent.env_vars and env.env_vars
         total_env_vars = {**self.env_vars, **env.env_vars}

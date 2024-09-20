@@ -66,34 +66,30 @@ class LocalRunner:
             base_id = None
 
         env = self._env
-        self._print_welcome(env._agents[0])
+        self._print_welcome(env.get_primary_agent())
 
         last_message_idx = 0
         last_message_idx = self._print_messages(env.list_messages(), last_message_idx)
-        run_id = "No run id"
+        run_id = None
 
+        new_message = None
         while True:
-            if env.get_next_actor() != "user":
-                messages = env.list_messages()
-                new_message = None if not messages else messages[-1]["content"]
-
+            next_actor = env.get_next_actor()
+            if next_actor == "user":
+                new_message = input("> ")
+                if new_message.lower() == "exit":
+                    break
+                env.set_next_actor("agent")
+            else:
                 # Run the agent's turn
                 run_id = env.run(new_message, 1)
 
-                # print the agent's response
+                # print the user's input and the agent's response
                 last_message_idx = self._print_messages(env.list_messages(), last_message_idx)
                 if env.is_done():
                     break
 
-            else:
-                new_message = input("> ")
-                if new_message.lower() == "exit":
-                    break
-                env.add_message("user", new_message)
-
-                env.set_next_actor("agent")
-
-        if record_run:
+        if record_run and run_id:
             self.save_env(env, run_id, base_id, "interactive")
 
         env.clear_temp_agent_files()

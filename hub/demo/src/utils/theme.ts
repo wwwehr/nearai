@@ -1,5 +1,5 @@
 export type ThemeInputVariant = 'default' | 'success' | 'error';
-export type ThemeIconSize = 'xxs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+export type ThemeIconSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
 export type ThemeGap = 'none' | 'xs' | 's' | 'm' | 'l' | 'xl' | '2xl' | '3xl';
 
 export type ThemeBreakpointProps<T> = T & {
@@ -19,6 +19,7 @@ export type ThemeColor =
   | ColorWhite;
 
 export type ThemeFontSize =
+  | 'text-2xs'
   | 'text-xs'
   | 'text-s'
   | 'text-base'

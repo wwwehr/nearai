@@ -110,7 +110,7 @@ export const ThreadsSidebar = ({
       setOpenForSmallScreens={setOpenForSmallScreens}
     >
       <Flex align="center" gap="s">
-        <Text size="text-xs" weight={500} uppercase>
+        <Text size="text-xs" weight={600} uppercase>
           Threads
         </Text>
 

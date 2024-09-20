@@ -1,7 +1,7 @@
 'use client';
 
-import { ResourceList } from '~/components/ResourceList';
+import { EntriesTable } from '~/components/EntriesTable';
 
 export default function DatasetsListPage() {
-  return <ResourceList category="dataset" title="Datasets" />;
+  return <EntriesTable category="dataset" title="Datasets" />;
 }

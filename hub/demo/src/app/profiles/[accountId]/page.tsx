@@ -4,6 +4,7 @@ import { ArrowsDownUp, SlidersHorizontal } from '@phosphor-icons/react';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { EntryCard } from '~/components/EntryCard';
 import { Badge } from '~/components/lib/Badge';
 import { BreakpointDisplay } from '~/components/lib/BreakpointDisplay';
 import { Button } from '~/components/lib/Button';
@@ -14,20 +15,14 @@ import { HR } from '~/components/lib/HorizontalRule';
 import { PlaceholderSection } from '~/components/lib/Placeholder';
 import { Sidebar } from '~/components/lib/Sidebar';
 import { Text } from '~/components/lib/Text';
-import { ResourceCard } from '~/components/ResourceCard';
 import { useProfileParams } from '~/hooks/profile';
 import { useQueryParams } from '~/hooks/url';
-import { type RegistryCategory } from '~/server/api/routers/hub';
+import { ENTRY_CATEGORY_LABELS } from '~/lib/entries';
+import { type EntryCategory } from '~/lib/models';
 import { api } from '~/trpc/react';
-import { CATEGORY_LABELS } from '~/utils/category';
 import { toTitleCase } from '~/utils/string';
 
-const categories: RegistryCategory[] = [
-  'agent',
-  'benchmark',
-  'dataset',
-  'model',
-];
+const categories: EntryCategory[] = ['agent', 'benchmark', 'dataset', 'model'];
 
 export default function ProfilePage() {
   const pathSegments = usePathname().split('/');
@@ -38,13 +33,13 @@ export default function ProfilePage() {
   const [sidebarOpenForSmallScreens, setSidebarOpenForSmallScreens] =
     useState(false);
 
-  const list = api.hub.registryEntries.useQuery({
+  const entriesQuery = api.hub.entries.useQuery({
     namespace: starred ? undefined : accountId,
     starredBy: starred ? accountId : undefined,
   });
 
-  const allPublished = list.data?.filter((item) =>
-    categories.includes(item.category as RegistryCategory),
+  const allPublished = entriesQuery.data?.filter((item) =>
+    categories.includes(item.category as EntryCategory),
   );
 
   const filteredPublished = queryParams.category
@@ -76,10 +71,10 @@ export default function ProfilePage() {
           openForSmallScreens={sidebarOpenForSmallScreens}
           setOpenForSmallScreens={setSidebarOpenForSmallScreens}
         >
-          <CheckboxGroup name="resourceTypeFilter">
+          <CheckboxGroup name="categoryFilter">
             <Flex as="label" align="center" gap="s">
               <Checkbox
-                name="resourceTypeFilter"
+                name="categoryFilter"
                 value="all"
                 type="radio"
                 checked={!queryParams.category}
@@ -91,13 +86,13 @@ export default function ProfilePage() {
             {categories.map((category) => (
               <Flex as="label" align="center" gap="s" key={category}>
                 <Checkbox
-                  name="resourceTypeFilter"
+                  name="categoryFilter"
                   value={category}
                   type="radio"
                   checked={queryParams.category === category}
                   onChange={() => updateQueryPath({ category: category })}
                 />
-                <Text>{CATEGORY_LABELS[category].label}</Text>
+                <Text>{ENTRY_CATEGORY_LABELS[category].label}</Text>
                 <Badge
                   label={
                     allPublished.filter((item) => item.category === category)
@@ -115,6 +110,7 @@ export default function ProfilePage() {
 
           <Flex gap="m" align="center">
             <Text size="text-xs">Sort by:</Text>
+
             <Dropdown.Root>
               <Dropdown.Trigger asChild>
                 <Badge
@@ -154,7 +150,8 @@ export default function ProfilePage() {
               <Button
                 label={`Filter (${
                   queryParams.category
-                    ? CATEGORY_LABELS[queryParams.category]?.label ?? 'Unknown'
+                    ? ENTRY_CATEGORY_LABELS[queryParams.category]?.label ??
+                      'Unknown'
                     : 'All'
                 })`}
                 iconLeft={<SlidersHorizontal weight="bold" />}
@@ -165,8 +162,8 @@ export default function ProfilePage() {
               />
             </BreakpointDisplay>
 
-            {filteredPublished.map((item) => (
-              <ResourceCard item={item} key={item.id} />
+            {filteredPublished.map((entry) => (
+              <EntryCard entry={entry} key={entry.id} />
             ))}
 
             {!allPublished.length ? (

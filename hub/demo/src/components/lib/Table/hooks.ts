@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import { parseStringOrNumber } from '~/utils/number';
+
 export type SortableTable = {
   column: string;
   order: 'ASCENDING' | 'DESCENDING';
@@ -21,13 +23,20 @@ export function useTable<T extends Record<string, unknown>[] | undefined>({
     order: sortOrder,
   });
 
-  const sorted = [...(data ?? [])];
+  const sorted = data ? [...data] : undefined;
 
-  sorted.sort((a, b) => {
-    const valueA = (a[sort.column] as string | number) ?? '';
-    const valueB = (b[sort.column] as string | number) ?? '';
+  sorted?.sort((a, b) => {
+    const valueA = parseStringOrNumber(a[sort.column]);
+    const valueB = parseStringOrNumber(b[sort.column]);
 
-    const compare = valueA.toString().localeCompare(valueB.toString());
+    let compare = 0;
+
+    if (typeof valueA === 'number' && typeof valueB === 'number') {
+      compare = valueA - valueB;
+    } else {
+      compare = valueA.toString().localeCompare(valueB.toString());
+    }
+
     return sort.order === 'ASCENDING' ? compare : compare * -1;
   });
 

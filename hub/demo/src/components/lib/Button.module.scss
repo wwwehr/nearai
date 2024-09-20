@@ -17,7 +17,7 @@
   border: 1px solid;
   box-shadow: 0 0 0 0px var(--violet-5);
   cursor: pointer;
-  transition: all var(--transition-speed);
+  transition: var(--transitions);
   text-decoration: none !important;
   width: var(--button-width);
   height: var(--button-height);
@@ -253,7 +253,7 @@
   width: var(--button-size-icon);
   height: var(--button-size-icon);
   color: var(--button-color-icon);
-  transition: all var(--transition-speed);
+  transition: var(--transitions);
 
   svg {
     display: block;

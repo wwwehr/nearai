@@ -1,6 +1,5 @@
 import json
 from pathlib import Path
-from shutil import copyfileobj
 from typing import Any, Dict, List, Set, Tuple
 
 from dotenv import load_dotenv
@@ -122,6 +121,7 @@ def download_evaluation(entry_location: EntryLocation) -> Path:
         result = download_file(entry, file)
         local_path.parent.mkdir(parents=True, exist_ok=True)
         with open(local_path, "wb") as f:
-            copyfileobj(result, f)
+            for chunk in result.body:
+                f.write(chunk)
 
     return download_path

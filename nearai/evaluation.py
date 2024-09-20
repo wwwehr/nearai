@@ -1,11 +1,10 @@
 import json
 from pathlib import Path
 from textwrap import fill
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any, Dict, List
 
 from tabulate import tabulate
 
-from nearai.lib import parse_tags
 from nearai.registry import get_registry_folder, registry
 from nearai.solvers import SolverStrategy
 
@@ -115,64 +114,8 @@ def upload_evaluation(
     registry.upload(Path(entry_path), show_progress=True)
 
 
-def evaluation_table(
-    namespace: str = "", tags: str = ""
-) -> Tuple[Dict[tuple[tuple[str, Any], ...], Dict[str, str]], List[str], List[str]]:
-    """Returns rows, columns, and important columns."""
-    # Make sure tags is a comma-separated list of tags
-    tags_l = parse_tags(tags)
-    tags = ",".join(tags_l)
-
-    entries = registry.list(
-        namespace=namespace,
-        category="evaluation",
-        tags=tags,
-        total=10000,
-        offset=0,
-        show_all=False,
-        show_latest_version=True,
-    )
-    rows: Dict[tuple[tuple[str, Any], ...], Dict[str, str]] = {}
-    metric_names: Set[str] = set()
-    important_metric_names: Set[str] = set()
-    for entry in entries:
-        evaluation_name = f"{entry.namespace}/{entry.name}/{entry.version}"
-        evaluation_path = registry.download(evaluation_name, verbose=False)
-        metrics_path = evaluation_path / "metrics.json"
-        with open(metrics_path, "r") as f:
-            metrics = json.load(f)
-            key = {
-                "model": metrics[EVALUATED_ENTRY_METADATA].get("model", ""),
-                "agent": metrics[EVALUATED_ENTRY_METADATA].get("agent", ""),
-                "namespace": metrics[EVALUATED_ENTRY_METADATA].get("namespace", ""),
-                "version": metrics[EVALUATED_ENTRY_METADATA].get("version", ""),
-                "provider": metrics[EVALUATED_ENTRY_METADATA].get("provider", ""),
-            }
-
-            # Convert the key dictionary to a tuple to use as a key in rows
-            key_tuple = tuple(key.items())
-
-            # Initialize the inner dictionary if this key doesn't exist
-            if key_tuple not in rows:
-                rows[key_tuple] = {}
-
-            # Add all other metrics that are not EVALUATED_ENTRY_METADATA
-            for metric_name, metric_value in metrics.items():
-                if metric_name == EVALUATED_ENTRY_METADATA:
-                    continue
-                if _is_important_metric(metric_name, metrics):
-                    important_metric_names.add(metric_name)
-                rows[key_tuple][metric_name] = str(metric_value)
-                metric_names.add(metric_name)
-
-    sorted_metric_names = sorted(metric_names)
-    columns = ["model", "agent", "namespace", "version", "provider"] + sorted_metric_names
-    important_columns = ["model", "agent"] + sorted(important_metric_names)
-    return rows, columns, important_columns
-
-
 def print_evaluation_table(
-    rows: Dict[tuple[tuple[str, Any], ...], Dict[str, str]],
+    rows: List[Dict[str, str]],
     columns: List[str],
     important_columns: List[str],
     all_key_columns: bool,
@@ -183,14 +126,6 @@ def print_evaluation_table(
     """Prints table of evaluations."""
     metric_names = columns[5:] if all_metrics else important_columns[2:]
     _print_metrics_tables(rows, metric_names, num_columns, all_key_columns, metric_name_max_length)
-
-
-def _is_important_metric(metric_name, metrics) -> bool:
-    """Simple heuristics to determine if the metric is important."""
-    if len(metrics) == 2:
-        # One score and metadata.
-        return True
-    return "coding" in metric_name or "average" in metric_name or "avg" in metric_name
 
 
 def _shorten_metric_name(name: str, max_length: int) -> str:
@@ -204,7 +139,7 @@ def _shorten_metric_name(name: str, max_length: int) -> str:
 
 
 def _print_metrics_tables(
-    rows: Dict[Tuple, Dict],
+    rows: List[Dict[str, str]],
     metric_names: List[str],
     num_columns: int,
     all_key_columns: bool,
@@ -220,12 +155,14 @@ def _print_metrics_tables(
         base_header.extend(["namespace", "version", "provider"])
 
     base_rows = []
-    for row_key_tuple, row_metrics in rows.items():
-        row_key = dict(row_key_tuple)
-        base_row = [fill(row_key["model"]), fill(row_key["agent"])]
+    for row in rows:
+        base_row = [fill(row.pop("model", "")), fill(row.pop("agent", ""))]
+        namespace = row.pop("namespace", "")
+        version = row.pop("version", "")
+        provider = row.pop("provider", "")
         if all_key_columns:
-            base_row.extend([fill(row_key["namespace"]), fill(row_key["version"]), fill(row_key["provider"])])
-        base_rows.append((base_row, row_metrics))
+            base_row.extend([fill(namespace), fill(version), fill(provider)])
+        base_rows.append((base_row, row))
 
     n_metrics_per_table = max(1, num_columns - len(base_header))
     # Split metrics into groups
@@ -244,6 +181,6 @@ def _print_metrics_tables(
         header = base_header + short_group
         table = []
         for base_row, row_metrics in base_rows:
-            row = base_row + [fill(str(row_metrics.get(metric, ""))) for metric in full_group]
-            table.append(row)
+            table_row = base_row + [fill(str(row_metrics.get(metric, ""))) for metric in full_group]
+            table.append(table_row)
         print(tabulate(table, headers=header, tablefmt="simple_grid"))

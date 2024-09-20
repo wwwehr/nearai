@@ -152,8 +152,15 @@ async def upload_file(
 
 
 @v1_router.post("/download_file")
-async def download_file(
+async def download_file_async(
     entry: RegistryEntry = Depends(get),
+    path: str = Body(),
+):
+    return download_file(entry, path)
+
+
+def download_file(
+    entry: RegistryEntry,
     path: str = Body(),
 ):
     source = entry.details.get("_source")
@@ -206,7 +213,11 @@ async def upload_metadata(registry_entry_id: int = Depends(get_or_create), metad
 
 
 @v1_router.post("/download_metadata")
-async def download_metadata(entry: RegistryEntry = Depends(get)) -> EntryMetadata:
+async def download_metadata_async(entry: RegistryEntry = Depends(get)) -> EntryMetadata:
+    return download_metadata(entry)
+
+
+def download_metadata(entry: RegistryEntry) -> EntryMetadata:
     with get_session() as session:
         q_tags = select(Tags).where(Tags.registry_id == entry.id)
         tags = [tag.tag for tag in session.exec(q_tags).all()]
@@ -227,8 +238,13 @@ class Filename(BaseModel):
 
 
 @v1_router.post("/list_files")
-async def list_files(entry: RegistryEntry = Depends(get)) -> List[Filename]:
-    """List all files that belong to a entry."""
+async def list_files_async(entry: RegistryEntry = Depends(get)) -> List[Filename]:
+    """Lists all files that belong to a entry."""
+    return list_files(entry)
+
+
+def list_files(entry: RegistryEntry) -> List[Filename]:
+    """Lists all files that belong to a entry."""
     source = entry.details.get("_source")
 
     if source is None:
@@ -263,7 +279,23 @@ class EntryInformation(BaseModel):
 
 
 @v1_router.post("/list_entries")
-async def list_entries(
+async def list_entries_async(
+    namespace: str = "",
+    category: str = "",
+    tags: str = "",
+    total: int = 32,
+    offset: int = 0,
+    show_hidden: bool = False,
+    show_latest_version: bool = True,
+    starred_by: str = "",
+    star_point_of_view: str = "",
+) -> List[EntryInformation]:
+    return list_entries(
+        namespace, category, tags, total, offset, show_hidden, show_latest_version, starred_by, star_point_of_view
+    )
+
+
+def list_entries(
     namespace: str = "",
     category: str = "",
     tags: str = "",

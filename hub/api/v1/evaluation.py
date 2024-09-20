@@ -1,9 +1,16 @@
-from typing import Dict, List
+import json
+from pathlib import Path
+from shutil import copyfileobj
+from typing import Any, Dict, List, Set, Tuple
 
 from dotenv import load_dotenv
 from fastapi import APIRouter
-from nearai.evaluation import evaluation_table
+from nearai.evaluation import EVALUATED_ENTRY_METADATA
+from nearai.registry import get_registry_folder
 from pydantic import BaseModel
+
+from hub.api.v1.entry_location import EntryLocation
+from hub.api.v1.registry import download_file, download_metadata, get, list_entries, list_files
 
 load_dotenv()
 
@@ -11,6 +18,14 @@ v1_router = APIRouter(
     prefix="/evaluation",
     tags=["evaluation"],
 )
+
+
+def _is_important_metric(metric_name, metrics) -> bool:
+    """Simple heuristics to determine if the metric is important."""
+    if len(metrics) == 2:
+        # One score and metadata.
+        return True
+    return "coding" in metric_name or "average" in metric_name or "avg" in metric_name
 
 
 class EvaluationTable(BaseModel):
@@ -26,3 +41,87 @@ async def table() -> EvaluationTable:
         {**dict(key_tuple), **{m: metrics[m] for m in columns if metrics.get(m)}} for key_tuple, metrics in rows.items()
     ]
     return EvaluationTable(rows=list_rows, columns=columns, important_columns=important_columns)
+
+
+def evaluation_table() -> Tuple[Dict[tuple[tuple[str, Any], ...], Dict[str, str]], List[str], List[str]]:
+    """Returns rows, columns, and important columns."""
+    entries = list_entries(
+        namespace="",
+        category="evaluation",
+        tags="",
+        total=10000,
+        offset=0,
+        show_hidden=False,
+        show_latest_version=True,
+    )
+    rows: Dict[tuple[tuple[str, Any], ...], Dict[str, str]] = {}
+    metric_names: Set[str] = set()
+    important_metric_names: Set[str] = set()
+    for entry in entries:
+        evaluation_path = download_evaluation(
+            EntryLocation(
+                namespace=entry.namespace,
+                name=entry.name,
+                version=entry.version,
+            )
+        )
+        metrics_path = evaluation_path / "metrics.json"
+        with open(metrics_path, "r") as f:
+            metrics = json.load(f)
+            key = {
+                "model": metrics[EVALUATED_ENTRY_METADATA].get("model", ""),
+                "agent": metrics[EVALUATED_ENTRY_METADATA].get("agent", ""),
+                "namespace": metrics[EVALUATED_ENTRY_METADATA].get("namespace", ""),
+                "version": metrics[EVALUATED_ENTRY_METADATA].get("version", ""),
+                "provider": metrics[EVALUATED_ENTRY_METADATA].get("provider", ""),
+            }
+
+            # Convert the key dictionary to a tuple to use as a key in rows
+            key_tuple = tuple(key.items())
+
+            # Initialize the inner dictionary if this key doesn't exist
+            if key_tuple not in rows:
+                rows[key_tuple] = {}
+
+            # Add all other metrics that are not EVALUATED_ENTRY_METADATA
+            for metric_name, metric_value in metrics.items():
+                if metric_name == EVALUATED_ENTRY_METADATA:
+                    continue
+                if _is_important_metric(metric_name, metrics):
+                    important_metric_names.add(metric_name)
+                rows[key_tuple][metric_name] = str(metric_value)
+                metric_names.add(metric_name)
+
+    sorted_metric_names = sorted(metric_names)
+    columns = ["model", "agent", "namespace", "version", "provider"] + sorted_metric_names
+    important_columns = ["model", "agent"] + sorted(important_metric_names)
+    return rows, columns, important_columns
+
+
+def download_evaluation(entry_location: EntryLocation) -> Path:
+    """Downloads evaluation from the registry locally."""
+    download_path = get_registry_folder() / entry_location.namespace / entry_location.name / entry_location.version
+
+    entry = get(entry_location)
+
+    files = [file.filename for file in list_files(entry)]
+
+    download_path.mkdir(parents=True, exist_ok=True)
+
+    metadata = download_metadata(entry)
+
+    if metadata is None:
+        raise ValueError(f"Entry {entry_location} not found.")
+
+    metadata_path = download_path / "metadata.json"
+    with open(metadata_path, "w") as f:
+        f.write(metadata.model_dump_json(indent=2))
+
+    for file in files:
+        local_path = download_path / file
+        result = download_file(entry, file)
+        local_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(local_path, "wb") as f:
+            copyfileobj(result, f)
+
+    return download_path

@@ -91,6 +91,30 @@ export function benchmarkEvaluationsUrlForEntry(
   return url;
 }
 
+export function sourceUrlForEntry(entry: z.infer<typeof entryModel>) {
+  let url: string | undefined;
+
+  switch (entry.category as EntryCategory) {
+    case 'agent':
+      url = `${primaryUrlForEntry(entry)}/source`;
+      break;
+
+    case 'benchmark':
+      url = `${primaryUrlForEntry(entry)}/source`;
+      break;
+
+    case 'dataset':
+      url = `${primaryUrlForEntry(entry)}/source`;
+      break;
+
+    case 'model':
+      url = `${primaryUrlForEntry(entry)}/source`;
+      break;
+  }
+
+  return url;
+}
+
 export function idForEntry(entry: z.infer<typeof entryModel>) {
   return `${entry.namespace}/${entry.name}/${entry.version}`;
 }

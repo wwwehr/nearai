@@ -4,7 +4,7 @@ import { EntrySource } from '~/components/EntrySource';
 import { useCurrentEntry } from '~/hooks/entries';
 
 export default function EntrySourcePage() {
-  const { currentEntry } = useCurrentEntry('agent');
+  const { currentEntry } = useCurrentEntry('model');
 
   if (!currentEntry) return null;
 

@@ -17,6 +17,7 @@ import {
   benchmarkEvaluationsUrlForEntry,
   ENTRY_CATEGORY_LABELS,
   primaryUrlForEntry,
+  sourceUrlForEntry,
 } from '~/lib/entries';
 import { type EntryCategory } from '~/lib/models';
 import { api } from '~/trpc/react';
@@ -157,28 +158,28 @@ export const EntriesTable = ({ category, title }: Props) => {
                     </Tooltip>
                   )}
 
-                  {category === 'agent' && (
-                    <>
-                      <Tooltip asChild content="View Source">
-                        <Button
-                          label="View Source"
-                          icon={<CodeBlock weight="duotone" />}
-                          size="small"
-                          fill="ghost"
-                          href={`/agents/${entry.namespace}/${entry.name}/${entry.version}/source`}
-                        />
-                      </Tooltip>
+                  {sourceUrlForEntry(entry) && (
+                    <Tooltip asChild content="View Source">
+                      <Button
+                        label="View Source"
+                        icon={<CodeBlock weight="duotone" />}
+                        size="small"
+                        fill="ghost"
+                        href={sourceUrlForEntry(entry)}
+                      />
+                    </Tooltip>
+                  )}
 
-                      <Tooltip asChild content="Run Agent">
-                        <Button
-                          label="Run Agent"
-                          icon={<Play weight="duotone" />}
-                          size="small"
-                          fill="ghost"
-                          href={`/agents/${entry.namespace}/${entry.name}/${entry.version}/run`}
-                        />
-                      </Tooltip>
-                    </>
+                  {category === 'agent' && (
+                    <Tooltip asChild content="Run Agent">
+                      <Button
+                        label="Run Agent"
+                        icon={<Play weight="duotone" />}
+                        size="small"
+                        fill="ghost"
+                        href={`/agents/${entry.namespace}/${entry.name}/${entry.version}/run`}
+                      />
+                    </Tooltip>
                   )}
                 </Flex>
               </Table.Cell>

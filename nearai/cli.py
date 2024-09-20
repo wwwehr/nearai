@@ -14,6 +14,7 @@ import fire
 from openapi_client import EntryLocation, EntryMetadataInput
 from openapi_client.api.benchmark_api import BenchmarkApi
 from openapi_client.api.default_api import DefaultApi
+from openapi_client.api.evaluation_api import EvaluationApi
 from shared.client_config import DEFAULT_MODEL, DEFAULT_MODEL_MAX_TOKENS, DEFAULT_MODEL_TEMPERATURE, DEFAULT_PROVIDER
 from tabulate import tabulate
 
@@ -298,19 +299,25 @@ class BenchmarkCli:
 class EvaluationCli:
     def table(
         self,
-        namespace: str = "",
-        tags: str = "",
         all_key_columns: bool = False,
         all_metrics: bool = False,
         num_columns: int = 6,
         metric_name_max_length: int = 30,
     ) -> None:
         """Prints table of evaluations."""
-        from nearai.evaluation import evaluation_table, print_evaluation_table
+        from nearai.evaluation import print_evaluation_table
 
-        rows, columns, important_columns = evaluation_table(namespace, tags)
+        api = EvaluationApi()
+        table = api.get_evaluation_table_v1_evaluation_table_get()
+
         print_evaluation_table(
-            rows, columns, important_columns, all_key_columns, all_metrics, num_columns, metric_name_max_length
+            table.rows,
+            table.columns,
+            table.important_columns,
+            all_key_columns,
+            all_metrics,
+            num_columns,
+            metric_name_max_length,
         )
 
 

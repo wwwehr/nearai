@@ -159,9 +159,8 @@ export const filesModel = fileModel.array();
 export const evaluationTableRowModel = z.intersection(
   z.object({
     agent: z.string(),
-    agentPath: z.string().optional(),
+    agentId: z.string().optional(),
     model: z.string(),
-    modelPath: z.string().optional(),
     namespace: z.string(),
     provider: z.string(),
     version: z.string(),

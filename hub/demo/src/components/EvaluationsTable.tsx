@@ -118,9 +118,9 @@ export const EvaluationsTable = ({ entry: entryToEvaluate }: Props) => {
       wordsMatchFuzzySearch(
         [
           evaluation.namespace,
-          evaluation.agentPath ?? evaluation.agent,
+          evaluation.agentId ?? evaluation.agent,
           evaluation.provider,
-          evaluation.modelPath ?? evaluation.model,
+          evaluation.model,
           evaluation.version,
         ],
         searchQueryDebounced,
@@ -354,7 +354,7 @@ export const EvaluationsTable = ({ entry: entryToEvaluate }: Props) => {
                   </Table.HeadCell>
 
                   <Table.HeadCell
-                    column="modelPath"
+                    column="model"
                     sortable
                     style={{ minWidth: '12rem' }}
                   >
@@ -362,7 +362,7 @@ export const EvaluationsTable = ({ entry: entryToEvaluate }: Props) => {
                   </Table.HeadCell>
 
                   <Table.HeadCell
-                    column="agentPath"
+                    column="agentId"
                     sortable
                     style={{ minWidth: '15rem' }}
                   >
@@ -412,24 +412,14 @@ export const EvaluationsTable = ({ entry: entryToEvaluate }: Props) => {
                       <Text size="text-s">{evaluation.provider}</Text>
                     </Table.Cell>
 
-                    {evaluation.modelPath ? (
-                      <Table.Cell href={`/models/${evaluation.modelPath}`}>
-                        <Text size="text-s" weight={500} color="sand-12">
-                          {evaluation.modelPath}
-                        </Text>
-                      </Table.Cell>
-                    ) : (
-                      <Table.Cell>
-                        <Text size="text-xs" color="sand-8">
-                          --
-                        </Text>
-                      </Table.Cell>
-                    )}
+                    <Table.Cell>
+                      <Text size="text-s">{evaluation.model}</Text>
+                    </Table.Cell>
 
-                    {evaluation.agentPath ? (
-                      <Table.Cell href={`/agents/${evaluation.agentPath}`}>
+                    {evaluation.agentId ? (
+                      <Table.Cell href={`/agents/${evaluation.agentId}`}>
                         <Text size="text-s" weight={500} color="sand-12">
-                          {evaluation.agentPath}
+                          {evaluation.agentId}
                         </Text>
                       </Table.Cell>
                     ) : (

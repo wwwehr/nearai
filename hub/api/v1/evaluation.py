@@ -121,7 +121,7 @@ def download_evaluation(entry_location: EntryLocation) -> Path:
         result = download_file(entry, file)
         local_path.parent.mkdir(parents=True, exist_ok=True)
         with open(local_path, "wb") as f:
-            for chunk in result.body:
+            for chunk in result.body_iterator:
                 f.write(chunk)
 
     return download_path

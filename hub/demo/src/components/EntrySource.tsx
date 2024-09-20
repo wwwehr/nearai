@@ -131,6 +131,7 @@ export const EntrySource = ({ entry }: Props) => {
               onClick={() =>
                 openedFile && copyTextToClipboard(openedFile.content)
               }
+              disabled={activeFileIsCompressed}
             />
           </Flex>
           {activeFileIsCompressed ? (

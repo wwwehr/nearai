@@ -349,16 +349,16 @@ export const EvaluationsTable = ({ entry: entryToEvaluate }: Props) => {
             <Table.Root {...tableProps}>
               <Table.Head>
                 <Table.Row>
+                  <Table.HeadCell column="provider" sortable>
+                    Provider
+                  </Table.HeadCell>
+
                   <Table.HeadCell
                     column="modelPath"
                     sortable
                     style={{ minWidth: '12rem' }}
                   >
                     Model
-                  </Table.HeadCell>
-
-                  <Table.HeadCell column="provider" sortable>
-                    Provider
                   </Table.HeadCell>
 
                   <Table.HeadCell
@@ -408,6 +408,10 @@ export const EvaluationsTable = ({ entry: entryToEvaluate }: Props) => {
 
                 {sorted?.map((evaluation, index) => (
                   <Table.Row key={index}>
+                    <Table.Cell>
+                      <Text size="text-s">{evaluation.provider}</Text>
+                    </Table.Cell>
+
                     {evaluation.modelPath ? (
                       <Table.Cell href={`/models/${evaluation.modelPath}`}>
                         <Text size="text-s" weight={500} color="sand-12">
@@ -421,10 +425,6 @@ export const EvaluationsTable = ({ entry: entryToEvaluate }: Props) => {
                         </Text>
                       </Table.Cell>
                     )}
-
-                    <Table.Cell>
-                      <Text size="text-s">{evaluation.provider}</Text>
-                    </Table.Cell>
 
                     {evaluation.agentPath ? (
                       <Table.Cell href={`/agents/${evaluation.agentPath}`}>

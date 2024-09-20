@@ -103,19 +103,20 @@ def download_evaluation(entry_location: EntryLocation) -> Path:
 
     entry = get(entry_location)
 
-    files = [file.filename for file in list_files(entry)]
-
-    download_path.mkdir(parents=True, exist_ok=True)
-
+    metadata_path = download_path / "metadata.json"
     metadata = download_metadata(entry)
-
     if metadata is None:
         raise ValueError(f"Entry {entry_location} not found.")
-
-    metadata_path = download_path / "metadata.json"
+    if download_path.exists():
+        with open(metadata_path, "r") as f:
+            existing_metadata = json.load(f)
+            if existing_metadata["version"] == metadata.version:
+                return download_path
+    download_path.mkdir(parents=True, exist_ok=True)
     with open(metadata_path, "w") as f:
         f.write(metadata.model_dump_json(indent=2))
 
+    files = [file.filename for file in list_files(entry)]
     for file in files:
         local_path = download_path / file
         result = download_file(entry, file)

@@ -50,8 +50,15 @@ export const EntrySource = ({ entry }: Props) => {
   let openedFile =
     activeFilePath === fileQuery.data?.path ? fileQuery.data : undefined;
   if (activeFilePath === METADATA_FILE_PATH) {
+    const metadata = {
+      category: entry.category,
+      name: entry.name,
+      namespace: entry.namespace,
+      tags: entry.tags,
+      details: entry.details,
+    };
     openedFile = {
-      content: JSON.stringify(entry ?? '{}', null, 2),
+      content: JSON.stringify(metadata ?? '{}', null, 2),
       path: METADATA_FILE_PATH,
     };
   }

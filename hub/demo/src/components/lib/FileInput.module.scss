@@ -34,7 +34,7 @@
   background-color: var(--sand-0);
   border: 2px dashed var(--sand-4);
   outline: none;
-  transition: all var(--transition-speed);
+  transition: var(--transitions);
   cursor: pointer;
 
   [data-disabled='true'] & {

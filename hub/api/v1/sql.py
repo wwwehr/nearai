@@ -101,8 +101,7 @@ class SqlClient:
         cursor.execute(query)
         return cursor.fetchone()
 
-    def add_user_usage(self, account_id: str, query: str, response: str, model: str, provider: str,
-                       endpoint: str):  # noqa: D102
+    def add_user_usage(self, account_id: str, query: str, response: str, model: str, provider: str, endpoint: str):  # noqa: D102
         # Escape single quotes in query and response strings
         query = query.replace("'", "''")
         response = response.replace("'", "''")
@@ -115,8 +114,7 @@ class SqlClient:
         query = f"SELECT * FROM completions WHERE account_id = '{account_id}'"
         return self.__fetch_all(query)
 
-    def store_nonce(self, account_id: str, nonce: bytes, message: str, recipient: str,
-                    callback_url: Optional[str]):  # noqa: D102
+    def store_nonce(self, account_id: str, nonce: bytes, message: str, recipient: str, callback_url: Optional[str]):  # noqa: D102
         logging.info(f"Storing nonce {nonce.decode()} for account {account_id}")
         query = """
         INSERT INTO nonces (nonce, account_id, message, recipient, callback_url, nonce_status)
@@ -503,13 +501,12 @@ class SqlClient:
         value: str,
         version: Optional[str] = "",
         description: Optional[str] = "",
-        category: Optional[str] = "agent"
+        category: Optional[str] = "agent",
     ) -> str:
-        """
-        """
-
+        """Create hub secret."""
         query = """
-        INSERT INTO hub_secrets (`owner_namespace`, `namespace`, `name`, `version`, `key`, `value`, `description`, `category`)
+        INSERT INTO hub_secrets (`owner_namespace`, `namespace`, `name`, `version`, `key`, `value`, `description`,
+        `category`)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
 
@@ -517,16 +514,7 @@ class SqlClient:
         try:
             cursor.execute(
                 query,
-                (
-                    owner_namespace,
-                    namespace,
-                    name,
-                    version,
-                    key,
-                    value,
-                    description,
-                    category
-                ),
+                (owner_namespace, namespace, name, version, key, value, description, category),
             )
             self.db.commit()
         except TypeError as e:
@@ -543,11 +531,9 @@ class SqlClient:
         name: str,
         key: str,
         version: Optional[str] = "",
-        category: Optional[str] = "agent"
+        category: Optional[str] = "agent",
     ) -> None:
-        """
-        """
-
+        """Remove hub secrets."""
         query = """
         DELETE FROM hub_secrets
         WHERE `owner_namespace` = %s
@@ -555,7 +541,7 @@ class SqlClient:
           AND `name` = %s
           AND `version` = %s
           AND `key` = %s
-          AND `category` = %s          
+          AND `category` = %s
         """
 
         parameters = (owner_namespace, namespace, name, version, key, category)
@@ -568,12 +554,12 @@ class SqlClient:
             self.db.rollback()
             raise RuntimeError("Hub secret removal error: " + str(e)) from e
 
-
     def get_user_secrets(self, owner_namespace: str, limit: int = 100, offset: int = 0) -> dict[Any, Any]:  # noqa: D102
+        """Load all hub secrets of the user."""
         query = """
             SELECT `namespace`, `name`, `version`, `description`, `key`, `value`, `category`
-            FROM `hub_secrets` 
-            WHERE `owner_namespace`= %s 
+            FROM `hub_secrets`
+            WHERE `owner_namespace`= %s
              LIMIT %s OFFSET %s
         """
 
@@ -583,15 +569,15 @@ class SqlClient:
 
         return result
 
-    def get_agent_secrets(self, owner_namespace: str,
-        namespace: str,
-        name: str,
-        version: str) -> tuple[dict[Any, Any], dict[Any, Any]]:  # noqa: D102
+    def get_agent_secrets(
+        self, owner_namespace: str, namespace: str, name: str, version: str
+    ) -> tuple[dict[Any, Any], dict[Any, Any]]:  # noqa: D102
+        """Load hub secrets for an agent."""
         query = """
-            SELECT `owner_namespace`, `key`, `value` 
-            FROM `hub_secrets` 
-            WHERE `owner_namespace` IN %s 
-              AND `namespace` = %s 
+            SELECT `owner_namespace`, `key`, `value`
+            FROM `hub_secrets`
+            WHERE `owner_namespace` IN %s
+              AND `namespace` = %s
               AND `name` = %s
               AND (`version` = %s OR `version` IS NULL OR version = '')
               AND category = 'agent'

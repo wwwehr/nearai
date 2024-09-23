@@ -10,7 +10,6 @@ from hub.api.v1.auth import AuthToken, revokable_auth
 from hub.api.v1.entry_location import EntryLocation
 from hub.api.v1.models import RegistryEntry
 from hub.api.v1.registry import S3_BUCKET, get
-
 from hub.api.v1.sql import SqlClient
 
 s3 = boto3.client("s3")
@@ -90,7 +89,9 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokab
     agent_entry = get(EntryLocation.from_str(primary_agent))
 
     # read secret for a primary agent only
-    (agent_secrets, user_secrets) = db.get_agent_secrets(auth.account_id, agent_entry.namespace, agent_entry.name, agent_entry.version)
+    (agent_secrets, user_secrets) = db.get_agent_secrets(
+        auth.account_id, agent_entry.namespace, agent_entry.name, agent_entry.version
+    )
 
     agent_env_vars = body.agent_env_vars or {}
     # agent vars from metadata has lower priority then agent secret

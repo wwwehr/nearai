@@ -497,7 +497,6 @@ class Environment(object):
         max_iterations: int = 10,
     ) -> str:
         """Runs agent(s) against a new or previously created environment."""
-
         run_id = self._generate_run_id()
         iteration = 0
         self._add_agent_start_system_log(agent_idx=0)

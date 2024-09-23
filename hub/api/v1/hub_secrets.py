@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 import boto3
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel
 
 from hub.api.v1.auth import AuthToken, revokable_auth
@@ -48,9 +48,7 @@ class GetUserHubSecret(BaseModel):
 async def create_hub_secret(
     request: CreateHubSecretRequest, background_tasks: BackgroundTasks, auth: AuthToken = Depends(revokable_auth)
 ):
-    """Create a hub secret.
-
-    """
+    """Create a hub secret."""
     logger.info(f"Creating hub secret for: {request.name}")
 
     # TODO encryption
@@ -67,7 +65,7 @@ async def create_hub_secret(
         category=request.category,
     )
 
-    logger.info(f"Hub secret created successfully")
+    logger.info("Hub secret created successfully")
 
     return True
 
@@ -76,9 +74,7 @@ async def create_hub_secret(
 async def remove_hub_secret(
     request: RemoveHubSecretRequest, background_tasks: BackgroundTasks, auth: AuthToken = Depends(revokable_auth)
 ):
-    """Remove a hub secret.
-
-    """
+    """Remove a hub secret."""
     logger.info(f"Removing hub secret for: {request.name}")
 
     sql_client = SqlClient()
@@ -91,7 +87,7 @@ async def remove_hub_secret(
         category=request.category,
     )
 
-    logger.info(f"Hub secret removed successfully")
+    logger.info("Hub secret removed successfully")
 
     return True
 
@@ -100,10 +96,7 @@ async def remove_hub_secret(
 async def get_user_secrets(
     request: GetUserHubSecret, background_tasks: BackgroundTasks, auth: AuthToken = Depends(revokable_auth)
 ):
-    """Get hub secrets for a given user.
-
-    """
-
+    """Get hub secrets for a given user."""
     sql_client = SqlClient()
     result = sql_client.get_user_secrets(
         owner_namespace=auth.account_id,

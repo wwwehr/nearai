@@ -12,8 +12,8 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = '47779d2b93f2'
-down_revision: Union[str, None] = '03f8ea1f734d'
+revision: str = "47779d2b93f2"
+down_revision: Union[str, None] = "03f8ea1f734d"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -30,8 +30,8 @@ def upgrade() -> None:
         sa.Column("description", sa.String(255), nullable=True),
         sa.Column("category", sa.String(255), nullable=False),
         sa.Column("created_at", sa.TIMESTAMP, nullable=False, server_default=sa.func.current_timestamp()),
-        sa.PrimaryKeyConstraint('owner_namespace', 'namespace', 'name', 'version'),
-        sa.Index('ix_owner_namespace', 'owner_namespace')
+        sa.PrimaryKeyConstraint("owner_namespace", "namespace", "name", "version"),
+        sa.Index("ix_owner_namespace", "owner_namespace"),
     )
 
 

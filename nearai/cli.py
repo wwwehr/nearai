@@ -404,6 +404,12 @@ class EvaluationCli:
 
 
 class AgentCli:
+    @staticmethod
+    def _load_agents(agents: str, local: bool = False):
+        from nearai.agents.local_runner import LocalRunner
+
+        return LocalRunner.load_agents(agents, local)
+
     def inspect(self, path: str) -> None:
         """Inspect environment from given path."""
         import subprocess
@@ -414,7 +420,7 @@ class AgentCli:
     def interactive(
         self,
         agents: str,
-        path: Optional[str] = "",
+        path: Optional[str] = None,
         record_run: bool = True,
         env_vars: Optional[Dict[str, Any]] = None,
         load_env: str = "",
@@ -425,12 +431,7 @@ class AgentCli:
         """Runs agent interactively with environment from given path."""
         from nearai.agents.local_runner import LocalRunner
 
-        agent_list = LocalRunner.load_agents(agents, local)
-        if not path:
-            if len(agent_list) == 1:
-                path = agent_list[0].path
-            else:
-                raise ValueError("Local path is required when running multiple agents")
+        agent_list = self._load_agents(agents, local)
 
         client_config = CONFIG.get_client_config()
 
@@ -449,7 +450,7 @@ class AgentCli:
         self,
         agents: str,
         task: str,
-        path: Optional[str] = "",
+        path: Optional[str] = None,
         max_iterations: int = 10,
         record_run: bool = True,
         env_vars: Optional[Dict[str, Any]] = None,
@@ -463,12 +464,7 @@ class AgentCli:
 
         from nearai.agents.local_runner import LocalRunner
 
-        agent_list = LocalRunner.load_agents(agents, local)
-        if not path:
-            if len(agent_list) == 1:
-                path = agent_list[0].path
-            else:
-                raise ValueError("Local path is required when running multiple agents")
+        agent_list = self._load_agents(agents, local)
 
         client_config = ClientConfig(
             base_url=CONFIG.nearai_hub.base_url,

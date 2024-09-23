@@ -30,7 +30,7 @@ def upgrade() -> None:
         sa.Column("description", sa.String(255), nullable=True),
         sa.Column("category", sa.String(255), nullable=False),
         sa.Column("created_at", sa.TIMESTAMP, nullable=False, server_default=sa.func.current_timestamp()),
-        sa.PrimaryKeyConstraint("owner_namespace", "namespace", "name", "version"),
+        sa.PrimaryKeyConstraint("owner_namespace", "namespace", "name", "version", "key"),
         sa.Index("ix_owner_namespace", "owner_namespace"),
     )
 

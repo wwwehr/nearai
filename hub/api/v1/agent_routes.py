@@ -56,13 +56,17 @@ class CreateThreadAndRunRequest(BaseModel):
         None,
         description="A dictionary of tool resources to use for the run.",
     )
-    user_env_vars: Optional[Dict[str, Any]] = Field(
-        None,
-        description="Env vars provided by the user",
+    user_env_vars: Optional[Dict[str, Any]] = (
+        Field(
+            None,
+            description="Env vars provided by the user",
+        ),
     )
-    agent_env_vars: Optional[Dict[str, Any]] = Field(
-        None,
-        description="Env vars provided by the agent",
+    agent_env_vars: Optional[Dict[str, Any]] = (
+        Field(
+            None,
+            description="Env vars provided by the agent",
+        ),
     )
 
 

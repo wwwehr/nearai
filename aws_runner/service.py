@@ -153,6 +153,7 @@ def run_with_environment(
 
     env = Environment(RUN_PATH, loaded_agents, near_client, env_vars=user_env_vars)
     start_time = time.perf_counter()
+    env.add_agent_start_system_log(agent_idx=0)
     run_id = env.run(new_message, max_iterations)
     new_environment = save_environment(env, near_client, run_id, environment_id, write_metric) if record_run else None
     clear_temp_agent_files(loaded_agents)

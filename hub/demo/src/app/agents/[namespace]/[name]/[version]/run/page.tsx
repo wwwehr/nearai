@@ -1,6 +1,13 @@
 'use client';
 
-import { ArrowRight, ChatCircleText, Copy, Gear } from '@phosphor-icons/react';
+import {
+  ArrowRight,
+  Chats,
+  Copy,
+  Gear,
+  Image as ImageIcon,
+  List,
+} from '@phosphor-icons/react';
 import { type KeyboardEventHandler, useEffect, useRef, useState } from 'react';
 import { Controller } from 'react-hook-form';
 import { type z } from 'zod';
@@ -14,10 +21,12 @@ import { Dialog } from '~/components/lib/Dialog';
 import { Flex } from '~/components/lib/Flex';
 import { Form } from '~/components/lib/Form';
 import { HR } from '~/components/lib/HorizontalRule';
+import { IframeWithBlob } from '~/components/lib/IframeWithBlob';
 import { InputTextarea } from '~/components/lib/InputTextarea';
 import { Sidebar } from '~/components/lib/Sidebar';
 import { Slider } from '~/components/lib/Slider';
 import { Text } from '~/components/lib/Text';
+import { Tooltip } from '~/components/lib/Tooltip';
 import { Messages } from '~/components/Messages';
 import { SignInPrompt } from '~/components/SignInPrompt';
 import { ThreadsSidebar } from '~/components/ThreadsSidebar';
@@ -48,6 +57,8 @@ export default function EntryRunPage() {
     defaultValues: { agent_id: agentId },
   });
 
+  const [htmlOutput, setHtmlOutput] = useState('');
+  const [view, setView] = useState<'conversation' | 'output' | 'auto'>('auto');
   const [openedFileName, setOpenedFileName] = useState<string | null>(null);
   const [parametersOpenForSmallScreens, setParametersOpenForSmallScreens] =
     useState(false);
@@ -113,7 +124,11 @@ export default function EntryRunPage() {
         response,
       );
 
-      updateQueryPath({ environmentId: response.environmentId });
+      updateQueryPath(
+        { environmentId: response.environmentId },
+        'replace',
+        false,
+      );
 
       void threadsQuery.refetch();
     } catch (error) {
@@ -137,12 +152,23 @@ export default function EntryRunPage() {
   };
 
   useEffect(() => {
+    const files = environmentQuery?.data?.files;
+    if (files?.['index.html']) {
+      setHtmlOutput(files['index.html'].content);
+      setView((current) => (current === 'auto' ? 'output' : current));
+    }
+  }, [environmentQuery]);
+
+  useEffect(() => {
     if (environmentId && environmentId !== environment?.environmentId) {
       void environmentQuery.refetch();
     }
   }, [environment, environmentId, environmentQuery]);
 
   useEffect(() => {
+    setView('auto');
+    setHtmlOutput('');
+
     if (!environmentId) {
       utils.hub.environment.setData(
         {
@@ -179,12 +205,16 @@ export default function EntryRunPage() {
         />
 
         <Sidebar.Main>
-          <Messages
-            loading={environmentQuery.isLoading}
-            messages={environment?.conversation ?? []}
-            threadId={agentId}
-            welcomeMessage={<AgentWelcome details={currentEntry.details} />}
-          />
+          {view === 'output' ? (
+            <IframeWithBlob html={htmlOutput} />
+          ) : (
+            <Messages
+              loading={environmentQuery.isLoading}
+              messages={environment?.conversation ?? []}
+              threadId={agentId}
+              welcomeMessage={<AgentWelcome details={currentEntry.details} />}
+            />
+          )}
 
           <Sidebar.MainStickyFooter>
             <Flex direction="column" gap="m">
@@ -201,25 +231,56 @@ export default function EntryRunPage() {
                     <b>Shift + Enter</b> to add a new line
                   </Text>
 
-                  <BreakpointDisplay show="sidebar-small-screen">
-                    <Button
-                      label="Select Thread"
-                      icon={<ChatCircleText />}
-                      size="small"
-                      fill="outline"
-                      onClick={() => setThreadsOpenForSmallScreens(true)}
-                    />
-                  </BreakpointDisplay>
+                  <Flex align="start" gap="s">
+                    <BreakpointDisplay show="sidebar-small-screen">
+                      <Button
+                        label="Select Thread"
+                        icon={<List />}
+                        size="small"
+                        fill="ghost"
+                        onClick={() => setThreadsOpenForSmallScreens(true)}
+                      />
+                    </BreakpointDisplay>
 
-                  <BreakpointDisplay show="sidebar-small-screen">
-                    <Button
-                      label="Edit Parameters"
-                      icon={<Gear />}
-                      size="small"
-                      fill="outline"
-                      onClick={() => setParametersOpenForSmallScreens(true)}
-                    />
-                  </BreakpointDisplay>
+                    <BreakpointDisplay show="sidebar-small-screen">
+                      <Button
+                        label="Edit Parameters"
+                        icon={<Gear />}
+                        size="small"
+                        fill="ghost"
+                        onClick={() => setParametersOpenForSmallScreens(true)}
+                      />
+                    </BreakpointDisplay>
+
+                    {htmlOutput && (
+                      <>
+                        {view === 'output' ? (
+                          <Tooltip
+                            asChild
+                            content="Switch to conversation view"
+                          >
+                            <Button
+                              label="Toggle View"
+                              icon={<Chats />}
+                              size="small"
+                              fill="ghost"
+                              onClick={() => setView('conversation')}
+                            />
+                          </Tooltip>
+                        ) : (
+                          <Tooltip asChild content="Switch to output view">
+                            <Button
+                              label="Toggle View"
+                              icon={<ImageIcon />}
+                              size="small"
+                              fill="ghost"
+                              onClick={() => setView('output')}
+                            />
+                          </Tooltip>
+                        )}
+                      </>
+                    )}
+                  </Flex>
 
                   <Button
                     label="Send Message"

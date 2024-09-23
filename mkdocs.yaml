@@ -136,6 +136,7 @@ nav:
     - API Reference: 'api.md'
     - Vector Stores: 'vector-stores.md'
     - Login with NEAR: 'login.md'
+    - Secrets: 'hub_secrets.md'
     - Contributing: 'contributing.md'
 plugins:
   - social

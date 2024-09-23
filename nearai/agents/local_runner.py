@@ -89,6 +89,7 @@ class LocalRunner:
 
         env = self._env
         self._print_welcome(env.get_primary_agent())
+        env.add_agent_start_system_log(agent_idx=0)
 
         last_message_idx = 0
         last_message_idx = self._print_messages(env.list_messages(), last_message_idx)
@@ -141,6 +142,7 @@ class LocalRunner:
         base_id = self.load_from_registry(load_env) if load_env else None
 
         env = self._env
+        env.add_agent_start_system_log(agent_idx=0)
         run_id = env.run(task, max_iterations)
 
         if record_run:

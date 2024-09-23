@@ -118,8 +118,8 @@ class Environment(object):
         # Log the message
         logger.log(level, log)
 
-    def _add_agent_start_system_log(self, agent_idx: int) -> None:
-        """Add agent start system log."""
+    def add_agent_start_system_log(self, agent_idx: int) -> None:
+        """Adds agent start system log."""
         agent = self._agents[agent_idx]
         message = f"Running agent {agent.name}"
         if agent.model != "":
@@ -492,7 +492,6 @@ class Environment(object):
         """Runs agent(s) against a new or previously created environment."""
         run_id = self._generate_run_id()
         iteration = 0
-        self._add_agent_start_system_log(agent_idx=0)
         self.set_next_actor("agent")
 
         if new_message:

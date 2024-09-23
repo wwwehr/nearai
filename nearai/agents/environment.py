@@ -172,6 +172,7 @@ class Environment(object):
         """
         if os.path.exists(os.path.join(self._path, filename)):
             file_location = self._path
+        # TODO: fix get_primary_agent => "current" agent
         elif os.path.exists(os.path.join(self.get_primary_agent().temp_dir, filename)):
             file_location = self.get_primary_agent().temp_dir
         else:

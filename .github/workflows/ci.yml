@@ -67,3 +67,27 @@ jobs:
 
     - name: Build Site
       run: ./scripts/build_mkdocs.sh
+
+  # integration:
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 15
+  #   steps:
+  #   - name: Checkout code
+  #     uses: actions/checkout@v4
+
+  #   - name: Cache Docker layers
+  #     uses: actions/cache@v3
+  #     with:
+  #       path: /tmp/.buildx-cache
+  #       key: ${{ runner.os }}-buildx-${{ github.sha }}
+  #       restore-keys: |
+  #         ${{ runner.os }}-buildx-
+
+  #   - name: Set up Docker Buildx
+  #     uses: docker/setup-buildx-action@v2
+
+  #   - name: Start Docker Compose
+  #     run: docker compose -f .docker/compose-ci.yml up -d --build
+
+  #   - name: Exec Integration Tests
+  #     run: docker exec docker-ci-1 poetry run pytest -m integration

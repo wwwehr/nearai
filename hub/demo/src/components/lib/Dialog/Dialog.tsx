@@ -15,18 +15,20 @@ export const Trigger = Primitive.Trigger;
 export const Title = Primitive.Title;
 
 type ContentProps = Omit<ComponentProps<typeof Primitive.Content>, 'title'> & {
+  align?: 'center' | 'stretch';
   header?: ReactNode;
   size?: 's' | 'm' | 'l';
   title?: string | null;
 };
 
 export const Content = forwardRef<HTMLDivElement, ContentProps>(
-  ({ children, header, size = 'm', title, ...props }, ref) => {
+  ({ align, children, header, size = 'm', title, ...props }, ref) => {
     return (
       <Primitive.Portal>
         <Primitive.Overlay className={s.overlay}>
           <Primitive.Content
             className={s.content}
+            data-align={align}
             data-size={size}
             ref={ref}
             {...props}

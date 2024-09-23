@@ -4,10 +4,10 @@ from typing import Any, Dict, List, Optional, Union, cast
 from datasets import Dataset, DatasetDict  # type: ignore[attr-defined]
 from litellm import Choices, ModelResponse
 from pydantic import BaseModel
+from shared.client_config import ClientConfig
+from shared.inference_client import InferenceClient
 
-from nearai.completion import InferenceRouter
 from nearai.config import CONFIG
-from nearai.provider_models import provider_models
 from nearai.solvers import SolverStrategy
 
 
@@ -24,7 +24,9 @@ class GSM8KSolverStrategy(SolverStrategy):
     def __init__(self, dataset_ref: Union[Dataset, DatasetDict], model: str) -> None:  # noqa: D107
         super().__init__()
         self.dataset_ref = dataset_ref
-        self.completion_fn = InferenceRouter(CONFIG).completions
+        client_config = ClientConfig(base_url=CONFIG.nearai_hub.base_url, auth=CONFIG.auth)
+        self.client = InferenceClient(client_config)
+        self.completion_fn = self.client.completions
         self.model = model
 
     def evaluation_name(self) -> str:  # noqa: D102
@@ -45,7 +47,7 @@ class GSM8KSolverStrategy(SolverStrategy):
 
     def model_provider(self) -> str:  # noqa: D102
         # TODO(#311): create a better helper method.
-        provider, _ = provider_models.match_provider_model(self.model)
+        provider, _ = self.client.provider_models.match_provider_model(self.model)
         return provider
 
     def solve(self, datum: dict) -> bool:  # noqa: D102

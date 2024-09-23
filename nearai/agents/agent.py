@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from nearai.lib import check_metadata
-from nearai.registry import get_namespace, get_registry_folder, registry
+from nearai.registry import get_namespace
 
 AGENT_FILENAME = "agent.py"
 
@@ -72,7 +72,7 @@ class Agent(object):
 
     def run(self, env: Any, task: Optional[str] = None) -> None:  # noqa: D102
         if not os.path.exists(os.path.join(self.path, AGENT_FILENAME)):
-            raise ValueError("Agent run error: {AGENT_FILENAME} does not exist")
+            raise ValueError(f"Agent run error: {AGENT_FILENAME} does not exist")
 
         # combine agent.env_vars and env.env_vars
         total_env_vars = {**self.env_vars, **env.env_vars}
@@ -92,17 +92,3 @@ class Agent(object):
         finally:
             os.chdir(original_cwd)
             sys.path.pop(0)
-
-
-def load_agent(name: str, local: bool = False) -> Agent:
-    # TODO: Figure out how to integrate StreamerAgent as a Agent
-    # if alias_or_name == "streamer":
-    #     return StreamerAgent()
-
-    if local:
-        path = get_registry_folder() / name
-    else:
-        path = registry.download(name)
-
-    assert path is not None, f"Agent {name} not found."
-    return Agent(path.as_posix())

@@ -2,7 +2,6 @@ import hashlib
 import json
 import logging
 import os
-import re
 import shlex
 import shutil
 import subprocess
@@ -12,23 +11,18 @@ import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from shutil import rmtree
 from typing import Any, Dict, Iterable, List, Optional, Union, cast
 
 import psutil
+from shared.inference_client import InferenceClient
+import shared.near.sign as near
 from litellm.types.utils import Choices, ModelResponse
 from litellm.utils import CustomStreamWrapper
 from openai.types.chat import ChatCompletionMessageParam
-from openapi_client import EntryMetadata
+from shared.client_config import DEFAULT_PROVIDER_MODEL
 
-import hub.api.near.sign as near
-from nearai.agent import Agent
-from nearai.completion import InferenceRouter
-from nearai.config import DEFAULT_PROVIDER_MODEL, AuthData, Config, NearAiHubConfig
-from nearai.lib import plain_location
-from nearai.provider_models import provider_models
-from nearai.registry import registry
-from nearai.tool_registry import ToolRegistry
+from nearai.agents.agent import Agent
+from nearai.agents.tool_registry import ToolRegistry
 
 DELIMITER = "\n"
 CHAT_FILENAME = "chat.txt"
@@ -36,32 +30,32 @@ SYSTEM_LOG_FILENAME = "system_log.txt"
 AGENT_LOG_FILENAME = "agent_log.txt"
 TERMINAL_FILENAME = "terminal.txt"
 
+default_approvals: Dict[str, Any] = {"confirm_execution": lambda _: True}
+
 
 class Environment(object):
     def __init__(  # noqa: D107
         self,
         path: str,
         agents: List[Agent],
-        config: Config,
+        client: InferenceClient,
         create_files: bool = True,
         env_vars: Optional[Dict[str, Any]] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
         print_system_log: bool = False,
+        approvals: Optional[Dict[str, Any]] = default_approvals,
     ) -> None:
         self._path = path
         self._agents = agents
         self._done = False
-        self._config = config
-        self._inference = InferenceRouter(config)
+        self._client = client
         self._tools = ToolRegistry()
         self.register_standard_tools()
         self.env_vars: Dict[str, Any] = env_vars if env_vars else {}
         self._last_used_model = ""
         self.tool_resources: Dict[str, Any] = tool_resources if tool_resources else {}
         self.print_system_log = print_system_log
-
-        if self._config.nearai_hub is None:
-            self._config.nearai_hub = NearAiHubConfig()
+        self._approvals = approvals
 
         if create_files:
             os.makedirs(self._path, exist_ok=True)
@@ -72,7 +66,7 @@ class Environment(object):
     def _generate_run_id() -> str:
         return uuid.uuid4().hex
 
-    def get_tool_registry(self) -> ToolRegistry:  # noqa: D102
+    def get_tool_registry(self) -> ToolRegistry:
         """Returns the tool registry, a dictionary of tools that can be called by the agent."""
         return self._tools
 
@@ -87,7 +81,7 @@ class Environment(object):
         reg.register_tool(self.query_vector_store)
 
     def add_message(self, role: str, message: str, filename: str = CHAT_FILENAME, **kwargs: Any) -> None:
-        """Add a message to the chat file."""
+        """Adds a message to the chat file."""
         with open(os.path.join(self._path, filename), "a") as f:
             f.write(json.dumps({"role": role, "content": message, **kwargs}) + DELIMITER)
 
@@ -127,7 +121,7 @@ class Environment(object):
     def _add_agent_start_system_log(self, agent_idx: int) -> None:
         """Add agent start system log."""
         agent = self._agents[agent_idx]
-        message = f"Starting an agent {agent.name}"
+        message = f"Running agent {agent.name}"
         if agent.model != "":
             model = self.get_model_for_inference(agent.model)
             self._last_used_model = model
@@ -155,7 +149,7 @@ class Environment(object):
     def verify_message(
         self, account_id: str, public_key: str, signature: str, message: str, nonce: str, callback_url: str
     ) -> bool:
-        """Verify user message signed with NEAR Account."""
+        """Verifies that the user message is signed with NEAR Account."""
         return near.verify_signed_message(
             account_id, public_key, signature, message, nonce, self._agents[0].name, callback_url
         )
@@ -167,7 +161,7 @@ class Environment(object):
         """
         return os.listdir(os.path.join(self._path, path))
 
-    def get_path(self) -> str:  # noqa: D102
+    def get_path(self) -> str:
         """Returns the path of the current directory."""
         return self._path
 
@@ -197,28 +191,33 @@ class Environment(object):
         return f"Successfully wrote {len(content) if content else 0} characters to {filename}"
 
     def query_vector_store(self, vector_store_id: str, query: str):
-        """Query a vector store.
+        """Queries a vector store.
 
         vector_store_id: The id of the vector store to query.
         query: The query to search for.
         """
-        return self._inference.query_vector_store(vector_store_id, query)
+        return self._client.query_vector_store(vector_store_id, query)
 
     def exec_command(self, command: str) -> Dict[str, Union[str, int]]:
         """Executes a command in the environment and logs the output.
 
-        The environment does not allow running interactive programs. It will run a program for 1 second then will interrupt it if it is still running or if it is waiting for user input.
+        The environment does not allow running interactive programs.
+        It will run a program for 1 second then will interrupt it if it is still running
+        or if it is waiting for user input.
         command: The command to execute, like 'ls -l' or 'python3 tests.py'
-        """  # noqa: E501
-        if self._config.get("confirm_commands", True):
-            yes_no = input("> Do you want to run the following command? (Y/n): " + command)
-            if yes_no != "" and yes_no.lower() != "y":
-                return {
-                    "command": command,
-                    "returncode": 999,
-                    "stdout": "",
-                    "stderr": "declined by user",
-                }
+        """
+        approval_function = self._approvals["confirm_execution"] if self._approvals else None
+        if not approval_function:
+            return {
+                "stderr": "Agent runner misconfiguration. No command execution approval function found.",
+            }
+        if not approval_function(command):
+            return {
+                "command": command,
+                "returncode": 999,
+                "stdout": "",
+                "stderr": "Command execution was not approved.",
+            }
 
         try:
             process = subprocess.Popen(
@@ -271,7 +270,7 @@ class Environment(object):
             model = self._agents[0].model if self._agents else ""
         if model == "":
             return DEFAULT_PROVIDER_MODEL
-        _, model = provider_models.match_provider_model(model, provider)
+        _, model = self._client.provider_models.match_provider_model(model, provider)
         return model
 
     def _run_inference_completions(
@@ -295,7 +294,7 @@ class Environment(object):
         if model != self._last_used_model:
             self._last_used_model = model
             self.add_system_log(f"Connecting to {model}")
-        return self._inference.completions(
+        return self._client.completions(
             model,
             messages,
             stream=stream,
@@ -347,12 +346,9 @@ class Environment(object):
         self,
         messages: Iterable[ChatCompletionMessageParam] | str,
         model: Iterable[ChatCompletionMessageParam] | str = "",
-        auth: Dict | Optional[AuthData] = None,
     ) -> str:
         """Returns a completion for the given messages using the given model."""
-        if isinstance(auth, Dict):
-            auth = AuthData(**auth)
-        raw_response = self.completions(messages, model, auth=auth)
+        raw_response = self.completions(messages, model)
         assert isinstance(raw_response, ModelResponse), "Expected ModelResponse"
         response: ModelResponse = raw_response
         assert all(map(lambda choice: isinstance(choice, Choices), response.choices)), "Expected Choices"
@@ -387,6 +383,10 @@ class Environment(object):
         """Returns list of agents available in environment."""
         return self._agents
 
+    def get_primary_agent(self) -> Agent:
+        """Returns the agent that is invoked first."""
+        return self._agents[0]
+
     def is_done(self) -> bool:  # noqa: D102
         return self._done
 
@@ -403,65 +403,36 @@ class Environment(object):
             snapshot = f.read()
         return snapshot
 
-    def save_to_registry(
-        self,
-        path: str,
-        run_type: str,
-        run_id: str,
-        base_id: Optional[Union[str, int]] = None,
-        run_name: Optional[str] = None,
-    ) -> Optional[bytes]:
-        """Save Environment to Registry."""
-        if self._config.auth is None:
-            print("Warning: Authentication is not set up. Run not saved to registry. To log in, run `nearai login`")
-            return None
+    def environment_run_info(self, run_id, base_id, run_type) -> dict:
+        """Returns the environment run information."""
+        if not self._agents or not self._agents[0]:
+            raise ValueError("Agent not found")
+        primary_agent = self._agents[0]
 
-        agent_name = self._agents[0].name if self._agents else "unknown"
-        generated_name = f"environment_run_{agent_name}_{run_id}"
-        name = run_name or generated_name
+        full_agent_name = "/".join([primary_agent.namespace, primary_agent.name, primary_agent.version])
+        safe_agent_name = full_agent_name.replace("/", "_")
+        generated_name = f"environment_run_{safe_agent_name}_{run_id}"
+        name = generated_name
 
-        tempdir = Path(tempfile.mkdtemp())
-        environment_path = tempdir / "environment.tar.gz"
-
-        with open(environment_path, "w+b") as f:
-            with tarfile.open(fileobj=f, mode="w:gz") as tar:
-                tar.add(path, arcname=".")
-            f.flush()
-            f.seek(0)
-            snapshot = f.read()
-            tar_filename = f.name
-
-            timestamp = datetime.now(timezone.utc).isoformat()
-
-            entry_location = registry.upload(
-                tempdir,
-                EntryMetadata.from_dict(
-                    {
-                        "name": name,
-                        "version": "0.0.1",
-                        "description": f"Agent {run_type} run {agent_name}",
-                        "category": "environment",
-                        "tags": ["environment"],
-                        "details": {
-                            "base_id": base_id,
-                            "timestamp": timestamp,
-                            "agents": [agent.name for agent in self._agents],
-                            "run_id": run_id,
-                            "run_type": run_type,
-                            "filename": tar_filename,
-                        },
-                        "show_entry": True,
-                    }
-                ),
-                show_progress=True,
-            )
-
-            location_str = plain_location(entry_location)
-
-            print(f"Saved environment {entry_location} to registry. To load use flag `--load-env={location_str}`.")
-
-        rmtree(tempdir)
-        return snapshot
+        timestamp = datetime.now(timezone.utc).isoformat()
+        return {
+            "name": name,
+            "version": "0",
+            "description": f"Agent {run_type} {full_agent_name} {run_id} {timestamp}",
+            "category": "environment",
+            "tags": ["environment"],
+            "details": {
+                "base_id": base_id,
+                "timestamp": timestamp,
+                "agents": [agent.name for agent in self._agents],
+                "primary_agent_namespace": primary_agent.namespace,
+                "primary_agent_name": primary_agent.name,
+                "primary_agent_version": primary_agent.version,
+                "run_id": run_id,
+                "run_type": run_type,
+            },
+            "show_entry": True,
+        }
 
     def load_snapshot(self, snapshot: bytes) -> None:
         """Load Environment from Snapshot."""
@@ -475,19 +446,6 @@ class Environment(object):
             with tarfile.open(fileobj=f, mode="r:gz") as tar:
                 tar.extractall(self._path)
 
-    def load_from_registry(self, load_env: str) -> str:  # noqa: D102
-        print(f"Loading environment from {load_env} to {self._path}")
-
-        directory = registry.download(load_env)
-        assert directory is not None, "Failed to download environment"
-
-        files = os.listdir(directory)
-        tarfile_file = next(f for f in files if f.endswith(".tar.gz"))
-
-        with tarfile.open(directory / tarfile_file, "r") as tar:
-            tar.extractall(self._path)
-        return directory.name
-
     def __str__(self) -> str:  # noqa: D105
         return f"Environment({self._path})"
 
@@ -498,13 +456,13 @@ class Environment(object):
         """Must be called to request input from the user."""
         self.set_next_actor("user")
 
-    def clear_temp_agent_files(self) -> None:  # noqa: D102
+    def clear_temp_agent_files(self) -> None:
         """Remove temp agent files created to be used in `runpy`."""
         for agent in self._agents:
             if agent.temp_dir and os.path.exists(agent.temp_dir):
                 shutil.rmtree(agent.temp_dir)
 
-    def set_next_actor(self, who: str) -> None:  # noqa: D102
+    def set_next_actor(self, who: str) -> None:
         """Set the next actor / action in the dialogue."""
         next_action_fn = os.path.join(self._path, ".next_action")
 
@@ -521,159 +479,25 @@ class Environment(object):
             # By default the user starts the conversation.
             return "user"
 
-    def run_interactive(self, record_run: str = "", load_env: str = "") -> None:
-        """Run an interactive session within the given environment."""
-        run_id = self._generate_run_id()
-        if load_env:
-            base_id = self.load_from_registry(load_env)
-        else:
-            base_id = None
-        last_message_idx = 0
-
-        self._add_agent_start_system_log(agent_idx=0)
-
-        if self._agents[0].welcome_description:
-            if self._agents[0].welcome_title:
-                print(f"{self._agents[0].welcome_title}: {self._agents[0].welcome_description}")
-            else:
-                print(self._agents[0].welcome_description)
-
-        def print_messages(last_message_idx: int) -> int:
-            messages = self.list_messages()
-            for item in messages[last_message_idx:]:
-                print(f"[{item['role']}]: {item['content']}", flush=True)
-            return len(messages)
-
-        last_message_idx = print_messages(last_message_idx)
-
-        iteration_count = 0
-        while True:
-            if self.get_next_actor() != "user":
-                messages = self.list_messages()
-                new_message = None if not messages else messages[-1]["content"]
-
-                iteration_count += 1
-                self.run_agent(new_message)
-
-                last_message_idx = print_messages(last_message_idx)
-                if self.is_done():
-                    break
-
-            else:
-                new_message = input("> ")
-                if new_message == "exit":
-                    break
-                self.add_message("user", new_message)
-
-                self.set_next_actor("agent")
-
-        self.clear_temp_agent_files()
-
-        if record_run:
-            run_name = record_run if record_run and record_run != "true" else None
-            self.save_to_registry(self._path, "interactive", run_id, base_id, run_name)
-
-    def run_task(
+    def run(
         self,
-        task: str,
-        record_run: str = "",
-        load_env: str = "",
+        new_message: Optional[str] = None,
         max_iterations: int = 10,
-    ) -> None:
-        """Runs a task within the given environment."""
+    ) -> str:
+        """Runs agent(s) against a new or previously created environment."""
         run_id = self._generate_run_id()
-        if load_env:
-            base_id = self.load_from_registry(load_env)
-        else:
-            base_id = None
         iteration = 0
-
         self._add_agent_start_system_log(agent_idx=0)
+        self.set_next_actor("agent")
 
-        if task:
-            self.add_message("user", task)
+        if new_message:
+            self.add_message("user", new_message)
 
-        while iteration < max_iterations and not self.is_done():
+        while iteration < max_iterations and not self.is_done() and self.get_next_actor() != "user":
             iteration += 1
-            self._agents[0].run(self, task=task)
+            self._agents[0].run(self, task=new_message)
 
-        if record_run:
-            run_name = record_run if record_run and record_run != "true" else None
-            self.save_to_registry(self._path, "task", run_id, base_id, run_name)
-
-    def inspect(self) -> None:  # noqa: D102
-        filename = Path(os.path.abspath(__file__)).parent / "streamlit_inspect.py"
-        subprocess.call(["streamlit", "run", filename, "--", self._path])
-
-    def contains_non_empty_chat_txt(self, directory: str) -> bool:  # noqa: D102
-        chat_txt_path = os.path.join(directory, "chat.txt")
-        return os.path.isfile(chat_txt_path) and os.path.getsize(chat_txt_path) > 0
-
-    def save_folder(self, name: Optional[str] = None) -> None:  # noqa: D102
-        path = self._path
-        temp_dir = None
-
-        def copy_relevant_folders(src: str, dest: str) -> None:
-            for item in os.listdir(src):
-                s = os.path.join(src, item)
-                d = os.path.join(dest, item)
-                if os.path.isdir(s):
-                    if self.contains_non_empty_chat_txt(s):
-                        shutil.copytree(s, d)
-                    else:
-                        os.makedirs(d, exist_ok=True)
-                        copy_relevant_folders(s, d)
-                        if not os.listdir(d):
-                            os.rmdir(d)
-
-        if not self.contains_non_empty_chat_txt(path):
-            temp_dir = tempfile.mkdtemp()
-            copy_relevant_folders(path, temp_dir)
-            path = temp_dir
-
-        try:
-            if not os.listdir(path):
-                raise ValueError(f"No files found in {path}")
-
-            self.save_to_registry(
-                path, "folders" if temp_dir else "folder", self.generate_folder_hash_id(path), None, name
-            )
-        finally:
-            if temp_dir:
-                shutil.rmtree(temp_dir)
-
-    def save_from_history(self, lines: List[str], name: Optional[str] = None) -> None:  # noqa: D102
-        # Parse lines and extract relevant information
-        pattern = r"^\s*(?:\d+\s+)?(\S+)\s+environment\s+interactive\s+(\S+)\s+(\S+)(.*?)$"
-        relevant_paths = {}
-        for line in lines:
-            match = re.match(pattern, line)
-            if match:
-                program_name, agents, path, other_args = match.groups()
-                path = path.strip("/")
-                if self.contains_non_empty_chat_txt(path):
-                    command = f"{program_name} environment interactive {agents} {path} {other_args}"
-                    relevant_paths[path] = {"command": command.strip()}
-
-        if not relevant_paths:
-            raise ValueError("No relevant paths with non-empty chat.txt files found in history")
-
-        for path, info in relevant_paths.items():
-            print(path)
-            # Write start_command.log
-            with open(os.path.join(path, "start_command.log"), "w") as f:
-                f.write(info["command"])
-
-        # Create temporary directory and copy relevant folders
-        temp_dir = tempfile.mkdtemp()
-        try:
-            for path, _info in relevant_paths.items():
-                dest = os.path.join(temp_dir, path.replace("/", "_").strip("_"))
-                shutil.copytree(path, dest)
-            self.save_to_registry(temp_dir, "folders", self.generate_folder_hash_id(temp_dir), None, name)
-
-        finally:
-            shutil.rmtree(temp_dir)
+        return run_id
 
     def generate_folder_hash_id(self, path: str) -> str:
         """Returns id similar to _generate_run_id(), but based on files and their contents in path, including subfolders."""  # noqa: E501

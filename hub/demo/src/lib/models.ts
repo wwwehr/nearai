@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { parseStringOrNumber } from '~/utils/number';
+
 export const authorizationModel = z.object({
   account_id: z.string(),
   public_key: z.string(),
@@ -51,7 +53,7 @@ export const listModelsModel = z.object({
   provider: z.string(),
 });
 
-export const oneModelModel = z.object({
+export const modelModel = z.object({
   id: z.string(),
   created: z.number(),
   object: z.string(),
@@ -63,12 +65,12 @@ export const oneModelModel = z.object({
   context_length: z.number().nullable().optional(),
 });
 
-export const listModelsResponseModel = z.object({
-  data: z.array(oneModelModel),
+export const modelsModel = z.object({
+  data: z.array(modelModel),
   object: z.string(),
 });
 
-export const challengeResponseModel = z.object({
+export const challengeModel = z.object({
   challenge: z.string(),
 });
 
@@ -82,16 +84,26 @@ export const nonceModel = z.object({
   first_seen_at: z.string(),
 });
 
-export const listNoncesModel = z.array(nonceModel);
+export const noncesModel = z.array(nonceModel);
 
 export const revokeNonceModel = z.object({
   nonce: z.string().regex(/^\d{32}$/),
   auth: z.string(),
 });
 
-export const registryEntry = z.object({
+export const entryCategory = z.enum([
+  'agent',
+  'benchmark',
+  'dataset',
+  'environment',
+  'evaluation',
+  'model',
+]);
+export type EntryCategory = z.infer<typeof entryCategory>;
+
+export const entryModel = z.object({
   id: z.number(),
-  category: z.string(),
+  category: entryCategory,
   namespace: z.string(),
   name: z.string(),
   version: z.string(),
@@ -127,7 +139,7 @@ export const registryEntry = z.object({
   ),
 });
 
-export const registryEntries = z.array(registryEntry);
+export const entriesModel = z.array(entryModel);
 
 export const chatWithAgentModel = z.object({
   agent_id: z.string(),
@@ -142,4 +154,25 @@ export const fileModel = z.object({
   filename: z.string(),
 });
 
-export const listFiles = fileModel.array();
+export const filesModel = fileModel.array();
+
+export const evaluationTableRowModel = z.intersection(
+  z.object({
+    agent: z.string(),
+    agentId: z.string().optional(),
+    model: z.string(),
+    namespace: z.string(),
+    provider: z.string(),
+    version: z.string(),
+  }),
+  z.record(
+    z.string(),
+    z.preprocess(parseStringOrNumber, z.string().or(z.number())),
+  ),
+);
+
+export const evaluationsTableModel = z.object({
+  columns: z.string().array(),
+  important_columns: z.string().array(),
+  rows: evaluationTableRowModel.array(),
+});

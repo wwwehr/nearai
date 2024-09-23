@@ -13,11 +13,11 @@ from openai.types.chat import (
     ChatCompletionSystemMessageParam,
     ChatCompletionUserMessageParam,
 )
+from shared.client_config import ClientConfig
+from shared.inference_client import InferenceClient
 from tqdm import tqdm
 
-from nearai.completion import InferenceRouter
 from nearai.config import CONFIG
-from nearai.provider_models import provider_models
 from nearai.solvers import (
     SolverScoringMethod,
     SolverStrategy,
@@ -62,7 +62,9 @@ class LiveBenchSolverStrategy(SolverStrategy):
     ) -> None:
         super().__init__()
         self.dataset_ref = dataset_ref
-        self.completion_fn = InferenceRouter(CONFIG).completions
+        client_config = ClientConfig(base_url=CONFIG.nearai_hub.base_url, auth=CONFIG.auth)
+        self.client = InferenceClient(client_config)
+        self.completion_fn = self.client.completions
         assert "/" not in model
         self.model = model
         self.step = step
@@ -85,7 +87,7 @@ class LiveBenchSolverStrategy(SolverStrategy):
 
     def model_provider(self) -> str:  # noqa: D102
         # TODO(#311): create a better helper method.
-        provider, _ = provider_models.match_provider_model(self.model)
+        provider, _ = self.client.provider_models.match_provider_model(self.model)
         return provider
 
     def get_custom_tasks(self) -> List[dict]:  # noqa: D102

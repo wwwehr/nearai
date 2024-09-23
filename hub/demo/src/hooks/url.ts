@@ -29,6 +29,7 @@ export function useQueryParams<const T extends string[]>(names: T) {
       mode: 'push' | 'replace' = 'push',
     ) => {
       const path = createQueryPath(updatedParams);
+
       if (mode === 'replace') {
         router.replace(path);
       } else {
@@ -49,7 +50,9 @@ export function useQueryParams<const T extends string[]>(names: T) {
     });
 
     return params as Partial<Record<T[number], string>>;
-  }, [names, searchParams]);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   return {
     createQueryPath,

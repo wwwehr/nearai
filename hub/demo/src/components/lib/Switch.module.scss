@@ -114,14 +114,14 @@
     inset 0 0 0 1px var(--switch-color-border),
     0px 1px 2px 0px rgba(0, 0, 0, 0.1);
   transform-origin: left center;
-  transition: all var(--transition-speed);
+  transition: var(--transitions);
 }
 
 .icon {
   color: var(--switch-color-icon);
   width: var(--switch-size-icon);
   height: var(--switch-size-icon);
-  transition: all var(--transition-speed);
+  transition: var(--transitions);
 
   svg {
     width: 100%;

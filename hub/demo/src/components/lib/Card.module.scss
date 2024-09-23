@@ -12,7 +12,7 @@
   border: 1px solid var(--card-border-color);
   outline: none;
   position: relative;
-  transition: all var(--transition-speed);
+  transition: var(--transitions);
 
   * {
     min-width: 0;

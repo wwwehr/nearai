@@ -7,12 +7,14 @@ import {
   chatModel,
   chatResponseModel,
   chatWithAgentModel,
-  listFiles,
-  listModelsResponseModel,
-  listNoncesModel,
+  type entriesModel,
+  entryCategory,
+  entryModel,
+  evaluationsTableModel,
+  filesModel,
   type messageModel,
-  type registryEntries,
-  registryEntry,
+  modelsModel,
+  noncesModel,
   revokeNonceModel,
 } from '~/lib/models';
 import {
@@ -30,15 +32,6 @@ type RegistryFile = {
   size: number;
   headerOffset: number;
 };
-
-export const registryCategory = z.enum([
-  'agent',
-  'benchmark',
-  'dataset',
-  'environment',
-  'model',
-]);
-export type RegistryCategory = z.infer<typeof registryCategory>;
 
 async function downloadEnvironment(environmentId: string) {
   const url = `${env.ROUTER_URL}/registry/download_file`;
@@ -158,11 +151,96 @@ export const hubRouter = createTRPCRouter({
       return environment;
     }),
 
+  entries: publicProcedure
+    .input(
+      z.object({
+        category: entryCategory.optional(),
+        limit: z.number().default(10_000),
+        namespace: z.string().optional(),
+        showLatestVersion: z.boolean().default(true),
+        starredBy: z.string().optional(),
+        tags: z.string().array().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const url = new URL(`${env.ROUTER_URL}/registry/list_entries`);
+
+      url.searchParams.append('total', `${input.limit}`);
+      url.searchParams.append(
+        'show_latest_version',
+        `${input.showLatestVersion}`,
+      );
+
+      if (input.category) url.searchParams.append('category', input.category);
+
+      if (input.namespace)
+        url.searchParams.append('namespace', input.namespace);
+
+      if (input.tags) url.searchParams.append('tags', input.tags.join(','));
+
+      if (input.starredBy) {
+        url.searchParams.append('starred_by', input.starredBy);
+      }
+
+      if (ctx.signature) {
+        url.searchParams.append('star_point_of_view', ctx.signature.account_id);
+      }
+
+      const response = await fetch(url.toString(), {
+        method: 'POST',
+      });
+
+      const data: unknown = await response.json();
+
+      if (!response.ok || !Array.isArray(data)) throw data;
+
+      /*
+        Unfortunately, we can't rely on fetchWithZod() for this method. If the endpoint 
+        returns a single record that didn't match our expected "entries" schema, 
+        all of the data would be thrown out. Instead, we loop over each returned item and 
+        parse the entries one at a time - only omitting entries that aren't valid instead 
+        of throwing an error for the entire list.
+      */
+
+      const list: z.infer<typeof entriesModel> = data
+        .map((item) => {
+          const parsed = entryModel.safeParse(item);
+          return parsed.data;
+        })
+        .filter((entry) => !!entry);
+
+      return list;
+    }),
+
   environment: protectedProcedure
     .input(z.object({ environmentId: z.string() }))
     .query(async ({ input }) => {
       return await downloadEnvironment(input.environmentId);
     }),
+
+  evaluations: publicProcedure.query(async () => {
+    const evaluations = await fetchWithZod(
+      evaluationsTableModel,
+      `${env.ROUTER_URL}/evaluation/table`,
+    );
+
+    const infoColumns = ['agent', 'model', 'namespace', 'version', 'provider'];
+    const benchmarkColumns = evaluations.columns.filter(
+      (column) => !infoColumns.includes(column),
+    );
+
+    evaluations.rows.forEach((row) => {
+      if (row.agent && row.namespace && row.version) {
+        row.agentId = `${row.namespace}/${row.agent}/${row.version}`;
+      }
+    });
+
+    return {
+      benchmarkColumns,
+      infoColumns,
+      results: evaluations.rows,
+    };
+  }),
 
   file: publicProcedure
     .input(
@@ -211,8 +289,8 @@ export const hubRouter = createTRPCRouter({
       }),
     )
     .query(async ({ input }) => {
-      const list = await fetchWithZod(
-        listFiles,
+      const files = await fetchWithZod(
+        filesModel,
         `${env.ROUTER_URL}/registry/list_files`,
         {
           method: 'POST',
@@ -229,7 +307,7 @@ export const hubRouter = createTRPCRouter({
         },
       );
 
-      const paths = list.flatMap((file) => file.filename);
+      const paths = files.flatMap((file) => file.filename);
       paths.push('metadata.json');
       paths.sort();
 
@@ -242,13 +320,13 @@ export const hubRouter = createTRPCRouter({
     const response = await fetch(url);
     const data: unknown = await response.json();
 
-    return listModelsResponseModel.parse(data);
+    return modelsModel.parse(data);
   }),
 
   nonces: protectedProcedure.query(async ({ ctx }) => {
     const url = env.ROUTER_URL + '/nonce/list';
 
-    const nonces = await fetchWithZod(listNoncesModel, url, {
+    const nonces = await fetchWithZod(noncesModel, url, {
       headers: {
         Authorization: ctx.authorization,
       },
@@ -256,67 +334,6 @@ export const hubRouter = createTRPCRouter({
 
     return nonces;
   }),
-
-  registryEntries: publicProcedure
-    .input(
-      z.object({
-        category: registryCategory.optional(),
-        limit: z.number().default(10_000),
-        namespace: z.string().optional(),
-        showLatestVersion: z.boolean().default(true),
-        starredBy: z.string().optional(),
-        tags: z.string().array().optional(),
-      }),
-    )
-    .query(async ({ ctx, input }) => {
-      const url = new URL(`${env.ROUTER_URL}/registry/list_entries`);
-
-      url.searchParams.append('total', `${input.limit}`);
-      url.searchParams.append(
-        'show_latest_version',
-        `${input.showLatestVersion}`,
-      );
-
-      if (input.category) url.searchParams.append('category', input.category);
-
-      if (input.namespace)
-        url.searchParams.append('namespace', input.namespace);
-
-      if (input.tags) url.searchParams.append('tags', input.tags.join(','));
-
-      if (input.starredBy) {
-        url.searchParams.append('starred_by', input.starredBy);
-      }
-
-      if (ctx.signature) {
-        url.searchParams.append('star_point_of_view', ctx.signature.account_id);
-      }
-
-      const response = await fetch(url.toString(), {
-        method: 'POST',
-      });
-
-      const data: unknown = await response.json();
-
-      if (!response.ok || !Array.isArray(data)) throw data;
-
-      /*
-        Unfortunately, we can't rely on fetchWithZod() for this method. If the endpoint 
-        returns a single record that didn't match our expected "registryEntries" schema, 
-        all of the data would be thrown out. Instead, we loop over each returned item and 
-        parse the entries one at a time - only omitting entries that aren't valid instead 
-        of throwing an error for the entire list.
-      */
-
-      const list: z.infer<typeof registryEntries> = data
-        .map((item) => {
-          const parsed = registryEntry.safeParse(item);
-          return parsed.data;
-        })
-        .filter((entry) => !!entry);
-
-      return list;
-    }),
 
   revokeNonce: protectedProcedure
     .input(revokeNonceModel)
@@ -359,7 +376,7 @@ export const hubRouter = createTRPCRouter({
       return data;
     }),
 
-  starRegistryEntry: protectedProcedure
+  starEntry: protectedProcedure
     .input(
       z.object({
         action: z.enum(['add', 'remove']),
@@ -396,7 +413,7 @@ export const hubRouter = createTRPCRouter({
         namespace: z.string(),
         name: z.string(),
         version: z.string(),
-        metadata: registryEntry.partial(),
+        metadata: entryModel.partial(),
       }),
     )
     .mutation(

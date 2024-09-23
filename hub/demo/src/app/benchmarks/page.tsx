@@ -1,7 +1,7 @@
 'use client';
 
-import { ResourceList } from '~/components/ResourceList';
+import { EntriesTable } from '~/components/EntriesTable';
 
 export default function BenchmarksListPage() {
-  return <ResourceList category="benchmark" title="Benchmarks" />;
+  return <EntriesTable category="benchmark" title="Benchmarks" />;
 }

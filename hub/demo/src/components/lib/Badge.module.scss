@@ -20,7 +20,7 @@
   white-space: nowrap;
   flex-shrink: 0;
   outline: none;
-  transition: all var(--transition-speed);
+  transition: var(--transitions);
 
   &[role='button'] {
     border-radius: 100px;
@@ -36,7 +36,7 @@
   }
 
   &[data-size='small'] {
-    font: var(--text-xxs);
+    font: var(--text-2xs);
     height: 16px;
     min-width: 16px;
     line-height: 16px;

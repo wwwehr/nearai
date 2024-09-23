@@ -39,3 +39,17 @@ export function formatBytes(bytes: number | null | undefined, decimals = 1) {
 
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }
+
+const NUMBER_REGEX = /^-?[0-9]\d*(\.\d+)?$/;
+
+export function parseStringOrNumber(value: unknown) {
+  if (typeof value === 'number') return value;
+
+  if (typeof value !== 'string') return '';
+
+  if (NUMBER_REGEX.test(value)) {
+    return stringToNumber(value) ?? 0;
+  }
+
+  return value;
+}

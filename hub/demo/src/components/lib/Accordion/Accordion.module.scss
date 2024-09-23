@@ -5,7 +5,7 @@
 .item {
   border-radius: 6px;
   box-shadow: 0 0 0 0px var(--violet-5);
-  transition: all var(--transition-speed);
+  transition: var(--transitions);
 
   &:focus-within {
     box-shadow: 0 0 0 4px var(--violet-5);
@@ -28,7 +28,7 @@
   color: var(--sand-12);
   padding: var(--gap-m);
   cursor: pointer;
-  transition: all var(--transition-speed);
+  transition: var(--transitions);
 
   &:hover {
     color: var(--violet-11);
@@ -39,7 +39,7 @@
   margin-left: auto;
   width: 16px;
   height: 16px;
-  transition: all var(--transition-speed);
+  transition: var(--transitions);
 
   svg {
     width: 100%;

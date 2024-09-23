@@ -7,8 +7,8 @@ from typing import Any, Dict, Iterable, List, Optional, Union
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security import HTTPBearer
-from nearai.provider_models import PROVIDER_MODEL_SEP, get_provider_model
 from pydantic import BaseModel, field_validator
+from shared.provider_models import PROVIDER_MODEL_SEP, get_provider_model
 
 from hub.api.v1.auth import AuthToken, revokable_auth, validate_signature
 from hub.api.v1.completions import Message, Provider, get_llm_ai, handle_stream

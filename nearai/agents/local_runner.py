@@ -30,7 +30,6 @@ class LocalRunner:
     ) -> None:
         if path:
             self._path = path
-            print("self._path ", self._path )
         else:
             first_agent = agents[0].identifier
             self._path = f"{DEFAULT_OUTPUT_PATH}{first_agent.replace('/', '_')}"

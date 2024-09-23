@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from enum import Enum
 from os import getenv
-from typing import Any, Dict, List, Literal, Optional, Set, Tuple
+from typing import Any, Dict, List, Literal, Optional
 
 import pymysql
 import pymysql.cursors
@@ -111,7 +111,6 @@ class SqlClient:
         self.db.cursor().execute(query)
         self.db.commit()
 
-    # TODO check if it has sql injection
     def get_user_usage(self, account_id: str):  # noqa: D102
         query = f"SELECT * FROM completions WHERE account_id = '{account_id}'"
         return self.__fetch_all(query)
@@ -152,13 +151,13 @@ class SqlClient:
         self.db.commit()
 
     def create_vector_store(
-            self,
-            account_id: str,
-            name: str,
-            file_ids: List[str],
-            expires_after: Optional[Dict[str, Any]] = None,
-            chunking_strategy: Optional[Dict[str, Any]] = None,
-            metadata: Optional[Dict[str, str]] = None,
+        self,
+        account_id: str,
+        name: str,
+        file_ids: List[str],
+        expires_after: Optional[Dict[str, Any]] = None,
+        chunking_strategy: Optional[Dict[str, Any]] = None,
+        metadata: Optional[Dict[str, str]] = None,
     ) -> str:
         """Create a new vector store.
 
@@ -244,15 +243,15 @@ class SqlClient:
         return [VectorStore(**x) for x in self.__fetch_all(query)]
 
     def create_file(
-            self,
-            account_id: str,
-            file_uri: str,
-            purpose: str,
-            filename: str,
-            content_type: str,
-            file_size: int,
-            encoding: Optional[str] = None,
-            embedding_status: Optional[Literal["in_progress", "completed"]] = None,
+        self,
+        account_id: str,
+        file_uri: str,
+        purpose: str,
+        filename: str,
+        content_type: str,
+        file_size: int,
+        encoding: Optional[str] = None,
+        embedding_status: Optional[Literal["in_progress", "completed"]] = None,
     ) -> str:
         """Add file details to the vector store.
 
@@ -326,7 +325,7 @@ class SqlClient:
         return VectorStoreFile(**result) if result else None
 
     def update_files_in_vector_store(
-            self, vector_store_id: str, file_ids: List[str], account_id: str
+        self, vector_store_id: str, file_ids: List[str], account_id: str
     ) -> Optional[VectorStore]:
         """Update the files associated with a vector store.
 
@@ -348,7 +347,7 @@ class SqlClient:
         return self.get_vector_store(vector_store_id)
 
     def store_embedding(
-            self, id: str, vector_store_id: str, file_id: str, chunk_index: int, chunk_text: str, embedding: List[float]
+        self, id: str, vector_store_id: str, file_id: str, chunk_index: int, chunk_text: str, embedding: List[float]
     ):
         """Store an embedding for a chunk of text.
 
@@ -431,7 +430,7 @@ class SqlClient:
         self.db.commit()
 
     def similarity_search(
-            self, vector_store_id: str, query_embedding: List[float], limit: int = 10
+        self, vector_store_id: str, query_embedding: List[float], limit: int = 10
     ) -> List[SimilaritySearch]:
         """Perform a similarity search in the vector store.
 
@@ -496,15 +495,15 @@ class SqlClient:
             return False
 
     def create_hub_secret(
-            self,
-            owner_namespace: str,
-            namespace: str,
-            name: str,
-            key: str,
-            value: str,
-            version: Optional[str] = "",
-            description: Optional[str] = "",
-            category: Optional[str] = "agent"
+        self,
+        owner_namespace: str,
+        namespace: str,
+        name: str,
+        key: str,
+        value: str,
+        version: Optional[str] = "",
+        description: Optional[str] = "",
+        category: Optional[str] = "agent"
     ) -> str:
         """
         """
@@ -538,13 +537,13 @@ class SqlClient:
             raise
 
     def remove_hub_secret(
-            self,
-            owner_namespace: str,
-            namespace: str,
-            name: str,
-            key: str,
-            version: Optional[str] = "",
-            category: Optional[str] = "agent"
+        self,
+        owner_namespace: str,
+        namespace: str,
+        name: str,
+        key: str,
+        version: Optional[str] = "",
+        category: Optional[str] = "agent"
     ) -> None:
         """
         """
@@ -585,9 +584,9 @@ class SqlClient:
         return result
 
     def get_agent_secrets(self, owner_namespace: str,
-                         namespace: str,
-                         name: str,
-                         version: str) -> tuple[dict[Any, Any], dict[Any, Any]]:  # noqa: D102
+        namespace: str,
+        name: str,
+        version: str) -> tuple[dict[Any, Any], dict[Any, Any]]:  # noqa: D102
         query = """
             SELECT `owner_namespace`, `key`, `value` 
             FROM `hub_secrets` 
@@ -605,20 +604,13 @@ class SqlClient:
         cursor.execute(query, params)
         result = cursor.fetchall()
 
-        final_query = query % tuple(map(lambda x: f"'{x}'" if isinstance(x, str) else x, params))
-
-        print("Final SQL Query:")
-        print(final_query)
-
         agent_secrets = {}
         user_secrets = {}
+
         for secret in result:
-            print("secret", secret, secret["owner_namespace"], owner_namespace)
             if secret["owner_namespace"] == owner_namespace:
                 user_secrets[secret["key"]] = secret["value"]
             else:
                 agent_secrets[secret["key"]] = secret["value"]
 
-        print("agent_secrets", agent_secrets)
-        print("user_secrets", user_secrets)
         return agent_secrets, user_secrets

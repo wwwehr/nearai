@@ -77,10 +77,7 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokab
     if not body.agent_id and not body.assistant_id:
         raise HTTPException(status_code=400, detail="Missing required parameters: agent_id or assistant_id")
 
-    import logging
-    v1_router = APIRouter()
     db = SqlClient()
-    logger = logging.getLogger(__name__)
 
     agents = body.agent_id or body.assistant_id or ""
     environment_id = body.environment_id or body.thread
@@ -111,10 +108,9 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokab
         "agent_env_vars": agent_env_vars,
     }
 
-    # print("run_agent", params)
-
     if not agent_entry:
         raise HTTPException(status_code=404, detail=f"Agent '{primary_agent}' not found in the registry.")
+
     entry_details = agent_entry.details
     agent_details = entry_details.get("agent", {})
     framework = agent_details.get("framework", "base")

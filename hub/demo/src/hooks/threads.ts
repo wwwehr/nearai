@@ -11,7 +11,7 @@ export type Thread = {
     url: string;
   };
   description: string;
-  environments: RouterOutputs['hub']['registryEntries'];
+  environments: RouterOutputs['hub']['entries'];
   environmentId: string;
   lastMessageAt: Date | null;
   messageCount: number;
@@ -22,7 +22,7 @@ export function useThreads() {
   const accountId = useAuthStore((store) => store.auth?.account_id);
   const utils = api.useUtils();
 
-  const list = api.hub.registryEntries.useQuery(
+  const entriesQuery = api.hub.entries.useQuery(
     {
       category: 'environment',
       namespace: accountId,
@@ -33,11 +33,8 @@ export function useThreads() {
   );
 
   const setThreadEnvironmentData = useCallback(
-    (
-      id: number,
-      data: Partial<RouterOutputs['hub']['registryEntries'][number]>,
-    ) => {
-      const environments = [...(list.data ?? [])].map((environment) => {
+    (id: number, data: Partial<RouterOutputs['hub']['entries'][number]>) => {
+      const environments = [...(entriesQuery.data ?? [])].map((environment) => {
         if (environment.id === id) {
           return {
             ...environment,
@@ -48,7 +45,7 @@ export function useThreads() {
         return environment;
       });
 
-      utils.hub.registryEntries.setData(
+      utils.hub.entries.setData(
         {
           category: 'environment',
           namespace: accountId,
@@ -56,19 +53,19 @@ export function useThreads() {
         environments,
       );
     },
-    [accountId, utils, list.data],
+    [accountId, utils, entriesQuery.data],
   );
 
   const threads = useMemo(() => {
     const result: Thread[] = [];
     if (!accountId) return [];
-    if (!list.data) return;
+    if (!entriesQuery.data) return;
 
     // If an environment has a nullish `base_id`, it's a parent (the start of a thread)
-    const parents = list.data.filter(
+    const parents = entriesQuery.data.filter(
       (environment) => !environment.details.base_id,
     );
-    const children = list.data.filter(
+    const children = entriesQuery.data.filter(
       (environment) => !!environment.details.base_id,
     );
 
@@ -113,19 +110,19 @@ export function useThreads() {
     }
 
     return result;
-  }, [accountId, list.data]);
+  }, [accountId, entriesQuery.data]);
 
   return {
     setThreadEnvironmentData,
     threads,
-    threadsQuery: list,
+    threadsQuery: entriesQuery,
   };
 }
 
 function followThread(
-  children: RouterOutputs['hub']['registryEntries'],
-  current: RouterOutputs['hub']['registryEntries'][number],
-  result: RouterOutputs['hub']['registryEntries'] = [],
+  children: RouterOutputs['hub']['entries'],
+  current: RouterOutputs['hub']['entries'][number],
+  result: RouterOutputs['hub']['entries'] = [],
 ) {
   result.push(current);
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { CodeBlock, Play } from '@phosphor-icons/react';
-import Link from 'next/link';
+import { type ReactNode } from 'react';
 import { type z } from 'zod';
 
 import { Badge } from '~/components/lib/Badge';
@@ -11,63 +11,72 @@ import { Flex } from '~/components/lib/Flex';
 import { Text } from '~/components/lib/Text';
 import { Tooltip } from '~/components/lib/Tooltip';
 import { StarButton } from '~/components/StarButton';
-import { type registryEntry } from '~/lib/models';
-import { CATEGORY_LABELS } from '~/utils/category';
+import { ENTRY_CATEGORY_LABELS, primaryUrlForEntry } from '~/lib/entries';
+import { type entryModel } from '~/lib/models';
 
+import { ConditionalLink } from './lib/ConditionalLink';
 import { ImageIcon } from './lib/ImageIcon';
 
 type Props = {
-  item: z.infer<typeof registryEntry>;
+  entry: z.infer<typeof entryModel>;
+  linksOpenNewTab?: boolean;
+  footer?: ReactNode;
 };
 
-export const ResourceCard = ({ item }: Props) => {
-  const icon = CATEGORY_LABELS[item.category]?.icon;
-  const baseUrl = `/agents/${item.namespace}/${item.name}/${item.version}`;
+export const EntryCard = ({ entry, linksOpenNewTab, footer }: Props) => {
+  const icon = ENTRY_CATEGORY_LABELS[entry.category]?.icon;
+  const primaryUrl = primaryUrlForEntry(entry);
+  const target = linksOpenNewTab ? '_blank' : undefined;
 
   return (
     <Card gap="m">
       <Flex gap="s" align="center">
-        <Link href={baseUrl}>
+        <ConditionalLink href={primaryUrl}>
           <ImageIcon
-            src={item.details.icon}
-            alt={item.name}
+            src={entry.details.icon}
+            alt={entry.name}
             fallbackIcon={icon}
           />
-        </Link>
+        </ConditionalLink>
 
         <Flex gap="none" direction="column">
-          <Link href={baseUrl} style={{ zIndex: 1, position: 'relative' }}>
+          <ConditionalLink
+            href={primaryUrl}
+            target={target}
+            style={{ zIndex: 1, position: 'relative' }}
+          >
             <Text size="text-base" weight={600} color="sand-12">
-              {item.name}
+              {entry.name}
             </Text>
-          </Link>
+          </ConditionalLink>
 
-          <Link
-            href={`/profiles/${item.namespace}`}
-            style={{ marginTop: '-0.4rem' }}
+          <ConditionalLink
+            href={`/profiles/${entry.namespace}`}
+            target={target}
+            style={{ marginTop: '-0.1rem' }}
           >
             <Text size="text-xs" weight={400}>
-              @{item.namespace}
+              @{entry.namespace}
             </Text>
-          </Link>
+          </ConditionalLink>
         </Flex>
       </Flex>
 
-      {item.description && <Text size="text-s">{item.description}</Text>}
+      {entry.description && <Text size="text-s">{entry.description}</Text>}
 
       <Flex gap="s" align="center">
         <Badge
-          label={CATEGORY_LABELS[item.category]?.label ?? item.category}
+          label={ENTRY_CATEGORY_LABELS[entry.category]?.label ?? entry.category}
           variant="neutral"
         />
 
         <Tooltip content="Latest Version">
-          <Badge label={item.version} variant="neutral" />
+          <Badge label={entry.version} variant="neutral" />
         </Tooltip>
 
-        <StarButton item={item} variant="simple" />
+        <StarButton entry={entry} variant="simple" />
 
-        {item.category === 'agent' && (
+        {entry.category === 'agent' && (
           <>
             <Tooltip asChild content="View Source">
               <Button
@@ -75,7 +84,8 @@ export const ResourceCard = ({ item }: Props) => {
                 icon={<CodeBlock weight="duotone" />}
                 size="small"
                 fill="ghost"
-                href={`${baseUrl}/source`}
+                target={target}
+                href={`${primaryUrl}/source`}
               />
             </Tooltip>
 
@@ -85,12 +95,15 @@ export const ResourceCard = ({ item }: Props) => {
                 icon={<Play weight="duotone" />}
                 size="small"
                 fill="ghost"
-                href={`${baseUrl}/run`}
+                target={target}
+                href={`${primaryUrl}/run`}
               />
             </Tooltip>
           </>
         )}
       </Flex>
+
+      {footer}
     </Card>
   );
 };

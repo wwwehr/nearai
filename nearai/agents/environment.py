@@ -388,6 +388,10 @@ class Environment(object):
         """Returns list of agents available in environment."""
         return self._agents
 
+    def get_primary_agent(self) -> Agent:
+        """Returns the agent that is invoked first."""
+        return self._agents[0]
+
     def is_done(self) -> bool:  # noqa: D102
         return self._done
 

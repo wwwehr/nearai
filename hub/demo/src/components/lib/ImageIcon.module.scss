@@ -17,9 +17,9 @@
     stroke: #000 !important;
   }
 
-  &[data-size='xxs'] {
-    width: var(--icon-size-xxs);
-    height: var(--icon-size-xxs);
+  &[data-size='2xs'] {
+    width: var(--icon-size-2xs);
+    height: var(--icon-size-2xs);
     padding: 1px;
   }
   &[data-size='xs'] {

@@ -14,16 +14,15 @@ import fire
 from openapi_client import EntryLocation, EntryMetadataInput
 from openapi_client.api.benchmark_api import BenchmarkApi
 from openapi_client.api.default_api import DefaultApi
+from openapi_client.api.evaluation_api import EvaluationApi
 from shared.client_config import DEFAULT_MODEL, DEFAULT_MODEL_MAX_TOKENS, DEFAULT_MODEL_TEMPERATURE, DEFAULT_PROVIDER
 from tabulate import tabulate
 
-from nearai.clients.lambda_client import LambdaWrapper
 from nearai.config import (
     CONFIG,
     update_config,
 )
 from nearai.finetune import FinetuneCli
-from nearai.hub import Hub
 from nearai.lib import check_metadata, parse_location, parse_tags
 from nearai.registry import registry
 from nearai.tensorboard_feed import TensorboardCli
@@ -298,19 +297,25 @@ class BenchmarkCli:
 class EvaluationCli:
     def table(
         self,
-        namespace: str = "",
-        tags: str = "",
         all_key_columns: bool = False,
         all_metrics: bool = False,
         num_columns: int = 6,
         metric_name_max_length: int = 30,
     ) -> None:
         """Prints table of evaluations."""
-        from nearai.evaluation import evaluation_table, print_evaluation_table
+        from nearai.evaluation import print_evaluation_table
 
-        rows, columns, important_columns = evaluation_table(namespace, tags)
+        api = EvaluationApi()
+        table = api.get_evaluation_table_v1_evaluation_table_get()
+
         print_evaluation_table(
-            rows, columns, important_columns, all_key_columns, all_metrics, num_columns, metric_name_max_length
+            table.rows,
+            table.columns,
+            table.important_columns,
+            all_key_columns,
+            all_metrics,
+            num_columns,
+            metric_name_max_length,
         )
 
 
@@ -406,39 +411,43 @@ class AgentCli:
         )
         runner.run_task(task, record_run, load_env, max_iterations)
 
+    def run_remote(
+        self,
+        agents: str,
+        new_message: str = "",
+        environment_id: str = "",
+        provider: str = "aws_lambda",
+        params: object = None,
+        framework: str = "base",
+        environment: str = "production",
+    ) -> None:
+        """Invoke a Container based AWS lambda function to run agents on a given environment."""
+        from nearai.clients.lambda_client import LambdaWrapper
 
-def run_remote(
-    self,
-    agents: str,
-    new_message: str = "",
-    environment_id: str = "",
-    provider: str = "aws_lambda",
-    params: object = None,
-) -> None:
-    """Invoke a Container based AWS lambda function to run agents on a given environment."""
-    if not CONFIG.auth:
-        print("Please login with `nearai login`")
-        return
-    if provider != "aws_lambda":
-        print(f"Provider {provider} is not supported.")
-        return
-    if not params:
-        params = {"max_iterations": 2}
-    wrapper = LambdaWrapper(boto3.client("lambda", region_name="us-east-2"))
-    try:
-        new_environment = wrapper.invoke_function(
-            "agent-runner-docker",
-            {
-                "agents": agents,
-                "environment_id": environment_id,
-                "auth": CONFIG.auth.model_dump(),
-                "new_message": new_message,
-                "params": params,
-            },
-        )
-        print(f"Agent run finished. New environment is {new_environment}")
-    except Exception as e:
-        print(f"Error running agent remotely: {e}")
+        if not CONFIG.auth:
+            print("Please login with `nearai login`")
+            return
+        if provider != "aws_lambda":
+            print(f"Provider {provider} is not supported.")
+            return
+        if not params:
+            params = {"max_iterations": 1}
+
+        wrapper = LambdaWrapper(boto3.client("lambda", region_name="us-east-2"))
+        try:
+            new_environment = wrapper.invoke_function(
+                f"{environment}-agent-runner-{framework}",
+                {
+                    "agents": agents,
+                    "environment_id": environment_id,
+                    "auth": CONFIG.auth.model_dump(),
+                    "new_message": new_message,
+                    "params": params,
+                },
+            )
+            print(f"Agent run finished. New environment is {new_environment}")
+        except Exception as e:
+            print(f"Error running agent remotely: {e}")
 
 
 class VllmCli:
@@ -471,6 +480,8 @@ class HubCLI:
             kwargs (Dict[str, Any]): All cli keyword arguments
 
         """
+        from nearai.hub import Hub
+
         hub = Hub(CONFIG)
         hub.chat(kwargs)
 

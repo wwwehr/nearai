@@ -1,7 +1,6 @@
 'use client';
 
 import { CodeBlock, Play } from '@phosphor-icons/react';
-import Head from 'next/head';
 
 import { Badge } from '~/components/lib/Badge';
 import { Button } from '~/components/lib/Button';
@@ -13,22 +12,28 @@ import { Table } from '~/components/lib/Table';
 import { useTable } from '~/components/lib/Table/hooks';
 import { Text } from '~/components/lib/Text';
 import { Tooltip } from '~/components/lib/Tooltip';
-import { useRegistryEntriesSearch } from '~/hooks/registry';
-import { type RegistryCategory } from '~/server/api/routers/hub';
+import { useEntriesSearch } from '~/hooks/entries';
+import {
+  benchmarkEvaluationsUrlForEntry,
+  ENTRY_CATEGORY_LABELS,
+  primaryUrlForEntry,
+  sourceUrlForEntry,
+} from '~/lib/entries';
+import { type EntryCategory } from '~/lib/models';
 import { api } from '~/trpc/react';
 
 import { StarButton } from './StarButton';
 
 type Props = {
-  category: RegistryCategory;
+  category: EntryCategory;
   title: string;
 };
 
-export const ResourceList = ({ category, title }: Props) => {
-  const listQuery = api.hub.registryEntries.useQuery({ category });
+export const EntriesTable = ({ category, title }: Props) => {
+  const entriesQuery = api.hub.entries.useQuery({ category });
 
-  const { searched, searchQuery, setSearchQuery } = useRegistryEntriesSearch(
-    listQuery.data,
+  const { searched, searchQuery, setSearchQuery } = useEntriesSearch(
+    entriesQuery.data,
   );
 
   const { sorted, ...tableProps } = useTable({
@@ -39,10 +44,6 @@ export const ResourceList = ({ category, title }: Props) => {
 
   return (
     <Section>
-      <Head>
-        <title>{title}</title>
-      </Head>
-
       <Grid
         columns="1fr 20rem"
         align="center"
@@ -51,9 +52,9 @@ export const ResourceList = ({ category, title }: Props) => {
       >
         <Text as="h1" size="text-2xl">
           {title}{' '}
-          {listQuery.data && (
+          {entriesQuery.data && (
             <Text as="span" size="text-2xl" color="sand-10" weight={400}>
-              ({listQuery.data.length})
+              ({entriesQuery.data.length})
             </Text>
           )}
         </Text>
@@ -70,7 +71,7 @@ export const ResourceList = ({ category, title }: Props) => {
       <Table.Root
         {...tableProps}
         setSort={(value) => {
-          void listQuery.refetch();
+          void entriesQuery.refetch();
           tableProps.setSort(value);
         }}
       >
@@ -86,84 +87,102 @@ export const ResourceList = ({ category, title }: Props) => {
             <Table.HeadCell>Tags</Table.HeadCell>
             <Table.HeadCell
               column="num_stars"
-              sortable={{ startingOrder: 'DESCENDING' }}
               style={{ paddingLeft: '1.4rem' }}
             >
               Stars
             </Table.HeadCell>
-            {category === 'agent' && <Table.HeadCell />}
+            <Table.HeadCell />
           </Table.Row>
         </Table.Head>
 
         <Table.Body>
-          {!listQuery.data && <Table.PlaceholderRows />}
+          {!sorted && <Table.PlaceholderRows />}
 
-          {sorted.map((item, index) => (
+          {sorted?.map((entry, index) => (
             <Table.Row key={index}>
-              {category === 'agent' ? (
-                <Table.Cell
-                  href={`/agents/${item.namespace}/${item.name}/${item.version}`}
-                  style={{ width: '20rem' }}
-                >
-                  <Text size="text-s" weight={500} color="sand-12">
-                    {item.name}
+              <Table.Cell
+                href={primaryUrlForEntry(entry)}
+                style={{ minWidth: '10rem', maxWidth: '20rem' }}
+              >
+                <Flex direction="column">
+                  <Text
+                    size="text-s"
+                    weight={500}
+                    color="sand-12"
+                    clickableHighlight
+                  >
+                    {entry.name}
                   </Text>
-                </Table.Cell>
-              ) : (
-                <Table.Cell style={{ width: '20rem' }}>
-                  <Text size="text-s" weight={500} color="sand-12">
-                    {item.name}
+                  <Text size="text-xs" clampLines={1}>
+                    {entry.description}
                   </Text>
-                </Table.Cell>
-              )}
+                </Flex>
+              </Table.Cell>
 
-              <Table.Cell href={`/profiles/${item.namespace}`}>
-                <Text size="text-s" weight={500}>
-                  {item.namespace}
+              <Table.Cell
+                href={`/profiles/${entry.namespace}`}
+                style={{ minWidth: '8rem', maxWidth: '12rem' }}
+              >
+                <Text size="text-s" weight={500} clampLines={1}>
+                  {entry.namespace}
                 </Text>
               </Table.Cell>
 
               <Table.Cell>
-                <Text size="text-s">{item.version}</Text>
+                <Text size="text-s">{entry.version}</Text>
               </Table.Cell>
 
-              <Table.Cell>
-                <Flex wrap="wrap" gap="xs" style={{ width: '15rem' }}>
-                  {item.tags.map((tag) => (
+              <Table.Cell style={{ maxWidth: '14rem', overflow: 'hidden' }}>
+                <Flex gap="xs">
+                  {entry.tags.map((tag) => (
                     <Badge label={tag} variant="neutral" key={tag} />
                   ))}
                 </Flex>
               </Table.Cell>
 
               <Table.Cell style={{ width: '1px' }}>
-                <StarButton item={item} variant="simple" />
+                <StarButton entry={entry} variant="simple" />
               </Table.Cell>
 
-              {category === 'agent' && (
-                <Table.Cell style={{ width: '1px' }}>
-                  <Flex align="center" gap="xs">
+              <Table.Cell style={{ width: '1px' }}>
+                <Flex align="center" gap="xs">
+                  {benchmarkEvaluationsUrlForEntry(entry) && (
+                    <Tooltip asChild content="View Evaluations">
+                      <Button
+                        label="View Evaluations"
+                        icon={ENTRY_CATEGORY_LABELS.evaluation.icon}
+                        size="small"
+                        fill="ghost"
+                        href={benchmarkEvaluationsUrlForEntry(entry)}
+                      />
+                    </Tooltip>
+                  )}
+
+                  {sourceUrlForEntry(entry) && (
                     <Tooltip asChild content="View Source">
                       <Button
                         label="View Source"
                         icon={<CodeBlock weight="duotone" />}
                         size="small"
                         fill="ghost"
-                        href={`/agents/${item.namespace}/${item.name}/${item.version}/source`}
+                        href={sourceUrlForEntry(entry)}
                       />
                     </Tooltip>
+                  )}
 
+                  {category === 'agent' && (
                     <Tooltip asChild content="Run Agent">
                       <Button
-                        label="Run"
+                        label="Run Agent"
                         icon={<Play weight="duotone" />}
                         size="small"
                         fill="ghost"
-                        href={`/agents/${item.namespace}/${item.name}/${item.version}/run`}
+                        href={`/agents/${entry.namespace}/${entry.name}/${entry.version}/run`}
                       />
                     </Tooltip>
-                  </Flex>
-                </Table.Cell>
-              )}
+                  )}
+                </Flex>
+              </Table.Cell>
             </Table.Row>
           ))}
         </Table.Body>

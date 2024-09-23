@@ -14,12 +14,12 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Union, cast
 
 import psutil
-from shared.inference_client import InferenceClient
 import shared.near.sign as near
 from litellm.types.utils import Choices, ModelResponse
 from litellm.utils import CustomStreamWrapper
 from openai.types.chat import ChatCompletionMessageParam
 from shared.client_config import DEFAULT_PROVIDER_MODEL
+from shared.inference_client import InferenceClient
 
 from nearai.agents.agent import Agent
 from nearai.agents.tool_registry import ToolRegistry

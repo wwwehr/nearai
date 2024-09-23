@@ -111,7 +111,7 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokab
         "agent_env_vars": agent_env_vars,
     }
 
-    print(params)
+    # print("run_agent", params)
 
     if not agent_entry:
         raise HTTPException(status_code=404, detail=f"Agent '{primary_agent}' not found in the registry.")

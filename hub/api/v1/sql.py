@@ -554,11 +554,12 @@ class SqlClient:
         WHERE `owner_namespace` = %s
           AND `namespace` = %s
           AND `name` = %s
+          AND `version` = %s
           AND `key` = %s
-          AND `category` = %s
+          AND `category` = %s          
         """
 
-        parameters = (owner_namespace, namespace, name, key, category, version)
+        parameters = (owner_namespace, namespace, name, version, key, category)
 
         cursor = self.db.cursor()
         try:

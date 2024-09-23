@@ -93,6 +93,8 @@ async def create_hub_secret(
 
     logger.info(f"Hub secret created successfully")
 
+    return True
+
 
 @hub_secrets_router.post("/remove_hub_secret")
 async def remove_hub_secret(
@@ -118,6 +120,8 @@ async def remove_hub_secret(
     )
 
     logger.info(f"Hub secret removed successfully")
+
+    return True
 
 
 @hub_secrets_router.get("/get_user_secrets")

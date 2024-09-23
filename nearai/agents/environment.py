@@ -170,11 +170,18 @@ class Environment(object):
 
         filename: The name of the file to read.
         """
-        if not os.path.exists(os.path.join(self._path, filename)):
+        if os.path.exists(os.path.join(self._path, filename)):
+            file_location = self._path
+        elif os.path.exists(os.path.join(self.get_primary_agent().temp_dir, filename)):
+            file_location = self.get_primary_agent().temp_dir
+        else:
+            print(f"File {filename} not found")
             return ""
+
         try:
-            with open(os.path.join(self._path, filename), "r") as f:
+            with open(os.path.join(file_location, filename), "r") as f:
                 return f.read()
+
         except Exception as e:
             return f"failed to read file: {e}"
 
@@ -490,6 +497,7 @@ class Environment(object):
         max_iterations: int = 10,
     ) -> str:
         """Runs agent(s) against a new or previously created environment."""
+
         run_id = self._generate_run_id()
         iteration = 0
         self._add_agent_start_system_log(agent_idx=0)

@@ -502,7 +502,7 @@ class SqlClient:
         version: Optional[str] = "",
         description: Optional[str] = "",
         category: Optional[str] = "agent",
-    ) -> str:
+    ) -> None:
         """Create hub secret."""
         query = """
         INSERT INTO hub_secrets (`owner_namespace`, `namespace`, `name`, `version`, `key`, `value`, `description`,
@@ -554,7 +554,9 @@ class SqlClient:
             self.db.rollback()
             raise RuntimeError("Hub secret removal error: " + str(e)) from e
 
-    def get_user_secrets(self, owner_namespace: str, limit: int = 100, offset: int = 0) -> dict[Any, Any]:  # noqa: D102
+    def get_user_secrets(
+        self, owner_namespace: str, limit: Optional[int] = 100, offset: Optional[int] = 0
+    ) -> (dict)[Any, Any]:  # noqa: D102
         """Load all hub secrets of the user."""
         query = """
             SELECT `namespace`, `name`, `version`, `description`, `key`, `value`, `category`

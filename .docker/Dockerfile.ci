@@ -1,0 +1,58 @@
+FROM python:3.10-slim
+
+## Top level args / env vars
+ARG USER=user
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+ENV DEBIAN_FRONTEND=noninteractive
+
+## Apt based dependencies
+RUN apt-get update -y \
+    && apt-get upgrade -y \
+    && apt-get -y install \
+    curl \
+    wget \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+## Create unpriv user
+RUN groupadd --gid $USER_GID $USER \
+    && useradd --uid $USER_UID --gid $USER_GID -m $USER \
+    && apt-get update \
+    && apt-get install -y sudo \
+    && echo $USER ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USER \
+    && chmod 0440 /etc/sudoers.d/$USER
+
+USER ${USER}
+RUN python3 -m pip install --user poetry
+WORKDIR /home/${USER}/nearai/
+ENV PATH="/home/${USER}/.local/bin:${PATH}"
+COPY . .
+RUN python3 -m poetry install
+
+
+RUN mkdir -p ~/.nearai && \
+    cat <<EOF > ~/.nearai/config.json
+{
+    "db_user": "root",
+    "db_password": "change-me",
+    "api_url": "http://nearaihub:8081",
+    "nearai_hub": {
+        "base_url": "http://nearaihub:8081/v1",
+        "default_provider": "local",
+        "default_model": "facebook/opt-125m",
+        "login_with_near": true
+    },
+    "auth": {
+        "account_id": "nearaici.near",
+        "signature": "54fCq9dKLNzBGjrxBRFgJISaQuBK1qn7ig/AIxLBMz3KvVBjENNotukgOXPcX2Dzqqz0vMOqeyXnnbVsPQZqBA==",
+        "public_key": "ed25519:ETEvMsdeVAvCyV7KY4wPqxio99wBcoEzvAHKyUEb7ogx",
+        "callback_url": "http://localhost:49225/capture",
+        "nonce": "1727052557096",
+        "recipient": "ai.near",
+        "message": "Welcome to NEAR AI"
+    }
+}
+EOF

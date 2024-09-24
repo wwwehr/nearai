@@ -73,6 +73,13 @@ jobs:
     timeout-minutes: 15
     environment: NearAI CI
     steps:
+
+    - name: Free up space
+      run: |
+        sudo apt-get autoremove -y >/dev/null 2>&1
+        sudo apt-get autoclean -y >/dev/null 2>&1
+        sudo docker rmi $(sudo docker image ls -aq) >/dev/null 2>&1 || true
+
     - name: Checkout code
       uses: actions/checkout@v4
 

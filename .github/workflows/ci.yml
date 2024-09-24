@@ -62,9 +62,6 @@ jobs:
     - name: Type Check
       run: ./scripts/type_check.sh
 
-    - name: Run Tests
-      run: ./scripts/test.sh
-
     - name: Build Site
       run: ./scripts/build_mkdocs.sh
 

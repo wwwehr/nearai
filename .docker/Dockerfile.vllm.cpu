@@ -29,7 +29,6 @@ RUN mkdir -p /workspace/vllm && \
 
 ENV PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
 RUN pip install --upgrade pip && \
-    pip install git+https://github.com/huggingface/transformers && \
     pip install -r requirements-build.txt
 
 # install oneDNN

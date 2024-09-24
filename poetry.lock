@@ -7171,11 +7171,11 @@ type = ["pytest-mypy"]
 
 [extras]
 explatform = ["fabric", "flask", "gunicorn", "requests", "shortuuid"]
-hub = ["chardet", "cryptography", "fastapi", "fastapi-cli", "openpyxl", "pypdf", "python-docx", "python-dotenv", "python-pptx", "sqlmodel"]
+hub = ["chardet", "cryptography", "fastapi", "fastapi-cli", "openpyxl", "pypdf", "python-docx", "python-dotenv", "python-pptx", "shortuuid", "sqlmodel"]
 torch = ["torch", "torchao", "torchtune"]
 vllm = ["torch", "vllm"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<4.0"
-content-hash = "76c78eff12adde8ee619d75808b9de0b3a510d76cb8cd4329ab7a6ac7fa2294a"
+content-hash = "277ef4195797b89b31a256aad173417a09d7e518f9247648554a748f4be1ba49"

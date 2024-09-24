@@ -15,6 +15,7 @@ class Provider(Enum):
     FIREWORKS = "fireworks"
     LOCAL = "local"
 
+
 async def handle_stream(resp_stream, add_usage_callback: Callable):
     response_chunks = []
 

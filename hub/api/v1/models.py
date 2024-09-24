@@ -50,6 +50,34 @@ class RegistryEntry(SQLModel, table=True):
         return key
 
 
+class HubSecrets(SQLModel, table=True):
+    """Encrypted hub secrets stored in the registry."""
+
+    __tablename__ = "hub_secrets"
+
+    id: int = Field(default=None, primary_key=True)
+
+    owner_namespace: str = Field(nullable=False)
+    """Owner of the secret"""
+
+    namespace: str = Field(nullable=False)
+    """Namespace of the secret recipient"""
+    name: str = Field(default="", nullable=False)
+    """Name of the secret recipient"""
+    version: str = Field(default="", nullable=False)
+    """Version of the secret recipient"""
+
+    key: str = Field(nullable=False)
+    value: str = Field(nullable=False)
+
+    created_at: datetime = Field(default_factory=datetime.now, nullable=False)
+    """Time when the entry was added to the registry."""
+    description: str = Field(default="", nullable=False)
+    """Long description of the entry."""
+    category: str = Field(default="", nullable=False)
+    """Type of the entry, e.g. 'dataset', 'model', 'agent', ...."""
+
+
 class Tags(SQLModel, table=True):
     """Many-to-many table between registry entries and tags."""
 

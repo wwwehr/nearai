@@ -112,6 +112,8 @@ class LocalRunner:
                 if env.is_done():
                     break
 
+                new_message = ""
+
         if record_run and run_id:
             self.save_env(env, run_id, base_id, "interactive")
 

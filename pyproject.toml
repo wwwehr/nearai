@@ -103,6 +103,10 @@ pytest-random-order = "^1.1.1"
 [tool.pytest.ini_options]
 addopts = "--random-order"
 norecursedirs = ["hub", "dist", "docs"]
+markers = [
+  "integration: mark test as integration test",
+]
+
 
 [tool.poetry.scripts]
 nearai = "nearai.cli:main"

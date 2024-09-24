@@ -21,7 +21,7 @@ services:
     volumes:
       - singlestore_data:/var/lib/memsql
     environment:
-      SINGLESTORE_LICENSE: license-key
+      SINGLESTORE_LICENSE: ${SINGLESTORE_LICENSE}
       ROOT_PASSWORD: change-me
     ports:
       - "3306:3306"

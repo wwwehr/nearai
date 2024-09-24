@@ -44,6 +44,3 @@ def test_hub_completion():
         max_tokens=16,
     )
     print(completion)
-
-
-# docker exec -it docker-ci-1 poetry run pytest -m integration

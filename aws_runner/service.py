@@ -126,13 +126,20 @@ def run_with_environment(
     record_run = bool(params.get("record_run", True))
     api_url = str(params.get("api_url", DEFAULT_API_URL))
     user_env_vars: dict = params.get("user_env_vars", {})
+    agent_env_vars: dict = params.get("agent_env_vars", {})
 
     if api_url != DEFAULT_API_URL:
         print(f"WARNING: Using custom API URL: {api_url}")
 
     near_client = PartialNearClient(api_url, auth)
 
-    loaded_agents = [load_agent(near_client, agent) for agent in agents.split(",")]
+    loaded_agents = []
+
+    for agent_name in agents.split(","):
+        agent = load_agent(near_client, agent_name)
+        # agents secrets has higher priority then agent metadata's env_vars
+        agent.env_vars = {**agent.env_vars, **agent_env_vars.get(agent_name, {})}
+        loaded_agents.append(agent)
 
     if environment_id:
         start_time = time.perf_counter()

@@ -7,38 +7,25 @@ from collections import OrderedDict
 from dataclasses import asdict
 from pathlib import Path
 from textwrap import fill
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Union
 
 import boto3
 import fire
 from openapi_client import EntryLocation, EntryMetadataInput
 from openapi_client.api.benchmark_api import BenchmarkApi
 from openapi_client.api.default_api import DefaultApi
+from openapi_client.api.evaluation_api import EvaluationApi
+from shared.client_config import DEFAULT_MODEL, DEFAULT_MODEL_MAX_TOKENS, DEFAULT_MODEL_TEMPERATURE, DEFAULT_PROVIDER
 from tabulate import tabulate
 
-from nearai.agent import load_agent
-from nearai.clients.lambda_client import LambdaWrapper
-from nearai.config import CONFIG, update_config
-from nearai.evaluation import evaluations_table
+from nearai.config import (
+    CONFIG,
+    update_config,
+)
 from nearai.finetune import FinetuneCli
-from nearai.hub import Hub
-from nearai.lib import check_metadata, parse_location
+from nearai.lib import check_metadata, parse_location, parse_tags
 from nearai.registry import registry
 from nearai.tensorboard_feed import TensorboardCli
-
-
-def parse_tags(tags: Union[str, Tuple[str, ...]]) -> List[str]:
-    if not tags:
-        return []
-
-    elif isinstance(tags, tuple):
-        return list(tags)
-
-    elif isinstance(tags, str):
-        return tags.split(",")
-
-    else:
-        raise ValueError(f"Invalid tags argument: {tags}")
 
 
 class RegistryCli:
@@ -63,19 +50,26 @@ class RegistryCli:
         folder_name = path.name
 
         with open(metadata_path, "w") as f:
-            json.dump(
-                {
-                    "name": folder_name,
-                    "version": "0.0.1",
-                    "description": description,
-                    "category": category,
-                    "tags": [],
-                    "details": {},
-                    "show_entry": True,
-                },
-                f,
-                indent=2,
-            )
+            metadata: Dict[str, Any] = {
+                "name": folder_name,
+                "version": "0.0.1",
+                "description": description,
+                "category": category,
+                "tags": [],
+                "details": {},
+                "show_entry": True,
+            }
+
+            if category == "agent":
+                metadata["details"]["agent"] = {}
+                metadata["details"]["agent"]["defaults"] = {
+                    "model": DEFAULT_MODEL,
+                    "model_provider": DEFAULT_PROVIDER,
+                    "model_temperature": DEFAULT_MODEL_TEMPERATURE,
+                    "model_max_tokens": DEFAULT_MODEL_MAX_TOKENS,
+                }
+
+            json.dump(metadata, f, indent=2)
 
     def list(
         self,
@@ -86,6 +80,7 @@ class RegistryCli:
         offset: int = 0,
         show_all: bool = False,
         show_latest_version: bool = True,
+        star: str = "",
     ) -> None:
         """List available items."""
         # Make sure tags is a comma-separated list of tags
@@ -100,6 +95,7 @@ class RegistryCli:
             offset=offset,
             show_all=show_all,
             show_latest_version=show_latest_version,
+            starred_by=star,
         )
 
         more_rows = len(entries) > total
@@ -222,8 +218,8 @@ class BenchmarkCli:
         If force is set to True, it will run the benchmark again and update the cache.
         """
         from nearai.benchmark import BenchmarkExecutor, DatasetInfo
-        from nearai.dataset import load_dataset
-        from nearai.solvers import SolverStrategy, SolverStrategyRegistry
+        from nearai.dataset import get_dataset, load_dataset
+        from nearai.solvers import SolverScoringMethod, SolverStrategy, SolverStrategyRegistry
 
         args = dict(solver_args)
         if subset is not None:
@@ -236,14 +232,18 @@ class BenchmarkCli:
             force=force,
         )
 
-        name, subset, dataset = dataset, subset, load_dataset(dataset, verbose=False)
-
-        solver_strategy_: SolverStrategy | None = SolverStrategyRegistry.get(solver_strategy, None)
+        solver_strategy_class: Union[SolverStrategy, None] = SolverStrategyRegistry.get(solver_strategy, None)
         assert (
-            solver_strategy
+            solver_strategy_class
         ), f"Solver strategy {solver_strategy} not found. Available strategies: {list(SolverStrategyRegistry.keys())}"
-        solver_strategy_obj: SolverStrategy = solver_strategy_(dataset_ref=dataset, **solver_args)  # type: ignore
 
+        name = dataset
+        if solver_strategy_class.scoring_method == SolverScoringMethod.Custom:
+            dataset = str(get_dataset(dataset))
+        else:
+            dataset = load_dataset(dataset)
+
+        solver_strategy_obj: SolverStrategy = solver_strategy_class(dataset_ref=dataset, **solver_args)  # type: ignore
         if check_compatibility:
             assert name in solver_strategy_obj.compatible_datasets() or any(
                 map(lambda n: n in name, solver_strategy_obj.compatible_datasets())
@@ -295,111 +295,117 @@ class BenchmarkCli:
 
 
 class EvaluationCli:
-    def table(self, namespace: str = "", tags: str = "", verbose: bool = False) -> None:
+    def table(
+        self,
+        all_key_columns: bool = False,
+        all_metrics: bool = False,
+        num_columns: int = 6,
+        metric_name_max_length: int = 30,
+    ) -> None:
         """Prints table of evaluations."""
-        # Make sure tags is a comma-separated list of tags
-        tags_l = parse_tags(tags)
-        tags = ",".join(tags_l)
+        from nearai.evaluation import print_evaluation_table
 
-        entries = registry.list(
-            namespace=namespace,
-            category="evaluation",
-            tags=tags,
-            total=10000,
-            offset=0,
-            show_all=False,
-            show_latest_version=True,
+        api = EvaluationApi()
+        table = api.get_evaluation_table_v1_evaluation_table_get()
+
+        print_evaluation_table(
+            table.rows,
+            table.columns,
+            table.important_columns,
+            all_key_columns,
+            all_metrics,
+            num_columns,
+            metric_name_max_length,
         )
-        evaluations_table(entries, verbose)
 
 
 class AgentCli:
+    @staticmethod
+    def _load_agents(agents: str, local: bool = False):
+        from nearai.agents.local_runner import LocalRunner
+
+        return LocalRunner.load_agents(agents, local)
+
     def inspect(self, path: str) -> None:
         """Inspect environment from given path."""
-        from nearai.environment import Environment
+        import subprocess
 
-        env = Environment(path, [], CONFIG, create_files=False)
-        env.inspect()
-
-    def save_folder(self, path: str, name: Optional[str] = None) -> None:
-        """Saves all subfolders with agent task runs (must contain non-empty chat.txt)."""
-        from nearai.environment import Environment
-
-        env = Environment(path, [], CONFIG, create_files=False)
-        env.save_folder(name)
-
-    def save_from_history(self, name: Optional[str] = None) -> None:
-        """Reads piped history, finds agent task runs, writes start_command.log files, and saves to registry. For detailed usage, run: nearai agent save_from_history --help.
-
-        This command:
-        1. Finds agent task runs (must contain non-empty chat.txt)
-        2. Writes start_command.log files
-        3. Saves to registry
-
-        Only 'interactive' is supported.
-        Assumes format:
-        ' <line_number>  <program_name> agent interactive <comma_separated_agents> <path> <other_args>'
-        Run:
-        $ history | grep "agent interactive" | sed "s:~:$HOME:g" | nearai agent save_from_history environment_interactive_runs_from_lambda_00
-        """  # noqa: E501
-        from nearai.environment import Environment
-
-        env = Environment("/", [], CONFIG, create_files=False)
-        # Read from stdin (piped input)
-        lines = sys.stdin.readlines()
-        env.save_from_history(lines, name)
+        filename = Path(os.path.abspath(__file__)).parent / "streamlit_inspect.py"
+        subprocess.call(["streamlit", "run", filename, "--", path])
 
     def interactive(
         self,
         agents: str,
-        path: Optional[str] = "",
-        record_run: str = "true",
+        path: Optional[str] = None,
+        record_run: bool = True,
         env_vars: Optional[Dict[str, Any]] = None,
         load_env: str = "",
         local: bool = False,
         tool_resources: Optional[Dict[str, Any]] = None,
+        print_system_log: bool = True,
     ) -> None:
         """Runs agent interactively with environment from given path."""
-        from nearai.environment import Environment
+        from shared.client_config import ClientConfig
 
-        _agents = [load_agent(agent, local) for agent in agents.split(",")]
-        if not path:
-            if len(_agents) == 1:
-                path = _agents[0].path
-            else:
-                raise ValueError("Local path is required when running multiple agents")
-        env = Environment(
-            path,
-            _agents,
-            CONFIG,
-            env_vars=env_vars,
-            tool_resources=tool_resources,
+        from nearai.agents.local_runner import LocalRunner
+
+        agent_list = self._load_agents(agents, local)
+
+        client_config = ClientConfig(
+            base_url=CONFIG.nearai_hub.base_url,
+            auth=CONFIG.auth,
+            custom_llm_provider=CONFIG.nearai_hub.custom_llm_provider,
+            default_provider=CONFIG.nearai_hub.default_provider,
         )
 
-        env.run_interactive(record_run, load_env)
+        runner = LocalRunner(
+            path,
+            agent_list,
+            client_config,
+            env_vars=env_vars,
+            tool_resources=tool_resources,
+            print_system_log=print_system_log,
+            confirm_commands=CONFIG.get("confirm_commands", True),
+        )
+        runner.run_interactive(record_run, load_env)
 
     def task(
         self,
         agents: str,
         task: str,
-        path: Optional[str] = "",
+        path: Optional[str] = None,
         max_iterations: int = 10,
-        record_run: str = "true",
+        record_run: bool = True,
         env_vars: Optional[Dict[str, Any]] = None,
         load_env: str = "",
         local: bool = False,
+        tool_resources: Optional[Dict[str, Any]] = None,
+        print_system_log: bool = True,
     ) -> None:
         """Runs agent non interactively with environment from given path."""
-        from nearai.environment import Environment
+        from shared.client_config import ClientConfig
 
-        _agents = [load_agent(agent, local) for agent in agents.split(",")]
-        if not path:
-            if len(_agents) == 1:
-                path = _agents[0].path
-            else:
-                raise ValueError("Local path is required when running multiple agents")
-        env = Environment(path, _agents, CONFIG, env_vars=env_vars)
-        env.run_task(task, record_run, load_env, max_iterations)
+        from nearai.agents.local_runner import LocalRunner
+
+        agent_list = self._load_agents(agents, local)
+
+        client_config = ClientConfig(
+            base_url=CONFIG.nearai_hub.base_url,
+            auth=CONFIG.auth,
+            custom_llm_provider=CONFIG.nearai_hub.custom_llm_provider,
+            default_provider=CONFIG.nearai_hub.default_provider,
+        )
+
+        runner = LocalRunner(
+            path,
+            agent_list,
+            client_config,
+            env_vars=env_vars,
+            tool_resources=tool_resources,
+            print_system_log=print_system_log,
+            confirm_commands=CONFIG.get("confirm_commands", True),
+        )
+        runner.run_task(task, record_run, load_env, max_iterations)
 
     def run_remote(
         self,
@@ -408,8 +414,12 @@ class AgentCli:
         environment_id: str = "",
         provider: str = "aws_lambda",
         params: object = None,
+        framework: str = "base",
+        environment: str = "production",
     ) -> None:
         """Invoke a Container based AWS lambda function to run agents on a given environment."""
+        from nearai.clients.lambda_client import LambdaWrapper
+
         if not CONFIG.auth:
             print("Please login with `nearai login`")
             return
@@ -417,11 +427,12 @@ class AgentCli:
             print(f"Provider {provider} is not supported.")
             return
         if not params:
-            params = {"max_iterations": 2}
+            params = {"max_iterations": 1}
+
         wrapper = LambdaWrapper(boto3.client("lambda", region_name="us-east-2"))
         try:
             new_environment = wrapper.invoke_function(
-                "agent-runner-docker",
+                f"{environment}-agent-runner-{framework}",
                 {
                     "agents": agents,
                     "environment_id": environment_id,
@@ -465,6 +476,8 @@ class HubCLI:
             kwargs (Dict[str, Any]): All cli keyword arguments
 
         """
+        from nearai.hub import Hub
+
         hub = Hub(CONFIG)
         hub.chat(kwargs)
 

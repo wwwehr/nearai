@@ -49,6 +49,10 @@
     max-width: var(--container-width-l);
   }
 
+  &[data-align='stretch'] {
+    height: 100%;
+  }
+
   @keyframes contentShow {
     from {
       opacity: 0;

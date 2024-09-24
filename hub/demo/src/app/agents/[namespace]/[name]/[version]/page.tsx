@@ -4,23 +4,27 @@ import { Badge } from '~/components/lib/Badge';
 import { Flex } from '~/components/lib/Flex';
 import { Section } from '~/components/lib/Section';
 import { Text } from '~/components/lib/Text';
-import { useCurrentResource } from '~/hooks/resources';
+import { useCurrentEntry } from '~/hooks/entries';
 
-export default function AgentDetailsPage() {
-  const { currentResource } = useCurrentResource('agent');
+export default function EntryDetailsPage() {
+  const { currentEntry } = useCurrentEntry('agent');
 
-  if (!currentResource) return null;
+  if (!currentEntry) return null;
 
   return (
     <>
       <Section>
-        <Text>{currentResource.description}</Text>
+        <Text size="text-l">Description</Text>
 
-        <Flex gap="s" wrap="wrap">
-          {currentResource.tags.map((tag) => (
-            <Badge label={tag} variant="neutral" key={tag} />
-          ))}
-        </Flex>
+        <Text>{currentEntry.description || 'No description provided.'}</Text>
+
+        {currentEntry.tags.length > 0 && (
+          <Flex gap="s" wrap="wrap">
+            {currentEntry.tags.map((tag) => (
+              <Badge label={tag} variant="neutral" key={tag} />
+            ))}
+          </Flex>
+        )}
       </Section>
     </>
   );

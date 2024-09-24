@@ -1,123 +1,136 @@
 'use client';
 
-import { ArrowRight, Copy, Gear, Info, ShareFat } from '@phosphor-icons/react';
-import { useSearchParams } from 'next/dist/client/components/navigation';
 import {
-  type KeyboardEventHandler,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+  ArrowRight,
+  Chats,
+  Copy,
+  Gear,
+  Image as ImageIcon,
+  List,
+} from '@phosphor-icons/react';
+import { type KeyboardEventHandler, useEffect, useRef, useState } from 'react';
 import { Controller } from 'react-hook-form';
 import { type z } from 'zod';
 
 import { AgentWelcome } from '~/components/AgentWelcome';
-import { ChatThread } from '~/components/inference/ChatThread';
 import { BreakpointDisplay } from '~/components/lib/BreakpointDisplay';
 import { Button } from '~/components/lib/Button';
 import { Card, CardList } from '~/components/lib/Card';
 import { Code, filePathToCodeLanguage } from '~/components/lib/Code';
 import { Dialog } from '~/components/lib/Dialog';
-import { Dropdown } from '~/components/lib/Dropdown';
 import { Flex } from '~/components/lib/Flex';
 import { Form } from '~/components/lib/Form';
 import { HR } from '~/components/lib/HorizontalRule';
+import { IframeWithBlob } from '~/components/lib/IframeWithBlob';
 import { InputTextarea } from '~/components/lib/InputTextarea';
-import { PlaceholderSection } from '~/components/lib/Placeholder';
 import { Sidebar } from '~/components/lib/Sidebar';
 import { Slider } from '~/components/lib/Slider';
 import { Text } from '~/components/lib/Text';
+import { Tooltip } from '~/components/lib/Tooltip';
+import { Messages } from '~/components/Messages';
 import { SignInPrompt } from '~/components/SignInPrompt';
+import { ThreadsSidebar } from '~/components/ThreadsSidebar';
+import { useCurrentEntry, useEntryParams } from '~/hooks/entries';
 import { useZodForm } from '~/hooks/form';
-import { useCurrentResource, useResourceParams } from '~/hooks/resources';
-import { agentRequestModel, type messageModel } from '~/lib/models';
-import { type FileStructure } from '~/server/api/routers/hub';
+import { useThreads } from '~/hooks/threads';
+import { useQueryParams } from '~/hooks/url';
+import { chatWithAgentModel } from '~/lib/models';
 import { useAuthStore } from '~/stores/auth';
 import { api } from '~/trpc/react';
 import { copyTextToClipboard } from '~/utils/clipboard';
 import { handleClientError } from '~/utils/error';
 import { formatBytes } from '~/utils/number';
+import { getQueryParams } from '~/utils/url';
 
-export default function RunAgentPage() {
-  const { currentResource } = useCurrentResource('agent');
+export default function EntryRunPage() {
+  const { currentEntry } = useCurrentEntry('agent');
   const isAuthenticated = useAuthStore((store) => store.isAuthenticated);
-  const { namespace, name, version } = useResourceParams();
-  const searchParams = useSearchParams();
-  const environmentId = searchParams.get('environmentId');
-  const chatMutation = api.hub.agentChat.useMutation();
+  const { namespace, name, version } = useEntryParams();
+  const { queryParams, updateQueryPath } = useQueryParams(['environmentId']);
+  const environmentId = queryParams.environmentId ?? '';
+  const chatMutation = api.hub.chatWithAgent.useMutation();
+  const { threadsQuery } = useThreads();
+  const utils = api.useUtils();
+  const agentId = `${namespace}/${name}/${version}`;
 
-  const form = useZodForm(agentRequestModel, {
-    defaultValues: { agent_id: `${namespace}/${name}/${version}` },
+  const form = useZodForm(chatWithAgentModel, {
+    defaultValues: { agent_id: agentId },
   });
 
-  const environmentQuery = api.hub.loadEnvironment.useQuery(
-    {
-      environmentId: environmentId!,
-    },
-    {
-      enabled: !!environmentId,
-    },
-  );
-
-  const [environmentName, setEnvironmentName] = useState<string>('');
-  const [conversation, setConversation] = useState<
-    z.infer<typeof messageModel>[]
-  >([]);
-  const [fileStructure, setFileStructure] = useState<FileStructure[]>([]);
-  const [files, setFiles] = useState<Record<string, string>>({});
+  const [htmlOutput, setHtmlOutput] = useState('');
+  const [view, setView] = useState<'conversation' | 'output' | 'auto'>('auto');
   const [openedFileName, setOpenedFileName] = useState<string | null>(null);
   const [parametersOpenForSmallScreens, setParametersOpenForSmallScreens] =
     useState(false);
+  const [threadsOpenForSmallScreens, setThreadsOpenForSmallScreens] =
+    useState(false);
   const formRef = useRef<HTMLFormElement | null>(null);
 
-  const openedFile = openedFileName && files?.[openedFileName];
+  const environmentQuery = api.hub.environment.useQuery(
+    {
+      environmentId,
+    },
+    {
+      enabled: false,
+    },
+  );
 
-  const shareLink = useMemo(() => {
-    if (environmentName) {
-      const urlEncodedEnv = encodeURIComponent(environmentName);
-      return `${window.location.origin}/agents/${namespace}/${name}/${version}/run?environmentId=${urlEncodedEnv}`;
-    }
-  }, [environmentName, namespace, name, version]);
+  const environment = environmentQuery.data;
+  const openedFile = openedFileName
+    ? environment?.files?.[openedFileName]
+    : undefined;
 
-  useEffect(() => {
-    const data = environmentQuery?.data;
-
-    if (data && !environmentName) {
-      setEnvironmentName(data.environmentId);
-
-      chatMutation.trpc.path;
-
-      setFileStructure(() => data.fileStructure);
-      setFiles(() => data.files);
-      setConversation(() => data.conversation);
-    }
-  }, [chatMutation.trpc.path, environmentName, environmentQuery.data]);
-
-  async function onSubmit(values: z.infer<typeof agentRequestModel>) {
+  async function onSubmit(values: z.infer<typeof chatWithAgentModel>) {
     try {
       if (!values.new_message.trim()) return;
 
-      if (environmentName) {
-        values.environment_id = environmentName;
+      if (environmentId) {
+        values.environment_id = environmentId;
       }
 
-      setConversation((current) => [
-        ...current,
+      utils.hub.environment.setData(
         {
-          content: values.new_message,
-          role: 'user',
+          environmentId,
         },
-      ]);
+        {
+          conversation: [
+            ...(environment?.conversation ?? []),
+            {
+              content: values.new_message,
+              role: 'user',
+            },
+          ],
+          environmentId: environment?.environmentId ?? '',
+          files: environment?.files ?? {},
+        },
+      );
 
       form.setValue('new_message', '');
-      form.setFocus('new_message');
+
+      values.user_env_vars = getQueryParams();
+      if (currentEntry?.details.env_vars) {
+        values.agent_env_vars = {
+          ...(values.agent_env_vars ?? {}),
+          [values.agent_id]: currentEntry?.details?.env_vars ?? {},
+        };
+      }
 
       const response = await chatMutation.mutateAsync(values);
-      setEnvironmentName(() => response.environmentId);
-      setFileStructure(() => response.fileStructure);
-      setFiles(() => response.files);
-      setConversation(response.conversation);
+
+      utils.hub.environment.setData(
+        {
+          environmentId: response.environmentId,
+        },
+        response,
+      );
+
+      updateQueryPath(
+        { environmentId: response.environmentId },
+        'replace',
+        false,
+      );
+
+      void threadsQuery.refetch();
     } catch (error) {
       handleClientError({ error, title: 'Failed to communicate with agent' });
     }
@@ -132,155 +145,206 @@ export default function RunAgentPage() {
     }
   };
 
-  const clearConversation = () => {
-    setConversation([]);
+  const startNewThread = () => {
+    updateQueryPath({ environmentId: undefined });
+    form.setValue('new_message', '');
+    form.setFocus('new_message');
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
+    const files = environmentQuery?.data?.files;
+    if (files?.['index.html']) {
+      setHtmlOutput(files['index.html'].content);
+      setView((current) => (current === 'auto' ? 'output' : current));
+    }
+  }, [environmentQuery]);
+
+  useEffect(() => {
+    if (environmentId && environmentId !== environment?.environmentId) {
+      void environmentQuery.refetch();
+    }
+  }, [environment, environmentId, environmentQuery]);
+
+  useEffect(() => {
+    setView('auto');
+    setHtmlOutput('');
+
+    if (!environmentId) {
+      utils.hub.environment.setData(
+        {
+          environmentId: '',
+        },
+        {
+          conversation: [],
+          environmentId: '',
+          files: {},
+        },
+      );
+    }
+  }, [environmentId, utils]);
+
+  useEffect(() => {
+    if (currentEntry && isAuthenticated) {
       form.setFocus('new_message');
     }
-  }, [isAuthenticated, form]);
+  }, [environmentId, currentEntry, isAuthenticated, form]);
 
-  if (!currentResource) return null;
+  useEffect(() => {
+    setThreadsOpenForSmallScreens(false);
+  }, [environmentId]);
 
-  if (environmentQuery.isLoading) {
-    return <PlaceholderSection />;
-  }
+  if (!currentEntry) return null;
 
   return (
     <Form stretch onSubmit={form.handleSubmit(onSubmit)} ref={formRef}>
       <Sidebar.Root>
+        <ThreadsSidebar
+          onRequestNewThread={startNewThread}
+          openForSmallScreens={threadsOpenForSmallScreens}
+          setOpenForSmallScreens={setThreadsOpenForSmallScreens}
+        />
+
         <Sidebar.Main>
-          <ChatThread
-            messages={conversation}
-            welcomeMessage={<AgentWelcome details={currentResource.details} />}
-          />
-
-          <Flex direction="column" gap="m">
-            <InputTextarea
-              placeholder="Write your message and press enter..."
-              onKeyDown={onKeyDownContent}
-              disabled={!isAuthenticated}
-              {...form.register('new_message')}
+          {view === 'output' ? (
+            <IframeWithBlob html={htmlOutput} />
+          ) : (
+            <Messages
+              loading={environmentQuery.isLoading}
+              messages={environment?.conversation ?? []}
+              threadId={agentId}
+              welcomeMessage={<AgentWelcome details={currentEntry.details} />}
             />
+          )}
 
-            {isAuthenticated ? (
-              <Flex align="start" gap="m">
-                <Text size="text-xs" style={{ marginRight: 'auto' }}>
-                  <b>Shift + Enter</b> to add a new line
-                </Text>
+          <Sidebar.MainStickyFooter>
+            <Flex direction="column" gap="m">
+              <InputTextarea
+                placeholder="Write your message and press enter..."
+                onKeyDown={onKeyDownContent}
+                disabled={!isAuthenticated}
+                {...form.register('new_message')}
+              />
 
-                <BreakpointDisplay show="sidebar-small-screen">
+              {isAuthenticated ? (
+                <Flex align="start" gap="m">
+                  <Text size="text-xs" style={{ marginRight: 'auto' }}>
+                    <b>Shift + Enter</b> to add a new line
+                  </Text>
+
+                  <Flex align="start" gap="s">
+                    <BreakpointDisplay show="sidebar-small-screen">
+                      <Button
+                        label="Select Thread"
+                        icon={<List />}
+                        size="small"
+                        fill="ghost"
+                        onClick={() => setThreadsOpenForSmallScreens(true)}
+                      />
+                    </BreakpointDisplay>
+
+                    <BreakpointDisplay show="sidebar-small-screen">
+                      <Button
+                        label="Edit Parameters"
+                        icon={<Gear />}
+                        size="small"
+                        fill="ghost"
+                        onClick={() => setParametersOpenForSmallScreens(true)}
+                      />
+                    </BreakpointDisplay>
+
+                    {htmlOutput && (
+                      <>
+                        {view === 'output' ? (
+                          <Tooltip
+                            asChild
+                            content="Switch to conversation view"
+                          >
+                            <Button
+                              label="Toggle View"
+                              icon={<Chats />}
+                              size="small"
+                              fill="ghost"
+                              onClick={() => setView('conversation')}
+                            />
+                          </Tooltip>
+                        ) : (
+                          <Tooltip asChild content="Switch to output view">
+                            <Button
+                              label="Toggle View"
+                              icon={<ImageIcon />}
+                              size="small"
+                              fill="ghost"
+                              onClick={() => setView('output')}
+                            />
+                          </Tooltip>
+                        )}
+                      </>
+                    )}
+                  </Flex>
+
                   <Button
-                    label="Edit Parameters"
-                    icon={<Gear weight="bold" />}
+                    label="Send Message"
+                    type="submit"
+                    icon={<ArrowRight weight="bold" />}
                     size="small"
-                    fill="outline"
-                    onClick={() => setParametersOpenForSmallScreens(true)}
+                    loading={chatMutation.isPending}
                   />
-                </BreakpointDisplay>
-
-                <Button
-                  label="Send Message"
-                  type="submit"
-                  icon={<ArrowRight weight="bold" />}
-                  size="small"
-                  loading={chatMutation.isPending}
-                />
-              </Flex>
-            ) : (
-              <SignInPrompt />
-            )}
-          </Flex>
+                </Flex>
+              ) : (
+                <SignInPrompt />
+              )}
+            </Flex>
+          </Sidebar.MainStickyFooter>
         </Sidebar.Main>
 
         <Sidebar.Sidebar
           openForSmallScreens={parametersOpenForSmallScreens}
           setOpenForSmallScreens={setParametersOpenForSmallScreens}
         >
-          <Flex align="center" gap="m">
-            <Text size="text-l" style={{ marginRight: 'auto' }}>
-              Output
-            </Text>
+          <Text size="text-xs" weight={600} uppercase>
+            Output
+          </Text>
 
-            <Dropdown.Root>
-              <Dropdown.Trigger asChild>
-                <Button
-                  label="Output Info"
-                  icon={<Info weight="duotone" />}
-                  size="small"
-                  fill="outline"
-                />
-              </Dropdown.Trigger>
-
-              <Dropdown.Content style={{ maxWidth: '30rem' }}>
-                <Dropdown.Section>
-                  <Dropdown.SectionContent>
-                    <Flex direction="column" gap="s">
-                      <Flex align="center" gap="m">
-                        <Text size="text-xs" weight={600}>
-                          Environment
-                        </Text>
-
-                        <Button
-                          label="Share"
-                          icon={<ShareFat />}
-                          size="small"
-                          fill="ghost"
-                          onClick={() =>
-                            shareLink && copyTextToClipboard(shareLink)
-                          }
-                          style={{ marginLeft: 'auto' }}
-                          disabled={!environmentName}
-                        />
-                      </Flex>
-
-                      <Text size="text-xs">
-                        {environmentName ||
-                          'No output environment has been generated yet.'}
-                      </Text>
-                    </Flex>
-                  </Dropdown.SectionContent>
-                </Dropdown.Section>
-              </Dropdown.Content>
-            </Dropdown.Root>
-          </Flex>
-
-          {fileStructure.length ? (
+          {environment?.files && Object.keys(environment.files).length ? (
             <CardList>
-              {fileStructure.map((fileInfo) => (
+              {Object.values(environment.files).map((file) => (
                 <Card
                   padding="s"
                   gap="s"
-                  key={fileInfo.name}
+                  key={file.name}
+                  background="sand-2"
                   onClick={() => {
-                    setOpenedFileName(fileInfo.name);
+                    setOpenedFileName(file.name);
                   }}
                 >
                   <Flex align="center" gap="s">
                     <Text
                       size="text-s"
                       color="violet-11"
+                      clickableHighlight
                       weight={500}
                       clampLines={1}
                       style={{ marginRight: 'auto' }}
                     >
-                      {fileInfo.name}
+                      {file.name}
                     </Text>
 
-                    <Text size="text-xs">{formatBytes(fileInfo.size)}</Text>
+                    <Text size="text-xs">{formatBytes(file.size)}</Text>
                   </Flex>
                 </Card>
               ))}
             </CardList>
           ) : (
-            <Text size="text-s">No files have been generated yet.</Text>
+            <Text size="text-s" color="sand-10">
+              No files generated yet.
+            </Text>
           )}
 
           <HR />
 
-          <Text size="text-l">Parameters</Text>
+          <Text size="text-xs" weight={600} uppercase>
+            Parameters
+          </Text>
 
           <Controller
             control={form.control}
@@ -292,20 +356,11 @@ export default function RunAgentPage() {
                 max={20}
                 min={1}
                 step={1}
-                assistive="The maximum number of iterations to run the agent for."
+                assistive="The maximum number of iterations to run the agent for, usually 1. Each iteration will loop back through your agent allowing it to act and reflect on LLM results."
                 {...field}
               />
             )}
           />
-
-          <Flex direction="column" gap="m" style={{ marginTop: 'auto' }}>
-            <Button
-              label="Clear Conversation"
-              onClick={clearConversation}
-              size="small"
-              variant="secondary"
-            />
-          </Flex>
         </Sidebar.Sidebar>
       </Sidebar.Root>
 
@@ -322,14 +377,16 @@ export default function RunAgentPage() {
               icon={<Copy />}
               size="small"
               fill="outline"
-              onClick={() => openedFile && copyTextToClipboard(openedFile)}
+              onClick={() =>
+                openedFile && copyTextToClipboard(openedFile?.content)
+              }
               style={{ marginLeft: 'auto' }}
             />
           }
         >
           <Code
             bleed
-            source={openedFile}
+            source={openedFile?.content}
             language={filePathToCodeLanguage(openedFileName)}
           />
         </Dialog.Content>

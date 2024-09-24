@@ -1,43 +1,61 @@
+import json
 import re
 from typing import List
 
 from openapi_client import (
     BodyDownloadEnvironmentV1DownloadEnvironmentPost,
     BodyDownloadFileV1RegistryDownloadFilePost,
+    BodyDownloadMetadataV1RegistryDownloadMetadataPost,
     BodyListFilesV1RegistryListFilesPost,
     BodyUploadMetadataV1RegistryUploadMetadataPost,
 )
 from openapi_client.api.agents_assistants_api import AgentsAssistantsApi
-from openapi_client.api.default_api import DefaultApi
 from openapi_client.api.registry_api import RegistryApi
-from openapi_client.models.chat_completions_request import ChatCompletionsRequest
-from openapi_client.models.request import Request
-from runner.environment import ENVIRONMENT_FILENAME
+from openapi_client.api_client import ApiClient
+from openapi_client.configuration import Configuration
+from shared.client_config import ClientConfig
+from shared.inference_client import InferenceClient
+from shared.models import SimilaritySearch
+
+ENVIRONMENT_FILENAME = "environment.tar.gz"
 
 
 class PartialNearClient:
     """Wrap NearAI api registry methods, uses generated NearAI client."""
 
-    def __init__(self, client, auth: dict):  # noqa: D107
+    def __init__(self, base_url, auth):  # noqa: D107
+        configuration = Configuration(access_token=f"Bearer {json.dumps(auth)}", host=base_url)
+        client = ApiClient(configuration)
+
+        client_config = ClientConfig(
+            base_url=base_url + "/v1",
+            auth=auth,
+        )
+
+        self._inference = InferenceClient(client_config)
+
         self._client = client
         self.entry_location_pattern = re.compile("^(?P<namespace>[^/]+)/(?P<name>[^/]+)/(?P<version>[^/]+)$")
         self.auth = auth
 
-    def completions(self, model, messages, stream=False, temperature=None, **kwargs):
+    def completions(self, model, messages, stream=False, temperature=None, max_tokens=None, **kwargs):
         """Calls NearAI Api to return all completions for given messages using the given model."""
-        api_instance = DefaultApi(self._client)
-        chat_completions_request = ChatCompletionsRequest(
-            # todo move model mappings into hub
-            model="fireworks::accounts/fireworks/models/llama-v3p1-405b-instruct-long",
-            messages=messages,
+        return self._inference.completions(
+            model,
+            messages,
             stream=stream,
             temperature=temperature,
+            max_tokens=max_tokens,
             **kwargs,
         )
-        request = Request(actual_instance=chat_completions_request, anyof_schema_1_validator=chat_completions_request)
-        api_response = api_instance.chat_completions_v1_chat_completions_post(request)
 
-        return api_response
+    def query_vector_store(self, vector_store_id: str, query: str) -> List[SimilaritySearch]:
+        """Query a vector store.
+
+        vector_store_id: The id of the vector store to query.
+        query: The query to search for.
+        """
+        return self._inference.query_vector_store(vector_store_id, query)
 
     def parse_location(self, entry_location: str) -> dict:
         """Create a EntryLocation from a string in the format namespace/name/version."""
@@ -97,6 +115,15 @@ class PartialNearClient:
             results.append({"filename": path, "content": result})
         return results
 
+    def get_agent_metadata(self, identifier: str) -> dict:
+        """Fetches metadata for an agent from NearAI registry."""
+        api_instance = RegistryApi(self._client)
+        entry_location = self.parse_location(identifier)
+        result = api_instance.download_metadata_v1_registry_download_metadata_post(
+            BodyDownloadMetadataV1RegistryDownloadMetadataPost.from_dict(dict(entry_location=entry_location))
+        )
+        return result.to_dict()
+
     def get_agent(self, identifier):
         """Fetches an agent from NearAI registry."""
         entry_location = self.parse_location(identifier)
@@ -118,18 +145,12 @@ class PartialNearClient:
         )
         return result
 
-    def save_environment(self, file: bytes, name: str, description: str, details: dict, tags: List[str]) -> str:
+    def save_environment(self, file: bytes, metadata: dict) -> str:
         """Saves an environment to NearAI registry."""
         api_instance = RegistryApi(self._client)
 
         author = self.auth.get("account_id")
-        metadata = {
-            "category": "environment",
-            "description": description,
-            "details": details,
-            "tags": tags,
-            "show_entry": True,
-        }
+        name = metadata.get("name")
         entry_location = {"namespace": author, "name": name, "version": "0"}
         api_instance.upload_metadata_v1_registry_upload_metadata_post(
             BodyUploadMetadataV1RegistryUploadMetadataPost(metadata=metadata, entry_location=entry_location)

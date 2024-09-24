@@ -1,18 +1,20 @@
 import asyncio
 import enum
 import random
-from copy import deepcopy
 from datetime import datetime
 from tempfile import TemporaryDirectory
 from typing import Any, Dict, List, Optional, Tuple
 
 import httpx as hx
 import tenacity
+from shared.client_config import DEFAULT_PROVIDER, ClientConfig
+from shared.inference_client import InferenceClient
 
-from nearai.agent import Agent, load_agent
-from nearai.config import CONFIG, DATA_FOLDER, DEFAULT_PROVIDER, Config
+from nearai.agents.agent import Agent
+from nearai.agents.environment import Environment
+from nearai.agents.local_runner import LocalRunner
+from nearai.config import CONFIG, DATA_FOLDER
 from nearai.dataset import Dataset
-from nearai.environment import Environment
 
 from . import SolverStrategy
 
@@ -74,9 +76,9 @@ async def submit_problem(problem_id: str, code: str, extension: Extensions) -> s
 
 
 class DDOTSEnvironment(Environment):
-    def __init__(self, agents: List[Agent], problem_id: str, description: str, config: Config):  # noqa: D107
+    def __init__(self, agents: List[Agent], problem_id: str, description: str, client):  # noqa: D107
         self.tdir = TemporaryDirectory()
-        super().__init__(self.tdir.name, agents, config)
+        super().__init__(self.tdir.name, agents, client, approvals={"confirm_execution": lambda _: False})
 
         self.problem_id = problem_id
         self.solved = False
@@ -135,7 +137,7 @@ class DDOTSV0Solver(SolverStrategy):
     """
 
     def __init__(self, dataset_ref: Dataset, agents: str, max_iterations: int, save_snapshots: bool = False):  # noqa: D107
-        self.agents = [load_agent(agent) for agent in agents.split(",")]
+        self.agents = [LocalRunner.load_agent(agent) for agent in agents.split(",")]
         self.max_iterations = max_iterations
 
         date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -170,14 +172,16 @@ class DDOTSV0Solver(SolverStrategy):
         problem_id = datum["problem_id"]
         description = datum["description"]
 
-        config = deepcopy(CONFIG)
-        config.confirm_commands = False
-
-        env = DDOTSEnvironment(self.agents, problem_id, description, config)
+        client_config = ClientConfig(
+            base_url=CONFIG.nearai_hub.base_url,
+            auth=CONFIG.auth,
+        )
+        client = InferenceClient(client_config)
+        env = DDOTSEnvironment(self.agents, problem_id, description, client)
         env.write_file(".solved", str(False))
 
         try:
-            env.run_task(description, max_iterations=self.max_iterations)
+            env.run(description, max_iterations=self.max_iterations)
             env.write_file(".solved", str(env.solved))
 
         except Exception as e:

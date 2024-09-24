@@ -3,7 +3,7 @@ from typing import List, cast
 import litellm
 from openai.types.chat import ChatCompletionMessageParam
 
-from nearai.environment import Environment
+from nearai.agents.environment import Environment
 
 
 class StreamerAgent(object):
@@ -33,7 +33,7 @@ class StreamerAgent(object):
             messages: List[ChatCompletionMessageParam] = [{"role": "system", "content": PROMPT}]
             messages += history
             messages += [{"role": "user", "content": PROMPT2}]
-            raw_stream = env.completions("llama-v3-70b-instruct", messages, stream=True)
+            raw_stream = env.completions(messages, stream=True)
             assert isinstance(raw_stream, litellm.CustomStreamWrapper), "Expected CustomStreamWrapper"
             stream: litellm.CustomStreamWrapper = raw_stream
 

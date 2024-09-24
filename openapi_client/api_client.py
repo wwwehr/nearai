@@ -15,7 +15,6 @@
 import datetime
 import gzip
 from io import BytesIO
-
 from dateutil.parser import parse
 from enum import Enum
 import json

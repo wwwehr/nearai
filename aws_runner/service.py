@@ -8,11 +8,10 @@ from subprocess import call
 from typing import Optional
 
 import boto3
-from openapi_client.api_client import ApiClient
-from openapi_client.configuration import Configuration
-from partial_near_client import PartialNearClient
-from runner.agent import Agent
-from runner.environment import ENVIRONMENT_FILENAME, Environment
+from aws_runner.partial_near_client import ENVIRONMENT_FILENAME, PartialNearClient
+from nearai.agents.agent import Agent
+from nearai.agents.environment import Environment
+from shared.near.sign import verify_signed_message
 
 cloudwatch = boto3.client("cloudwatch", region_name="us-east-2")
 
@@ -32,7 +31,20 @@ def handler(event, context):
         return f"Missing required parameters: {missing}"
 
     auth_object = auth if isinstance(auth, dict) else json.loads(auth)
-    # todo validate signature
+
+    start_time_val = time.perf_counter()
+    if not verify_signed_message(
+        auth_object.get("account_id"),
+        auth_object.get("public_key"),
+        auth_object.get("signature"),
+        auth_object.get("message"),
+        auth_object.get("nonce"),
+        auth_object.get("recipient"),
+        auth_object.get("callback_url"),
+    ):
+        return "Unauthorized: Invalid signature"
+    stop_time_val = time.perf_counter()
+    write_metric("VerifySignatureDuration", stop_time_val - start_time_val)
 
     environment_id = event.get("environment_id")
     new_message = event.get("new_message")
@@ -68,14 +80,14 @@ def write_metric(metric_name, value, unit="Milliseconds"):
         print(f"Would have written metric {metric_name} with value {value} to cloudwatch")
 
 
-def load_agent(client, agent, agent_env_vars):
-    env_vars = agent_env_vars.get(agent, {})
+def load_agent(client, agent):
     start_time = time.perf_counter()
     agent_files = client.get_agent(agent)
     stop_time = time.perf_counter()
     write_metric("GetAgentFromRegistry_Duration", stop_time - start_time)
+    agent_metadata = client.get_agent_metadata(agent)
 
-    return Agent(path=RUN_PATH, name=agent, agent_files=agent_files, env_vars=env_vars)
+    return Agent(agent, agent_files, agent_metadata)
 
 
 def clear_temp_agent_files(agents):
@@ -83,6 +95,26 @@ def clear_temp_agent_files(agents):
         if agent.temp_dir and os.path.exists(agent.temp_dir):
             print("removed agent.temp_dir", agent.temp_dir)
             shutil.rmtree(agent.temp_dir)
+
+
+def save_environment(env, client, run_id, base_id, metric_function=None) -> str:
+    save_start_time = time.perf_counter()
+    snapshot = env.create_snapshot()
+    metadata = env.environment_run_info(run_id, base_id, "remote run")
+    name = metadata["name"]
+    request_start_time = time.perf_counter()
+    registry_id = client.save_environment(snapshot, metadata)
+    request_stop_time = time.perf_counter()
+    if metric_function:
+        metric_function("SaveEnvironmentToRegistry_Duration", request_stop_time - request_start_time)
+    print(
+        f"Saved environment {registry_id} to registry. To load use flag `--load-env={registry_id}`. "
+        f"or `--load-env={name}`"
+    )
+    save_stop_time = time.perf_counter()
+    if metric_function:
+        metric_function("SaveEnvironment_Duration", save_stop_time - save_start_time)
+    return registry_id
 
 
 def run_with_environment(
@@ -93,17 +125,21 @@ def run_with_environment(
     max_iterations = int(params.get("max_iterations", 2))
     record_run = bool(params.get("record_run", True))
     api_url = str(params.get("api_url", DEFAULT_API_URL))
-    agent_env_vars: dict = params.get("agent_env_vars", {})
     user_env_vars: dict = params.get("user_env_vars", {})
+    agent_env_vars: dict = params.get("agent_env_vars", {})
 
     if api_url != DEFAULT_API_URL:
         print(f"WARNING: Using custom API URL: {api_url}")
 
-    configuration = Configuration(access_token=f"Bearer {json.dumps(auth)}", host=api_url)
-    client = ApiClient(configuration)
-    near_client = PartialNearClient(client, auth)
+    near_client = PartialNearClient(api_url, auth)
 
-    loaded_agents = [load_agent(near_client, agent, agent_env_vars) for agent in agents.split(",")]
+    loaded_agents = []
+
+    for agent_name in agents.split(","):
+        agent = load_agent(near_client, agent_name)
+        # agents secrets has higher priority then agent metadata's env_vars
+        agent.env_vars = {**agent.env_vars, **agent_env_vars.get(agent_name, {})}
+        loaded_agents.append(agent)
 
     if environment_id:
         start_time = time.perf_counter()
@@ -122,10 +158,12 @@ def run_with_environment(
         except tarfile.ReadError:
             print("The file is not a valid tar archive.")
 
-    env = Environment(RUN_PATH, loaded_agents, near_client, metric_function=write_metric, env_vars=user_env_vars)
+    env = Environment(RUN_PATH, loaded_agents, near_client, env_vars=user_env_vars)
     start_time = time.perf_counter()
-    run_result = env.run(new_message, record_run, environment_id, max_iterations)
+    env.add_agent_start_system_log(agent_idx=0)
+    run_id = env.run(new_message, max_iterations)
+    new_environment = save_environment(env, near_client, run_id, environment_id, write_metric) if record_run else None
     clear_temp_agent_files(loaded_agents)
     stop_time = time.perf_counter()
     write_metric("ExecuteAgentDuration", stop_time - start_time)
-    return run_result
+    return new_environment

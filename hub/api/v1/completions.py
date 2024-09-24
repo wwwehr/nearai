@@ -15,10 +15,10 @@ class Provider(Enum):
     FIREWORKS = "fireworks"
     LOCAL = "local"
 
-def handle_stream(resp_stream, add_usage_callback: Callable):
+async def handle_stream(resp_stream, add_usage_callback: Callable):
     response_chunks = []
 
-    for chunk in resp_stream:
+    async for chunk in resp_stream:
         c = json.dumps(chunk.model_dump())
         response_chunks.append(c)
         print(c)

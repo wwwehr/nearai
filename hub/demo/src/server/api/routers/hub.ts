@@ -4,14 +4,17 @@ import { createZodFetcher } from 'zod-fetch';
 
 import { env } from '~/env';
 import {
-  agentRequestModel,
-  chatCompletionsModel,
+  chatModel,
   chatResponseModel,
-  listFiles,
-  listModelsResponseModel,
-  listNoncesModel,
-  listRegistry,
+  chatWithAgentModel,
+  type entriesModel,
+  entryCategory,
+  entryModel,
+  evaluationsTableModel,
+  filesModel,
   type messageModel,
+  modelsModel,
+  noncesModel,
   revokeNonceModel,
 } from '~/lib/models';
 import {
@@ -22,27 +25,19 @@ import {
 
 const fetchWithZod = createZodFetcher();
 
-export interface FileStructure {
+type RegistryFile = {
+  content: string;
   name: string;
   type: number;
   size: number;
   headerOffset: number;
-}
-
-export const registryCategory = z.enum([
-  'agent',
-  'benchmark',
-  'category',
-  'dataset',
-  'model',
-]);
-export type RegistryCategory = z.infer<typeof registryCategory>;
+};
 
 async function downloadEnvironment(environmentId: string) {
-  const u = `${env.ROUTER_URL}/registry/download_file`;
+  const url = `${env.ROUTER_URL}/registry/download_file`;
   const [namespace, name, version] = environmentId.split('/');
 
-  const response = await fetch(u, {
+  const response = await fetch(url, {
     method: 'POST',
     headers: {
       Accept: 'binary/octet-stream',
@@ -79,11 +74,9 @@ async function downloadEnvironment(environmentId: string) {
       return JSON.parse(message) as z.infer<typeof messageModel>;
     });
 
-  const fileStructure: FileStructure[] = [];
-  const files: Record<string, string> = {};
+  const files: Record<string, RegistryFile> = {};
   const environment = {
     environmentId,
-    fileStructure,
     files,
     conversation,
   };
@@ -95,8 +88,10 @@ async function downloadEnvironment(environmentId: string) {
       const fileName = originalFileName.replace(/^\.\//, '');
       if (fileName !== 'chat.txt' && fileName !== '.next_action') {
         fileInfo.name = fileName;
-        environment.fileStructure.push(fileInfo);
-        environment.files[fileName] = tarReader.getTextFile(fileName);
+        environment.files[fileName] = {
+          ...fileInfo,
+          content: tarReader.getTextFile(fileName),
+        };
       }
     }
   }
@@ -105,21 +100,30 @@ async function downloadEnvironment(environmentId: string) {
 }
 
 export const hubRouter = createTRPCRouter({
-  listModels: publicProcedure.query(async () => {
-    const u = env.ROUTER_URL + '/models';
+  chat: protectedProcedure.input(chatModel).mutation(async ({ ctx, input }) => {
+    const url = env.ROUTER_URL + '/chat/completions';
 
-    const response = await fetch(u);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: ctx.authorization,
+      },
+      body: JSON.stringify(input),
+    });
+
     const data: unknown = await response.json();
+    if (!response.ok) throw data;
 
-    return listModelsResponseModel.parse(data);
+    return chatResponseModel.parse(data);
   }),
 
-  chat: protectedProcedure
-    .input(chatCompletionsModel)
+  chatWithAgent: protectedProcedure
+    .input(chatWithAgentModel)
     .mutation(async ({ ctx, input }) => {
-      const u = env.ROUTER_URL + '/chat/completions';
+      const url = env.ROUTER_URL + '/agent/runs';
 
-      const response = await fetch(u, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -130,143 +134,115 @@ export const hubRouter = createTRPCRouter({
 
       if (!response.ok) {
         throw new Error(
-          'Failed to send chat completions, status: ' + response.status,
+          `Failed to send chat completions, status: ${response.status}`,
         );
       }
 
-      const data: unknown = await response.json();
-
-      return chatResponseModel.parse(data);
-    }),
-
-  listNonces: protectedProcedure.query(async ({ ctx }) => {
-    const u = env.ROUTER_URL + '/nonce/list';
-
-    const nonces = await fetchWithZod(listNoncesModel, u, {
-      headers: {
-        Authorization: ctx.authorization,
-      },
-    });
-
-    return nonces;
-  }),
-
-  revokeNonce: protectedProcedure
-    .input(revokeNonceModel)
-    .mutation(async ({ input }) => {
-      const u = env.ROUTER_URL + '/nonce/revoke';
-
-      try {
-        // We can't use regular auth since we need to use the signed revoke message.
-        const response = await fetch(u, {
-          headers: {
-            Authorization: input.auth,
-            'Content-Type': 'application/json',
-          },
-          method: 'POST',
-          body: JSON.stringify({ nonce: input.nonce }),
-        });
-        return response;
-      } catch (e) {
-        console.error(e);
-        throw e;
+      const text: string = await response.text();
+      if (!text.match(/".*\/.*\/.*/)) {
+        // check whether the response matches namespace/name/version
+        throw new Error('Response text does not match namespace/name/version');
       }
+
+      const environmentId = text.replace(/\\/g, '').replace(/"/g, '');
+
+      const environment = await downloadEnvironment(environmentId);
+
+      return environment;
     }),
 
-  revokeAllNonces: protectedProcedure
-    .input(z.object({ auth: z.string() }))
-    .mutation(async ({ input }) => {
-      const u = env.ROUTER_URL + '/nonce/revoke/all';
-
-      try {
-        // We can't use regular auth since we need to use the signed revoke message.
-        const response = await fetch(u, {
-          headers: {
-            Authorization: input.auth,
-            'Content-Type': 'application/json',
-          },
-          method: 'POST',
-        });
-        return response;
-      } catch (e) {
-        console.error(e);
-        throw e;
-      }
-    }),
-
-  listRegistry: publicProcedure
+  entries: publicProcedure
     .input(
       z.object({
-        category: registryCategory,
+        category: entryCategory.optional(),
         limit: z.number().default(10_000),
         namespace: z.string().optional(),
         showLatestVersion: z.boolean().default(true),
+        starredBy: z.string().optional(),
         tags: z.string().array().optional(),
       }),
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const url = new URL(`${env.ROUTER_URL}/registry/list_entries`);
 
-      url.searchParams.append('category', input.category);
       url.searchParams.append('total', `${input.limit}`);
       url.searchParams.append(
         'show_latest_version',
         `${input.showLatestVersion}`,
       );
 
+      if (input.category) url.searchParams.append('category', input.category);
+
       if (input.namespace)
         url.searchParams.append('namespace', input.namespace);
 
       if (input.tags) url.searchParams.append('tags', input.tags.join(','));
 
-      const list = await fetchWithZod(listRegistry, url.toString(), {
+      if (input.starredBy) {
+        url.searchParams.append('starred_by', input.starredBy);
+      }
+
+      if (ctx.signature) {
+        url.searchParams.append('star_point_of_view', ctx.signature.account_id);
+      }
+
+      const response = await fetch(url.toString(), {
         method: 'POST',
       });
+
+      const data: unknown = await response.json();
+
+      if (!response.ok || !Array.isArray(data)) throw data;
+
+      /*
+        Unfortunately, we can't rely on fetchWithZod() for this method. If the endpoint 
+        returns a single record that didn't match our expected "entries" schema, 
+        all of the data would be thrown out. Instead, we loop over each returned item and 
+        parse the entries one at a time - only omitting entries that aren't valid instead 
+        of throwing an error for the entire list.
+      */
+
+      const list: z.infer<typeof entriesModel> = data
+        .map((item) => {
+          const parsed = entryModel.safeParse(item);
+          return parsed.data;
+        })
+        .filter((entry) => !!entry);
 
       return list;
     }),
 
-  loadEnvironment: protectedProcedure
+  environment: protectedProcedure
     .input(z.object({ environmentId: z.string() }))
     .query(async ({ input }) => {
       return await downloadEnvironment(input.environmentId);
     }),
 
-  listFilePaths: publicProcedure
-    .input(
-      z.object({
-        namespace: z.string(),
-        name: z.string(),
-        version: z.string(),
-      }),
-    )
-    .query(async ({ input }) => {
-      const list = await fetchWithZod(
-        listFiles,
-        `${env.ROUTER_URL}/registry/list_files`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            entry_location: {
-              namespace: input.namespace,
-              name: input.name,
-              version: input.version,
-            },
-          }),
-        },
-      );
+  evaluations: publicProcedure.query(async () => {
+    const evaluations = await fetchWithZod(
+      evaluationsTableModel,
+      `${env.ROUTER_URL}/evaluation/table`,
+    );
 
-      const paths = list.flatMap((file) => file.filename);
-      paths.push('metadata.json');
-      paths.sort();
+    const infoColumns = ['agent', 'model', 'namespace', 'version', 'provider'];
+    const benchmarkColumns = evaluations.columns.filter(
+      (column) => !infoColumns.includes(column),
+    );
 
-      return paths;
-    }),
+    evaluations.rows.forEach((row) => {
+      if (row.agent && row.namespace && row.version) {
+        row.agentId = `${row.namespace}/${row.agent}/${row.version}`;
+      }
+    });
 
-  loadFileByPath: publicProcedure
+    return {
+      benchmarkColumns,
+      infoColumns,
+      results: evaluations.rows,
+    };
+  }),
+
+  file: publicProcedure
     .input(
       z.object({
         filePath: z.string(),
@@ -304,34 +280,167 @@ export const hubRouter = createTRPCRouter({
       };
     }),
 
-  agentChat: protectedProcedure
-    .input(agentRequestModel)
-    .mutation(async ({ ctx, input }) => {
-      const u = env.ROUTER_URL + '/agent/runs';
-
-      const response = await fetch(u, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: ctx.authorization,
+  filePaths: publicProcedure
+    .input(
+      z.object({
+        namespace: z.string(),
+        name: z.string(),
+        version: z.string(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const files = await fetchWithZod(
+        filesModel,
+        `${env.ROUTER_URL}/registry/list_files`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            entry_location: {
+              namespace: input.namespace,
+              name: input.name,
+              version: input.version,
+            },
+          }),
         },
-        body: JSON.stringify(input),
+      );
+
+      const paths = files.flatMap((file) => file.filename);
+      paths.push('metadata.json');
+      paths.sort();
+
+      return paths;
+    }),
+
+  models: publicProcedure.query(async () => {
+    const url = env.ROUTER_URL + '/models';
+
+    const response = await fetch(url);
+    const data: unknown = await response.json();
+
+    return modelsModel.parse(data);
+  }),
+
+  nonces: protectedProcedure.query(async ({ ctx }) => {
+    const url = env.ROUTER_URL + '/nonce/list';
+
+    const nonces = await fetchWithZod(noncesModel, url, {
+      headers: {
+        Authorization: ctx.authorization,
+      },
+    });
+
+    return nonces;
+  }),
+
+  revokeNonce: protectedProcedure
+    .input(revokeNonceModel)
+    .mutation(async ({ input }) => {
+      const url = env.ROUTER_URL + '/nonce/revoke';
+
+      // We can't use regular auth since we need to use the signed revoke message.
+      const response = await fetch(url, {
+        headers: {
+          Authorization: input.auth,
+          'Content-Type': 'application/json',
+        },
+        method: 'POST',
+        body: JSON.stringify({ nonce: input.nonce }),
       });
 
-      if (!response.ok) {
-        throw new Error(
-          `Failed to send chat completions, status: ${response.status}`,
-        );
-      }
+      const data: unknown = await response.json();
+      if (!response.ok) throw data;
 
-      const responseText: string = await response.text();
-      if (!responseText.match(/".*\/.*\/.*/)) {
-        // check whether the response matches namespace/name/version
-        throw new Error('Response text does not match namespace/name/version');
-      }
-
-      return downloadEnvironment(
-        responseText.replace(/\\/g, '').replace(/"/g, ''),
-      );
+      return data;
     }),
+
+  revokeAllNonces: protectedProcedure
+    .input(z.object({ auth: z.string() }))
+    .mutation(async ({ input }) => {
+      const url = env.ROUTER_URL + '/nonce/revoke/all';
+
+      // We can't use regular auth since we need to use the signed revoke message.
+      const response = await fetch(url, {
+        headers: {
+          Authorization: input.auth,
+          'Content-Type': 'application/json',
+        },
+        method: 'POST',
+      });
+
+      const data: unknown = await response.json();
+      if (!response.ok) throw data;
+
+      return data;
+    }),
+
+  starEntry: protectedProcedure
+    .input(
+      z.object({
+        action: z.enum(['add', 'remove']),
+        namespace: z.string(),
+        name: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input: { action, namespace, name } }) => {
+      const url =
+        env.ROUTER_URL +
+        `/stars/${action === 'add' ? 'add_star' : 'remove_star'}`;
+
+      const formData = new FormData();
+      formData.append('namespace', namespace);
+      formData.append('name', name);
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: ctx.authorization,
+        },
+        method: 'POST',
+        body: formData,
+      });
+
+      const data: unknown = await response.json();
+      if (!response.ok) throw data;
+
+      return true;
+    }),
+
+  updateMetadata: protectedProcedure
+    .input(
+      z.object({
+        namespace: z.string(),
+        name: z.string(),
+        version: z.string(),
+        metadata: entryModel.partial(),
+      }),
+    )
+    .mutation(
+      async ({ ctx, input: { name, namespace, version, metadata } }) => {
+        const response = await fetch(
+          `${env.ROUTER_URL}/registry/upload_metadata`,
+          {
+            headers: {
+              Authorization: ctx.authorization,
+              'Content-Type': 'application/json',
+            },
+            method: 'POST',
+            body: JSON.stringify({
+              metadata,
+              entry_location: {
+                namespace,
+                name,
+                version,
+              },
+            }),
+          },
+        );
+
+        const data: unknown = await response.json();
+        if (!response.ok) throw data;
+
+        return true;
+      },
+    ),
 });

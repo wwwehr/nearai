@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { parseStringOrNumber } from '~/utils/number';
+
 export const authorizationModel = z.object({
   account_id: z.string(),
   public_key: z.string(),
@@ -15,7 +17,7 @@ export const messageModel = z.object({
   content: z.string(),
 });
 
-export const chatCompletionsModel = z.object({
+export const chatModel = z.object({
   max_tokens: z.number().default(64),
   temperature: z.number().default(0.1),
   frequency_penalty: z.number().default(0),
@@ -51,7 +53,7 @@ export const listModelsModel = z.object({
   provider: z.string(),
 });
 
-export const oneModelModel = z.object({
+export const modelModel = z.object({
   id: z.string(),
   created: z.number(),
   object: z.string(),
@@ -63,12 +65,12 @@ export const oneModelModel = z.object({
   context_length: z.number().nullable().optional(),
 });
 
-export const listModelsResponseModel = z.object({
-  data: z.array(oneModelModel),
+export const modelsModel = z.object({
+  data: z.array(modelModel),
   object: z.string(),
 });
 
-export const challengeResponseModel = z.object({
+export const challengeModel = z.object({
   challenge: z.string(),
 });
 
@@ -82,21 +84,34 @@ export const nonceModel = z.object({
   first_seen_at: z.string(),
 });
 
-export const listNoncesModel = z.array(nonceModel);
+export const noncesModel = z.array(nonceModel);
 
 export const revokeNonceModel = z.object({
   nonce: z.string().regex(/^\d{32}$/),
   auth: z.string(),
 });
 
-export const registryEntry = z.object({
+export const entryCategory = z.enum([
+  'agent',
+  'benchmark',
+  'dataset',
+  'environment',
+  'evaluation',
+  'model',
+]);
+export type EntryCategory = z.infer<typeof entryCategory>;
+
+export const entryModel = z.object({
   id: z.number(),
-  category: z.string(),
+  category: entryCategory,
   namespace: z.string(),
   name: z.string(),
   version: z.string(),
   description: z.string(),
   tags: z.string().array(),
+  show_entry: z.boolean().default(true),
+  starred_by_point_of_view: z.boolean().default(false),
+  num_stars: z.number(),
   details: z.intersection(
     z
       .object({
@@ -110,24 +125,54 @@ export const registryEntry = z.object({
               .partial(),
           })
           .partial(),
+        primary_agent_name: z.string(),
+        primary_agent_namespace: z.string(),
+        primary_agent_version: z.string(),
+        base_id: z.string().or(z.null()),
         icon: z.string(),
+        run_id: z.coerce.string(),
+
+        timestamp: z.string(),
       })
       .partial(),
     z.record(z.string(), z.unknown()),
   ),
 });
 
-export const listRegistry = z.array(registryEntry);
+export const entriesModel = z.array(entryModel);
 
-export const agentRequestModel = z.object({
+export const chatWithAgentModel = z.object({
   agent_id: z.string(),
   new_message: z.string(),
   environment_id: z.string().nullable().optional(),
   max_iterations: z.number(),
+  user_env_vars: z.record(z.string(), z.unknown()).nullable().optional(),
+  agent_env_vars: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
 export const fileModel = z.object({
   filename: z.string(),
 });
 
-export const listFiles = fileModel.array();
+export const filesModel = fileModel.array();
+
+export const evaluationTableRowModel = z.intersection(
+  z.object({
+    agent: z.string(),
+    agentId: z.string().optional(),
+    model: z.string(),
+    namespace: z.string(),
+    provider: z.string(),
+    version: z.string(),
+  }),
+  z.record(
+    z.string(),
+    z.preprocess(parseStringOrNumber, z.string().or(z.number())),
+  ),
+);
+
+export const evaluationsTableModel = z.object({
+  columns: z.string().array(),
+  important_columns: z.string().array(),
+  rows: evaluationTableRowModel.array(),
+});

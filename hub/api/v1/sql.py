@@ -10,6 +10,7 @@ import pymysql
 import pymysql.cursors
 from dotenv import load_dotenv
 from pydantic import BaseModel, RootModel
+from shared.models import SimilaritySearch
 
 load_dotenv()
 
@@ -70,12 +71,6 @@ class VectorStoreFile(BaseModel):
     created_at: datetime
     updated_at: datetime
     embedding_status: Optional[Literal["in_progress", "completed"]]
-
-
-class SimilaritySearch(BaseModel):
-    file_id: str
-    chunk_text: str
-    distance: float
 
 
 class SqlClient:
@@ -496,3 +491,114 @@ class SqlClient:
             logger.error(f"Error deleting vector store and its embeddings: {str(e)}")
             self.db.rollback()
             return False
+
+    def create_hub_secret(
+        self,
+        owner_namespace: str,
+        namespace: str,
+        name: str,
+        key: str,
+        value: str,
+        version: Optional[str] = "",
+        description: Optional[str] = "",
+        category: Optional[str] = "agent",
+    ) -> None:
+        """Create hub secret."""
+        query = """
+        INSERT INTO hub_secrets (`owner_namespace`, `namespace`, `name`, `version`, `key`, `value`, `description`,
+        `category`)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """
+
+        cursor = self.db.cursor()
+        try:
+            cursor.execute(
+                query,
+                (owner_namespace, namespace, name, version, key, value, description, category),
+            )
+            self.db.commit()
+        except TypeError as e:
+            if "dict can not be used as parameter" in str(e):
+                raise ValueError(
+                    "Invalid data type in parameters. Ensure all dictionary values are JSON serializable."
+                ) from e
+            raise
+
+    def remove_hub_secret(
+        self,
+        owner_namespace: str,
+        namespace: str,
+        name: str,
+        key: str,
+        version: Optional[str] = "",
+        category: Optional[str] = "agent",
+    ) -> None:
+        """Remove hub secrets."""
+        query = """
+        DELETE FROM hub_secrets
+        WHERE `owner_namespace` = %s
+          AND `namespace` = %s
+          AND `name` = %s
+          AND `version` = %s
+          AND `key` = %s
+          AND `category` = %s
+        """
+
+        parameters = (owner_namespace, namespace, name, version, key, category)
+
+        cursor = self.db.cursor()
+        try:
+            cursor.execute(query, parameters)
+            self.db.commit()
+        except Exception as e:
+            self.db.rollback()
+            raise RuntimeError("Hub secret removal error: " + str(e)) from e
+
+    def get_user_secrets(
+        self, owner_namespace: str, limit: Optional[int] = 100, offset: Optional[int] = 0
+    ) -> (dict)[Any, Any]:  # noqa: D102
+        """Load all hub secrets of the user."""
+        query = """
+            SELECT `namespace`, `name`, `version`, `description`, `key`, `value`, `category`
+            FROM `hub_secrets`
+            WHERE `owner_namespace`= %s
+             LIMIT %s OFFSET %s
+        """
+
+        cursor = self.db.cursor(pymysql.cursors.DictCursor)
+        cursor.execute(query, [owner_namespace, limit, offset])
+        result = cursor.fetchall()
+
+        return result
+
+    def get_agent_secrets(
+        self, owner_namespace: str, namespace: str, name: str, version: str
+    ) -> tuple[dict[Any, Any], dict[Any, Any]]:  # noqa: D102
+        """Load hub secrets for an agent."""
+        query = """
+            SELECT `owner_namespace`, `key`, `value`
+            FROM `hub_secrets`
+            WHERE `owner_namespace` IN %s
+              AND `namespace` = %s
+              AND `name` = %s
+              AND (`version` = %s OR `version` IS NULL OR version = '')
+              AND category = 'agent'
+        """
+        # check both owner secret and agent author's secret
+        owner_namespaces = [owner_namespace, namespace]
+        params = [tuple(owner_namespaces), namespace, name, version]
+
+        cursor = self.db.cursor(pymysql.cursors.DictCursor)
+        cursor.execute(query, params)
+        result = cursor.fetchall()
+
+        agent_secrets = {}
+        user_secrets = {}
+
+        for secret in result:
+            if secret["owner_namespace"] == owner_namespace:
+                user_secrets[secret["key"]] = secret["value"]
+            else:
+                agent_secrets[secret["key"]] = secret["value"]
+
+        return agent_secrets, user_secrets

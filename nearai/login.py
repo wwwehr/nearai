@@ -8,8 +8,10 @@ import time
 import urllib.parse as urlparse
 from pathlib import Path
 
-import hub.api.near.sign as near
-from nearai.config import AuthData, load_config_file, save_config_file
+import shared.near.sign as near
+from shared.auth_data import AuthData
+
+from nearai.config import load_config_file, save_config_file
 
 RECIPIENT = "ai.near"
 MESSAGE = "Welcome to NEAR AI"

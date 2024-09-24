@@ -19,7 +19,7 @@ import { authorizationModel } from '~/lib/models';
 import { api } from '~/trpc/react';
 
 export const NonceList = () => {
-  const nonces = api.hub.listNonces.useQuery();
+  const noncesQuery = api.hub.nonces.useQuery();
   const revokeNonceMutation = api.hub.revokeNonce.useMutation();
   const revokeAllNoncesMutation = api.hub.revokeAllNonces.useMutation();
 
@@ -75,7 +75,7 @@ export const NonceList = () => {
       } catch (e) {
         console.error(e);
       } finally {
-        await nonces.refetch();
+        await noncesQuery.refetch();
       }
     };
 
@@ -87,7 +87,7 @@ export const NonceList = () => {
       } catch (e) {
         console.error(e);
       } finally {
-        await nonces.refetch();
+        await noncesQuery.refetch();
       }
     };
 
@@ -129,9 +129,9 @@ export const NonceList = () => {
         </Table.Head>
 
         <Table.Body>
-          {!nonces.data && <Table.PlaceholderRows />}
+          {!noncesQuery.data && <Table.PlaceholderRows />}
 
-          {nonces.data?.map((nonce) => (
+          {noncesQuery.data?.map((nonce) => (
             <Table.Row key={nonce.nonce}>
               <Table.Cell>
                 <Text size="text-xs" color="sand-12">

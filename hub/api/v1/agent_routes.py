@@ -1,7 +1,9 @@
+import json
 from os import getenv
 from typing import Any, Dict, Optional
 
 import boto3
+import requests
 from fastapi import APIRouter, Body, Depends, HTTPException, Response
 from nearai.clients.lambda_client import LambdaWrapper
 from pydantic import BaseModel, Field
@@ -60,6 +62,45 @@ class CreateThreadAndRunRequest(BaseModel):
         None,
         description="Env vars provided by the user",
     )
+
+
+def invoke_function_via_curl(runner_invoke_url, agents, environment_id, auth, new_message, params):
+    if auth["nonce"]:
+        if isinstance(auth["nonce"], bytes):
+            auth["nonce"] = auth["nonce"].decode("utf-8")
+
+    payload = {
+        "agents": agents,
+        "environment_id": environment_id,
+        "auth": auth.model_dump(),
+        "new_message": new_message,
+        "params": params,
+    }
+
+    headers = {"Content-Type": "application/json"}
+
+    response = requests.post(runner_invoke_url, data=json.dumps(payload), headers=headers)
+
+    if response.status_code == 200:
+        return response.json()
+    else:
+        raise Exception(f"Request failed with status code {response.status_code}: {response.text}")
+
+
+def invoke_function_via_lambda(function_name, agents, environment_id, auth, new_message, params):
+    wrapper = LambdaWrapper(boto3.client("lambda", region_name="us-east-2"))
+    result = wrapper.invoke_function(
+        function_name,
+        {
+            "agents": agents,
+            "environment_id": environment_id,
+            "auth": auth.model_dump(),
+            "new_message": new_message,
+            "params": params,
+        },
+    )
+
+    return result
 
 
 @v1_router.post("/threads/runs", tags=["Agents", "Assistants"])  # OpenAI compatibility
@@ -124,18 +165,16 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokab
             print(f"Passing agent API URL: {agent_api_url}")
         print(f"Running function {function_name} with: agents={agents}, environment_id={environment_id}, ")
 
-        wrapper = LambdaWrapper(boto3.client("lambda", region_name="us-east-2"))
-        result = wrapper.invoke_function(
-            function_name,
-            {
-                "agents": agents,
-                "environment_id": environment_id,
-                "auth": auth.model_dump(),
-                "new_message": new_message,
-                "params": params,
-            },
-        )
-        return result
+        runner_mode = getenv("RUNNER_MODE", "lambda")
+
+        if runner_mode == "lambda":
+            return invoke_function_via_lambda(function_name, agents, environment_id, auth, new_message, params)
+        elif runner_mode == "local":
+            runner_invoke_url = getenv("RUNNER_INVOKE_URL", None)
+            if runner_invoke_url:
+                return invoke_function_via_curl(runner_invoke_url, agents, environment_id, auth, new_message, params)
+
+        raise HTTPException(status_code=400, detail="Invalid runner parameters")
 
 
 @v1_router.post(

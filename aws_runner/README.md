@@ -15,7 +15,7 @@ Base framework `docker build -f aws_runner/Dockerfile --platform linux/amd64 --b
 
 LangGraph framework `docker build -f aws_runner/Dockerfile --platform linux/amd64 --build-arg FRAMEWORK=-langgraph-1-4 -t nearai-runner:test .`
 
-Then `docker run --platform linux/amd64 -p 9000:8080 nearai-runner:test` will start the server on port 9000. 
+Then `docker run --platform linux/amd64 -p 9000:8080 nearai-runner:test` will start the server on port 9000.
 
 To call the server you will need a signedMessage for the auth param.
 Then you can call the server with the following curl command.
@@ -40,6 +40,21 @@ curl "http://localhost:9000/2015-03-31/functions/function/invocations" \
         \"callback_url\":\"https://app.near.ai/",\"message\":\"Welcome to NEAR Talkbot app\"}"}
 EOF
 ```
+
+### Local testing with Hub UI
+
+By default, an AWS Lambda runner is used to execute the agent's code, but you can switch to using local runner by specifying the environment variables (which can be set in `/hub/.env`):
+
+```
+RUNNER_MODE="local"
+RUNNER_INVOKE_URL=http://localhost:9000/2015-03-31/functions/function/invocations
+API_URL=http://host.docker.internal:8081
+```
+
+It might be useful to provide `API_URL` into the `docker run` command to use local Hub API instead of NearAI Hub API.
+
+`docker run -e API_URL=http://host.docker.internal:8081 --platform linux/amd64 -p 9009:8080 nearai-runner:test`
+
 
 ## Deployment
 The docker image is built and pushed to the NearAI ECR repository. The image is then deployed to AWS Lambda using the AWS CLI.

@@ -11,7 +11,7 @@ import boto3
 from aws_runner.partial_near_client import ENVIRONMENT_FILENAME, PartialNearClient
 from nearai.agents.agent import Agent
 from nearai.agents.environment import Environment
-from shared.near.sign import verify_signed_message, SignatureVerificationResult
+from shared.near.sign import SignatureVerificationResult, verify_signed_message
 
 cloudwatch = boto3.client("cloudwatch", region_name="us-east-2")
 

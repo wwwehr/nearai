@@ -1,4 +1,4 @@
-FROM docker-nearai_base:latest
+FROM nearai_base:latest
 
 RUN mkdir -p ~/.nearai && \
     cat <<EOF > ~/.nearai/config.json

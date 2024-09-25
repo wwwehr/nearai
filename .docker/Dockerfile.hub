@@ -1,4 +1,4 @@
-FROM docker-nearai_base:latest
+FROM nearai_base:latest
 
 ## Top level args / env vars
 ARG USER=user

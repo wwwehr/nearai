@@ -105,7 +105,7 @@ jobs:
         SINGLESTORE_LICENSE: ${{ secrets.SINGLESTORE_LICENSE }}
 
     - name: Exec Integration Tests
-      run: sleep 30 && docker exec docker-ci-1 poetry run pytest -m integration
+      run: sleep 30 && docker exec docker-ci-1 poetry run pytest -m integration ./ci/
     
     - name: Stop Docker Compose
       run: docker compose -f .docker/compose-ci.yml down

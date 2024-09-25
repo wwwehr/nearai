@@ -67,7 +67,7 @@ jobs:
 
   integration:
     runs-on: integration
-    timeout-minutes: 15
+    timeout-minutes: 30
     environment: NearAI CI
     steps:
 
@@ -90,6 +90,9 @@ jobs:
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
+
+    - name: Build nearai_base Image
+      run: docker compose -f .docker/compose-ci.yml build nearai_base
     
     - name: Build Docker Images
       run: docker compose -f .docker/compose-ci.yml build

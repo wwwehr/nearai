@@ -90,9 +90,12 @@ jobs:
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
+    
+    - name: Build Docker Images
+      run: docker compose -f .docker/compose-ci.yml build
 
     - name: Start Docker Compose
-      run: docker compose -f .docker/compose-ci.yml up -d --build
+      run: docker compose -f .docker/compose-ci.yml up -d
       env:
         SINGLESTORE_LICENSE: ${{ secrets.SINGLESTORE_LICENSE }}
 

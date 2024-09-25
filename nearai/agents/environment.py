@@ -148,7 +148,7 @@ class Environment(object):
 
     def verify_message(
         self, account_id: str, public_key: str, signature: str, message: str, nonce: str, callback_url: str
-    ) -> bool:
+    ) -> near.SignatureVerificationResult:
         """Verifies that the user message is signed with NEAR Account."""
         return near.verify_signed_message(
             account_id, public_key, signature, message, nonce, self._agents[0].name, callback_url

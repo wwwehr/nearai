@@ -17,8 +17,15 @@ import psutil
 import shared.near.sign as near
 from litellm.types.utils import Choices, ModelResponse
 from litellm.utils import CustomStreamWrapper
+from openai.types.beta.vector_store import VectorStore
 from openai.types.chat import ChatCompletionMessageParam
 from shared.client_config import DEFAULT_PROVIDER, DEFAULT_PROVIDER_MODEL
+from shared.models import (
+    ChunkingStrategy,
+    ExpiresAfter,
+    GitHubSource,
+    GitLabSource,
+)
 from shared.near.primitives import PROVIDER_MODEL_SEP
 
 from nearai.agents.agent import Agent
@@ -148,7 +155,7 @@ class Environment(object):
 
     def verify_message(
         self, account_id: str, public_key: str, signature: str, message: str, nonce: str, callback_url: str
-    ) -> bool:
+    ) -> near.SignatureVerificationResult:
         """Verifies that the user message is signed with NEAR Account."""
         return near.verify_signed_message(
             account_id, public_key, signature, message, nonce, self._agents[0].name, callback_url
@@ -205,6 +212,44 @@ class Environment(object):
         query: The query to search for.
         """
         return self._client.query_vector_store(vector_store_id, query)
+
+    def create_vector_store_from_source(
+        self,
+        name: str,
+        source: Union[GitHubSource, GitLabSource],
+        source_auth: Optional[str] = None,
+        chunking_strategy: Optional[ChunkingStrategy] = None,
+        expires_after: Optional[ExpiresAfter] = None,
+        metadata: Optional[Dict[str, str]] = None,
+    ) -> VectorStore:
+        """Creates a vector store from the given source.
+
+        Args:
+        ----
+            name: The name of the vector store.
+            source: The source from which to create the vector store.
+            source_auth: The source authentication token.
+            chunking_strategy: The chunking strategy to use.
+            expires_after: The expiration policy.
+            metadata: Additional metadata.
+
+        Returns:
+        -------
+            VectorStore: The created vector store.
+
+        """
+        return self._client.create_vector_store_from_source(
+            name=name,
+            source=source,
+            source_auth=source_auth,
+            chunking_strategy=chunking_strategy,
+            expires_after=expires_after,
+            metadata=metadata,
+        )
+
+    def get_vector_store(self, vector_store_id: str) -> VectorStore:
+        """Gets a vector store by id."""
+        return self._client.get_vector_store(vector_store_id)
 
     def exec_command(self, command: str) -> Dict[str, Union[str, int]]:
         """Executes a command in the environment and logs the output.

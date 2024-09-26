@@ -71,28 +71,16 @@ jobs:
     environment: NearAI CI
     steps:
 
-    # - name: Free up space
-    #   run: |
-    #     sudo apt-get autoremove -y >/dev/null 2>&1
-    #     sudo apt-get autoclean -y >/dev/null 2>&1
-    #     sudo docker rmi $(sudo docker image ls -aq) >/dev/null 2>&1 || true
-
     - name: Checkout code
       uses: actions/checkout@v4
-
-    # - name: Cache Docker layers
-    #   uses: actions/cache@v3
-    #   with:
-    #     path: /tmp/.buildx-cache
-    #     key: ${{ runner.os }}-buildx-${{ github.sha }}
-    #     restore-keys: |
-    #       ${{ runner.os }}-buildx-
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
       with:
         driver: docker
 
+    # TODO: remove this step, in order to build the child images
+    # we need to have the base image already built
     - name: Build nearai_base Image
       run: docker compose -f .docker/compose-ci.yml build nearai_base
     

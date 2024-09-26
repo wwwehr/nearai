@@ -64,15 +64,17 @@ class CreateThreadAndRunRequest(BaseModel):
     )
 
 
-def invoke_function_via_curl(runner_invoke_url, agents, environment_id, auth, new_message, params):
-    if auth["nonce"]:
-        if isinstance(auth["nonce"], bytes):
-            auth["nonce"] = auth["nonce"].decode("utf-8")
+def invoke_function_via_curl(runner_invoke_url, agents, environment_id, auth: AuthToken, new_message, params):
+    auth_data = auth.model_dump()
+
+    if auth_data["nonce"]:
+        if isinstance(auth_data["nonce"], bytes):
+            auth_data["nonce"] = auth_data["nonce"].decode("utf-8")
 
     payload = {
         "agents": agents,
         "environment_id": environment_id,
-        "auth": auth.model_dump(),
+        "auth": auth_data,
         "new_message": new_message,
         "params": params,
     }
@@ -87,7 +89,7 @@ def invoke_function_via_curl(runner_invoke_url, agents, environment_id, auth, ne
         raise Exception(f"Request failed with status code {response.status_code}: {response.text}")
 
 
-def invoke_function_via_lambda(function_name, agents, environment_id, auth, new_message, params):
+def invoke_function_via_lambda(function_name, agents, environment_id, auth: AuthToken, new_message, params):
     wrapper = LambdaWrapper(boto3.client("lambda", region_name="us-east-2"))
     result = wrapper.invoke_function(
         function_name,
@@ -160,19 +162,17 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokab
     if framework == "prompt":
         raise HTTPException(status_code=400, detail="Prompt only agents are not implemented yet.")
     else:
-        function_name = f"{runner}-{framework.lower()}"
-        if agent_api_url != "https://api.near.ai":
-            print(f"Passing agent API URL: {agent_api_url}")
-        print(f"Running function {function_name} with: agents={agents}, environment_id={environment_id}, ")
-
-        runner_mode = getenv("RUNNER_MODE", "lambda")
-
-        if runner_mode == "lambda":
-            return invoke_function_via_lambda(function_name, agents, environment_id, auth, new_message, params)
-        elif runner_mode == "local":
+        if runner == "local":
             runner_invoke_url = getenv("RUNNER_INVOKE_URL", None)
             if runner_invoke_url:
                 return invoke_function_via_curl(runner_invoke_url, agents, environment_id, auth, new_message, params)
+        else:
+            function_name = f"{runner}-{framework.lower()}"
+            if agent_api_url != "https://api.near.ai":
+                print(f"Passing agent API URL: {agent_api_url}")
+            print(f"Running function {function_name} with: agents={agents}, environment_id={environment_id}, ")
+
+            return invoke_function_via_lambda(function_name, agents, environment_id, auth, new_message, params)
 
         raise HTTPException(status_code=400, detail="Invalid runner parameters")
 
@@ -189,8 +189,10 @@ def download_environment(entry: RegistryEntry = Depends(get), path: str = Body()
 
 
 def _runner_for_env():
-    env = getenv("SERVER_ENVIRONMENT", "local")
-    if env == "production":
+    runner_env = getenv("RUNNER_ENVIRONMENT", "local")
+    if runner_env == "production":
         return "production-agent-runner"
-    else:
+    elif runner_env == "staging":
         return "staging-agent-runner"
+    else:
+        return runner_env

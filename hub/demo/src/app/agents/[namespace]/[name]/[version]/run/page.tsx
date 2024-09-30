@@ -34,6 +34,7 @@ import { useCurrentEntry, useEntryParams } from '~/hooks/entries';
 import { useZodForm } from '~/hooks/form';
 import { useThreads } from '~/hooks/threads';
 import { useQueryParams } from '~/hooks/url';
+import type { messageModel } from '~/lib/models';
 import { chatWithAgentModel } from '~/lib/models';
 import { useAuthStore } from '~/stores/auth';
 import { api } from '~/trpc/react';
@@ -57,7 +58,9 @@ export default function EntryRunPage() {
     defaultValues: { agent_id: agentId },
   });
 
+  const [htmlOutputEnabled, setHtmlOutputEnabled] = useState(false);
   const [htmlOutput, setHtmlOutput] = useState('');
+  const prevHtmlOutput = useRef('')
   const [view, setView] = useState<'conversation' | 'output' | 'auto'>('auto');
   const [openedFileName, setOpenedFileName] = useState<string | null>(null);
   const [parametersOpenForSmallScreens, setParametersOpenForSmallScreens] =
@@ -154,8 +157,14 @@ export default function EntryRunPage() {
   useEffect(() => {
     const files = environmentQuery?.data?.files;
     if (files?.['index.html']) {
-      setHtmlOutput(files['index.html'].content);
-      setView((current) => (current === 'auto' ? 'output' : current));
+      setHtmlOutputEnabled(true);
+      const currentOutput = files['index.html'].content;
+      if (prevHtmlOutput.current !== currentOutput) {
+        prevHtmlOutput.current = htmlOutput;
+        // always switch to output if page was updated
+        setView('output');
+      }
+      setHtmlOutput(currentOutput);
     }
   }, [environmentQuery]);
 
@@ -166,7 +175,6 @@ export default function EntryRunPage() {
   }, [environment, environmentId, environmentQuery]);
 
   useEffect(() => {
-    setView('auto');
     setHtmlOutput('');
 
     if (!environmentId) {
@@ -195,6 +203,18 @@ export default function EntryRunPage() {
 
   if (!currentEntry) return null;
 
+  const lastAssistantReplies: z.infer<typeof messageModel>[] = [];
+  const messages = environment?.conversation ?? [];
+
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i];
+    if (messages && message?.role === 'assistant') {
+      lastAssistantReplies.push(message);
+    } else {
+      break;
+    }
+  }
+
   return (
     <Form stretch onSubmit={form.handleSubmit(onSubmit)} ref={formRef}>
       <Sidebar.Root>
@@ -206,7 +226,15 @@ export default function EntryRunPage() {
 
         <Sidebar.Main>
           {view === 'output' ? (
-            <IframeWithBlob html={htmlOutput} />
+            <>
+              <IframeWithBlob html={htmlOutput} />
+
+              <Messages
+                loading={environmentQuery.isLoading}
+                messages={lastAssistantReplies}
+                threadId={agentId}
+              />
+            </>
           ) : (
             <Messages
               loading={environmentQuery.isLoading}
@@ -252,7 +280,7 @@ export default function EntryRunPage() {
                       />
                     </BreakpointDisplay>
 
-                    {htmlOutput && (
+                    {htmlOutputEnabled && (
                       <>
                         {view === 'output' ? (
                           <Tooltip

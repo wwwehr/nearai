@@ -166,7 +166,7 @@ export default function EntryRunPage() {
       }
       setHtmlOutput(currentOutput);
     }
-  }, [environmentQuery]);
+  }, [environmentQuery, htmlOutput]);
 
   useEffect(() => {
     if (environmentId && environmentId !== environment?.environmentId) {
@@ -175,7 +175,7 @@ export default function EntryRunPage() {
   }, [environment, environmentId, environmentQuery]);
 
   useEffect(() => {
-    setHtmlOutput('');
+    // setHtmlOutput('');
 
     if (!environmentId) {
       utils.hub.environment.setData(

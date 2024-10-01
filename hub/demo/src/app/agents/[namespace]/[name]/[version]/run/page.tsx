@@ -34,7 +34,7 @@ import { useCurrentEntry, useEntryParams } from '~/hooks/entries';
 import { useZodForm } from '~/hooks/form';
 import { useThreads } from '~/hooks/threads';
 import { useQueryParams } from '~/hooks/url';
-import { chatWithAgentModel } from '~/lib/models';
+import { chatWithAgentModel, type messageModel } from '~/lib/models';
 import { useAuthStore } from '~/stores/auth';
 import { api } from '~/trpc/react';
 import { copyTextToClipboard } from '~/utils/clipboard';
@@ -81,11 +81,17 @@ export default function EntryRunPage() {
     ? environment?.files?.[openedFileName]
     : undefined;
 
-  const latestAssistantMessage = environment?.conversation.findLast(
-    (message) => {
-      return message.role === 'assistant';
-    },
-  );
+  const latestAssistantMessages: z.infer<typeof messageModel>[] = [];
+  if (environment) {
+    for (let i = environment.conversation.length - 1; i >= 0; i--) {
+      const message = environment.conversation[i];
+      if (message?.role === 'assistant') {
+        latestAssistantMessages.push(message);
+      } else {
+        break;
+      }
+    }
+  }
 
   async function onSubmit(values: z.infer<typeof chatWithAgentModel>) {
     try {
@@ -222,10 +228,10 @@ export default function EntryRunPage() {
             <>
               <IframeWithBlob html={htmlOutput} />
 
-              {latestAssistantMessage && (
+              {latestAssistantMessages.length > 0 && (
                 <Messages
                   loading={environmentQuery.isLoading}
-                  messages={[latestAssistantMessage]}
+                  messages={latestAssistantMessages}
                   threadId={agentId}
                 />
               )}

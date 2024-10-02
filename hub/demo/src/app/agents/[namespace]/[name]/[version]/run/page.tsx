@@ -34,8 +34,7 @@ import { useCurrentEntry, useEntryParams } from '~/hooks/entries';
 import { useZodForm } from '~/hooks/form';
 import { useThreads } from '~/hooks/threads';
 import { useQueryParams } from '~/hooks/url';
-import type { messageModel } from '~/lib/models';
-import { chatWithAgentModel } from '~/lib/models';
+import { chatWithAgentModel, type messageModel } from '~/lib/models';
 import { useAuthStore } from '~/stores/auth';
 import { api } from '~/trpc/react';
 import { copyTextToClipboard } from '~/utils/clipboard';
@@ -58,10 +57,9 @@ export default function EntryRunPage() {
     defaultValues: { agent_id: agentId },
   });
 
-  const [htmlOutputEnabled, setHtmlOutputEnabled] = useState(false);
   const [htmlOutput, setHtmlOutput] = useState('');
-  const prevHtmlOutput = useRef('')
-  const [view, setView] = useState<'conversation' | 'output' | 'auto'>('auto');
+  const previousHtmlOutput = useRef('');
+  const [view, setView] = useState<'conversation' | 'output'>('conversation');
   const [openedFileName, setOpenedFileName] = useState<string | null>(null);
   const [parametersOpenForSmallScreens, setParametersOpenForSmallScreens] =
     useState(false);
@@ -82,6 +80,18 @@ export default function EntryRunPage() {
   const openedFile = openedFileName
     ? environment?.files?.[openedFileName]
     : undefined;
+
+  const latestAssistantMessages: z.infer<typeof messageModel>[] = [];
+  if (environment) {
+    for (let i = environment.conversation.length - 1; i >= 0; i--) {
+      const message = environment.conversation[i];
+      if (message?.role === 'assistant') {
+        latestAssistantMessages.push(message);
+      } else {
+        break;
+      }
+    }
+  }
 
   async function onSubmit(values: z.infer<typeof chatWithAgentModel>) {
     try {
@@ -156,16 +166,19 @@ export default function EntryRunPage() {
 
   useEffect(() => {
     const files = environmentQuery?.data?.files;
-    if (files?.['index.html']) {
-      setHtmlOutputEnabled(true);
-      const currentOutput = files['index.html'].content;
-      if (prevHtmlOutput.current !== currentOutput) {
-        prevHtmlOutput.current = htmlOutput;
-        // always switch to output if page was updated
+    const htmlFile = files?.['index.html'];
+
+    if (htmlFile) {
+      setHtmlOutput(htmlFile.content);
+      if (previousHtmlOutput.current !== htmlFile.content) {
         setView('output');
       }
-      setHtmlOutput(currentOutput);
+    } else {
+      setView('conversation');
+      setHtmlOutput('');
     }
+
+    previousHtmlOutput.current = htmlOutput;
   }, [environmentQuery, htmlOutput]);
 
   useEffect(() => {
@@ -175,8 +188,6 @@ export default function EntryRunPage() {
   }, [environment, environmentId, environmentQuery]);
 
   useEffect(() => {
-    // setHtmlOutput('');
-
     if (!environmentId) {
       utils.hub.environment.setData(
         {
@@ -203,18 +214,6 @@ export default function EntryRunPage() {
 
   if (!currentEntry) return null;
 
-  const lastAssistantReplies: z.infer<typeof messageModel>[] = [];
-  const messages = environment?.conversation ?? [];
-
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const message = messages[i];
-    if (messages && message?.role === 'assistant') {
-      lastAssistantReplies.push(message);
-    } else {
-      break;
-    }
-  }
-
   return (
     <Form stretch onSubmit={form.handleSubmit(onSubmit)} ref={formRef}>
       <Sidebar.Root>
@@ -229,11 +228,13 @@ export default function EntryRunPage() {
             <>
               <IframeWithBlob html={htmlOutput} />
 
-              <Messages
-                loading={environmentQuery.isLoading}
-                messages={lastAssistantReplies}
-                threadId={agentId}
-              />
+              {latestAssistantMessages.length > 0 && (
+                <Messages
+                  loading={environmentQuery.isLoading}
+                  messages={latestAssistantMessages}
+                  threadId={agentId}
+                />
+              )}
             </>
           ) : (
             <Messages
@@ -280,7 +281,7 @@ export default function EntryRunPage() {
                       />
                     </BreakpointDisplay>
 
-                    {htmlOutputEnabled && (
+                    {htmlOutput && (
                       <>
                         {view === 'output' ? (
                           <Tooltip

@@ -19,7 +19,7 @@ export const IframeWithBlob = ({ className = '', html, ...props }: Props) => {
   };
 
   useEffect(() => {
-    const blob = new Blob([html], { type: 'text/html' });
+    const blob = new Blob([html], { type: 'text/html;charset=UTF-8' });
     const url = URL.createObjectURL(blob);
 
     setDataUrl(url);

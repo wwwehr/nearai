@@ -10,7 +10,12 @@ import {
 } from '@phosphor-icons/react';
 import { type KeyboardEventHandler, useEffect, useRef, useState } from 'react';
 import { Controller } from 'react-hook-form';
-import { type z } from 'zod';
+import {
+  type z,
+  type ZodNullable,
+  type ZodOptional,
+  type ZodString,
+} from 'zod';
 
 import { AgentWelcome } from '~/components/AgentWelcome';
 import { BreakpointDisplay } from '~/components/lib/BreakpointDisplay';
@@ -57,6 +62,7 @@ export default function EntryRunPage() {
     defaultValues: { agent_id: agentId },
   });
 
+  const auth = useAuthStore((store) => store.auth);
   const [htmlOutput, setHtmlOutput] = useState('');
   const previousHtmlOutput = useRef('');
   const [view, setView] = useState<'conversation' | 'output'>('conversation');
@@ -164,13 +170,82 @@ export default function EntryRunPage() {
     form.setFocus('new_message');
   };
 
+  interface MessageData {
+    action: string;
+    data: typeof chatWithAgentModel;
+  }
+
+  const refreshEnvironment = (
+    environmentId: ZodOptional<ZodNullable<ZodString>>['_output'] | undefined,
+  ) => {
+    if (environmentId) {
+      updateQueryPath({ environmentId }, 'replace', false);
+      console.log(`Refresh environment: ${environmentId}`);
+    }
+  };
+
+  // iframe messages
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== 'null') {
+        // our sandbox iframe always has origin "null"
+        return;
+      }
+
+      const message_data = event.data as MessageData;
+
+      if (message_data.action === 'remote_agent_run') {
+        const parsedData = chatWithAgentModel.safeParse(message_data.data);
+
+        if (!parsedData.success) {
+          console.error('Invalid message data:', parsedData.error);
+          return;
+        }
+
+        const requestData = parsedData.data;
+        requestData.max_iterations = Number(requestData.max_iterations) || 1;
+        requestData.environment_id =
+          requestData.environment_id ?? environmentId;
+
+        chatMutation
+          .mutateAsync(requestData)
+          .then((response) => {
+            refreshEnvironment(response.environmentId);
+          })
+          .catch((error) => {
+            console.error('Error in mutation:', error);
+          });
+
+      } else if (message_data.action === 'refresh_environment_id') {
+        const parsedData = chatWithAgentModel.safeParse(message_data.data);
+
+        if (!parsedData.success) {
+          console.error('Invalid message data:', parsedData.error);
+          return;
+        }
+
+        refreshEnvironment(parsedData.data.environment_id);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+
+    return () => {
+      window.removeEventListener('message', handleMessage);
+    };
+  }, [auth, environmentId, chatMutation]);
+
   useEffect(() => {
     const files = environmentQuery?.data?.files;
     const htmlFile = files?.['index.html'];
 
     if (htmlFile) {
-      setHtmlOutput(htmlFile.content);
-      if (previousHtmlOutput.current !== htmlFile.content) {
+      const htmlContent = htmlFile.content.replaceAll(
+        '{{%agent_id%}}',
+        agentId,
+      );
+      setHtmlOutput(htmlContent);
+      if (previousHtmlOutput.current !== htmlContent) {
         setView('output');
       }
     } else {
@@ -179,7 +254,7 @@ export default function EntryRunPage() {
     }
 
     previousHtmlOutput.current = htmlOutput;
-  }, [environmentQuery, htmlOutput]);
+  }, [environmentQuery, htmlOutput, agentId]);
 
   useEffect(() => {
     if (environmentId && environmentId !== environment?.environmentId) {

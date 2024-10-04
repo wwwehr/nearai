@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import shortuuid  # type: ignore
 from litellm import Choices, ModelResponse
-from openai.types.chat import (
+from litellm.types.completion import (
     ChatCompletionAssistantMessageParam,
     ChatCompletionSystemMessageParam,
     ChatCompletionUserMessageParam,

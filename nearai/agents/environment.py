@@ -15,13 +15,13 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union, cast
 
 import psutil
-from shared.inference_client import InferenceClient
 import shared.near.sign as near
+from litellm.types.completion import ChatCompletionMessageParam
 from litellm.types.utils import ChatCompletionMessageToolCall, Choices, Function, ModelResponse
 from litellm.utils import CustomStreamWrapper
 from openai.types.beta.vector_store import VectorStore
-from openai.types.chat import ChatCompletionMessageParam
 from shared.client_config import DEFAULT_PROVIDER_MODEL
+from shared.inference_client import InferenceClient
 from shared.models import (
     ChunkingStrategy,
     ExpiresAfter,

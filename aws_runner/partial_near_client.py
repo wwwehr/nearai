@@ -13,9 +13,6 @@ from openapi_client.api.agents_assistants_api import AgentsAssistantsApi
 from openapi_client.api.registry_api import RegistryApi
 from openapi_client.api_client import ApiClient
 from openapi_client.configuration import Configuration
-from shared.client_config import ClientConfig
-from shared.inference_client import InferenceClient
-from shared.models import SimilaritySearch
 
 ENVIRONMENT_FILENAME = "environment.tar.gz"
 

@@ -96,8 +96,29 @@ To run without user interaction pass the task input to the task
 nearai agent task flatirons.near/xela-agent/5 "Build a command line chess engine" ~/tmp/test-agents/xela-agent/chess-engine
 ```
 
+### Running an agent through AI Hub
+To run an agent in the [AI Hub](https://app.near.ai/agents):
+1. Select the desired agent.
+1. Navigate to the **Run** tab.
+1. Interact with the agent using the chat interface
+
+Note:
+. Agent chat through the AI Hub does not yet stream back responses, it takes a few seconds to respond.
+
 
 ## The Environment API
+This is the api your agent will use to interact with NearAI. For example, to add an agent's response you could call completions and add_message.
+```
+prompt = {"role": "system", "content": "You are a travel agent that helps users plan trips."}
+
+conversation = env.list_messages() # the user's new message is added to this list by both the remote and local UIs.
+
+agent_response = env.completion([prompt] + conversation)
+
+env.add_message("agent", agent_response)
+```
+
+
 Your agent will receive an `env` object that has the following methods:
 
   * [`request_user_input`](api.md#nearai.agents.environment.Environment.request_user_input): 
@@ -159,8 +180,10 @@ def my_tool():
 
 env.get_tool_registry().register_tool(my_tool)
 
-response = env.completions_and_run_tools("llama-v3p1-405b-instruct-long", messages, tools=get_tool_registry().get_all_tools())
+response = env.completions_and_run_tools(messages, tools=get_tool_registry().get_all_tools())
 ```
+The tool registry supports OpenAI style tool calling and Llama style. When a llama model is passed to completions_and_run_tools
+a system message is added to the conversation with the tool definitions.
 
 ### Logging
 * [`add_system_log`](api.md#nearai.agents.environment.Environment.add_system_log): adds a system or environment log that is then saved into "system_log.txt".
@@ -338,13 +361,13 @@ nearai agent interactive user.near/agent/1 --local --env_vars='{"foo":"bar"}'
 Consider an agent `zavodil.near/test-env-agent/1` that has configurable environment variables.
 
 ## Agent Frameworks
-Agents can be built using a variety of frameworks and libraries. A particular bundle of libraries is given a name, such as `langgraph-1-4`.
+Agents can be built using a variety of frameworks and libraries. A particular bundle of libraries is given a name, such as `langgraph-0-2-26`.
 To run your agent remotely with a particular framework, set the framework name in the agent's metadata.json file.
 ```json
 {
   "details": {
     "agent": {
-      "framework": "langgraph-1-4"
+      "framework": "langgraph-0-2-26"
     }
   }
 }
@@ -355,5 +378,5 @@ Current frameworks can be found in the repo's [frameworks](https://github.com/ne
 
 ### LangChain / LangGraph
 The example agent [langgraph-min-example](https://app.near.ai/agents/flatirons.near/langgraph-min-example/1.0.1/source)
-has metadata that specifies the `langgraph-1-4` framework to run on langgraph version 1.4. In addition, the agent.py 
+has metadata that specifies the `langgraph-0-1-4` framework to run on langgraph version 1.4. In addition, the agent.py 
 code contains an adaptor class, `AgentChatModel` that maps LangChain inference operations to `env.completions` calls.

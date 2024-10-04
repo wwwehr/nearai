@@ -11,7 +11,7 @@ import boto3
 from aws_runner.partial_near_client import ENVIRONMENT_FILENAME, PartialNearClient
 from nearai.agents.agent import Agent
 from nearai.agents.environment import Environment
-from shared.near.sign import verify_signed_message
+from shared.near.sign import SignatureVerificationResult, verify_signed_message
 
 cloudwatch = boto3.client("cloudwatch", region_name="us-east-2")
 
@@ -33,7 +33,7 @@ def handler(event, context):
     auth_object = auth if isinstance(auth, dict) else json.loads(auth)
 
     start_time_val = time.perf_counter()
-    if not verify_signed_message(
+    verification_result = verify_signed_message(
         auth_object.get("account_id"),
         auth_object.get("public_key"),
         auth_object.get("signature"),
@@ -41,10 +41,16 @@ def handler(event, context):
         auth_object.get("nonce"),
         auth_object.get("recipient"),
         auth_object.get("callback_url"),
-    ):
+    )
+
+    if verification_result == SignatureVerificationResult.VERIFY_ACCESS_KEY_OWNER_SERVICE_NOT_AVAILABLE:
+        write_metric("AdminNotifications", "SignatureAccessKeyVerificationServiceFailed", "Count")
+    elif not verification_result:
         return "Unauthorized: Invalid signature"
-    stop_time_val = time.perf_counter()
-    write_metric("VerifySignatureDuration", stop_time_val - start_time_val)
+    else:
+        # signature is valid
+        stop_time_val = time.perf_counter()
+        write_metric("VerifySignatureDuration", stop_time_val - start_time_val)
 
     environment_id = event.get("environment_id")
     new_message = event.get("new_message")
@@ -126,13 +132,20 @@ def run_with_environment(
     record_run = bool(params.get("record_run", True))
     api_url = str(params.get("api_url", DEFAULT_API_URL))
     user_env_vars: dict = params.get("user_env_vars", {})
+    agent_env_vars: dict = params.get("agent_env_vars", {})
 
     if api_url != DEFAULT_API_URL:
         print(f"WARNING: Using custom API URL: {api_url}")
 
     near_client = PartialNearClient(api_url, auth)
 
-    loaded_agents = [load_agent(near_client, agent) for agent in agents.split(",")]
+    loaded_agents = []
+
+    for agent_name in agents.split(","):
+        agent = load_agent(near_client, agent_name)
+        # agents secrets has higher priority then agent metadata's env_vars
+        agent.env_vars = {**agent.env_vars, **agent_env_vars.get(agent_name, {})}
+        loaded_agents.append(agent)
 
     if environment_id:
         start_time = time.perf_counter()
@@ -153,6 +166,7 @@ def run_with_environment(
 
     env = Environment(RUN_PATH, loaded_agents, near_client, env_vars=user_env_vars)
     start_time = time.perf_counter()
+    env.add_agent_start_system_log(agent_idx=0)
     run_id = env.run(new_message, max_iterations)
     new_environment = save_environment(env, near_client, run_id, environment_id, write_metric) if record_run else None
     clear_temp_agent_files(loaded_agents)

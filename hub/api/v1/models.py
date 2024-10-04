@@ -4,7 +4,6 @@ from os import getenv
 from typing import Dict, Iterator, Optional
 
 from dotenv import load_dotenv
-from pydantic import BaseModel
 from sqlmodel import JSON, Column, Field, Session, SQLModel, create_engine
 
 load_dotenv()
@@ -48,6 +47,34 @@ class RegistryEntry(SQLModel, table=True):
         if object is not None:
             key = f"{key}/{object}"
         return key
+
+
+class HubSecrets(SQLModel, table=True):
+    """Encrypted hub secrets stored in the registry."""
+
+    __tablename__ = "hub_secrets"
+
+    id: int = Field(default=None, primary_key=True)
+
+    owner_namespace: str = Field(nullable=False)
+    """Owner of the secret"""
+
+    namespace: str = Field(nullable=False)
+    """Namespace of the secret recipient"""
+    name: str = Field(default="", nullable=False)
+    """Name of the secret recipient"""
+    version: str = Field(default="", nullable=False)
+    """Version of the secret recipient"""
+
+    key: str = Field(nullable=False)
+    value: str = Field(nullable=False)
+
+    created_at: datetime = Field(default_factory=datetime.now, nullable=False)
+    """Time when the entry was added to the registry."""
+    description: str = Field(default="", nullable=False)
+    """Long description of the entry."""
+    category: str = Field(default="", nullable=False)
+    """Type of the entry, e.g. 'dataset', 'model', 'agent', ...."""
 
 
 class Tags(SQLModel, table=True):
@@ -124,21 +151,3 @@ SUPPORTED_MIME_TYPES = {
 }
 
 SUPPORTED_TEXT_ENCODINGS = ["utf-8", "utf-16", "ascii"]
-
-
-class Source(BaseModel):
-    type: str
-
-
-class GitHubSource(Source):
-    type: str = "github"
-    owner: str
-    repo: str
-    branch: str = "main"
-
-
-class GitLabSource(Source):
-    type: str = "gitlab"
-    owner: str
-    repo: str
-    branch: str = "main"

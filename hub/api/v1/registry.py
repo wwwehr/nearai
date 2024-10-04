@@ -105,7 +105,7 @@ def get(entry_location: EntryLocation = Body()) -> RegistryEntry:
         ).first()
 
         if entry is None:
-            raise HTTPException(status_code=404, detail="Entry not found")
+            raise HTTPException(status_code=404, detail=f"Entry '{entry_location}' not found")
 
         return entry
 

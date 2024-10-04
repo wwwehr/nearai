@@ -16,18 +16,18 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple, Union, cast
 
 import psutil
 import shared.near.sign as near
+from litellm.types.completion import ChatCompletionMessageParam
 from litellm.types.utils import ChatCompletionMessageToolCall, Choices, Function, ModelResponse
 from litellm.utils import CustomStreamWrapper
 from openai.types.beta.vector_store import VectorStore
-from openai.types.chat import ChatCompletionMessageParam
-from shared.client_config import DEFAULT_PROVIDER, DEFAULT_PROVIDER_MODEL
+from shared.client_config import DEFAULT_PROVIDER_MODEL
+from shared.inference_client import InferenceClient
 from shared.models import (
     ChunkingStrategy,
     ExpiresAfter,
     GitHubSource,
     GitLabSource,
 )
-from shared.near.primitives import PROVIDER_MODEL_SEP
 
 from nearai.agents import tool_json_helper
 from nearai.agents.agent import Agent
@@ -49,7 +49,7 @@ class Environment(object):
         self,
         path: str,
         agents: List[Agent],
-        client,
+        client: InferenceClient,
         create_files: bool = True,
         env_vars: Optional[Dict[str, Any]] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
@@ -320,19 +320,14 @@ class Environment(object):
         return result
 
     def get_model_for_inference(self, model: str = "") -> str:
-        """Returns 'provider::model_full_path' or 'model_short_name' if provider is default or not given."""
+        """Returns 'provider::model_full_path'."""
         provider = self._agents[0].model_provider if self._agents else ""
         if model == "":
             model = self._agents[0].model if self._agents else ""
         if model == "":
             return DEFAULT_PROVIDER_MODEL
-
-        # TODO(#225): convert model_short_name -> model_full_path before passing to AI Hub.
-        # Until it's not implemented assume the model given from metadata for not default provider
-        # is already model_full_path, or model_short_name as used by fireworks.
-        if provider == "" or provider == DEFAULT_PROVIDER:
-            return model
-        return provider + PROVIDER_MODEL_SEP + model
+        _, model = self._client.provider_models.match_provider_model(model, provider)
+        return model
 
     def _run_inference_completions(
         self,

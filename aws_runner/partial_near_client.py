@@ -13,9 +13,6 @@ from openapi_client.api.agents_assistants_api import AgentsAssistantsApi
 from openapi_client.api.registry_api import RegistryApi
 from openapi_client.api_client import ApiClient
 from openapi_client.configuration import Configuration
-from shared.client_config import ClientConfig
-from shared.inference_client import InferenceClient
-from shared.models import SimilaritySearch
 
 ENVIRONMENT_FILENAME = "environment.tar.gz"
 
@@ -27,35 +24,9 @@ class PartialNearClient:
         configuration = Configuration(access_token=f"Bearer {json.dumps(auth)}", host=base_url)
         client = ApiClient(configuration)
 
-        client_config = ClientConfig(
-            base_url=base_url + "/v1",
-            auth=auth,
-        )
-
-        self._inference = InferenceClient(client_config)
-
         self._client = client
         self.entry_location_pattern = re.compile("^(?P<namespace>[^/]+)/(?P<name>[^/]+)/(?P<version>[^/]+)$")
         self.auth = auth
-
-    def completions(self, model, messages, stream=False, temperature=None, max_tokens=None, **kwargs):
-        """Calls NearAI Api to return all completions for given messages using the given model."""
-        return self._inference.completions(
-            model,
-            messages,
-            stream=stream,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            **kwargs,
-        )
-
-    def query_vector_store(self, vector_store_id: str, query: str) -> List[SimilaritySearch]:
-        """Query a vector store.
-
-        vector_store_id: The id of the vector store to query.
-        query: The query to search for.
-        """
-        return self._inference.query_vector_store(vector_store_id, query)
 
     def parse_location(self, entry_location: str) -> dict:
         """Create a EntryLocation from a string in the format namespace/name/version."""

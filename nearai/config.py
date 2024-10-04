@@ -6,7 +6,7 @@ from typing import Any, Callable, Dict, Optional
 from openapi_client import ApiClient, Configuration
 from pydantic import BaseModel
 from shared.auth_data import AuthData
-from shared.client_config import DEFAULT_PROVIDER, DEFAULT_PROVIDER_MODEL
+from shared.client_config import DEFAULT_PROVIDER, DEFAULT_PROVIDER_MODEL, ClientConfig
 
 DATA_FOLDER = Path.home() / ".nearai"
 DATA_FOLDER.mkdir(parents=True, exist_ok=True)
@@ -15,7 +15,6 @@ LOCAL_CONFIG_FILE = Path(".nearai") / "config.json"
 REPO_FOLDER = Path(__file__).parent.parent
 PROMPTS_FOLDER = REPO_FOLDER / "nearai" / "prompts"
 ETC_FOLDER = REPO_FOLDER / "etc"
-DEFAULT_NAMESPACE = "near.ai"
 
 
 def get_config_path(local: bool = False) -> Path:
@@ -98,6 +97,14 @@ class Config(BaseModel):
     def get(self, key: str, default: Optional[Any] = None) -> Optional[Any]:
         """Get the value of a key in the config if it exists."""
         return getattr(self, key, default)
+
+    def get_client_config(self) -> ClientConfig:  # noqa: D102
+        return ClientConfig(
+            base_url=CONFIG.nearai_hub.base_url,
+            auth=CONFIG.auth,
+            custom_llm_provider=CONFIG.nearai_hub.custom_llm_provider,
+            default_provider=CONFIG.nearai_hub.default_provider,
+        )
 
 
 # Load default configs

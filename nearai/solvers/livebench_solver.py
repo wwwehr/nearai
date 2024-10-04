@@ -13,9 +13,8 @@ from litellm.types.completion import (
     ChatCompletionSystemMessageParam,
     ChatCompletionUserMessageParam,
 )
-from shared.client_config import DEFAULT_PROVIDER, ClientConfig
+from shared.client_config import ClientConfig
 from shared.inference_client import InferenceClient
-from shared.near.primitives import get_provider_model
 from tqdm import tqdm
 
 from nearai.config import CONFIG
@@ -64,7 +63,8 @@ class LiveBenchSolverStrategy(SolverStrategy):
         super().__init__()
         self.dataset_ref = dataset_ref
         client_config = ClientConfig(base_url=CONFIG.nearai_hub.base_url, auth=CONFIG.auth)
-        self.completion_fn = InferenceClient(client_config).completions
+        self.client = InferenceClient(client_config)
+        self.completion_fn = self.client.completions
         assert "/" not in model
         self.model = model
         self.step = step
@@ -86,7 +86,8 @@ class LiveBenchSolverStrategy(SolverStrategy):
         return ""
 
     def model_provider(self) -> str:  # noqa: D102
-        provider, _ = get_provider_model(DEFAULT_PROVIDER, self.model)
+        # TODO(#311): create a better helper method.
+        provider, _ = self.client.provider_models.match_provider_model(self.model)
         return provider
 
     def get_custom_tasks(self) -> List[dict]:  # noqa: D102

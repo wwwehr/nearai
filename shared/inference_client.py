@@ -1,3 +1,4 @@
+from functools import cached_property
 from typing import Any, Dict, Iterable, List, Optional, Union
 
 import litellm
@@ -15,7 +16,7 @@ from shared.models import (
     GitLabSource,
     SimilaritySearch,
 )
-from shared.near.primitives import get_provider_model
+from shared.provider_models import ProviderModels
 
 
 class InferenceClient(object):
@@ -25,6 +26,13 @@ class InferenceClient(object):
             self._auth = config.auth.generate_bearer_token()
         else:
             self._auth = None
+
+    # This makes sense in the CLI where we don't mind doing this request and caching it.
+    # In the aws_runner this is an extra request every time we run.
+    # TODO(#233): add a choice of a provider model in aws_runner, and then this step can be skipped.
+    @cached_property
+    def provider_models(self) -> ProviderModels:  # noqa: D102
+        return ProviderModels(self._config)
 
     def completions(
         self,
@@ -41,7 +49,7 @@ class InferenceClient(object):
         1. full path `provider::model_full_path`.
         2. `model_short_name`. Default provider will be used.
         """
-        provider, _ = get_provider_model(self._config.default_provider, model)
+        provider, model = self.provider_models.match_provider_model(model)
 
         auth_bearer_token = self._auth
 

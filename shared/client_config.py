@@ -9,6 +9,7 @@ DEFAULT_MODEL_MAX_TOKENS = 16384
 DEFAULT_PROVIDER = "fireworks"
 DEFAULT_MODEL = "llama-v3p1-405b-instruct-long"
 DEFAULT_PROVIDER_MODEL = f"fireworks::accounts/fireworks/models/{DEFAULT_MODEL}"
+DEFAULT_NAMESPACE = "near.ai"
 
 
 class ClientConfig(BaseModel):

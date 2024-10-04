@@ -9,15 +9,11 @@ import {
   List,
 } from '@phosphor-icons/react';
 import { type KeyboardEventHandler, useEffect, useRef, useState } from 'react';
-import { Controller } from 'react-hook-form';
-import {
-  type z,
-  type ZodNullable,
-  type ZodOptional,
-  type ZodString,
-} from 'zod';
+import { Controller, type SubmitHandler } from 'react-hook-form';
+import { type z } from 'zod';
 
 import { AgentWelcome } from '~/components/AgentWelcome';
+import { EntryEnvironmentVariables } from '~/components/EntryEnvironmentVariables';
 import { BreakpointDisplay } from '~/components/lib/BreakpointDisplay';
 import { Button } from '~/components/lib/Button';
 import { Card, CardList } from '~/components/lib/Card';
@@ -25,8 +21,10 @@ import { Code, filePathToCodeLanguage } from '~/components/lib/Code';
 import { Dialog } from '~/components/lib/Dialog';
 import { Flex } from '~/components/lib/Flex';
 import { Form } from '~/components/lib/Form';
-import { HR } from '~/components/lib/HorizontalRule';
-import { IframeWithBlob } from '~/components/lib/IframeWithBlob';
+import {
+  type IframePostMessageEventHandler,
+  IframeWithBlob,
+} from '~/components/lib/IframeWithBlob';
 import { InputTextarea } from '~/components/lib/InputTextarea';
 import { Sidebar } from '~/components/lib/Sidebar';
 import { Slider } from '~/components/lib/Slider';
@@ -35,7 +33,11 @@ import { Tooltip } from '~/components/lib/Tooltip';
 import { Messages } from '~/components/Messages';
 import { SignInPrompt } from '~/components/SignInPrompt';
 import { ThreadsSidebar } from '~/components/ThreadsSidebar';
-import { useCurrentEntry, useEntryParams } from '~/hooks/entries';
+import {
+  useCurrentEntry,
+  useCurrentEntryEnvironmentVariables,
+  useEntryParams,
+} from '~/hooks/entries';
 import { useZodForm } from '~/hooks/form';
 import { useThreads } from '~/hooks/threads';
 import { useQueryParams } from '~/hooks/url';
@@ -45,13 +47,17 @@ import { api } from '~/trpc/react';
 import { copyTextToClipboard } from '~/utils/clipboard';
 import { handleClientError } from '~/utils/error';
 import { formatBytes } from '~/utils/number';
-import { getQueryParams } from '~/utils/url';
+import { unreachable } from '~/utils/unreachable';
 
 export default function EntryRunPage() {
   const { currentEntry } = useCurrentEntry('agent');
   const isAuthenticated = useAuthStore((store) => store.isAuthenticated);
   const { namespace, name, version } = useEntryParams();
   const { queryParams, updateQueryPath } = useQueryParams(['environmentId']);
+  const entryEnvironmentVariables = useCurrentEntryEnvironmentVariables(
+    'agent',
+    Object.keys(queryParams),
+  );
   const environmentId = queryParams.environmentId ?? '';
   const chatMutation = api.hub.chatWithAgent.useMutation();
   const { threadsQuery } = useThreads();
@@ -99,12 +105,14 @@ export default function EntryRunPage() {
     }
   }
 
-  async function onSubmit(values: z.infer<typeof chatWithAgentModel>) {
+  const onSubmit: SubmitHandler<z.infer<typeof chatWithAgentModel>> = async (
+    data,
+  ) => {
     try {
-      if (!values.new_message.trim()) return;
+      if (!data.new_message.trim()) return;
 
       if (environmentId) {
-        values.environment_id = environmentId;
+        data.environment_id = environmentId;
       }
 
       utils.hub.environment.setData(
@@ -115,7 +123,7 @@ export default function EntryRunPage() {
           conversation: [
             ...(environment?.conversation ?? []),
             {
-              content: values.new_message,
+              content: data.new_message,
               role: 'user',
             },
           ],
@@ -126,15 +134,10 @@ export default function EntryRunPage() {
 
       form.setValue('new_message', '');
 
-      values.user_env_vars = getQueryParams();
-      if (currentEntry?.details.env_vars) {
-        values.agent_env_vars = {
-          ...(values.agent_env_vars ?? {}),
-          [values.agent_id]: currentEntry?.details?.env_vars ?? {},
-        };
-      }
+      data.agent_env_vars = entryEnvironmentVariables.metadataVariablesByKey;
+      data.user_env_vars = entryEnvironmentVariables.urlVariablesByKey;
 
-      const response = await chatMutation.mutateAsync(values);
+      const response = await chatMutation.mutateAsync(data);
 
       utils.hub.environment.setData(
         {
@@ -153,7 +156,7 @@ export default function EntryRunPage() {
     } catch (error) {
       handleClientError({ error, title: 'Failed to communicate with agent' });
     }
-  }
+  };
 
   const onKeyDownContent: KeyboardEventHandler<HTMLTextAreaElement> = (
     event,
@@ -170,70 +173,40 @@ export default function EntryRunPage() {
     form.setFocus('new_message');
   };
 
-  interface MessageData {
-    action: string;
-    data: typeof chatWithAgentModel;
-  }
 
-  const refreshEnvironment = (
-    environmentId: ZodOptional<ZodNullable<ZodString>>['_output'] | undefined,
-  ) => {
-    if (environmentId) {
-      updateQueryPath({ environmentId }, 'replace', false);
-      console.log(`Refresh environment: ${environmentId}`);
+  const onIframePostMessage: IframePostMessageEventHandler<{
+    action: 'remote_agent_run' | 'refresh_environment_id';
+    data: unknown;
+  }> = async (event) => {
+    try {
+      const chat = chatWithAgentModel.parse(event.data.data);
+
+      const conditionallyUpdateEnvironmentId = (
+        environmentId: string | null | undefined,
+      ) => {
+        if (!environmentId) return;
+        updateQueryPath({ environmentId }, 'replace', false);
+      };
+
+      switch (event.data.action) {
+        case 'remote_agent_run':
+          chat.max_iterations = Number(chat.max_iterations) || 1;
+          chat.environment_id = chat.environment_id ?? environmentId;
+          const response = await chatMutation.mutateAsync(chat);
+          conditionallyUpdateEnvironmentId(response.environmentId);
+          break;
+
+        case 'refresh_environment_id':
+          conditionallyUpdateEnvironmentId(chat.environment_id);
+          break;
+
+        default:
+          unreachable(event.data.action);
+      }
+    } catch (error) {
+      console.error(`Unable to handle message in onIframePostMessage()`, error);
     }
   };
-
-  // iframe messages
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== 'null') {
-        // our sandbox iframe always has origin "null"
-        return;
-      }
-
-      const message_data = event.data as MessageData;
-
-      if (message_data.action === 'remote_agent_run') {
-        const parsedData = chatWithAgentModel.safeParse(message_data.data);
-
-        if (!parsedData.success) {
-          console.error('Invalid message data:', parsedData.error);
-          return;
-        }
-
-        const requestData = parsedData.data;
-        requestData.max_iterations = Number(requestData.max_iterations) || 1;
-        requestData.environment_id =
-          requestData.environment_id ?? environmentId;
-
-        chatMutation
-          .mutateAsync(requestData)
-          .then((response) => {
-            refreshEnvironment(response.environmentId);
-          })
-          .catch((error) => {
-            console.error('Error in mutation:', error);
-          });
-
-      } else if (message_data.action === 'refresh_environment_id') {
-        const parsedData = chatWithAgentModel.safeParse(message_data.data);
-
-        if (!parsedData.success) {
-          console.error('Invalid message data:', parsedData.error);
-          return;
-        }
-
-        refreshEnvironment(parsedData.data.environment_id);
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-
-    return () => {
-      window.removeEventListener('message', handleMessage);
-    };
-  }, [auth, environmentId, chatMutation]);
 
   useEffect(() => {
     const files = environmentQuery?.data?.files;
@@ -301,7 +274,10 @@ export default function EntryRunPage() {
         <Sidebar.Main>
           {view === 'output' ? (
             <>
-              <IframeWithBlob html={htmlOutput} />
+              <IframeWithBlob
+                html={htmlOutput}
+                onPostMessage={onIframePostMessage}
+              />
 
               {latestAssistantMessages.length > 0 && (
                 <Messages
@@ -405,66 +381,75 @@ export default function EntryRunPage() {
           openForSmallScreens={parametersOpenForSmallScreens}
           setOpenForSmallScreens={setParametersOpenForSmallScreens}
         >
-          <Text size="text-xs" weight={600} uppercase>
-            Output
-          </Text>
+          <Flex direction="column" gap="l">
+            <Flex direction="column" gap="m">
+              <Text size="text-xs" weight={600} uppercase>
+                Output
+              </Text>
 
-          {environment?.files && Object.keys(environment.files).length ? (
-            <CardList>
-              {Object.values(environment.files).map((file) => (
-                <Card
-                  padding="s"
-                  gap="s"
-                  key={file.name}
-                  background="sand-2"
-                  onClick={() => {
-                    setOpenedFileName(file.name);
-                  }}
-                >
-                  <Flex align="center" gap="s">
-                    <Text
-                      size="text-s"
-                      color="violet-11"
-                      clickableHighlight
-                      weight={500}
-                      clampLines={1}
-                      style={{ marginRight: 'auto' }}
+              {environment?.files && Object.keys(environment.files).length ? (
+                <CardList>
+                  {Object.values(environment.files).map((file) => (
+                    <Card
+                      padding="s"
+                      gap="s"
+                      key={file.name}
+                      background="sand-2"
+                      onClick={() => {
+                        setOpenedFileName(file.name);
+                      }}
                     >
-                      {file.name}
-                    </Text>
+                      <Flex align="center" gap="s">
+                        <Text
+                          size="text-s"
+                          color="violet-11"
+                          clickableHighlight
+                          weight={500}
+                          clampLines={1}
+                          style={{ marginRight: 'auto' }}
+                        >
+                          {file.name}
+                        </Text>
 
-                    <Text size="text-xs">{formatBytes(file.size)}</Text>
-                  </Flex>
-                </Card>
-              ))}
-            </CardList>
-          ) : (
-            <Text size="text-s" color="sand-10">
-              No files generated yet.
-            </Text>
-          )}
+                        <Text size="text-xs">{formatBytes(file.size)}</Text>
+                      </Flex>
+                    </Card>
+                  ))}
+                </CardList>
+              ) : (
+                <Text size="text-s" color="sand-10">
+                  No files generated yet.
+                </Text>
+              )}
+            </Flex>
 
-          <HR />
+            <EntryEnvironmentVariables
+              entry={currentEntry}
+              variables={entryEnvironmentVariables}
+            />
 
-          <Text size="text-xs" weight={600} uppercase>
-            Parameters
-          </Text>
+            <Flex direction="column" gap="m">
+              <Text size="text-xs" weight={600} uppercase>
+                Parameters
+              </Text>
 
-          <Controller
-            control={form.control}
-            defaultValue={1}
-            name="max_iterations"
-            render={({ field }) => (
-              <Slider
-                label="Max Iterations"
-                max={20}
-                min={1}
-                step={1}
-                assistive="The maximum number of iterations to run the agent for, usually 1. Each iteration will loop back through your agent allowing it to act and reflect on LLM results."
-                {...field}
+              <Controller
+                control={form.control}
+                defaultValue={1}
+                name="max_iterations"
+                render={({ field }) => (
+                  <Slider
+                    label="Max Iterations"
+                    max={20}
+                    min={1}
+                    step={1}
+                    assistive="The maximum number of iterations to run the agent for, usually 1. Each iteration will loop back through your agent allowing it to act and reflect on LLM results."
+                    {...field}
+                  />
+                )}
               />
-            )}
-          />
+            </Flex>
+          </Flex>
         </Sidebar.Sidebar>
       </Sidebar.Root>
 

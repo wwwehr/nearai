@@ -11,6 +11,8 @@ import boto3
 from aws_runner.partial_near_client import ENVIRONMENT_FILENAME, PartialNearClient
 from nearai.agents.agent import Agent
 from nearai.agents.environment import Environment
+from shared.client_config import ClientConfig
+from shared.inference_client import InferenceClient
 from shared.near.sign import SignatureVerificationResult, verify_signed_message
 
 cloudwatch = boto3.client("cloudwatch", region_name="us-east-2")
@@ -179,7 +181,13 @@ def run_with_environment(
         except tarfile.ReadError:
             print("The file is not a valid tar archive.")
 
-    env = Environment(RUN_PATH, loaded_agents, near_client, env_vars=user_env_vars)
+    client_config = ClientConfig(
+        base_url=api_url + "/v1",
+        auth=auth,
+    )
+    inference_client = InferenceClient(client_config)
+
+    env = Environment(RUN_PATH, loaded_agents, inference_client, env_vars=user_env_vars)
     start_time = time.perf_counter()
     env.add_agent_start_system_log(agent_idx=0)
     run_id = env.run(new_message, max_iterations)

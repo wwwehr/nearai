@@ -10,8 +10,8 @@ import botocore.exceptions
 from dotenv import load_dotenv
 from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
-from nearai.config import DEFAULT_NAMESPACE
 from pydantic import BaseModel
+from shared.client_config import DEFAULT_NAMESPACE
 from sqlmodel import delete, select, text
 
 from hub.api.v1.auth import AuthToken, revokable_auth
@@ -33,7 +33,8 @@ DEFAULT_NAMESPACE_WRITE_ACCESS_LIST = [
 load_dotenv()
 S3_BUCKET = getenv("S3_BUCKET")
 
-s3 = boto3.client("s3")
+S3_ENDPOINT = getenv("S3_ENDPOINT")
+s3 = boto3.client("s3", endpoint_url=S3_ENDPOINT)
 
 v1_router = APIRouter(
     prefix="/registry",

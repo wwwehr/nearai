@@ -15,7 +15,15 @@ from openapi_client import EntryLocation, EntryMetadataInput
 from openapi_client.api.benchmark_api import BenchmarkApi
 from openapi_client.api.default_api import DefaultApi
 from openapi_client.api.evaluation_api import EvaluationApi
-from shared.client_config import DEFAULT_MODEL, DEFAULT_MODEL_MAX_TOKENS, DEFAULT_MODEL_TEMPERATURE, DEFAULT_PROVIDER
+from shared.client_config import (
+    DEFAULT_MODEL,
+    DEFAULT_MODEL_MAX_TOKENS,
+    DEFAULT_MODEL_TEMPERATURE,
+    DEFAULT_NAMESPACE,
+    DEFAULT_PROVIDER,
+)
+from shared.naming import NamespacedName, create_registry_name
+from shared.provider_models import ProviderModels, get_provider_namespaced_model
 from tabulate import tabulate
 
 from nearai.config import (
@@ -24,7 +32,7 @@ from nearai.config import (
 )
 from nearai.finetune import FinetuneCli
 from nearai.lib import check_metadata, parse_location, parse_tags
-from nearai.registry import registry
+from nearai.registry import get_registry_folder, registry
 from nearai.tensorboard_feed import TensorboardCli
 
 
@@ -39,6 +47,22 @@ class RegistryCli:
             return
 
         print(metadata.model_dump_json(indent=2))
+        if metadata.category == "model":
+            available_provider_matches = ProviderModels(CONFIG.get_client_config()).available_provider_matches(
+                NamespacedName(name=metadata.name, namespace=entry_location.namespace)
+            )
+            if len(available_provider_matches) > 0:
+                header = ["provider", "name"]
+
+                table = []
+                for provider, name in available_provider_matches.items():
+                    table.append(
+                        [
+                            fill(provider),
+                            fill(name),
+                        ]
+                    )
+                print(tabulate(table, headers=header, tablefmt="simple_grid"))
 
     def metadata_template(self, local_path: str = ".", category: str = "", description: str = ""):
         """Create a metadata template."""
@@ -119,6 +143,15 @@ class RegistryCli:
 
         print(tabulate(table, headers=header, tablefmt="simple_grid"))
 
+        if category == "model" and len(entries) < total and namespace == "" and tags == "" and star == "":
+            unregistered_common_provider_models = ProviderModels(
+                CONFIG.get_client_config()
+            ).get_unregistered_common_provider_models(registry.dict_models())
+            if len(unregistered_common_provider_models):
+                print(
+                    f"There are unregistered common provider models: {unregistered_common_provider_models}. Run 'nearai registry upload-unregistered-common-provider-models' to update registry."  # noqa: E501
+                )
+
     def update(self, local_path: str = ".") -> None:
         """Update metadata of a registry item."""
         path = Path(local_path)
@@ -146,6 +179,57 @@ class RegistryCli:
         entry_metadata = EntryMetadataInput.model_validate(metadata)
         result = registry.update(entry_location, entry_metadata)
         print(json.dumps(result, indent=2))
+
+    def upload_unregistered_common_provider_models(self, dry_run: bool = True) -> None:
+        """Creates new registry items for unregistered common provider models."""
+        provider_matches_list = ProviderModels(CONFIG.get_client_config()).get_unregistered_common_provider_models(
+            registry.dict_models()
+        )
+        if len(provider_matches_list) == 0:
+            print("No new models to upload.")
+            return
+
+        print("Going to create new registry items:")
+        header = ["entry", "description"]
+        table = []
+        paths = []
+        for provider_matches in provider_matches_list:
+            provider_model = provider_matches.get(DEFAULT_PROVIDER) or next(iter(provider_matches.values()))
+            _, model = get_provider_namespaced_model(provider_model)
+            assert model.namespace == ""
+            model.name = create_registry_name(model.name)
+            model.namespace = DEFAULT_NAMESPACE
+            version = "1.0.0"
+            description = " & ".join(provider_matches.values())
+            table.append(
+                [
+                    fill(f"{model.namespace}/{model.name}/{version}"),
+                    fill(description, 50),
+                ]
+            )
+
+            path = get_registry_folder() / model.namespace / model.name / version
+            path.mkdir(parents=True, exist_ok=True)
+            paths.append(path)
+            metadata_path = path / "metadata.json"
+            with open(metadata_path, "w") as f:
+                metadata: Dict[str, Any] = {
+                    "name": model.name,
+                    "version": version,
+                    "description": description,
+                    "category": "model",
+                    "tags": [],
+                    "details": {},
+                    "show_entry": True,
+                }
+                json.dump(metadata, f, indent=2)
+
+        print(tabulate(table, headers=header, tablefmt="simple_grid"))
+        if dry_run:
+            print("Please verify, then repeat the command with --dry_run=False")
+        else:
+            for path in paths:
+                self.upload(str(path))
 
     def upload(self, local_path: str = ".") -> None:
         """Upload item to the registry."""
@@ -345,18 +429,11 @@ class AgentCli:
         print_system_log: bool = True,
     ) -> None:
         """Runs agent interactively with environment from given path."""
-        from shared.client_config import ClientConfig
-
         from nearai.agents.local_runner import LocalRunner
 
         agent_list = self._load_agents(agents, local)
 
-        client_config = ClientConfig(
-            base_url=CONFIG.nearai_hub.base_url,
-            auth=CONFIG.auth,
-            custom_llm_provider=CONFIG.nearai_hub.custom_llm_provider,
-            default_provider=CONFIG.nearai_hub.default_provider,
-        )
+        client_config = CONFIG.get_client_config()
 
         runner = LocalRunner(
             path,

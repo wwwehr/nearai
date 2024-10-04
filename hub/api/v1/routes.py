@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security import HTTPBearer
 from pydantic import BaseModel, field_validator
-from shared.near.primitives import PROVIDER_MODEL_SEP, get_provider_model
+from shared.provider_models import PROVIDER_MODEL_SEP, get_provider_model
 
 from hub.api.v1.auth import AuthToken, revokable_auth, validate_signature
 from hub.api.v1.completions import Message, Provider, get_llm_ai, handle_stream
@@ -111,7 +111,11 @@ async def completions(
     except NotImplementedError:
         raise HTTPException(status_code=400, detail="Provider not supported") from None
 
-    resp = await llm.completions.create(**request.model_dump(exclude={"provider", "response_format"}))
+    ## remove tools from the model as it is not supported by the completions API
+    model = request.model_dump(exclude={"provider", "response_format"})
+    model.pop("tools", None)
+
+    resp = await llm.completions.create(**model)
 
     if request.stream:
 

@@ -96,7 +96,6 @@ def load_agent(client, agent, params: dict = None):
         agent_files = client.get_agent(agent, params)
         stop_time = time.perf_counter()
         write_metric("GetAgentFromRegistry_Duration", stop_time - start_time)
-
         agent_metadata = client.get_agent_metadata(agent)
     elif params["data_source"] == "local_files":
         agent_files = get_local_agent_files(agent)

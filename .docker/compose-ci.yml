@@ -71,6 +71,11 @@ services:
       DATABASE_NAME: hub
       PROVIDER_LOCAL_BASE_URL: http://vllm:8000/v1
       PROVIDER_LOCAL_API_KEY: n/a
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   
   ci:
     depends_on:

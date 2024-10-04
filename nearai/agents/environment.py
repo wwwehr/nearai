@@ -114,6 +114,9 @@ class Environment(object):
 
         # Log the message
         logger.log(level, log)
+        # Force the handler to write to disk
+        for handler in logger.handlers:
+            handler.flush()
 
     def add_agent_log(self, log: str, level: int = logging.INFO) -> None:
         """Add agent log with timestamp and log level."""
@@ -128,6 +131,9 @@ class Environment(object):
 
         # Log the message
         logger.log(level, log)
+        # Force the handler to write to disk
+        for handler in logger.handlers:
+            handler.flush()
 
     def add_agent_start_system_log(self, agent_idx: int) -> None:
         """Adds agent start system log."""

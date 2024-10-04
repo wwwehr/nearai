@@ -1,4 +1,6 @@
 import { TarReader } from '@gera2ld/tarjs';
+import { promises as fs } from 'fs';
+import path from 'path';
 import { z } from 'zod';
 import { createZodFetcher } from 'zod-fetch';
 
@@ -99,6 +101,69 @@ async function downloadEnvironment(environmentId: string) {
   return environment;
 }
 
+const entryMetadata = entryModel.partial();
+type EntryMetadata = z.infer<typeof entryMetadata>;
+async function readMetadataJson(
+  filePath: string,
+): Promise<EntryMetadata | null> {
+  try {
+    const data = await fs.readFile(filePath, 'utf8');
+    return entryMetadata.parse(JSON.parse(data));
+  } catch (err) {
+    console.error(`Error reading ${filePath}`);
+    return null;
+  }
+}
+async function processDirectory(
+  dirPath: string,
+  results: EntryMetadata[],
+  registryPath: string,
+): Promise<EntryMetadata[]> {
+  try {
+    const files = await fs.readdir(dirPath, { withFileTypes: true });
+    console.log('dirPath', dirPath);
+
+    await Promise.all(
+      files.map(async (file) => {
+        // skip hidden items
+        if (file.name.startsWith('.')) return;
+
+        const filePath = path.join(dirPath, file.name);
+        if (file.isDirectory()) {
+          await processDirectory(filePath, results, registryPath);
+        } else if (file.name === 'metadata.json') {
+          try {
+            const metadata: EntryMetadata | null =
+              await readMetadataJson(filePath);
+            if (metadata) {
+              metadata.id = results.length + 1;
+
+              const agentRelativePath = path.relative(registryPath, dirPath);
+              const agentPathParts = agentRelativePath.split(path.sep);
+              if (
+                agentPathParts.length > 0 &&
+                agentPathParts[0]?.endsWith('.near')
+              ) {
+                // ignore version from metadata if actual version in filePath is different
+                metadata.version = agentPathParts[agentPathParts.length - 1];
+
+                metadata.namespace = agentPathParts[0];
+                results.push(metadata);
+              }
+            }
+          } catch (err) {
+            // Ignore error if agent.py doesn't exist or any other read error
+          }
+        }
+      }),
+    );
+  } catch (err) {
+    console.error(`Error reading ${dirPath}`);
+  }
+
+  return results;
+}
+
 export const hubRouter = createTRPCRouter({
   chat: protectedProcedure.input(chatModel).mutation(async ({ ctx, input }) => {
     const url = env.ROUTER_URL + '/chat/completions';
@@ -180,6 +245,11 @@ export const hubRouter = createTRPCRouter({
         url.searchParams.append('namespace', input.namespace);
 
       if (input.tags) url.searchParams.append('tags', input.tags.join(','));
+
+      if (input.category == 'agent' && env.DATA_SOURCE == 'local_files') {
+        const registryPath = path.join(process.env.HOME, '.nearai', 'registry');
+        return await processDirectory(registryPath, [], registryPath);
+      }
 
       if (input.starredBy) {
         url.searchParams.append('starred_by', input.starredBy);

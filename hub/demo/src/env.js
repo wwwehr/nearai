@@ -9,6 +9,7 @@ export const env = createEnv({
   server: {
     NODE_ENV: z.enum(['development', 'test', 'production']),
     ROUTER_URL: z.string().url(),
+    DATA_SOURCE: z.string().default('registry'),
   },
 
   /**
@@ -30,6 +31,7 @@ export const env = createEnv({
     NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_VERCEL_URL
       ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/`
       : process.env.NEXT_PUBLIC_BASE_URL,
+    DATA_SOURCE: process.env.DATA_SOURCE ?? 'registry',
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

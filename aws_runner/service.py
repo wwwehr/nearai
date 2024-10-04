@@ -86,14 +86,29 @@ def write_metric(metric_name, value, unit="Milliseconds"):
         print(f"Would have written metric {metric_name} with value {value} to cloudwatch")
 
 
-def load_agent(client, agent):
-    start_time = time.perf_counter()
-    agent_files = client.get_agent(agent)
-    stop_time = time.perf_counter()
-    write_metric("GetAgentFromRegistry_Duration", stop_time - start_time)
-    agent_metadata = client.get_agent_metadata(agent)
+def load_agent(client, agent, params: dict = None):
+    agent_metadata = None
 
-    return Agent(agent, agent_files, agent_metadata)
+    if params["data_source"] == "registry":
+        start_time = time.perf_counter()
+        agent_files = client.get_agent(agent, params)
+        stop_time = time.perf_counter()
+        write_metric("GetAgentFromRegistry_Duration", stop_time - start_time)
+
+        agent_metadata = client.get_agent_metadata(agent)
+    elif params["data_source"] == "local_files":
+        agent_files = get_local_agent_files(agent)
+
+        for file in agent_files:
+            if os.path.basename(file["filename"]) == "metadata.json":
+                agent_metadata = json.loads(file["content"])
+                print(f"Loaded {agent_metadata} agents from {agent}")
+                break
+
+    if not agent_metadata:
+        print(f"Missing metadata for {agent}")
+
+    return Agent(agent, agent_files, agent_metadata or {})
 
 
 def clear_temp_agent_files(agents):
@@ -142,7 +157,7 @@ def run_with_environment(
     loaded_agents = []
 
     for agent_name in agents.split(","):
-        agent = load_agent(near_client, agent_name)
+        agent = load_agent(near_client, agent_name, params)
         # agents secrets has higher priority then agent metadata's env_vars
         agent.env_vars = {**agent.env_vars, **agent_env_vars.get(agent_name, {})}
         loaded_agents.append(agent)
@@ -173,3 +188,28 @@ def run_with_environment(
     stop_time = time.perf_counter()
     write_metric("ExecuteAgentDuration", stop_time - start_time)
     return new_environment
+
+
+def get_local_agent_files(agent_identifier: str):
+    """Fetches an agent from local filesystem."""
+    # base_path = os.path.join("/root/.nearai/registry", agent_identifier)
+    # os.path.expanduser(f"/root/.nearai/registry/{agent_identifier}")
+    # base_path = os.path.expanduser(f"/nearai_registry/{agent_identifier}")
+    base_path = os.path.expanduser(f"~/.nearai/registry/{agent_identifier}")
+    print("base_path", base_path)
+
+    results = []
+
+    for root, _dirs, files in os.walk(base_path):
+        for file in files:
+            path = os.path.join(root, file)
+            try:
+                with open(path, "r") as f:
+                    result = f.read()
+                results.append({"filename": os.path.basename(path), "content": result})
+            except Exception as e:
+                print(f"Error {path}: {e}")
+
+    print("results", results)
+
+    return results

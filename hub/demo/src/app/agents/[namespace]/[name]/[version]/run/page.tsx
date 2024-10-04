@@ -68,7 +68,6 @@ export default function EntryRunPage() {
     defaultValues: { agent_id: agentId },
   });
 
-  const auth = useAuthStore((store) => store.auth);
   const [htmlOutput, setHtmlOutput] = useState('');
   const previousHtmlOutput = useRef('');
   const [view, setView] = useState<'conversation' | 'output'>('conversation');
@@ -172,7 +171,6 @@ export default function EntryRunPage() {
     form.setValue('new_message', '');
     form.setFocus('new_message');
   };
-
 
   const onIframePostMessage: IframePostMessageEventHandler<{
     action: 'remote_agent_run' | 'refresh_environment_id';

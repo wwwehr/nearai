@@ -25,6 +25,11 @@ docs/agent_quickstart.sh
 nearai agent interactive example_agent /tmp/example_agent_run_1 --local
 ```
 
+When running the agent locally, session files such as chat history are stored in the `/tmp/nearai/conversations/` folder. 
+If you want to reset these files and clear the conversation history, you can run the agent with the `--reset` flag. 
+This will remove the existing session data and start a new one.
+
+
 ### Example agent.py
 ```python
 # In local interactive mode, the first user input is collected before the agent runs.

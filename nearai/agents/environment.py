@@ -222,6 +222,10 @@ class Environment(object):
         """
         return self._client.query_vector_store(vector_store_id, query)
 
+    def upload_file(self, file_content: str, purpose: str = "assistants"):
+        """Uploads a file to the registry."""
+        return self._client.upload_file(file_content, purpose)
+
     def create_vector_store_from_source(
         self,
         name: str,
@@ -251,6 +255,41 @@ class Environment(object):
             name=name,
             source=source,
             source_auth=source_auth,
+            chunking_strategy=chunking_strategy,
+            expires_after=expires_after,
+            metadata=metadata,
+        )
+
+    def add_file_to_vector_store(self, vector_store_id: str, file_id: str):
+        """Adds a file to the vector store."""
+        return self._client.add_file_to_vector_store(vector_store_id, file_id)
+
+    def create_vector_store(
+        self,
+        name: str,
+        file_ids: list,
+        chunking_strategy: Optional[ChunkingStrategy] = None,
+        expires_after: Optional[ExpiresAfter] = None,
+        metadata: Optional[Dict[str, str]] = None,
+    ) -> VectorStore:
+        """Creates a vector store from the given source.
+
+        Args:
+        ----
+            name: The name of the vector store.
+            file_ids: List of file ids to create the vector store.
+            chunking_strategy: The chunking strategy to use.
+            expires_after: The expiration policy.
+            metadata: Additional metadata.
+
+        Returns:
+        -------
+            VectorStore: The created vector store.
+
+        """
+        return self._client.create_vector_store(
+            name=name,
+            file_ids=file_ids,
             chunking_strategy=chunking_strategy,
             expires_after=expires_after,
             metadata=metadata,

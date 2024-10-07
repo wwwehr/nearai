@@ -1,3 +1,4 @@
+import io
 from functools import cached_property
 from typing import Any, Dict, Iterable, List, Optional, Union
 
@@ -7,6 +8,7 @@ from litellm import CustomStreamWrapper, ModelResponse
 from litellm import completion as litellm_completion
 from litellm.types.completion import ChatCompletionMessageParam
 from openai.types.beta.vector_store import VectorStore
+from openai.types.file_object import FileObject
 
 from shared.client_config import DEFAULT_MODEL_MAX_TOKENS, DEFAULT_MODEL_TEMPERATURE, ClientConfig
 from shared.models import (
@@ -15,6 +17,7 @@ from shared.models import (
     GitHubSource,
     GitLabSource,
     SimilaritySearch,
+    VectorStoreFileCreate,
 )
 from shared.provider_models import ProviderModels
 
@@ -102,6 +105,44 @@ class InferenceClient(object):
         except requests.RequestException as e:
             raise ValueError(f"Error querying vector store: {e}") from None
 
+    def upload_file(
+        self, file_content: str, purpose: str, encoding: str = "utf-8", file_name="file.txt", file_type="text/plain"
+    ) -> FileObject:
+        """Uploads a file."""
+        headers = {"Authorization": f"Bearer {self._auth}"}
+
+        endpoint = f"{self._config.base_url}/files"
+        file_data = io.BytesIO(file_content.encode(encoding))
+        files = {
+            "file": (file_name, file_data, file_type),
+            "purpose": (None, purpose),
+        }
+
+        try:
+            response = requests.post(endpoint, headers=headers, files=files)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            raise ValueError(f"Failed to upload a file: {e}") from None
+
+    def add_file_to_vector_store(self, vector_store_id: str, file_id: str) -> FileObject:
+        """Uploads a file to vector store."""
+        file_data = VectorStoreFileCreate(file_id=file_id)
+
+        headers = {"Authorization": f"Bearer {self._auth}"}
+
+        endpoint = f"{self._config.base_url}/vector_stores/{vector_store_id}/files"
+
+        try:
+            response = requests.post(endpoint, headers=headers, json=file_data.model_dump())
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            if e.response is not None:
+                print("Response content:", e.response.text)  # Log the response content for debugging
+
+            raise ValueError(f"Failed to add file to vector store: {e}") from None
+
     def create_vector_store_from_source(
         self,
         name: str,
@@ -149,6 +190,46 @@ class InferenceClient(object):
             return VectorStore(**response.json())
         except requests.RequestException as e:
             raise ValueError(f"Failed to create vector store: {e}") from None
+
+    def create_vector_store(
+        self,
+        name: str,
+        file_ids: List[str],
+        expires_after: Optional[ExpiresAfter] = None,
+        chunking_strategy: Optional[ChunkingStrategy] = None,
+        metadata: Optional[Dict[str, str]] = None,
+    ):
+        """Creates Vestor Store.
+
+        :param name: Vector store name.
+        :param file_ids: Files to be added to the vector store.
+        :param expires_after: Expiration policy.
+        :param chunking_strategy: Chunking strategy.
+        :param metadata: Additional metadata.
+        :return: Returns the created vector store or error.
+        """
+        headers = {
+            "Authorization": f"Bearer {self._auth}",
+            "Content-Type": "application/json",
+        }
+
+        endpoint = f"{self._config.base_url}/vector_stores"
+
+        data = {
+            "name": name,
+            "file_ids": file_ids,
+            "expires_after": expires_after,
+            "chunking_strategy": chunking_strategy,
+            "metadata": metadata,
+        }
+
+        try:
+            response = requests.post(endpoint, headers=headers, json=data)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            print(f"Vector Store creation failed: {e}")
+            return None
 
     def get_vector_store(self, vector_store_id: str) -> VectorStore:
         """Gets a vector store by id."""

@@ -4,20 +4,16 @@ import json
 import os
 import subprocess
 import time
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Dict, List, Tuple, Union
 
 import shortuuid  # type: ignore
-from litellm import Choices, ModelResponse
 from litellm.types.completion import (
     ChatCompletionAssistantMessageParam,
     ChatCompletionSystemMessageParam,
     ChatCompletionUserMessageParam,
 )
-from shared.client_config import ClientConfig
-from shared.inference_client import InferenceClient
 from tqdm import tqdm
 
-from nearai.config import CONFIG
 from nearai.solvers import (
     SolverScoringMethod,
     SolverStrategy,
@@ -58,40 +54,33 @@ class LiveBenchSolverStrategy(SolverStrategy):
     """Solver strategy for the live bench dataset."""
 
     def __init__(  # noqa: D107
-        self, dataset_ref: str, model: str, step: str = "all"
+        self, dataset_ref: str, model: str = "", agent: str = "", step: str = "all"
     ) -> None:
-        super().__init__()
+        super().__init__(model, agent)
         self.dataset_ref = dataset_ref
-        client_config = ClientConfig(base_url=CONFIG.nearai_hub.base_url, auth=CONFIG.auth)
-        self.client = InferenceClient(client_config)
-        self.completion_fn = self.client.completions
-        assert "/" not in model
-        self.model = model
+        assert "/" not in self.model
+        assert "/" not in self.agent
         self.step = step
 
     def evaluation_name(self) -> str:  # noqa: D102
         return "live_bench"
 
     def compatible_datasets(self) -> List[str]:  # noqa: D102
-        return ["near.ai/live_bench/1.0.0"]
-
-    def model_metadata(self) -> Optional[Dict[str, Any]]:  # noqa: D102
-        return {"name": self.model}
-
-    def agent_metadata(self) -> Optional[Dict[str, Any]]:  # noqa: D102
-        return None
-
-    def evaluated_entry_namespace(self) -> str:  # noqa: D102
-        # Only provider models are supported.
-        return ""
-
-    def model_provider(self) -> str:  # noqa: D102
-        # TODO(#311): create a better helper method.
-        provider, _ = self.client.provider_models.match_provider_model(self.model)
-        return provider
+        return ["live_bench"]
 
     def get_custom_tasks(self) -> List[dict]:  # noqa: D102
         return [{"summary": "all"}]
+
+    @property
+    def evaluated_entry_name(self) -> str:  # noqa: D102
+        name = ""
+        if self.agent != "":
+            name = self.agent
+            if self.model != "":
+                name += f"_with_model_{self.model}"
+        else:
+            name = self.model
+        return name
 
     @SolverStrategyClassProperty
     def scoring_method(self) -> SolverScoringMethod:  # noqa: D102
@@ -120,7 +109,7 @@ class LiveBenchSolverStrategy(SolverStrategy):
         for question_file in list_of_question_files:
             questions = load_questions_jsonl(question_file)
             bench_name = os.path.dirname(question_file).split(str(self.dataset_ref))[-1]
-            answer_file = f"~/.nearai/live_bench_answers/{bench_name}/model_answer/{self.model}.jsonl"
+            answer_file = f"~/.nearai/live_bench_answers/{bench_name}/model_answer/{self.evaluated_entry_name}.jsonl"
             print(f"Questions from {question_file}")
             print(f"Output to {answer_file}")
             self.run_eval(questions, answer_file)
@@ -147,7 +136,7 @@ class LiveBenchSolverStrategy(SolverStrategy):
             ans_json = {
                 "question_id": question["question_id"],
                 "answer_id": shortuuid.uuid(),
-                "model_id": self.model,
+                "model_id": self.evaluated_entry_name,
                 "choices": choices,
                 "tstamp": time.time(),
             }
@@ -157,23 +146,10 @@ class LiveBenchSolverStrategy(SolverStrategy):
                 fout.write(json.dumps(ans_json) + "\n")
 
     def answer_question(self, question) -> List[dict]:  # noqa: D102
-        conv = []
-        # Append system prompt here if needed.
         turns = []
+        session = self.start_inference_session(question["question_id"])
         for qs in question["turns"]:
-            conv.append({"role": "user", "content": qs})
-
-            completion_response = cast(
-                ModelResponse,
-                self.completion_fn(
-                    self.model,
-                    messages=[convert_message(msg) for msg in conv],
-                    temperature=0.0,
-                ),
-            )
-            output = str(cast(List[Choices], completion_response.choices)[0].message.content)
-
-            conv.append({"role": "assistant", "content": output})
+            output = session.run_task(qs)
             turns.append(output)
 
         return [{"index": 0, "turns": turns}]
@@ -186,7 +162,7 @@ class LiveBenchSolverStrategy(SolverStrategy):
 
         try:
             # Run the script without capturing output
-            subprocess.run(["/bin/bash", script_path, self.model, self.dataset_ref], check=True)
+            subprocess.run(["/bin/bash", script_path, self.evaluated_entry_name, self.dataset_ref], check=True)
             return True
 
         except subprocess.CalledProcessError as e:
@@ -201,7 +177,7 @@ class LiveBenchSolverStrategy(SolverStrategy):
 
         try:
             # Run the script without capturing output
-            subprocess.run(["/bin/bash", script_path, self.model], check=True)
+            subprocess.run(["/bin/bash", script_path, self.evaluated_entry_name], check=True)
 
         except subprocess.CalledProcessError as e:
             print(f"An error occurred while running the script: {e}")
@@ -213,7 +189,7 @@ class LiveBenchSolverStrategy(SolverStrategy):
         file_path = os.path.expanduser(file_path)
         with open(file_path, "r") as f:
             reader = csv.DictReader(f)
-            matching_rows = [row for row in reader if row["model"] == self.model]
+            matching_rows = [row for row in reader if row["model"] == self.evaluated_entry_name]
             return matching_rows[-1] if matching_rows else {}  # Get the last matching row
 
     def create_result_dict(self) -> Tuple[bool, dict]:  # noqa: D102

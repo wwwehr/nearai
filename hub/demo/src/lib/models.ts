@@ -142,7 +142,7 @@ export const entryModel = z.object({
   category: entryCategory,
   namespace: z.string(),
   name: z.string(),
-  version: z.string(),
+  version: z.string().default('0'),
   description: z.string().default(''),
   tags: z.string().array().default([]),
   show_entry: z.boolean().default(true),

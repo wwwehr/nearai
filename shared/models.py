@@ -64,3 +64,10 @@ class CreateVectorStoreFromSourceRequest(BaseModel):
     chunking_strategy: Optional[ChunkingStrategy] = None
     expires_after: Optional[ExpiresAfter] = None
     metadata: Optional[Dict[str, str]] = None
+
+
+class VectorStoreFileCreate(BaseModel):
+    """Request model for creating a vector store file."""
+
+    file_id: str
+    """File ID returned from upload file endpoint."""

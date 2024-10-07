@@ -110,43 +110,45 @@ export const entryCategory = z.enum([
 ]);
 export type EntryCategory = z.infer<typeof entryCategory>;
 
+export const entryDetailsModel = z.intersection(
+  z
+    .object({
+      agent: z
+        .object({
+          welcome: z
+            .object({
+              title: z.string(),
+              description: z.string(),
+            })
+            .partial(),
+        })
+        .partial(),
+      env_vars: z.record(z.string(), z.string()),
+      primary_agent_name: z.string(),
+      primary_agent_namespace: z.string(),
+      primary_agent_version: z.string(),
+      base_id: z.string().or(z.null()),
+      icon: z.string(),
+      run_id: z.coerce.string(),
+
+      timestamp: z.string(),
+    })
+    .partial(),
+  z.record(z.string(), z.unknown()),
+);
+
 export const entryModel = z.object({
-  id: z.number(),
+  id: z.number().default(0),
   category: entryCategory,
   namespace: z.string(),
   name: z.string(),
   version: z.string(),
-  description: z.string(),
-  tags: z.string().array(),
+  description: z.string().default(''),
+  tags: z.string().array().default([]),
   show_entry: z.boolean().default(true),
   starred_by_point_of_view: z.boolean().default(false),
-  num_stars: z.number(),
-  details: z.intersection(
-    z
-      .object({
-        agent: z
-          .object({
-            welcome: z
-              .object({
-                title: z.string(),
-                description: z.string(),
-              })
-              .partial(),
-          })
-          .partial(),
-        env_vars: z.record(z.string(), z.string()),
-        primary_agent_name: z.string(),
-        primary_agent_namespace: z.string(),
-        primary_agent_version: z.string(),
-        base_id: z.string().or(z.null()),
-        icon: z.string(),
-        run_id: z.coerce.string(),
-
-        timestamp: z.string(),
-      })
-      .partial(),
-    z.record(z.string(), z.unknown()),
-  ),
+  num_stars: z.number().default(0),
+  details: entryDetailsModel.default({}),
 });
 
 export const entriesModel = z.array(entryModel);

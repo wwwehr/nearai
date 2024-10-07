@@ -4,24 +4,25 @@ import { type z } from 'zod';
 
 import { entryModel } from '~/lib/models';
 
-const entryMetadata = entryModel.partial();
-type EntryMetadata = z.infer<typeof entryMetadata>;
+type EntryModel = z.infer<typeof entryModel>;
+
 export async function readMetadataJson(
   filePath: string,
-): Promise<EntryMetadata | null> {
+): Promise<EntryModel | null> {
   try {
     const data = await fs.readFile(filePath, 'utf8');
-    return entryMetadata.parse(JSON.parse(data));
+    return entryModel.parse(JSON.parse(data));
   } catch (err) {
     console.error(`Error reading ${filePath}`);
     return null;
   }
 }
+
 export async function processDirectory(
   dirPath: string,
-  results: EntryMetadata[],
+  results: EntryModel[],
   registryPath: string,
-): Promise<EntryMetadata[]> {
+): Promise<EntryModel[]> {
   try {
     const files = await fs.readdir(dirPath, { withFileTypes: true });
 
@@ -35,7 +36,7 @@ export async function processDirectory(
           await processDirectory(filePath, results, registryPath);
         } else if (file.name === 'metadata.json') {
           try {
-            const metadata: EntryMetadata | null =
+            const metadata: EntryModel | null =
               await readMetadataJson(filePath);
             if (metadata) {
               metadata.id = results.length + 1;
@@ -47,8 +48,8 @@ export async function processDirectory(
                 agentPathParts[0]?.endsWith('.near')
               ) {
                 // ignore version from metadata if actual version in filePath is different
-                metadata.version = agentPathParts[agentPathParts.length - 1];
-
+                metadata.version =
+                  agentPathParts[agentPathParts.length - 1] ?? '';
                 metadata.namespace = agentPathParts[0];
                 results.push(metadata);
               }

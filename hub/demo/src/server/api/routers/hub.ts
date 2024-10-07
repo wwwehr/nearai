@@ -187,7 +187,11 @@ export const hubRouter = createTRPCRouter({
       if (input.tags) url.searchParams.append('tags', input.tags.join(','));
 
       if (input.category == 'agent' && env.DATA_SOURCE == 'local_files') {
-        const registryPath = path.join(process.env.HOME, '.nearai', 'registry');
+        if (!env.HOME)
+          throw new Error(
+            'Missing required HOME environment variable for serving local files',
+          );
+        const registryPath = path.join(env.HOME, '.nearai', 'registry');
         return await processDirectory(registryPath, [], registryPath);
       }
 

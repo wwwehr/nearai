@@ -8,6 +8,8 @@ import pytest
 from nearai.cli import RegistryCli
 from nearai.registry import Registry
 
+MODEL_NAME = "Qwen/Qwen2.5-0.5B-Instruct"
+
 
 @pytest.mark.integration
 def test_registry():
@@ -35,12 +37,35 @@ def test_hub_completion():
 
     # list models available from NEAR AI Hub
     models = client.models.list()
-    assert any(model.id == "local::facebook/opt-125m" for model in models)
+    assert any(model.id == f"local::{MODEL_NAME}" for model in models)
 
     # create a chat completion
     completion = client.completions.create(
-        model="local::facebook/opt-125m",
+        model=f"local::{MODEL_NAME}",
         prompt="Hello, world!",
-        max_tokens=16,
+        max_tokens=4,
     )
     print(completion)
+
+
+@pytest.mark.integration
+def test_hub_chat():
+    auth = nearai.config.load_config_file()["auth"]
+    signature = json.dumps(auth)
+
+    client = openai.OpenAI(base_url=nearai.config.CONFIG.nearai_hub.base_url, api_key=signature)
+
+    # list models available from NEAR AI Hub
+    models = client.models.list()
+    assert any(model.id == f"local::{MODEL_NAME}" for model in models)
+
+    # create a chat completion
+    chat_completion = client.chat.completions.create(
+        model=f"local::{MODEL_NAME}",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "Say anything."},
+        ],
+        max_tokens=4,
+    )
+    print(chat_completion)

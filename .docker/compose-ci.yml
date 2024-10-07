@@ -51,6 +51,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    command: --model Qwen/Qwen2.5-0.5B-Instruct --enable-auto-tool-choice --tool-call-parser mistral
 
   nearaihub:
     depends_on:

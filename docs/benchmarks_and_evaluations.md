@@ -116,7 +116,7 @@ To check agent functionality to write files:
         
         goal = f"""Please add the following numbers together: {datum.input}\n\nOutput the result in a file called 'result.txt'."""
         session.run_task(goal)
-        with open(os.path.join(path, "result.txt"), "r") as f:
+        with open(os.path.join(session.path, "result.txt"), "r") as f:
             result = f.read().strip()
         return result == datum.output
 ```

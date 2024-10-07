@@ -190,4 +190,5 @@ https://app.near.ai/evaluations has a functionality to choose any columns.
 - [litellm.Timeout errors when running benchmark](https://github.com/nearai/nearai/issues/367)
 - [Feature request: tag individual evaluation metrics](https://github.com/nearai/nearai/issues/242)
 - [Feature request: add cost of running benchmark to evaluation results as a separate metric](https://github.com/nearai/nearai/issues/74)
+- [Feature request: hide evaluation results for hidden agents and models](https://github.com/nearai/nearai/issues/373)
 - [Capabilities Benchmarks Tracking: list of benchmarks we want to add](https://github.com/nearai/nearai/issues/57)

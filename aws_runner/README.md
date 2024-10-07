@@ -56,6 +56,13 @@ It might be useful to provide `API_URL` into the `docker run` command to use loc
 `docker run -e API_URL=http://host.docker.internal:8081 --platform linux/amd64 -p 9009:8080 nearai-runner:test`
 
 
+### Local data source 
+
+If you want to use local files instead of the NearAI registry to run agents that are not yet published:
+
+- mount  `~/.nearai/registry` to the docker image (add `-v ~/.nearai/registry:/root/.nearai/registry` to `docker run` command)
+- specify `DATA_SOURCE="local_files"` in both he Hub environment variables (`hub/.env`) and the Hub UI environment variables (`/hub/demo/.env`)
+
 ## Deployment
 The docker image is built and pushed to the NearAI ECR repository. The image is then deployed to AWS Lambda using the AWS CLI.
 

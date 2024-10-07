@@ -124,24 +124,26 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokab
 
     runner = _runner_for_env()
     agent_api_url = getenv("API_URL", "https://api.near.ai")
+    data_source = getenv("DATA_SOURCE", "registry")
 
     agent_env_vars: Dict[str, Any] = {}
     user_env_vars = body.user_env_vars or {}
 
     agent_entry: RegistryEntry | None = None
     for agent in reversed(agents.split(",")):
-        agent_entry = get(EntryLocation.from_str(agent))
+        agent_entry = get_agent_entry(agent, data_source)
 
         # read secret for every requested agent
-        (agent_secrets, user_secrets) = db.get_agent_secrets(
-            auth.account_id, agent_entry.namespace, agent_entry.name, agent_entry.version
-        )
+        if agent_entry:
+            (agent_secrets, user_secrets) = db.get_agent_secrets(
+                auth.account_id, agent_entry.namespace, agent_entry.name, agent_entry.version
+            )
 
-        # agent vars from metadata has lower priority then agent secret
-        agent_env_vars[agent] = {**(agent_env_vars.get(agent, {})), **agent_secrets}
+            # agent vars from metadata has lower priority then agent secret
+            agent_env_vars[agent] = {**(agent_env_vars.get(agent, {})), **agent_secrets}
 
-        # user vars from url has higher priority then user secret
-        user_env_vars = {**user_secrets, **user_env_vars}
+            # user vars from url has higher priority then user secret
+            user_env_vars = {**user_secrets, **user_env_vars}
 
     params = {
         "max_iterations": body.max_iterations,
@@ -150,9 +152,9 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokab
         "tool_resources": body.tool_resources,
         "user_env_vars": user_env_vars,
         "agent_env_vars": agent_env_vars,
+        "data_source": data_source,
     }
 
-    # agent_entry here is the primary agent, because of the reversed loop for all agents
     if not agent_entry:
         raise HTTPException(status_code=404, detail=f"Agent '{agent_entry}' not found in the registry.")
 
@@ -197,3 +199,17 @@ def _runner_for_env():
         return "staging-agent-runner"
     else:
         return runner_env
+
+
+def get_agent_entry(agent, data_source: str) -> RegistryEntry | None:
+    if data_source == "registry":
+        return get(EntryLocation.from_str(agent))
+    elif data_source == "local_files":
+        entry_location = EntryLocation.from_str(agent)
+        return RegistryEntry(
+            namespace=entry_location.namespace,
+            name=entry_location.name,
+            version=entry_location.version,
+        )
+    else:
+        raise HTTPException(status_code=404, detail=f"Illegal data_source '{data_source}'.")

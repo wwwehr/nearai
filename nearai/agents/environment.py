@@ -20,15 +20,16 @@ from litellm.types.completion import ChatCompletionMessageParam
 from litellm.types.utils import ChatCompletionMessageToolCall, Choices, Function, ModelResponse
 from litellm.utils import CustomStreamWrapper
 from openai import NOT_GIVEN, NotGiven
-from openai.types.beta import AutoFileChunkingStrategyParam, StaticFileChunkingStrategyParam
 from openai.types.beta.vector_store import VectorStore
 from shared.client_config import DEFAULT_PROVIDER_MODEL
 from shared.inference_client import InferenceClient
 from shared.models import (
+    AutoFileChunkingStrategyParam,
     ChunkingStrategy,
     ExpiresAfter,
     GitHubSource,
     GitLabSource,
+    StaticFileChunkingStrategyParam,
 )
 
 from nearai.agents import tool_json_helper

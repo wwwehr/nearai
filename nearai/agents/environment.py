@@ -272,7 +272,7 @@ class Environment(object):
         expires_after: Optional[ExpiresAfter] = None,
         metadata: Optional[Dict[str, str]] = None,
     ) -> VectorStore:
-        """Creates a vector store from the given source.
+        """Creates a vector store.
 
         Args:
         ----

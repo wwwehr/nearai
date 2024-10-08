@@ -12,13 +12,15 @@ import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union, cast
+from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union, cast
 
 import psutil
 import shared.near.sign as near
 from litellm.types.completion import ChatCompletionMessageParam
 from litellm.types.utils import ChatCompletionMessageToolCall, Choices, Function, ModelResponse
 from litellm.utils import CustomStreamWrapper
+from openai import NOT_GIVEN, NotGiven
+from openai.types.beta import AutoFileChunkingStrategyParam, StaticFileChunkingStrategyParam
 from openai.types.beta.vector_store import VectorStore
 from shared.client_config import DEFAULT_PROVIDER_MODEL
 from shared.inference_client import InferenceClient
@@ -222,7 +224,9 @@ class Environment(object):
         """
         return self._client.query_vector_store(vector_store_id, query)
 
-    def upload_file(self, file_content: str, purpose: str = "assistants"):
+    def upload_file(
+        self, file_content: str, purpose: Literal["assistants", "batch", "fine-tune", "vision"] = "assistants"
+    ):
         """Uploads a file to the registry."""
         return self._client.upload_file(file_content, purpose)
 
@@ -268,8 +272,8 @@ class Environment(object):
         self,
         name: str,
         file_ids: list,
-        chunking_strategy: Optional[ChunkingStrategy] = None,
-        expires_after: Optional[ExpiresAfter] = None,
+        expires_after: ExpiresAfter | NotGiven = NOT_GIVEN,
+        chunking_strategy: AutoFileChunkingStrategyParam | StaticFileChunkingStrategyParam | NotGiven = NOT_GIVEN,
         metadata: Optional[Dict[str, str]] = None,
     ) -> VectorStore:
         """Creates a vector store.

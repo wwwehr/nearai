@@ -58,7 +58,7 @@ async def create_vector_store(
         account_id=auth.account_id,
         name=request.name,
         file_ids=request.file_ids or [],
-        expires_after=request.expires_after.model_dump() if request.expires_after else None,
+        expires_after=dict(request.expires_after) if request.expires_after else None,
         chunking_strategy=request.chunking_strategy.model_dump() if request.chunking_strategy else None,
         metadata=request.metadata,
     )
@@ -303,9 +303,6 @@ async def create_vector_store_file(
     background_tasks.add_task(generate_embeddings_for_file, file_data.file_id, vector_store_id)
     logger.info(f"Embedding generation queued for file: {file_data.file_id}")
 
-    logger.info(f"Queueing embedding generation for vector store: {vector_store_id}")
-    background_tasks.add_task(generate_embeddings_for_vector_store, vector_store.id)
-
     return VectorStore(
         id=str(updated_vector_store.id),
         object="vector_store",
@@ -404,7 +401,7 @@ async def create_vector_store_from_source(
         account_id=auth.account_id,
         name=request.name,
         file_ids=[],
-        expires_after=request.expires_after.model_dump() if request.expires_after else None,
+        expires_after=dict(request.expires_after) if request.expires_after else None,
         chunking_strategy=request.chunking_strategy.model_dump() if request.chunking_strategy else None,
         metadata=request.metadata,
     )

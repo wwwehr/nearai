@@ -151,6 +151,16 @@ export const entryModel = z.object({
   details: entryDetailsModel.default({}),
 });
 
+export const metadataModel = z.object({
+  category: entryCategory,
+  name: z.string(),
+  version: z.string().default('0'),
+  description: z.string().default(''),
+  tags: z.string().array().default([]),
+  show_entry: z.boolean().default(true),
+  details: entryDetailsModel.default({}),
+});
+
 export const entriesModel = z.array(entryModel);
 
 export const fileModel = z.object({

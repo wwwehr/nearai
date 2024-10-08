@@ -2,16 +2,35 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { type z } from 'zod';
 
-import { entryModel } from '~/lib/models';
+import { type entryModel, metadataModel } from '~/lib/models';
 
 type EntryModel = z.infer<typeof entryModel>;
+type MetadataModel = z.infer<typeof metadataModel>;
+
+function transformMetadataToEntry(
+  metadata: z.infer<typeof metadataModel>,
+): z.infer<typeof entryModel> {
+  return {
+    id: 0,
+    category: metadata.category,
+    namespace: 'undefined',
+    name: metadata.name,
+    version: metadata.version,
+    description: metadata.description,
+    tags: metadata.tags,
+    show_entry: metadata.show_entry,
+    starred_by_point_of_view: false,
+    num_stars: 0,
+    details: metadata.details,
+  };
+}
 
 export async function readMetadataJson(
   filePath: string,
-): Promise<EntryModel | null> {
+): Promise<MetadataModel | null> {
   try {
     const data = await fs.readFile(filePath, 'utf8');
-    return entryModel.parse(JSON.parse(data));
+    return metadataModel.parse(JSON.parse(data));
   } catch (err) {
     console.error(`Error reading ${filePath}`);
     return null;
@@ -36,10 +55,11 @@ export async function processDirectory(
           await processDirectory(filePath, results, registryPath);
         } else if (file.name === 'metadata.json') {
           try {
-            const metadata: EntryModel | null =
+            const metadata: MetadataModel | null =
               await readMetadataJson(filePath);
             if (metadata) {
-              metadata.id = results.length + 1;
+              const entry = transformMetadataToEntry(metadata);
+              entry.id = results.length + 1;
 
               const agentRelativePath = path.relative(registryPath, dirPath);
               const agentPathParts = agentRelativePath.split(path.sep);
@@ -48,10 +68,9 @@ export async function processDirectory(
                 agentPathParts[0]?.endsWith('.near')
               ) {
                 // ignore version from metadata if actual version in filePath is different
-                metadata.version =
-                  agentPathParts[agentPathParts.length - 1] ?? '';
-                metadata.namespace = agentPathParts[0];
-                results.push(metadata);
+                entry.version = agentPathParts[agentPathParts.length - 1] ?? '';
+                entry.namespace = agentPathParts[0];
+                results.push(entry);
               }
             }
           } catch (err) {

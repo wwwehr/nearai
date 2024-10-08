@@ -1,6 +1,7 @@
 import ast
 import re
 from itertools import islice
+from multiprocessing import Process, Queue
 from typing import List, Union
 
 from datasets import Dataset, DatasetDict  # type: ignore[attr-defined]
@@ -32,6 +33,28 @@ def parse_code_block(answer_text: str) -> List[str]:
     pattern = r"```\n(.*?)\n```"
     code_blocks = re.findall(pattern, answer_text, re.DOTALL)
     return code_blocks
+
+
+def run_code(code, queue):
+    try:
+        exec(code)
+        queue.put(True)
+    except Exception:
+        queue.put(False)
+
+
+def run_with_timeout(code, timeout=10):
+    queue = Queue()
+    process = Process(target=run_code, args=(code, queue))
+    process.daemon = True
+    process.start()
+
+    try:
+        return queue.get(timeout=timeout)
+    except Exception:
+        print("process.terminate()")
+        process.terminate()
+        return False
 
 
 class MBPPDatum(BaseModel):
@@ -91,7 +114,8 @@ class MBPPSolverStrategy(SolverStrategy):
         try:
             for test in datum["test_list"] + datum["challenge_test_list"]:
                 test_code = code + "\n" + test
-                exec(test_code)
+                if not run_with_timeout(test_code):
+                    return False
             return True
         except Exception:
             return False

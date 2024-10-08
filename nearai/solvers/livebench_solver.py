@@ -58,8 +58,6 @@ class LiveBenchSolverStrategy(SolverStrategy):
     ) -> None:
         super().__init__(model, agent)
         self.dataset_ref = dataset_ref
-        assert "/" not in self.model
-        assert "/" not in self.agent
         self.step = step
 
     def evaluation_name(self) -> str:  # noqa: D102
@@ -74,12 +72,13 @@ class LiveBenchSolverStrategy(SolverStrategy):
     @property
     def evaluated_entry_name(self) -> str:  # noqa: D102
         name = ""
-        if self.agent != "":
-            name = self.agent
-            if self.model != "":
-                name += f"_with_model_{self.model}"
+        if self.agent_obj:
+            name = self.agent_obj.name
+            if self.model_name != "":
+                name += f"_with_model_{self.model_name}"
         else:
-            name = self.model
+            name = self.model_name
+        assert "/" not in name
         return name
 
     @SolverStrategyClassProperty

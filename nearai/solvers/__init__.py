@@ -108,26 +108,24 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
         CONFIG.confirm_commands = False
         client_config = ClientConfig(base_url=CONFIG.nearai_hub.base_url, auth=CONFIG.auth)
         self.client = InferenceClient(client_config)
-        self.model = model
-        self.agent = agent
         assert model != "" or agent != ""
 
         self.provider = ""
         self.model_namespace = ""
         self.model_full_path = ""
+        self.model_name = ""
         if model != "":
-            self.provider, self.model = self.client.provider_models.match_provider_model(model)
-            self.model_full_path = self.model
-            self.provider, namespaced_model = get_provider_namespaced_model(self.model, self.provider)
+            self.provider, self.model_full_path = self.client.provider_models.match_provider_model(model)
+            self.provider, namespaced_model = get_provider_namespaced_model(self.model_full_path, self.provider)
             self.model_namespace = namespaced_model.namespace
-            self.model = namespaced_model.name
+            self.model_name = namespaced_model.name
 
         self.agent_obj = None
         if agent != "":
             self.agent_obj = LocalRunner.load_agent(agent)
             self.agent_obj.model_temperature = 0.0
-            if self.model != "":
-                self.agent_obj.model = self.model
+            if self.model_full_path != "":
+                self.agent_obj.model = self.model_full_path
             if self.provider != "":
                 self.agent_obj.model_provider = self.provider
 
@@ -152,8 +150,8 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
 
     def model_metadata(self) -> Optional[Dict[str, Any]]:
         """Returns model metadata that is evaluated or used by an agent."""
-        if self.model != "":
-            return {"name": self.model}
+        if self.model_name != "":
+            return {"name": self.model_name}
         return {"name": cast(Agent, self.agent_obj).model}
 
     def agent_metadata(self) -> Optional[Dict[str, Any]]:

@@ -37,7 +37,7 @@ class GSM8KSolverStrategy(SolverStrategy):
                 problem_shots_indices,
             )
         )
-        session = self.start_inference_session(str(datum["task_id"]))
+        session = self.start_inference_session("")
         session.add_system_message(
             dedent(
                 """
@@ -55,7 +55,7 @@ class GSM8KSolverStrategy(SolverStrategy):
         res_output = session.run_task(parsed_datum.question).strip()
 
         ## cleanup the output
-        session = self.start_inference_session(str(datum["task_id"]))
+        session = self.start_inference_session("")
         res_refined_output = session.run_task(
             dedent(
                 f"""

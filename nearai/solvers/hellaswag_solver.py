@@ -55,7 +55,7 @@ class HellaswagSolverStrategy(SolverStrategy):
             challenge_problem=datum,
             choices=choices,
         )
-        response = self.start_inference_session(str(datum["task_id"])).run_task(base_prompt)
+        response = self.start_inference_session("").run_task(base_prompt)
 
         ## Extract the answer from the response
         extract_answer_prompt = Template(
@@ -66,7 +66,7 @@ class HellaswagSolverStrategy(SolverStrategy):
             answer_text=response,
             choices=choices,
         )
-        response = self.start_inference_session(str(datum["task_id"])).run_task(extract_answer_prompt)
+        response = self.start_inference_session("").run_task(extract_answer_prompt)
 
         try:
             answer = choices.index(response)

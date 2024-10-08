@@ -1,6 +1,7 @@
 from typing import Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel
+from typing_extensions import Required, TypedDict
 
 
 class SimilaritySearch(BaseModel):
@@ -9,19 +10,50 @@ class SimilaritySearch(BaseModel):
     distance: float
 
 
+class StaticFileChunkingStrategyParam(TypedDict, total=False):
+    chunk_overlap_tokens: Required[int]
+    """The number of tokens that overlap between chunks. The default value is `400`.
+
+    Note that the overlap must not exceed half of `max_chunk_size_tokens`.
+    """
+
+    max_chunk_size_tokens: Required[int]
+    """The maximum number of tokens in each chunk.
+
+    The default value is `800`. The minimum value is `100` and the maximum value is
+    `4096`.
+    """
+
+
 class ChunkingStrategy(BaseModel):
     """Defines the chunking strategy for vector stores."""
 
     pass
 
 
-class ExpiresAfter(BaseModel):
-    """Defines the expiration policy for vector stores."""
+class AutoFileChunkingStrategyParam(TypedDict, total=False):
+    type: Required[Literal["auto"]]
+    """Always `auto`."""
 
-    anchor: Literal["last_active_at"]
-    """The anchor point for expiration calculation."""
-    days: int
-    """The number of days after which the vector store expires."""
+
+class ExpiresAfter(TypedDict, total=False):
+    anchor: Required[Literal["last_active_at"]]
+    """Anchor timestamp after which the expiration policy applies.
+
+    Supported anchors: `last_active_at`.
+    """
+
+    days: Required[int]
+    """The number of days after the anchor time that the vector store will expire."""
+
+
+# class ExpiresAfter(BaseModel):
+#     """Defines the expiration policy for vector stores."""
+#
+#     anchor: Literal["last_active_at"]
+#     """The anchor point for expiration calculation."""
+#     days: int
+#     """The number of days after which the vector store expires."""
 
 
 class CreateVectorStoreRequest(BaseModel):
@@ -64,3 +96,10 @@ class CreateVectorStoreFromSourceRequest(BaseModel):
     chunking_strategy: Optional[ChunkingStrategy] = None
     expires_after: Optional[ExpiresAfter] = None
     metadata: Optional[Dict[str, str]] = None
+
+
+class VectorStoreFileCreate(BaseModel):
+    """Request model for creating a vector store file."""
+
+    file_id: str
+    """File ID returned from upload file endpoint."""

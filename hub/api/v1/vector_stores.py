@@ -6,13 +6,20 @@ from fastapi.responses import JSONResponse
 from openai.types.beta.vector_store import ExpiresAfter as OpenAIExpiresAfter
 from openai.types.beta.vector_store import FileCounts, VectorStore
 from pydantic import BaseModel
-from shared.models import CreateVectorStoreFromSourceRequest, CreateVectorStoreRequest, GitHubSource, GitLabSource
+from shared.models import (
+    CreateVectorStoreFromSourceRequest,
+    CreateVectorStoreRequest,
+    GitHubSource,
+    GitLabSource,
+    VectorStoreFileCreate,
+)
 
 from hub.api.v1.auth import AuthToken, revokable_auth
 from hub.api.v1.sql import SqlClient
 from hub.tasks.embedding_generation import (
     generate_embedding,
     generate_embeddings_for_file,
+    generate_embeddings_for_vector_store,
 )
 from hub.tasks.github_import import process_github_source
 
@@ -51,7 +58,7 @@ async def create_vector_store(
         account_id=auth.account_id,
         name=request.name,
         file_ids=request.file_ids or [],
-        expires_after=request.expires_after.model_dump() if request.expires_after else None,
+        expires_after=dict(request.expires_after) if request.expires_after else None,
         chunking_strategy=request.chunking_strategy.model_dump() if request.chunking_strategy else None,
         metadata=request.metadata,
     )
@@ -65,6 +72,9 @@ async def create_vector_store(
     expires_at = None
     if vector_store.expires_after and vector_store.expires_after.get("days"):
         expires_at = vector_store.created_at.timestamp() + vector_store.expires_after["days"] * 24 * 60 * 60
+
+    logger.info(f"Queueing embedding generation for vector store: {vector_store_id}")
+    background_tasks.add_task(generate_embeddings_for_vector_store, vector_store.id)
 
     logger.info(f"Vector store created successfully: {vector_store_id}")
     return VectorStore(
@@ -220,13 +230,6 @@ async def delete_vector_store(vector_store_id: str, auth: AuthToken = Depends(re
     except Exception as e:
         logger.error(f"Error deleting vector store: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to delete vector store") from e
-
-
-class VectorStoreFileCreate(BaseModel):
-    """Request model for creating a vector store file."""
-
-    file_id: str
-    """File ID returned from upload file endpoint."""
 
 
 @vector_stores_router.post("/vector_stores/{vector_store_id}/files")
@@ -398,7 +401,7 @@ async def create_vector_store_from_source(
         account_id=auth.account_id,
         name=request.name,
         file_ids=[],
-        expires_after=request.expires_after.model_dump() if request.expires_after else None,
+        expires_after=dict(request.expires_after) if request.expires_after else None,
         chunking_strategy=request.chunking_strategy.model_dump() if request.chunking_strategy else None,
         metadata=request.metadata,
     )

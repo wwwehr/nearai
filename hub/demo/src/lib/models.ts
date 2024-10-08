@@ -138,11 +138,11 @@ export const entryDetailsModel = z.intersection(
 );
 
 export const entryModel = z.object({
-  id: z.number().default(0),
+  id: z.number(),
   category: entryCategory,
   namespace: z.string(),
   name: z.string(),
-  version: z.string().default('0'),
+  version: z.string(),
   description: z.string().default(''),
   tags: z.string().array().default([]),
   show_entry: z.boolean().default(true),

@@ -550,9 +550,9 @@ class Environment(object):
         response_content = choices[0].message.content
         return response_content
 
-    def call_agent(self, agent_path: int, task: str) -> None:
+    def call_agent(self, agent_index: int, task: str) -> None:
         """Calls agent with given task."""
-        self._agents[agent_path].run(self, task=task)
+        self._agents[agent_index].run(self, task=task)
 
     def get_agents(self) -> List[Agent]:
         """Returns list of agents available in environment."""
@@ -669,6 +669,7 @@ class Environment(object):
 
         while iteration < max_iterations and not self.is_done() and self.get_next_actor() != "user":
             iteration += 1
+            print([x.identifier for x in self._agents])
             self._agents[0].run(self, task=new_message)
 
         return run_id
@@ -685,3 +686,10 @@ class Environment(object):
                         hash_obj.update(chunk)
 
         return hash_obj.hexdigest()
+
+    def get_agent_by_name(self, agent_name: str) -> Optional[Agent]:
+        """Returns an agent by its name."""
+        for agent in self._agents:
+            if agent.name == agent_name:
+                return agent
+        return None

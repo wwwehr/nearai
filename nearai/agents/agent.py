@@ -6,6 +6,7 @@ import shutil
 import sys
 import tempfile
 import time
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -36,7 +37,8 @@ class Agent(object):
 
     @staticmethod
     def _write_agent_files_to_temp(agent_files):
-        temp_dir = os.path.join(tempfile.gettempdir(), str(int(time.time())))
+        unique_id = uuid.uuid4().hex
+        temp_dir = os.path.join(tempfile.gettempdir(), f"agent_{unique_id}")
 
         if isinstance(agent_files, List):
             os.makedirs(temp_dir, exist_ok=True)
@@ -116,9 +118,11 @@ class Agent(object):
 
         original_cwd = os.getcwd()
         try:
+            print(self.temp_dir)
             os.chdir(self.temp_dir)
             sys.path.insert(0, self.temp_dir)
-            runpy.run_path(AGENT_FILENAME, init_globals=context, run_name="__main__")
+            res = runpy.run_path(AGENT_FILENAME, init_globals=context, run_name="__main__")
+            print(f"Agent {self.identifier} ran successfully, output: {res}")
         finally:
             os.chdir(original_cwd)
             sys.path.pop(0)

@@ -2,6 +2,7 @@ import json
 import re
 from typing import List
 
+import openai
 from openapi_client import (
     BodyDownloadEnvironmentV1DownloadEnvironmentPost,
     BodyDownloadFileV1RegistryDownloadFilePost,
@@ -23,6 +24,14 @@ class PartialNearClient:
     def __init__(self, base_url, auth):  # noqa: D107
         configuration = Configuration(access_token=f"Bearer {json.dumps(auth)}", host=base_url)
         client = ApiClient(configuration)
+
+        client_config = ClientConfig(
+            base_url=base_url + "/v1",
+            auth=auth,
+        )
+        self.openai_client = openai.OpenAI(api_key=auth, base_url=base_url)
+
+        self._inference = InferenceClient(client_config)
 
         self._client = client
         self.entry_location_pattern = re.compile("^(?P<namespace>[^/]+)/(?P<name>[^/]+)/(?P<version>[^/]+)$")
@@ -135,3 +144,7 @@ class PartialNearClient:
             version=entry_location["version"],
         )
         return f"{author}/{name}/0"
+
+    def get_thread_messages(self, thread_id):
+        """Get messages from a thread."""
+        return self.openai_client.beta.threads.messages.list(thread_id)

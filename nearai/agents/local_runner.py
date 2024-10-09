@@ -62,7 +62,10 @@ class LocalRunner:
 
     @staticmethod
     def load_agent(name: str, local: bool = False) -> Agent:
-        """Loads a single agent from the registry."""
+        """Loads a single agent from the registry.
+
+        TODO: should handle local and remote code at once. eg add local::path, remote::path
+        """
         identifier = None
         if local:
             agent_files_path = get_registry_folder() / name

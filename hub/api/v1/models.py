@@ -1,10 +1,15 @@
+import uuid
 from contextlib import contextmanager
 from datetime import datetime
 from os import getenv
-from typing import Dict, Iterator, Optional
+from typing import Dict, Iterator, List, Literal, Optional
 
 from dotenv import load_dotenv
-from sqlmodel import JSON, Column, Field, Session, SQLModel, create_engine
+from openai.types.beta.thread import Thread as OpenAITThread
+from openai.types.beta.threads.message import Message as OpenAITThreadMessage
+from openai.types.beta.threads.message_content import MessageContent
+from openai.types.beta.threads.run import Run as OpenAIRun
+from sqlmodel import JSON, Column, Field, Relationship, Session, SQLModel, create_engine
 
 load_dotenv()
 
@@ -111,6 +116,121 @@ class BenchmarkResult(SQLModel, table=True):
     index: int = Field(nullable=False)
     solved: bool = Field(nullable=False)
     info: Dict = Field(default_factory=dict, sa_column=Column(JSON))
+
+
+class Message(SQLModel, table=True):
+    __tablename__ = "messages"
+
+    id: str = Field(default_factory=lambda: "msg_" + uuid.uuid4().hex[:24], primary_key=True)
+    object: str = Field(default="message", nullable=False)
+    created_at: datetime = Field(default_factory=datetime.now, nullable=False)
+    thread_id: str = Field(nullable=False, foreign_key="threads.id")
+    status: str = Field(default="completed", nullable=False)
+    incomplete_details: Dict = Field(default=None, sa_column=Column(JSON))
+    completed_at: Optional[datetime] = Field(default=None)
+    incomplete_at: Optional[datetime] = Field(default=None)
+    role: str = Field(nullable=False)
+    content: List[MessageContent] = Field(sa_column=Column(JSON))
+    assistant_id: Optional[str] = Field(default=None)
+    run_id: Optional[str] = Field(default=None)
+    attachments: Optional[List] = Field(default=None, sa_column=Column(JSON))
+    meta_data: Optional[Dict] = Field(default=None, sa_column=Column("metadata", JSON))
+
+    def to_openai(self) -> OpenAITThreadMessage:
+        """Convert to OpenAI Thread."""
+        return OpenAITThreadMessage(
+            metadata=self.meta_data,
+            created_at=int(self.created_at.timestamp()),
+            id=self.id,
+            object="thread.message",
+            role=self.role,
+            content=self.content,
+            status=self.status,
+            attachments=self.attachments,
+            thread_id=self.thread_id,
+        )
+
+
+class Thread(SQLModel, table=True):
+    __tablename__ = "threads"
+
+    id: str = Field(default_factory=lambda: "thread_" + uuid.uuid4().hex[:24], primary_key=True)
+    object: str = Field(default="thread", nullable=False)
+    created_at: datetime = Field(default_factory=datetime.now, nullable=False)
+    tool_resources: Optional[Dict] = Field(default=None, sa_column=Column(JSON))
+    meta_data: Optional[Dict] = Field(default=None, sa_column=Column("metadata", JSON))
+
+    def to_openai(self) -> OpenAITThread:
+        """Convert to OpenAI Thread."""
+        return OpenAITThread(
+            metadata=self.meta_data,
+            tool_resources=None,  # TODO: Implement conversion
+            created_at=int(self.created_at.timestamp()),
+            id=self.id,
+            object="thread",
+        )
+
+
+class Run(SQLModel, table=True):
+    __tablename__ = "runs"
+
+    id: str = Field(default_factory=lambda: "run_" + uuid.uuid4().hex[:24], primary_key=True)
+    object: str = Field(default="thread.run", nullable=False)
+    created_at: datetime = Field(default_factory=datetime.now, nullable=False)
+    assistant_id: str = Field(nullable=False)
+    thread_id: str = Field(nullable=False, foreign_key="threads.id")
+    status: str = Field(default="queued")
+    started_at: Optional[datetime] = Field(default=None)
+    expires_at: Optional[datetime] = Field(default=None)
+    cancelled_at: Optional[datetime] = Field(default=None)
+    failed_at: Optional[datetime] = Field(default=None)
+    completed_at: Optional[datetime] = Field(default=None)
+    last_error: Optional[Dict] = Field(default=None, sa_column=Column(JSON))
+    model: str = Field(nullable=False)
+    instructions: Optional[str] = Field(default=None)
+    tools: List[Dict] = Field(default=[], sa_column=Column(JSON))
+    file_ids: List[str] = Field(default=[], sa_column=Column(JSON))
+    meta_data: Optional[Dict] = Field(default=None, sa_column=Column("metadata", JSON))
+    usage: Optional[Dict] = Field(default=None, sa_column=Column(JSON))
+    temperature: Optional[float] = Field(default=None)
+    top_p: Optional[float] = Field(default=None)
+    max_prompt_tokens: Optional[int] = Field(default=None)
+    max_completion_tokens: Optional[int] = Field(default=None)
+    truncation_strategy: Optional[Dict] = Field(default=None, sa_column=Column(JSON))
+    response_format: Optional[str] = Field(default=None)
+    tool_choice: Optional[str] = Field(default=None)
+    parallel_tool_calls: bool = Field(default=False)
+
+    def to_openai(self) -> OpenAIRun:
+        """Convert to OpenAI Run object."""
+        return OpenAIRun(
+            id=self.id,
+            object="thread.run",
+            created_at=int(self.created_at.timestamp()),
+            assistant_id=self.assistant_id,
+            thread_id=self.thread_id,
+            status=self.status,
+            started_at=int(self.started_at.timestamp()) if self.started_at else None,
+            expires_at=int(self.expires_at.timestamp()) if self.expires_at else None,
+            cancelled_at=int(self.cancelled_at.timestamp()) if self.cancelled_at else None,
+            failed_at=int(self.failed_at.timestamp()) if self.failed_at else None,
+            completed_at=int(self.completed_at.timestamp()) if self.completed_at else None,
+            last_error=None,
+            model=self.model,
+            instructions="TODO",
+            tools=[],
+            # file_ids=self.file_ids,
+            metadata=self.meta_data,
+            usage=None,
+            temperature=self.temperature,
+            top_p=self.top_p,
+            max_prompt_tokens=self.max_prompt_tokens,
+            max_completion_tokens=self.max_completion_tokens,
+            truncation_strategy=None,
+            response_format=None,
+            tool_choice=None,
+            parallel_tool_calls=self.parallel_tool_calls,
+        )
 
 
 engine = create_engine(f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}")

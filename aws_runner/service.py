@@ -140,7 +140,12 @@ def save_environment(env, client, run_id, base_id, metric_function=None) -> str:
 
 
 def run_with_environment(
-    agents: str, auth: dict, environment_id: str = None, new_message: str = None, params: dict = None
+    agents: str,
+    auth: dict,
+    environment_id: str = None,
+    new_message: str = None,
+    params: dict = None,
+    thread_id: str = None,
 ) -> Optional[str]:
     """Runs agent against environment fetched from id, optionally passing a new message to the environment."""
     params = params or {}
@@ -185,6 +190,14 @@ def run_with_environment(
         auth=auth,
     )
     inference_client = InferenceClient(client_config)
+
+    # Add messages from thread to env chat.txt
+    if thread_id:
+        messages = near_client.get_thread_messages(thread_id)
+
+        with open(f"{RUN_PATH}/chat.txt", "a") as f:
+            for message in messages:
+                f.write(f"{message.role}: {message.content}\n")
 
     env = Environment(RUN_PATH, loaded_agents, inference_client, env_vars=user_env_vars)
     start_time = time.perf_counter()

@@ -18,6 +18,10 @@ import {
 import { Controller, type SubmitHandler } from 'react-hook-form';
 import { type z } from 'zod';
 
+import {
+  AgentRunPermissionsModal,
+  checkAgentRunPermissions,
+} from '~/components/AgentRunPermissionsModal';
 import { AgentWelcome } from '~/components/AgentWelcome';
 import { EntryEnvironmentVariables } from '~/components/EntryEnvironmentVariables';
 import { BreakpointDisplay } from '~/components/lib/BreakpointDisplay';
@@ -60,7 +64,7 @@ type RunView = 'conversation' | 'output' | undefined;
 export default function EntryRunPage() {
   const { currentEntry } = useCurrentEntry('agent');
   const isAuthenticated = useAuthStore((store) => store.isAuthenticated);
-  const { namespace, name, version } = useEntryParams();
+  const { id: agentId } = useEntryParams();
   const { queryParams, updateQueryPath } = useQueryParams([
     'environmentId',
     'view',
@@ -73,7 +77,6 @@ export default function EntryRunPage() {
   const chatMutation = api.hub.chatWithAgent.useMutation();
   const { threadsQuery } = useThreads();
   const utils = api.useUtils();
-  const agentId = `${namespace}/${name}/${version}`;
 
   const form = useZodForm(chatWithAgentModel, {
     defaultValues: { agent_id: agentId },
@@ -86,6 +89,9 @@ export default function EntryRunPage() {
   const [threadsOpenForSmallScreens, setThreadsOpenForSmallScreens] =
     useState(false);
   const formRef = useRef<HTMLFormElement | null>(null);
+
+  const [runRequestNeedingPermissions, setRunRequestNeedingPermissions] =
+    useState<z.infer<typeof chatWithAgentModel> | null>(null);
 
   const environmentQuery = api.hub.environment.useQuery(
     {
@@ -200,6 +206,24 @@ export default function EntryRunPage() {
     form.setFocus('new_message');
   };
 
+  const conditionallyRunAgent = async (
+    request: z.infer<typeof chatWithAgentModel>,
+    allowedBypass?: boolean,
+  ) => {
+    if (!currentEntry) return;
+    const permissionsCheck = checkAgentRunPermissions(currentEntry, request);
+    if (allowedBypass ?? permissionsCheck.allowed) {
+      const response = await chatMutation.mutateAsync(request);
+      updateQueryPath(
+        { environmentId: response.environmentId },
+        'replace',
+        false,
+      );
+    } else {
+      setRunRequestNeedingPermissions(request);
+    }
+  };
+
   const onIframePostMessage: IframePostMessageEventHandler<{
     action: 'remote_agent_run' | 'refresh_environment_id';
     data: unknown;
@@ -207,23 +231,21 @@ export default function EntryRunPage() {
     try {
       const chat = chatWithAgentModel.parse(event.data.data);
 
-      const conditionallyUpdateEnvironmentId = (
-        environmentId: string | null | undefined,
-      ) => {
-        if (!environmentId) return;
-        updateQueryPath({ environmentId }, 'replace', false);
-      };
-
       switch (event.data.action) {
         case 'remote_agent_run':
           chat.max_iterations = Number(chat.max_iterations) || 1;
           chat.environment_id = chat.environment_id ?? environmentId;
-          const response = await chatMutation.mutateAsync(chat);
-          conditionallyUpdateEnvironmentId(response.environmentId);
+          void conditionallyRunAgent(chat);
           break;
 
         case 'refresh_environment_id':
-          conditionallyUpdateEnvironmentId(chat.environment_id);
+          if (chat.environment_id) {
+            updateQueryPath(
+              { environmentId: chat.environment_id },
+              'replace',
+              false,
+            );
+          }
           break;
 
         default:
@@ -471,6 +493,12 @@ export default function EntryRunPage() {
           </Flex>
         </Sidebar.Sidebar>
       </Sidebar.Root>
+
+      <AgentRunPermissionsModal
+        onAllow={(request) => conditionallyRunAgent(request, true)}
+        request={runRequestNeedingPermissions}
+        setRequest={setRunRequestNeedingPermissions}
+      />
 
       <Dialog.Root
         open={openedFileName !== null}

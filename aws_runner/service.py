@@ -2,13 +2,13 @@
 import json
 import os
 import shutil
-import tarfile
 import time
 from subprocess import call
 from typing import Optional
 
 import boto3
-from aws_runner.partial_near_client import ENVIRONMENT_FILENAME, PartialNearClient
+import openai
+from aws_runner.partial_near_client import PartialNearClient
 from nearai.agents.agent import Agent
 from nearai.agents.environment import Environment
 from shared.client_config import ClientConfig
@@ -56,10 +56,14 @@ def handler(event, context):
 
     environment_id = event.get("environment_id")
     new_message = event.get("new_message")
+    thread_id = event.get("environment_id")  # TODO: migrate to thread_id
 
     params = event.get("params", {})
+    print("event", event)
 
-    new_environment_registry_id = run_with_environment(agents, auth_object, environment_id, new_message, params)
+    new_environment_registry_id = run_with_environment(
+        agents, auth_object, environment_id, new_message, params, thread_id
+    )
     if not new_environment_registry_id:
         return f"Run not recorded. Ran {agents} agent(s) with generated near client and environment {environment_id}"
 
@@ -90,10 +94,10 @@ def write_metric(metric_name, value, unit="Milliseconds"):
 
 def load_agent(client, agent, params: dict = None):
     agent_metadata = None
-
+    print("agent", agent, "params", params)
     if params["data_source"] == "registry":
         start_time = time.perf_counter()
-        agent_files = client.get_agent(agent, params)
+        agent_files = client.get_agent(agent)
         stop_time = time.perf_counter()
         write_metric("GetAgentFromRegistry_Duration", stop_time - start_time)
         agent_metadata = client.get_agent_metadata(agent)
@@ -148,6 +152,7 @@ def run_with_environment(
     thread_id: str = None,
 ) -> Optional[str]:
     """Runs agent against environment fetched from id, optionally passing a new message to the environment."""
+    print("Running with :", agents, auth, environment_id, new_message, params, thread_id)
     params = params or {}
     max_iterations = int(params.get("max_iterations", 2))
     record_run = bool(params.get("record_run", True))
@@ -159,6 +164,7 @@ def run_with_environment(
         print(f"WARNING: Using custom API URL: {api_url}")
 
     near_client = PartialNearClient(api_url, auth)
+    hub_client = openai.OpenAI(base_url=api_url, api_key=f"Bearer {json.dumps(auth)}")
 
     loaded_agents = []
 
@@ -168,22 +174,22 @@ def run_with_environment(
         agent.env_vars = {**agent.env_vars, **agent_env_vars.get(agent_name, {})}
         loaded_agents.append(agent)
 
-    if environment_id:
-        start_time = time.perf_counter()
-        loaded_env = near_client.get_environment(environment_id)
-        stop_time = time.perf_counter()
-        write_metric("GetEnvironmentFromRegistry_Duration", stop_time - start_time)
-        file = loaded_env
-        os.makedirs(PATH, exist_ok=True)
-        with open(f"{PATH}/{ENVIRONMENT_FILENAME}", "wb") as f:
-            f.write(file)
-            f.flush()
+    # if environment_id:
+    #     start_time = time.perf_counter()
+    #     loaded_env = near_client.get_environment(environment_id)
+    #     stop_time = time.perf_counter()
+    #     write_metric("GetEnvironmentFromRegistry_Duration", stop_time - start_time)
+    #     file = loaded_env
+    #     os.makedirs(PATH, exist_ok=True)
+    #     with open(f"{PATH}/{ENVIRONMENT_FILENAME}", "wb") as f:
+    #         f.write(file)
+    #         f.flush()
 
-        try:
-            with tarfile.open(f"{PATH}/environment.tar.gz", mode="r") as tar:
-                tar.extractall(RUN_PATH)
-        except tarfile.ReadError:
-            print("The file is not a valid tar archive.")
+    #     try:
+    #         with tarfile.open(f"{PATH}/environment.tar.gz", mode="r") as tar:
+    #             tar.extractall(RUN_PATH)
+    #     except tarfile.ReadError:
+    #         print("The file is not a valid tar archive.")
 
     client_config = ClientConfig(
         base_url=api_url + "/v1",
@@ -192,14 +198,21 @@ def run_with_environment(
     inference_client = InferenceClient(client_config)
 
     # Add messages from thread to env chat.txt
+    messages = []
     if thread_id:
+        print("getting messages from thread", thread_id)
         messages = near_client.get_thread_messages(thread_id)
+        print("messages in thread", messages)
 
-        with open(f"{RUN_PATH}/chat.txt", "a") as f:
-            for message in messages:
-                f.write(f"{message.role}: {message.content}\n")
-
-    env = Environment(RUN_PATH, loaded_agents, inference_client, env_vars=user_env_vars)
+    env = Environment(
+        RUN_PATH,
+        loaded_agents,
+        inference_client,
+        messages,
+        env_vars=user_env_vars,
+        hub_client=hub_client,
+        thread_id=thread_id,
+    )
     start_time = time.perf_counter()
     env.add_agent_start_system_log(agent_idx=0)
     run_id = env.run(new_message, max_iterations)

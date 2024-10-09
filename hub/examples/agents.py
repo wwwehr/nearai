@@ -24,9 +24,7 @@ client = openai.OpenAI(base_url=hub_url, api_key=signature)
 
 # Create a new thread
 logger.info("Creating a new thread")
-thread = client.beta.threads.create(
-    tool_resources=
-)
+thread = client.beta.threads.create()
 logger.info(f"Thread created with ID: {thread.id}")
 
 # Add a message to the thread
@@ -37,15 +35,17 @@ message = client.beta.threads.messages.create(
     content="Hello! Can you help me with planning my trip to Lisbon?"
 )
 
-logger.info(f"Message added to thread: {message.id}")
-logger.info(f"Message content: {message.content}")
+messages = client.beta.threads.messages.list(thread.id)
+logger.info(f"Messages in thread: {messages}")
+
 
 # Execute a run on the assistant
 logger.info("Executing a run on the assistant")
 run = client.beta.threads.runs.create(
     thread_id=thread.id,
-    assistant_id="flatirons.near/example-travel-agent/1",
-    model="fireworks::llama-v3p1-70b-instruct",
+    assistant_id="badisland7754.near/inter-agents/0.0.1",
+    instructions="Please provide a helpful response.",
+    model="fireworks::llama-v3p1-70b-instruct"
 )
 
 logger.info(f"Run created with ID: {run.id}")
@@ -63,15 +63,7 @@ logger.info("Run completed")
 # Retrieve the assistant's response
 logger.info("Retrieving the assistant's response")
 messages = client.beta.threads.messages.list(thread_id=thread.id)
-assistant_message = next((msg for msg in messages.data if msg.role == "assistant"), None)
-
-if assistant_message:
-    logger.info("Assistant's response received")
-    print("Assistant's response:")
-    print(assistant_message.content[0].text.value)
-else:
-    logger.warning("No response received from the assistant")
-    print("No response from the assistant.")
+logger.info(f"Messages in thread: {messages}")
 
 logger.info("Agent execution process completed")
 

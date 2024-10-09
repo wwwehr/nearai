@@ -19,7 +19,8 @@ import shared.near.sign as near
 from litellm.types.completion import ChatCompletionMessageParam
 from litellm.types.utils import ChatCompletionMessageToolCall, Choices, Function, ModelResponse
 from litellm.utils import CustomStreamWrapper
-from openai import NOT_GIVEN, NotGiven
+from openai import NOT_GIVEN, NotGiven, OpenAI
+from openai.types.beta.threads.message import Message
 from openai.types.beta.vector_store import VectorStore
 from shared.client_config import DEFAULT_PROVIDER_MODEL
 from shared.inference_client import InferenceClient
@@ -53,6 +54,9 @@ class Environment(object):
         path: str,
         agents: List[Agent],
         client: InferenceClient,
+        messages: List[Message],
+        hub_client: OpenAI,
+        thread_id: str,
         create_files: bool = True,
         env_vars: Optional[Dict[str, Any]] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
@@ -70,6 +74,9 @@ class Environment(object):
         self.tool_resources: Dict[str, Any] = tool_resources if tool_resources else {}
         self.print_system_log = print_system_log
         self._approvals = approvals
+        self._messages = messages
+        self._hub_client = hub_client
+        self._thread_id = thread_id
 
         if create_files:
             os.makedirs(self._path, exist_ok=True)
@@ -93,10 +100,12 @@ class Environment(object):
         reg.register_tool(self.list_files)
         reg.register_tool(self.query_vector_store)
 
-    def add_message(self, role: str, message: str, filename: str = CHAT_FILENAME, **kwargs: Any) -> None:
-        """Adds a message to the chat file."""
-        with open(os.path.join(self._path, filename), "a") as f:
-            f.write(json.dumps({"role": role, "content": message, **kwargs}) + DELIMITER)
+    def add_message(
+        self, role: Literal["user", "assistant"], message: str, filename: str = CHAT_FILENAME, **kwargs: Any
+    ) -> None:
+        """Assistant adds a message to the environment."""
+        resp = self._hub_client.beta.threads.messages.create(thread_id=self._thread_id, role=role, content=message)
+        self._messages.append(resp)
 
     def add_system_log(self, log: str, level: int = logging.INFO) -> None:
         """Add system log with timestamp and log level."""
@@ -155,15 +164,9 @@ class Environment(object):
         """Returns the terminal commands from the terminal file."""
         return self.list_messages(filename)
 
-    def list_messages(self, filename: str = CHAT_FILENAME) -> List[Any]:
-        """Returns messages from a specified file."""
-        path = os.path.join(self._path, filename)
-
-        if not os.path.exists(path):
-            return []
-
-        with open(path, "r") as f:
-            return [json.loads(message) for message in f.read().split(DELIMITER) if message]
+    def list_messages(self, filename: str = CHAT_FILENAME) -> List[Message]:
+        """Returns messages from the environment."""
+        return self._messages
 
     def verify_message(
         self, account_id: str, public_key: str, signature: str, message: str, nonce: str, callback_url: str

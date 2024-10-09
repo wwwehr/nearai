@@ -25,14 +25,7 @@ class PartialNearClient:
         configuration = Configuration(access_token=f"Bearer {json.dumps(auth)}", host=base_url)
         client = ApiClient(configuration)
 
-        client_config = ClientConfig(
-            base_url=base_url + "/v1",
-            auth=auth,
-        )
-        self.openai_client = openai.OpenAI(api_key=auth, base_url=base_url)
-
-        self._inference = InferenceClient(client_config)
-
+        self.openai_client = openai.OpenAI(api_key=f"Bearer {json.dumps(auth)}", base_url=base_url + "/v1")
         self._client = client
         self.entry_location_pattern = re.compile("^(?P<namespace>[^/]+)/(?P<name>[^/]+)/(?P<version>[^/]+)$")
         self.auth = auth
@@ -147,4 +140,5 @@ class PartialNearClient:
 
     def get_thread_messages(self, thread_id):
         """Get messages from a thread."""
-        return self.openai_client.beta.threads.messages.list(thread_id)
+        response = self.openai_client.beta.threads.messages.list(thread_id)
+        return response

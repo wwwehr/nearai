@@ -427,6 +427,7 @@ class AgentCli:
         local: bool = False,
         tool_resources: Optional[Dict[str, Any]] = None,
         print_system_log: bool = True,
+        reset: bool = False,
     ) -> None:
         """Runs agent interactively with environment from given path."""
         from nearai.agents.local_runner import LocalRunner
@@ -442,6 +443,7 @@ class AgentCli:
             env_vars=env_vars,
             tool_resources=tool_resources,
             print_system_log=print_system_log,
+            reset=reset,
             confirm_commands=CONFIG.get("confirm_commands", True),
         )
         runner.run_interactive(record_run, load_env)

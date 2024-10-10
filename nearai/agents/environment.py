@@ -61,6 +61,7 @@ class Environment(object):
         client: InferenceClient,
         hub_client: OpenAI,
         thread_id: str,
+        model: str,
         create_files: bool = True,
         env_vars: Optional[Dict[str, Any]] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
@@ -80,7 +81,7 @@ class Environment(object):
         self._approvals = approvals
         self._hub_client = hub_client
         self._thread_id = thread_id
-
+        self._model = model
         if create_files:
             os.makedirs(self._path, exist_ok=True)
             open(os.path.join(self._path, CHAT_FILENAME), "a").close()

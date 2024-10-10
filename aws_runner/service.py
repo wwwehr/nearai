@@ -57,12 +57,19 @@ def handler(event, context):
     environment_id = event.get("environment_id")
     new_message = event.get("new_message")
     thread_id = event.get("environment_id")  # TODO: migrate to thread_id
+    model = event.get("model")
 
     params = event.get("params", {})
     print("event", event)
 
     new_environment_registry_id = run_with_environment(
-        agents, auth_object, environment_id, new_message, params, thread_id
+        agents,
+        auth_object,
+        environment_id,
+        new_message,
+        params,
+        thread_id,
+        model,
     )
     if not new_environment_registry_id:
         return f"Run not recorded. Ran {agents} agent(s) with generated near client and environment {environment_id}"
@@ -146,10 +153,11 @@ def save_environment(env, client, run_id, base_id, metric_function=None) -> str:
 def run_with_environment(
     agents: str,
     auth: dict,
+    thread_id,
+    model,
     environment_id: str = None,
     new_message: str = None,
     params: dict = None,
-    thread_id: str = None,
 ) -> Optional[str]:
     """Runs agent against environment fetched from id, optionally passing a new message to the environment."""
     print("Running with :", agents, auth, environment_id, new_message, params, thread_id)
@@ -184,9 +192,10 @@ def run_with_environment(
         RUN_PATH,
         loaded_agents,
         inference_client,
+        hub_client,
+        thread_id,
+        model,
         env_vars=user_env_vars,
-        hub_client=hub_client,
-        thread_id=thread_id,
     )
     start_time = time.perf_counter()
     env.add_agent_start_system_log(agent_idx=0)

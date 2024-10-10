@@ -17,7 +17,12 @@ from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union, c
 import psutil
 import shared.near.sign as near
 from litellm.types.completion import ChatCompletionMessageParam
-from litellm.types.utils import ChatCompletionMessageToolCall, Choices, Function, ModelResponse
+from litellm.types.utils import (
+    ChatCompletionMessageToolCall,
+    Choices,
+    Function,
+    ModelResponse,
+)
 from litellm.utils import CustomStreamWrapper
 from openai import NOT_GIVEN, NotGiven, OpenAI
 from openai.types.beta.threads.message import Message
@@ -101,10 +106,19 @@ class Environment(object):
         reg.register_tool(self.query_vector_store)
 
     def add_message(
-        self, role: Literal["user", "assistant"], message: str, filename: str = CHAT_FILENAME, **kwargs: Any
+        self,
+        role: Literal["user", "assistant"],
+        message: str,
+        filename: str = CHAT_FILENAME,
+        **kwargs: Any,
     ) -> None:
         """Assistant adds a message to the environment."""
-        resp = self._hub_client.beta.threads.messages.create(thread_id=self._thread_id, role=role, content=message)
+        resp = self._hub_client.beta.threads.messages.create(
+            thread_id=self._thread_id,
+            role=role,
+            content=message,
+            extra_body={"assistant_id": self._agents[0].identifier},
+        )
         self._messages.append(resp)
 
     def add_system_log(self, log: str, level: int = logging.INFO) -> None:
@@ -169,11 +183,23 @@ class Environment(object):
         return self._messages
 
     def verify_message(
-        self, account_id: str, public_key: str, signature: str, message: str, nonce: str, callback_url: str
+        self,
+        account_id: str,
+        public_key: str,
+        signature: str,
+        message: str,
+        nonce: str,
+        callback_url: str,
     ) -> near.SignatureVerificationResult:
         """Verifies that the user message is signed with NEAR Account."""
         return near.verify_signed_message(
-            account_id, public_key, signature, message, nonce, self._agents[0].name, callback_url
+            account_id,
+            public_key,
+            signature,
+            message,
+            nonce,
+            self._agents[0].name,
+            callback_url,
         )
 
     def list_files(self, path: str) -> List[str]:
@@ -229,7 +255,9 @@ class Environment(object):
         return self._client.query_vector_store(vector_store_id, query)
 
     def upload_file(
-        self, file_content: str, purpose: Literal["assistants", "batch", "fine-tune", "vision"] = "assistants"
+        self,
+        file_content: str,
+        purpose: Literal["assistants", "batch", "fine-tune", "vision"] = "assistants",
     ):
         """Uploads a file to the registry."""
         return self._client.upload_file(file_content, purpose)
@@ -391,7 +419,10 @@ class Environment(object):
     ) -> Union[ModelResponse, CustomStreamWrapper]:
         """Run inference completions for given parameters."""
         if isinstance(messages, str):
-            self.add_system_log("Deprecated completions call. Pass `messages` as a first parameter.", logging.WARNING)
+            self.add_system_log(
+                "Deprecated completions call. Pass `messages` as a first parameter.",
+                logging.WARNING,
+            )
             messages_or_model = messages
             model_or_messages = model
             model = cast(str, messages_or_model)
@@ -448,7 +479,13 @@ class Environment(object):
 
         return response
 
-    def _handle_tool_calls(self, response_message, add_responses_to_messages, agent_role_name, tool_role_name):
+    def _handle_tool_calls(
+        self,
+        response_message,
+        add_responses_to_messages,
+        agent_role_name,
+        tool_role_name,
+    ):
         (message_without_tool_call, tool_calls) = self._parse_tool_call(response_message)
         if add_responses_to_messages and response_message.content:
             self.add_message(agent_role_name, message_without_tool_call)
@@ -468,16 +505,26 @@ class Environment(object):
                         function_response_json = json.dumps(function_response) if function_response else ""
                         if add_responses_to_messages:
                             self.add_message(
-                                tool_role_name, function_response_json, tool_call_id=tool_call.id, name=function_name
+                                tool_role_name,
+                                function_response_json,
+                                tool_call_id=tool_call.id,
+                                name=function_name,
                             )
                 except Exception as e:
                     error_message = f"Error calling tool {function_name}: {e}"
                     self.add_system_log(error_message, level=logging.ERROR)
                     if add_responses_to_messages:
-                        self.add_message(tool_role_name, error_message, tool_call_id=tool_call.id, name=function_name)
+                        self.add_message(
+                            tool_role_name,
+                            error_message,
+                            tool_call_id=tool_call.id,
+                            name=function_name,
+                        )
 
     @staticmethod
-    def _parse_tool_call(response_message) -> Tuple[Optional[str], Optional[List[ChatCompletionMessageToolCall]]]:
+    def _parse_tool_call(
+        response_message,
+    ) -> Tuple[Optional[str], Optional[List[ChatCompletionMessageToolCall]]]:
         if hasattr(response_message, "tool_calls") and response_message.tool_calls:
             return response_message.content, response_message.tool_calls
         content = response_message.content
@@ -547,7 +594,10 @@ class Environment(object):
         """Returns a completion for the given messages using the given model and runs tools."""
         completion_tools_response = self.completions_and_run_tools(messages, model, tools, **kwargs)
         assert all(
-            map(lambda choice: isinstance(choice, Choices), completion_tools_response.choices)
+            map(
+                lambda choice: isinstance(choice, Choices),
+                completion_tools_response.choices,
+            )
         ), "Expected Choices"
         choices: List[Choices] = completion_tools_response.choices  # type: ignore
         response_content = choices[0].message.content

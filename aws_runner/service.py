@@ -164,7 +164,7 @@ def run_with_environment(
         print(f"WARNING: Using custom API URL: {api_url}")
 
     near_client = PartialNearClient(api_url, auth)
-    hub_client = openai.OpenAI(base_url=api_url, api_key=f"Bearer {json.dumps(auth)}")
+    hub_client = openai.OpenAI(base_url=api_url + "/v1", api_key=f"Bearer {json.dumps(auth)}")
 
     loaded_agents = []
 

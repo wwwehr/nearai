@@ -174,41 +174,16 @@ def run_with_environment(
         agent.env_vars = {**agent.env_vars, **agent_env_vars.get(agent_name, {})}
         loaded_agents.append(agent)
 
-    # if environment_id:
-    #     start_time = time.perf_counter()
-    #     loaded_env = near_client.get_environment(environment_id)
-    #     stop_time = time.perf_counter()
-    #     write_metric("GetEnvironmentFromRegistry_Duration", stop_time - start_time)
-    #     file = loaded_env
-    #     os.makedirs(PATH, exist_ok=True)
-    #     with open(f"{PATH}/{ENVIRONMENT_FILENAME}", "wb") as f:
-    #         f.write(file)
-    #         f.flush()
-
-    #     try:
-    #         with tarfile.open(f"{PATH}/environment.tar.gz", mode="r") as tar:
-    #             tar.extractall(RUN_PATH)
-    #     except tarfile.ReadError:
-    #         print("The file is not a valid tar archive.")
-
     client_config = ClientConfig(
         base_url=api_url + "/v1",
         auth=auth,
     )
     inference_client = InferenceClient(client_config)
 
-    # Add messages from thread to env chat.txt
-    messages = []
-    if thread_id:
-        print("getting messages from thread", thread_id)
-        messages = near_client.get_thread_messages(thread_id)
-        print("messages in thread", messages)
-
     env = Environment(
         RUN_PATH,
         loaded_agents,
         inference_client,
-        messages,
         env_vars=user_env_vars,
         hub_client=hub_client,
         thread_id=thread_id,

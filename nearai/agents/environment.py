@@ -59,7 +59,6 @@ class Environment(object):
         path: str,
         agents: List[Agent],
         client: InferenceClient,
-        messages: List[Message],
         hub_client: OpenAI,
         thread_id: str,
         create_files: bool = True,
@@ -79,7 +78,6 @@ class Environment(object):
         self.tool_resources: Dict[str, Any] = tool_resources if tool_resources else {}
         self.print_system_log = print_system_log
         self._approvals = approvals
-        self._messages = messages
         self._hub_client = hub_client
         self._thread_id = thread_id
 
@@ -111,15 +109,14 @@ class Environment(object):
         message: str,
         filename: str = CHAT_FILENAME,
         **kwargs: Any,
-    ) -> None:
+    ):
         """Assistant adds a message to the environment."""
-        resp = self._hub_client.beta.threads.messages.create(
+        return self._hub_client.beta.threads.messages.create(
             thread_id=self._thread_id,
             role=role,
             content=message,
             extra_body={"assistant_id": self._agents[0].identifier},
         )
-        self._messages.append(resp)
 
     def add_system_log(self, log: str, level: int = logging.INFO) -> None:
         """Add system log with timestamp and log level."""
@@ -176,11 +173,19 @@ class Environment(object):
 
     def list_terminal_commands(self, filename: str = TERMINAL_FILENAME) -> List[Any]:
         """Returns the terminal commands from the terminal file."""
-        return self.list_messages(filename)
+        path = os.path.join(self._path, filename)
+
+        if not os.path.exists(path):
+            return []
+
+        with open(path, "r") as f:
+            return [json.loads(message) for message in f.read().split(DELIMITER) if message]
 
     def list_messages(self, filename: str = CHAT_FILENAME) -> List[Message]:
         """Returns messages from the environment."""
-        return self._messages
+        messages = self._hub_client.beta.threads.messages.list(self._thread_id)
+        self.add_system_log(f"Retrieved {len(messages.data)} messages from NearAI Hub")
+        return messages.data
 
     def verify_message(
         self,

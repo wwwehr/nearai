@@ -137,8 +137,3 @@ class PartialNearClient:
             version=entry_location["version"],
         )
         return f"{author}/{name}/0"
-
-    def get_thread_messages(self, thread_id):
-        """Get messages from a thread."""
-        response = self.openai_client.beta.threads.messages.list(thread_id)
-        return response

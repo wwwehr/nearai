@@ -17,9 +17,6 @@ class TestAgentsRoutes(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(app)
         app.dependency_overrides[revokable_auth] = self.override_dependency
-        self.file_content = b"To list use client.beta.vector_stores.list()"
-        self.in_memory_file = io.BytesIO(self.file_content)
-        self.in_memory_file.name = "test_file.py"
 
     @staticmethod
     async def override_dependency():
@@ -33,7 +30,7 @@ class TestAgentsRoutes(unittest.TestCase):
     def test_run_agent(self):
         client = self.create_openai_client()
 
-        assistant_id = "s3::pierre-dev.near/agents/vector-store-agent"
+        assistant_id = "pierre-dev.near/agents/vector-store-agent"
         thread = client.beta.threads.create(messages=[Message(role="user", content="Create vector store for near core-contracts.")])
         run = client.beta.threads.runs.create_and_poll(
             thread_id=thread.id,

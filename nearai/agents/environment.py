@@ -117,6 +117,7 @@ class Environment(object):
             role=role,
             content=message,
             extra_body={"assistant_id": self._agents[0].identifier},
+            metadata=kwargs,
         )
 
     def add_system_log(self, log: str, level: int = logging.INFO) -> None:
@@ -745,10 +746,3 @@ class Environment(object):
                         hash_obj.update(chunk)
 
         return hash_obj.hexdigest()
-
-    def get_agent_by_name(self, agent_name: str) -> Optional[Agent]:
-        """Returns an agent by its name."""
-        for agent in self._agents:
-            if agent.name == agent_name:
-                return agent
-        return None

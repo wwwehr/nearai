@@ -248,7 +248,6 @@ class Filename(BaseModel):
 async def list_files_async(entry: RegistryEntry = Depends(get)) -> List[Filename]:
     """Lists all files that belong to a entry."""
     logger.info(f"Listing files for entry: {entry}")
-    print(f"Listing files for entry: {entry}")
     return list_files(entry)
 
 

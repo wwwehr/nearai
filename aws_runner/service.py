@@ -60,7 +60,6 @@ def handler(event, context):
     model = event.get("model")
 
     params = event.get("params", {})
-    print("event", event)
 
     new_environment_registry_id = run_with_environment(
         agents,

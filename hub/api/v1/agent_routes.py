@@ -65,7 +65,7 @@ class CreateThreadAndRunRequest(BaseModel):
     )
 
 
-def invoke_function_via_curl(runner_invoke_url, agents, environment_id, auth: AuthToken, new_message, params):
+def invoke_function_via_curl(runner_invoke_url, agents, thread_id, run_id, auth: AuthToken, new_message, params):
     auth_data = auth.model_dump()
 
     if auth_data["nonce"]:
@@ -74,7 +74,8 @@ def invoke_function_via_curl(runner_invoke_url, agents, environment_id, auth: Au
 
     payload = {
         "agents": agents,
-        "environment_id": environment_id,
+        "thread_id": thread_id,
+        "run_id": run_id,
         "auth": auth_data,
         "new_message": new_message,
         "params": params,
@@ -90,13 +91,14 @@ def invoke_function_via_curl(runner_invoke_url, agents, environment_id, auth: Au
         raise Exception(f"Request failed with status code {response.status_code}: {response.text}")
 
 
-def invoke_function_via_lambda(function_name, agents, environment_id, auth: AuthToken, new_message, params):
+def invoke_function_via_lambda(function_name, agents, thread_id, run_id, auth: AuthToken, new_message, params):
     wrapper = LambdaWrapper(boto3.client("lambda", region_name="us-east-2"))
     result = wrapper.invoke_function(
         function_name,
         {
             "agents": agents,
-            "environment_id": environment_id,
+            "thread_id": thread_id,
+            "run_id": run_id,
             "auth": auth.model_dump(),
             "new_message": new_message,
             "params": params,

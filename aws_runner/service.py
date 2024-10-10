@@ -56,19 +56,18 @@ def handler(event, context):
 
     environment_id = event.get("environment_id")
     new_message = event.get("new_message")
-    thread_id = event.get("environment_id")  # TODO: migrate to thread_id
-    model = event.get("model")
+    thread_id = event.get("thread_id")
+    run_id = event.get("run_id")
 
     params = event.get("params", {})
 
     new_environment_registry_id = run_with_environment(
         agents,
         auth_object,
-        environment_id,
+        thread_id,
+        run_id,
         new_message,
         params,
-        thread_id,
-        model,
     )
     if not new_environment_registry_id:
         return f"Run not recorded. Ran {agents} agent(s) with generated near client and environment {environment_id}"
@@ -100,7 +99,7 @@ def write_metric(metric_name, value, unit="Milliseconds"):
 
 def load_agent(client, agent, params: dict = None):
     agent_metadata = None
-    print("agent", agent, "params", params)
+
     if params["data_source"] == "registry":
         start_time = time.perf_counter()
         agent_files = client.get_agent(agent)
@@ -153,19 +152,19 @@ def run_with_environment(
     agents: str,
     auth: dict,
     thread_id,
-    model,
-    environment_id: str = None,
+    run_id,
     new_message: str = None,
     params: dict = None,
 ) -> Optional[str]:
     """Runs agent against environment fetched from id, optionally passing a new message to the environment."""
-    print("Running with :", agents, auth, environment_id, new_message, params, thread_id)
+    print("Running with :", agents, auth, new_message, params, thread_id, run_id)
     params = params or {}
     max_iterations = int(params.get("max_iterations", 2))
     record_run = bool(params.get("record_run", True))
     api_url = str(params.get("api_url", DEFAULT_API_URL))
     user_env_vars: dict = params.get("user_env_vars", {})
     agent_env_vars: dict = params.get("agent_env_vars", {})
+    model: str = params.get("model", "")
 
     if api_url != DEFAULT_API_URL:
         print(f"WARNING: Using custom API URL: {api_url}")
@@ -199,7 +198,7 @@ def run_with_environment(
     start_time = time.perf_counter()
     env.add_agent_start_system_log(agent_idx=0)
     run_id = env.run(new_message, max_iterations)
-    new_environment = save_environment(env, near_client, run_id, environment_id, write_metric) if record_run else None
+    new_environment = save_environment(env, near_client, run_id, thread_id, write_metric) if record_run else None
     clear_temp_agent_files(loaded_agents)
     stop_time = time.perf_counter()
     write_metric("ExecuteAgentDuration", stop_time - start_time)
@@ -212,7 +211,6 @@ def get_local_agent_files(agent_identifier: str):
     # os.path.expanduser(f"/root/.nearai/registry/{agent_identifier}")
     # base_path = os.path.expanduser(f"/nearai_registry/{agent_identifier}")
     base_path = os.path.expanduser(f"~/.nearai/registry/{agent_identifier}")
-    print("base_path", base_path)
 
     results = []
 
@@ -225,7 +223,5 @@ def get_local_agent_files(agent_identifier: str):
                 results.append({"filename": os.path.basename(path), "content": result})
             except Exception as e:
                 print(f"Error {path}: {e}")
-
-    print("results", results)
 
     return results

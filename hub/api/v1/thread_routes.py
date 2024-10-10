@@ -98,7 +98,6 @@ async def create_message(
     message: MessageCreateParams = Body(...),
     auth: AuthToken = Depends(revokable_auth),
 ) -> Message:
-    print("create_message", message)
     with get_session() as session:
         thread_model = session.get(ThreadModel, thread_id)
         if thread_model is None:
@@ -221,11 +220,9 @@ async def create_run(
         thread_model = session.get(ThreadModel, thread_id)
         if thread_model is None:
             raise HTTPException(status_code=404, detail="Thread not found")
-        model = run["model"] if "model" in run else DEFAULT_MODEL
-        # TODO: get model from agents metadata
+        run["model"] = run["model"] if "model" in run else DEFAULT_MODEL
         run_model = RunModel(
             thread_id=thread_id,
-            model=model,
             **run,
         )
         background_tasks.add_task(run_agent, thread_id, run_model.id, auth)
@@ -237,7 +234,6 @@ async def create_run(
 
 def run_agent(thread_id: str, run_id: str, auth: AuthToken = Depends(revokable_auth)) -> OpenAIRun:
     """Task to run an agent in the background."""
-    print("HERE run_agent")
     with get_session() as session:
         run_model = session.get(RunModel, run_id)
         if run_model is None:
@@ -259,11 +255,12 @@ def run_agent(thread_id: str, run_id: str, auth: AuthToken = Depends(revokable_a
         agents = run_model.assistant_id
         runner = _runner_for_env()
         framework = "base"
+        print("HERE")
 
         if runner == "local":
             runner_invoke_url = getenv("RUNNER_INVOKE_URL", None)
             if runner_invoke_url:
-                invoke_function_via_curl(runner_invoke_url, agents, thread_id, auth, "", params)
+                invoke_function_via_curl(runner_invoke_url, agents, thread_id, run_id, auth, "", params)
             else:
                 raise HTTPException(status_code=400, detail="Runner invoke URL not set for local runner")
         else:
@@ -273,7 +270,7 @@ def run_agent(thread_id: str, run_id: str, auth: AuthToken = Depends(revokable_a
             print(
                 f"Running function {function_name} with: assistant_id={run_model.assistant_id}, thread_id={thread_id}, run_id={run_id}"
             )
-            invoke_function_via_lambda(function_name, agents, thread_id, auth, "", params)
+            invoke_function_via_lambda(function_name, agents, thread_id, run_id, auth, "", params)
 
         run_model.completed_at = datetime.now()
         run_model.status = "completed"

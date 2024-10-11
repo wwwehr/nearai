@@ -192,6 +192,7 @@ def run_with_environment(
         inference_client,
         hub_client,
         thread_id,
+        run_id,
         model,
         env_vars=user_env_vars,
     )

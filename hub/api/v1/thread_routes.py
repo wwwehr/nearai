@@ -405,15 +405,11 @@ def run_agent(thread_id: str, run_id: str, auth: AuthToken = Depends(revokable_a
             if agent_api_url != "https://api.near.ai":
                 print(f"Passing agent API URL: {agent_api_url}")
             print(
-                f"Running function {function_name} with: assistant_id={run_model.assistant_id}, thread_id={thread_id}, run_id={run_id}"
+                f"Running function {function_name} with: "
+                f"assistant_id={run_model.assistant_id}, "
+                f"thread_id={thread_id}, run_id={run_id}"
             )
             invoke_function_via_lambda(function_name, agents, thread_id, run_id, auth, "", params)
-
-        run_model.completed_at = datetime.now()
-        run_model.status = "completed"
-
-        session.add(run_model)
-        session.commit()
 
         return run_model.to_openai()
 
@@ -433,4 +429,34 @@ async def get_run(
         if run_model.thread_id != thread_id:
             raise HTTPException(status_code=404, detail="Run not found for this thread")
 
+        return run_model.to_openai()
+
+
+class RunUpdateParams(BaseModel):
+    status: Optional[Literal["requires_action", "failed", "expired", "completed"]] = None
+    completed_at: Optional[datetime] = None
+    metadata: Optional[dict] = None
+
+
+@threads_router.post("/threads/{thread_id}/runs/{run_id}")
+async def update_run(
+    thread_id: str,
+    run_id: str,
+    run: RunUpdateParams = Body(...),
+    auth: AuthToken = Depends(revokable_auth),
+) -> OpenAIRun:
+    with get_session() as session:
+        run_model = session.get(RunModel, run_id)
+        if run_model is None:
+            raise HTTPException(status_code=404, detail="Run not found")
+
+        if run.status:
+            run_model.status = run.status
+        if run.completed_at:
+            run_model.completed_at = run.completed_at
+        if run.metadata:
+            run_model.meta_data = run.metadata
+
+        session.add(run_model)
+        session.commit()
         return run_model.to_openai()

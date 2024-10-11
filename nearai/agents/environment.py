@@ -26,6 +26,7 @@ from litellm.types.utils import (
 from litellm.utils import CustomStreamWrapper
 from openai import NOT_GIVEN, NotGiven, OpenAI
 from openai.types.beta.threads.message import Message
+from openai.types.beta.threads.run import Run
 from openai.types.beta.vector_store import VectorStore
 from shared.client_config import DEFAULT_PROVIDER_MODEL
 from shared.inference_client import InferenceClient
@@ -61,6 +62,7 @@ class Environment(object):
         client: InferenceClient,
         hub_client: OpenAI,
         thread_id: str,
+        run_id: str,
         model: str,
         create_files: bool = True,
         env_vars: Optional[Dict[str, Any]] = None,
@@ -82,6 +84,8 @@ class Environment(object):
         self._hub_client = hub_client
         self._thread_id = thread_id
         self._model = model
+        self._run_id = run_id
+
         if create_files:
             os.makedirs(self._path, exist_ok=True)
             open(os.path.join(self._path, CHAT_FILENAME), "a").close()
@@ -625,8 +629,16 @@ class Environment(object):
     def is_done(self) -> bool:  # noqa: D102
         return self._done
 
-    def mark_done(self) -> None:  # noqa: D102
+    def mark_done(self) -> Run:  # noqa: D102
         self._done = True
+        self.add_system_log("Marking environment run as completed", logging.INFO)
+        res = self._hub_client.beta.threads.runs.update(
+            thread_id=self._thread_id,
+            run_id=self._run_id,
+            extra_body={"status": "completed", "completed_at": datetime.now().isoformat()},
+        )
+        self.add_system_log("Environment run completed", logging.INFO)
+        return res
 
     def create_snapshot(self) -> bytes:
         """Create an in memory snapshot."""
@@ -687,9 +699,13 @@ class Environment(object):
     def run_agent(self, task: Optional[str]) -> None:  # noqa: D102
         self._agents[0].run(self, task=task)
 
-    def request_user_input(self) -> None:
+    def request_user_input(self) -> Run:
         """Must be called to request input from the user."""
-        self.set_next_actor("user")
+        return self._hub_client.beta.threads.runs.update(
+            thread_id=self._thread_id,
+            run_id=self._run_id,
+            extra_body={"status": "requires_action"},
+        )
 
     def clear_temp_agent_files(self) -> None:
         """Remove temp agent files created to be used in `runpy`."""

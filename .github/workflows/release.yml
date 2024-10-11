@@ -84,7 +84,7 @@ jobs:
 
     - name: Bump version, generate changelog, and push
       run: |
-        poetry run cz bump --yes --changelog --increment ${{ github.event.inputs.bump }} --check-consistency
+        poetry run cz bump --yes --changelog --increment ${{ github.event.inputs.bump }} --check-consistency --changelog-to-stdout > body.md
         git push origin HEAD --tags
       env:
         GH_TOKEN: ${{ steps.generate-token.outputs.token }}

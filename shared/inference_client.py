@@ -1,20 +1,27 @@
+import io
 from functools import cached_property
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any, Dict, Iterable, List, Literal, Optional, Union
 
 import litellm
+import openai
 import requests
 from litellm import CustomStreamWrapper, ModelResponse
 from litellm import completion as litellm_completion
 from litellm.types.completion import ChatCompletionMessageParam
+from openai import NOT_GIVEN, NotGiven
 from openai.types.beta.vector_store import VectorStore
+from openai.types.beta.vector_stores import VectorStoreFile
+from openai.types.file_object import FileObject
 
 from shared.client_config import DEFAULT_MODEL_MAX_TOKENS, DEFAULT_MODEL_TEMPERATURE, ClientConfig
 from shared.models import (
+    AutoFileChunkingStrategyParam,
     ChunkingStrategy,
     ExpiresAfter,
     GitHubSource,
     GitLabSource,
     SimilaritySearch,
+    StaticFileChunkingStrategyParam,
 )
 from shared.provider_models import ProviderModels
 
@@ -102,6 +109,24 @@ class InferenceClient(object):
         except requests.RequestException as e:
             raise ValueError(f"Error querying vector store: {e}") from None
 
+    def upload_file(
+        self,
+        file_content: str,
+        purpose: Literal["assistants", "batch", "fine-tune", "vision"],
+        encoding: str = "utf-8",
+        file_name="file.txt",
+        file_type="text/plain",
+    ) -> FileObject:
+        """Uploads a file."""
+        client = openai.OpenAI(base_url=self._config.base_url, api_key=self._auth)
+        file_data = io.BytesIO(file_content.encode(encoding))
+        return client.files.create(file=(file_name, file_data, file_type), purpose=purpose)
+
+    def add_file_to_vector_store(self, vector_store_id: str, file_id: str) -> VectorStoreFile:
+        """Adds a file to vector store."""
+        client = openai.OpenAI(base_url=self._config.base_url, api_key=self._auth)
+        return client.beta.vector_stores.files.create(vector_store_id=vector_store_id, file_id=file_id)
+
     def create_vector_store_from_source(
         self,
         name: str,
@@ -149,6 +174,32 @@ class InferenceClient(object):
             return VectorStore(**response.json())
         except requests.RequestException as e:
             raise ValueError(f"Failed to create vector store: {e}") from None
+
+    def create_vector_store(
+        self,
+        name: str,
+        file_ids: List[str],
+        expires_after: ExpiresAfter | NotGiven = NOT_GIVEN,
+        chunking_strategy: AutoFileChunkingStrategyParam | StaticFileChunkingStrategyParam | NotGiven = NOT_GIVEN,
+        metadata: Optional[Dict[str, str]] = None,
+    ) -> VectorStore:
+        """Creates Vector Store.
+
+        :param name: Vector store name.
+        :param file_ids: Files to be added to the vector store.
+        :param expires_after: Expiration policy.
+        :param chunking_strategy: Chunking strategy.
+        :param metadata: Additional metadata.
+        :return: Returns the created vector store or error.
+        """
+        client = openai.OpenAI(base_url=self._config.base_url, api_key=self._auth)
+        return client.beta.vector_stores.create(
+            file_ids=file_ids,
+            name=name,
+            expires_after=expires_after,
+            chunking_strategy=chunking_strategy,
+            metadata=metadata,
+        )
 
     def get_vector_store(self, vector_store_id: str) -> VectorStore:
         """Gets a vector store by id."""

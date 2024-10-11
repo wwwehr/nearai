@@ -30,11 +30,12 @@ RUN mkdir -p /workspace/vllm && \
     cd /tmp/vllm && \
     git checkout ${VLLM_VERSION} && \
     cd /workspace && \
-    mv /tmp/vllm/* /workspace/ && \
+    mv /tmp/vllm/ /workspace/ && \
     rm -rf /tmp/vllm
 
 ENV PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
 RUN --mount=type=cache,target=/root/.cache/pip \
+    cd /workspace/vllm && \
     pip install --upgrade pip && \
     pip install -r requirements-build.txt
 
@@ -51,26 +52,23 @@ RUN --mount=type=cache,target=/root/.cache/ccache \
     -DONEDNN_ENABLE_PRIMITIVE=MATMUL && \
     cmake --build ./oneDNN/build --target install --config Release
 
-# FROM cpu-test-1 AS build
-
-## COPY the .git folder to the build stage to ensure reproducibility
-# COPY --from=cpu-test-1 /workspace/.git /workspace/.git
-
 RUN --mount=type=cache,target=/root/.cache/pip \
+    cd /workspace/vllm && \
     pip install -v -r requirements-cpu.txt
 
 # Support for building with non-AVX512 vLLM: docker build --build-arg VLLM_CPU_DISABLE_AVX512="true" ...
 ARG VLLM_CPU_DISABLE_AVX512
-ENV VLLM_CPU_DISABLE_AVX512=${VLLM_CPU_DISABLE_AVX512}
+ENV VLLM_CPU_DISABLE_AVX512=false
 
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=cache,target=/root/.cache/ccache \
+    cd /workspace/vllm && \
     VLLM_TARGET_DEVICE=cpu python3 setup.py bdist_wheel && \
     pip install dist/*.whl && \
     rm -rf dist
 
 WORKDIR /workspace/
 
-# RUN ln -s /workspace/tests && ln -s /workspace/examples && ln -s /workspace/benchmarks
+RUN ln -s /workspace/vllm/tests && ln -s /workspace/vllm/examples && ln -s /workspace/vllm/benchmarks
 
 ENTRYPOINT ["python3", "-m", "vllm.entrypoints.openai.api_server"]

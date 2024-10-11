@@ -1,4 +1,5 @@
 import { TarReader } from '@gera2ld/tarjs';
+import path from 'path';
 import { z } from 'zod';
 import { createZodFetcher } from 'zod-fetch';
 
@@ -23,6 +24,7 @@ import {
   protectedProcedure,
   publicProcedure,
 } from '~/server/api/trpc';
+import { loadEntriesFromDirectory } from '~/utils/data-source';
 
 const fetchWithZod = createZodFetcher();
 
@@ -184,6 +186,15 @@ export const hubRouter = createTRPCRouter({
 
       if (input.tags) url.searchParams.append('tags', input.tags.join(','));
 
+      if (input.category == 'agent' && env.DATA_SOURCE == 'local_files') {
+        if (!env.HOME)
+          throw new Error(
+            'Missing required HOME environment variable for serving local files',
+          );
+        const registryPath = path.join(env.HOME, '.nearai', 'registry');
+        return await loadEntriesFromDirectory(registryPath);
+      }
+
       if (input.starredBy) {
         url.searchParams.append('starred_by', input.starredBy);
       }
@@ -241,8 +252,13 @@ export const hubRouter = createTRPCRouter({
       }
     });
 
+    const defaultBenchmarkColumns = evaluations.important_columns.filter(
+      (column) => !infoColumns.includes(column),
+    );
+
     return {
       benchmarkColumns,
+      defaultBenchmarkColumns,
       infoColumns,
       results: evaluations.rows,
     };

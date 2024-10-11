@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import tarfile
 import tempfile
 from pathlib import Path
@@ -27,6 +28,7 @@ class LocalRunner:
         tool_resources=None,
         print_system_log=True,
         confirm_commands=True,
+        reset=False,
     ) -> None:
         if path:
             self._path = path
@@ -39,6 +41,9 @@ class LocalRunner:
         self._confirm_commands = confirm_commands
 
         client = InferenceClient(client_config)
+
+        if reset:
+            shutil.rmtree(self._path)
 
         self.env = Environment(
             self._path,

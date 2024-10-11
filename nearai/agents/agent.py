@@ -31,17 +31,16 @@ class Agent(object):
         self.welcome_description: Optional[str] = None
 
         self.set_agent_metadata(metadata)
+        self.agent_files = agent_files
+        self.original_cwd = os.getcwd()
 
-        self.temp_dir = self._write_agent_files_to_temp(agent_files)
-
-    @staticmethod
-    def _write_agent_files_to_temp(agent_files):
+    def write_agent_files_to_temp(self):  # noqa: D102
         temp_dir = os.path.join(tempfile.gettempdir(), str(int(time.time())))
 
-        if isinstance(agent_files, List):
+        if isinstance(self.agent_files, List):
             os.makedirs(temp_dir, exist_ok=True)
 
-            for file_obj in agent_files:
+            for file_obj in self.agent_files:
                 file_path = os.path.join(temp_dir, file_obj["filename"])
 
                 try:
@@ -70,7 +69,7 @@ class Agent(object):
         else:
             # if agent files is a PosixPath, it is a path to the agent directory
             # Copy all agent files including subfolders
-            shutil.copytree(agent_files, temp_dir, dirs_exist_ok=True)
+            shutil.copytree(self.agent_files, temp_dir, dirs_exist_ok=True)
 
         return temp_dir
 
@@ -100,8 +99,8 @@ class Agent(object):
         if not self.version or not self.name:
             raise ValueError("Both 'version' and 'name' must be non-empty in metadata.")
 
-    def run(self, env: Any, task: Optional[str] = None) -> None:  # noqa: D102
-        if not os.path.exists(os.path.join(self.temp_dir, AGENT_FILENAME)):
+    def run(self, env: Any, temp_dir: Path, task: Optional[str] = None) -> None:  # noqa: D102
+        if not os.path.exists(os.path.join(temp_dir, AGENT_FILENAME)):
             raise ValueError(f"Agent run error: {AGENT_FILENAME} does not exist")
 
         # combine agent.env_vars and env.env_vars
@@ -114,11 +113,10 @@ class Agent(object):
 
         context = {"env": env, "agent": self, "task": task}
 
-        original_cwd = os.getcwd()
         try:
-            os.chdir(self.temp_dir)
-            sys.path.insert(0, self.temp_dir)
+            os.chdir(temp_dir)
+            sys.path.insert(0, str(temp_dir))
             runpy.run_path(AGENT_FILENAME, init_globals=context, run_name="__main__")
         finally:
-            os.chdir(original_cwd)
+            os.chdir(self.original_cwd)
             sys.path.pop(0)

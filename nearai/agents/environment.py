@@ -61,6 +61,7 @@ class Environment(object):
     ) -> None:
         self._path = path
         self._agents = agents
+        self._agent_temp_dirs = [a.write_agent_files_to_temp() for a in agents]
         self._done = False
         self._client = client
         self._tools = ToolRegistry()
@@ -192,8 +193,8 @@ class Environment(object):
         if os.path.exists(os.path.join(self._path, filename)):
             file_location = self._path
         # TODO: fix get_primary_agent => "current" agent
-        elif os.path.exists(os.path.join(self.get_primary_agent().temp_dir, filename)):
-            file_location = self.get_primary_agent().temp_dir
+        elif os.path.exists(os.path.join(self.get_primary_agent_temp_dir(), filename)):
+            file_location = str(self.get_primary_agent_temp_dir())
         else:
             print(f"File {filename} not found")
             return ""
@@ -552,7 +553,7 @@ class Environment(object):
 
     def call_agent(self, agent_path: int, task: str) -> None:
         """Calls agent with given task."""
-        self._agents[agent_path].run(self, task=task)
+        self._agents[agent_path].run(self, self._agent_temp_dirs[agent_path], task=task)
 
     def get_agents(self) -> List[Agent]:
         """Returns list of agents available in environment."""
@@ -561,6 +562,10 @@ class Environment(object):
     def get_primary_agent(self) -> Agent:
         """Returns the agent that is invoked first."""
         return self._agents[0]
+
+    def get_primary_agent_temp_dir(self) -> Path:
+        """Returns temp dir for primary agent."""
+        return self._agent_temp_dirs[0]
 
     def is_done(self) -> bool:  # noqa: D102
         return self._done
@@ -625,7 +630,7 @@ class Environment(object):
         return f"Environment({self._path})"
 
     def run_agent(self, task: Optional[str]) -> None:  # noqa: D102
-        self._agents[0].run(self, task=task)
+        self._agents[0].run(self, self._agent_temp_dirs[0], task=task)
 
     def request_user_input(self) -> None:
         """Must be called to request input from the user."""
@@ -633,9 +638,9 @@ class Environment(object):
 
     def clear_temp_agent_files(self) -> None:
         """Remove temp agent files created to be used in `runpy`."""
-        for agent in self._agents:
-            if agent.temp_dir and os.path.exists(agent.temp_dir):
-                shutil.rmtree(agent.temp_dir)
+        for temp_dir in self._agent_temp_dirs:
+            if os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
 
     def set_next_actor(self, who: str) -> None:
         """Set the next actor / action in the dialogue."""
@@ -669,7 +674,7 @@ class Environment(object):
 
         while iteration < max_iterations and not self.is_done() and self.get_next_actor() != "user":
             iteration += 1
-            self._agents[0].run(self, task=new_message)
+            self._agents[0].run(self, self._agent_temp_dirs[0], task=new_message)
 
         return run_id
 

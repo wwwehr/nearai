@@ -172,6 +172,8 @@ nearai benchmark run mbpp MBPPSolverStrategy \
     --max_concurrent=1
 ```
 
+More details [here](benchmarks_and_evaluations.md).
+
 ## Fine tuning
 
 We use [`torchtune`](https://github.com/pytorch/torchtune) for fine tuning models. The following command will start a fine tuning process using the `llama-3-8b-instruct` model and the `llama3` tokenizer.

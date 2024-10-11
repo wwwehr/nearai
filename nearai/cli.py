@@ -289,7 +289,7 @@ class BenchmarkCli:
         self,
         dataset: str,
         solver_strategy: str,
-        max_concurrent: int = -1,
+        max_concurrent: int = 2,
         force: bool = False,
         subset: Optional[str] = None,
         check_compatibility: bool = True,

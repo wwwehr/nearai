@@ -3,11 +3,11 @@ import enum
 import random
 from datetime import datetime
 from tempfile import TemporaryDirectory
-from typing import Any, Dict, List, Optional, Tuple
+from typing import List, Tuple
 
 import httpx as hx
 import tenacity
-from shared.client_config import DEFAULT_PROVIDER, ClientConfig
+from shared.client_config import ClientConfig
 from shared.inference_client import InferenceClient
 
 from nearai.agents.agent import Agent
@@ -153,20 +153,6 @@ class DDOTSV0Solver(SolverStrategy):
 
     def compatible_datasets(self) -> List[str]:  # noqa: D102
         return ["ddots_codeforces_small/v0", "datasets/ddots_codeforces_medium_A_B/v0"]
-
-    def model_metadata(self) -> Optional[Dict[str, Any]]:  # noqa: D102
-        # TODO: we may want to return the model used by an agent here.
-        return None
-
-    def agent_metadata(self) -> Optional[Dict[str, Any]]:  # noqa: D102
-        return self.agents[0].metadata
-
-    def evaluated_entry_namespace(self) -> str:  # noqa: D102
-        return self.agents[0].namespace
-
-    def model_provider(self) -> str:  # noqa: D102
-        # TODO: we may want to return the provider used by an agent here.
-        return DEFAULT_PROVIDER
 
     def solve(self, datum: dict) -> bool:  # noqa: D102
         problem_id = datum["problem_id"]

@@ -1,13 +1,10 @@
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import List, Union
 
 from datasets import Dataset, DatasetDict  # type: ignore[attr-defined]
 from jinja2 import Template
-from litellm import Choices, ModelResponse
 from pydantic import BaseModel
-from shared.client_config import ClientConfig
-from shared.inference_client import InferenceClient
 
-from nearai.config import CONFIG, PROMPTS_FOLDER
+from nearai.config import PROMPTS_FOLDER
 from nearai.solvers import SolverStrategy
 
 
@@ -29,34 +26,15 @@ class HellaswagSolverStrategy(SolverStrategy):
 
     SHOTS = 8
 
-    def __init__(self, dataset_ref: Union[Dataset, DatasetDict], model: str) -> None:  # noqa: D107
-        super().__init__()
+    def __init__(self, dataset_ref: Union[Dataset, DatasetDict], model: str = "", agent: str = "") -> None:  # noqa: D107
+        super().__init__(model, agent)
         self.dataset_ref = dataset_ref
-        client_config = ClientConfig(base_url=CONFIG.nearai_hub.base_url, auth=CONFIG.auth)
-        self.client = InferenceClient(client_config)
-        self.completion_fn = self.client.completions
-        self.model = model
 
     def evaluation_name(self) -> str:  # noqa: D102
         return "hellaswag"
 
     def compatible_datasets(self) -> List[str]:  # noqa: D102
         return ["hellaswag"]
-
-    def model_metadata(self) -> Optional[Dict[str, Any]]:  # noqa: D102
-        return {"name": self.model}
-
-    def agent_metadata(self) -> Optional[Dict[str, Any]]:  # noqa: D102
-        return None
-
-    def evaluated_entry_namespace(self) -> str:  # noqa: D102
-        # Only provider models are supported.
-        return ""
-
-    def model_provider(self) -> str:  # noqa: D102
-        # TODO(#311): create a better helper method.
-        provider, _ = self.client.provider_models.match_provider_model(self.model)
-        return provider
 
     def solve(self, datum: dict) -> bool:  # noqa: D102
         datum = HellaswagDatum(**datum).model_dump()
@@ -77,17 +55,7 @@ class HellaswagSolverStrategy(SolverStrategy):
             challenge_problem=datum,
             choices=choices,
         )
-        completion_response = cast(
-            ModelResponse,
-            self.completion_fn(
-                self.model,
-                messages=[
-                    {"role": "system", "content": base_prompt},
-                ],
-                temperature=0.0,
-            ),
-        )
-        response = str(cast(List[Choices], completion_response.choices)[0].message.content)
+        response = self.start_inference_session("").run_task(base_prompt)
 
         ## Extract the answer from the response
         extract_answer_prompt = Template(
@@ -98,17 +66,7 @@ class HellaswagSolverStrategy(SolverStrategy):
             answer_text=response,
             choices=choices,
         )
-        completion_response = cast(
-            ModelResponse,
-            self.completion_fn(
-                self.model,
-                messages=[
-                    {"role": "system", "content": extract_answer_prompt},
-                ],
-                temperature=0.0,
-            ),
-        )
-        response = str(cast(List[Choices], completion_response.choices)[0].message.content)
+        response = self.start_inference_session("").run_task(extract_answer_prompt)
 
         try:
             answer = choices.index(response)

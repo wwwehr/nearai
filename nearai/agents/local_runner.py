@@ -45,7 +45,7 @@ class LocalRunner:
         if reset:
             shutil.rmtree(self._path)
 
-        self._env = Environment(
+        self.env = Environment(
             self._path,
             agents,
             client,
@@ -92,7 +92,7 @@ class LocalRunner:
         else:
             base_id = None
 
-        env = self._env
+        env = self.env
         self._print_welcome(env.get_primary_agent())
         env.add_agent_start_system_log(agent_idx=0)
 
@@ -148,7 +148,7 @@ class LocalRunner:
         """Runs a task within the given env."""
         base_id = self.load_from_registry(load_env) if load_env else None
 
-        env = self._env
+        env = self.env
         env.add_agent_start_system_log(agent_idx=0)
         run_id = env.run(task, max_iterations)
 

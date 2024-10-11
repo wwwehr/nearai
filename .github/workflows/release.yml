@@ -43,7 +43,6 @@ jobs:
 
     - name: Ensure NearAIBot status
       run: |
-        git config --global user.name "NearAIBot"
         echo "${{ steps.generate-token.outputs.token }}" | gh auth login --with-token
         gh auth status
     

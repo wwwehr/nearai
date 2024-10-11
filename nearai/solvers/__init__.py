@@ -63,7 +63,7 @@ class SolverInferenceSession:
             self.runner = LocalRunner(
                 self.path,
                 [self.agent_obj],
-                CONFIG,
+                CONFIG.get_client_config(),
                 print_system_log=False,
                 confirm_commands=False,
             )
@@ -77,7 +77,7 @@ class SolverInferenceSession:
 
     def run_task(self, task: str) -> str:
         if self.runner:
-            self.runner.run_task(task, max_iterations=1)
+            self.runner.run_task(task, max_iterations=1, record_run=False)
             output = ""
             messages = self.runner.env.list_messages()
             i = len(messages) - 1

@@ -1,9 +1,9 @@
 import openai
 import json
-import os
 import nearai
 import logging
 import time
+from datetime import datetime, timedelta
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -38,6 +38,22 @@ message = client.beta.threads.messages.create(
 messages = client.beta.threads.messages.list(thread.id)
 logger.info(f"Messages in thread: {messages}")
 
+# Schedule a run
+logger.info("Scheduling a run")
+run = client.beta.threads.runs.create(
+    thread_id=thread.id,
+    assistant_id="badisland7754.near/inter-agents/0.0.1",
+    extra_body={"schedule_at": (datetime.now() + timedelta(seconds=10)).isoformat()}
+)
+
+logger.info(f"Run scheduled with ID: {run.id}")
+logger.info(f"Initial run status: {run.status}")
+
+# get run
+run = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
+logger.info(f"Run retrieved with ID: {run.id}")
+logger.info(f"Retrieved run status: {run.status}")
+
 
 # Execute a run on the assistant
 logger.info("Executing a run on the assistant")
@@ -45,7 +61,13 @@ run = client.beta.threads.runs.create(
     thread_id=thread.id,
     assistant_id="badisland7754.near/inter-agents/0.0.1",
     instructions="Please provide a helpful response.",
-    model="fireworks::llama-v3p1-70b-instruct"
+    model="fireworks::llama-v3p1-70b-instruct",
+    additional_messages=[
+        {
+            "role": "user",
+            "content": "What is the weather in Lisbon?"
+        }
+    ]
 )
 
 logger.info(f"Run created with ID: {run.id}")

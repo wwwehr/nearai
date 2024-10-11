@@ -233,7 +233,8 @@ class Run(SQLModel, table=True):
         )
 
 
-engine = create_engine(f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}")
+db_url = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
+engine = create_engine(db_url)
 
 
 @contextmanager

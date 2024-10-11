@@ -27,7 +27,8 @@ from hub.api.v1.auth import AuthToken, revokable_auth
 from hub.api.v1.models import Message as MessageModel
 from hub.api.v1.models import Run as RunModel
 from hub.api.v1.models import Thread as ThreadModel
-from hub.api.v1.models import get_session
+from hub.api.v1.models import engine, get_session
+from hub.api.v1.scheduler import get_scheduler
 from hub.api.v1.sql import SqlClient
 
 s3 = boto3.client("s3")
@@ -37,8 +38,12 @@ threads_router = APIRouter(
 )
 
 logger = logging.getLogger(__name__)
-
 DEFAULT_MODEL = "fireworks::llama-v3p1-70b-instruct"
+
+# scheduler = BackgroundScheduler()
+# pg_job_store = SQLAlchemyJobStore(engine=engine)
+# scheduler.add_jobstore(jobstore=pg_job_store, alias="sqlalchemy")
+# scheduler.start()
 
 
 @threads_router.post("/threads")
@@ -269,6 +274,7 @@ async def create_run(
     background_tasks: BackgroundTasks,
     run: RunCreateParamsBase = Body(...),
     auth: AuthToken = Depends(revokable_auth),
+    scheduler=Depends(get_scheduler),
 ) -> OpenAIRun:
     logger.info(f"Creating run for thread: {thread_id}")
     with get_session() as session:
@@ -308,6 +314,7 @@ async def create_run(
             tool_choice=run.tool_choice,
             top_p=run.top_p,
             truncation_strategy=run.truncation_strategy,
+            status="queued",
         )
 
         session.add(run_model)
@@ -316,13 +323,25 @@ async def create_run(
         session.commit()
 
         # Queue the run
-        background_tasks.add_task(run_agent, thread_id, run_model.id, auth)
+        if not run.schedule_at:
+            background_tasks.add_task(run_agent, thread_id, run_model.id, auth)
+        else:
+            logger.info(f"Scheduling run to run at {run.schedule_at}")
+            scheduler.add_job(
+                run_agent,
+                "date",
+                run_date=run.schedule_at,
+                args=[thread_id, run_model.id, auth],
+                jobstore="default",
+            )
 
         return run_model.to_openai()
 
 
 def run_agent(thread_id: str, run_id: str, auth: AuthToken = Depends(revokable_auth)) -> OpenAIRun:
     """Task to run an agent in the background."""
+    logger.info(f"Running agent for run: {run_id} on thread: {thread_id}")
+
     with get_session() as session:
         run_model = session.get(RunModel, run_id)
         if run_model is None:
@@ -369,6 +388,11 @@ def run_agent(thread_id: str, run_id: str, auth: AuthToken = Depends(revokable_a
         framework = "base"
         if agent_entry and "agent" in agent_entry.details:
             framework = agent_entry.details["agent"].get("framework", "base")
+
+        run_model.status = "in_progress"
+        run_model.started_at = datetime.now()
+        session.add(run_model)
+        session.commit()
 
         if runner == "local":
             runner_invoke_url = getenv("RUNNER_INVOKE_URL", None)

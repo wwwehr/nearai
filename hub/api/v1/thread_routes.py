@@ -1,26 +1,34 @@
 import logging
 from datetime import datetime
 from os import getenv
-from typing import Iterable, List, Literal, Optional, Union
+from typing import Any, Dict, Iterable, List, Literal, Optional, Union
 
 import boto3
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Path, Query
+from openai.types.beta.assistant_response_format_option_param import AssistantResponseFormatOptionParam
 from openai.types.beta.thread import Thread
 from openai.types.beta.thread_create_params import ThreadCreateParams
 from openai.types.beta.threads.message import Attachment, Message
 from openai.types.beta.threads.message_create_params import MessageContentPartParam
 from openai.types.beta.threads.message_update_params import MessageUpdateParams
 from openai.types.beta.threads.run import Run as OpenAIRun
-from openai.types.beta.threads.run_create_params import RunCreateParams
-from pydantic import BaseModel
+from openai.types.beta.threads.run_create_params import AdditionalMessage, TruncationStrategy
+from openai.types.beta.threads.runs.run_step_include import RunStepInclude
+from pydantic import BaseModel, Field
 from sqlmodel import select
 
-from hub.api.v1.agent_routes import _runner_for_env, invoke_function_via_curl, invoke_function_via_lambda
+from hub.api.v1.agent_routes import (
+    _runner_for_env,
+    get_agent_entry,
+    invoke_function_via_curl,
+    invoke_function_via_lambda,
+)
 from hub.api.v1.auth import AuthToken, revokable_auth
 from hub.api.v1.models import Message as MessageModel
 from hub.api.v1.models import Run as RunModel
 from hub.api.v1.models import Thread as ThreadModel
 from hub.api.v1.models import get_session
+from hub.api.v1.sql import SqlClient
 
 s3 = boto3.client("s3")
 
@@ -208,11 +216,58 @@ async def modify_message(
         return message_model.to_openai()
 
 
+class RunCreateParamsBase(BaseModel):
+    assistant_id: str = Field(..., description="The ID of the assistant to use to execute this run.")
+    model: Optional[str] = Field(
+        default=DEFAULT_MODEL, description="The ID of the Model to be used to execute this run."
+    )
+    instructions: Optional[str] = Field(
+        None,
+        description="Overrides the instructions of the assistant. This is useful for modifying the behavior on a per-run basis.",
+    )
+    tools: Optional[List[dict]] = Field(None, description="Override the tools the assistant can use for this run.")
+    metadata: Optional[dict] = Field(None, description="Set of 16 key-value pairs that can be attached to an object.")
+
+    include: List[RunStepInclude] = Field(None, description="A list of additional fields to include in the response.")
+    additional_instructions: Optional[str] = Field(
+        None, description="Appends additional instructions at the end of the instructions for the run."
+    )
+    additional_messages: Optional[List[AdditionalMessage]] = Field(
+        None, description="Adds additional messages to the thread before creating the run."
+    )
+    max_completion_tokens: Optional[int] = Field(
+        None, description="The maximum number of completion tokens that may be used over the course of the run."
+    )
+    max_prompt_tokens: Optional[int] = Field(
+        None, description="The maximum number of prompt tokens that may be used over the course of the run."
+    )
+    parallel_tool_calls: Optional[bool] = Field(
+        None, description="Whether to enable parallel function calling during tool use."
+    )
+    response_format: Optional[AssistantResponseFormatOptionParam] = Field(
+        None, description="Specifies the format that the model must output."
+    )
+    temperature: Optional[float] = Field(None, description="What sampling temperature to use, between 0 and 2.")
+    tool_choice: Optional[Union[str, dict]] = Field(
+        None, description="Controls which (if any) tool is called by the model."
+    )
+    top_p: Optional[float] = Field(
+        None, description="An alternative to sampling with temperature, called nucleus sampling."
+    )
+    truncation_strategy: Optional[TruncationStrategy] = Field(
+        None, description="Controls for how a thread will be truncated prior to the run."
+    )
+    stream: bool = Field(False, description="Whether to stream the run.")
+
+    # Custom fields
+    schedule_at: Optional[datetime] = Field(None, description="The time at which the run should be scheduled.")
+
+
 @threads_router.post("/threads/{thread_id}/runs")
 async def create_run(
     thread_id: str,
     background_tasks: BackgroundTasks,
-    run: RunCreateParams = Body(...),
+    run: RunCreateParamsBase = Body(...),
     auth: AuthToken = Depends(revokable_auth),
 ) -> OpenAIRun:
     logger.info(f"Creating run for thread: {thread_id}")
@@ -220,15 +275,49 @@ async def create_run(
         thread_model = session.get(ThreadModel, thread_id)
         if thread_model is None:
             raise HTTPException(status_code=404, detail="Thread not found")
-        run["model"] = run["model"] if "model" in run else DEFAULT_MODEL
+
+        if run.additional_messages:
+            messages = []
+            for message in run.additional_messages:
+                messages.append(
+                    MessageModel(
+                        thread_id=thread_id,
+                        content=[{"type": "text", "text": {"value": message["content"], "annotations": []}}],
+                        role=message["role"],
+                        attachments=message["attachments"] if "attachments" in message else None,
+                        meta_data=message["metadata"] if "metadata" in message else None,
+                    )
+                )
+            session.add_all(messages)
+
         run_model = RunModel(
             thread_id=thread_id,
-            **run,
+            assistant_id=run.assistant_id,
+            model=run.model,
+            instructions=run.instructions,
+            tools=run.tools,
+            metadata=run.metadata,
+            include=run.include,
+            additional_instructions=run.additional_instructions,
+            additional_messages=run.additional_messages,
+            max_completion_tokens=run.max_completion_tokens,
+            max_prompt_tokens=run.max_prompt_tokens,
+            parallel_tool_calls=run.parallel_tool_calls,
+            response_format=run.response_format,
+            temperature=run.temperature,
+            tool_choice=run.tool_choice,
+            top_p=run.top_p,
+            truncation_strategy=run.truncation_strategy,
         )
-        background_tasks.add_task(run_agent, thread_id, run_model.id, auth)
 
         session.add(run_model)
+
+        # Add the run and messages in DB
         session.commit()
+
+        # Queue the run
+        background_tasks.add_task(run_agent, thread_id, run_model.id, auth)
+
         return run_model.to_openai()
 
 
@@ -238,9 +327,31 @@ def run_agent(thread_id: str, run_id: str, auth: AuthToken = Depends(revokable_a
         run_model = session.get(RunModel, run_id)
         if run_model is None:
             raise HTTPException(status_code=404, detail="Run not found")
-        # TODO: secrets
+
         agent_api_url = getenv("API_URL", "https://api.near.ai")
         data_source = getenv("DATA_SOURCE", "registry")
+
+        agent_env_vars: Dict[str, Any] = {}
+        user_env_vars: Dict[str, Any] = {}
+
+        agent_entry = get_agent_entry(run_model.assistant_id, data_source)
+
+        # read secret for every requested agent
+        if agent_entry:
+            db = SqlClient()
+
+            (agent_secrets, user_secrets) = db.get_agent_secrets(
+                auth.account_id, agent_entry.namespace, agent_entry.name, agent_entry.version
+            )
+
+            # agent vars from metadata has lower priority then agent secret
+            agent_env_vars[run_model.assistant_id] = {
+                **(agent_env_vars.get(run_model.assistant_id, {})),
+                **agent_secrets,
+            }
+
+            # user vars from url has higher priority then user secret
+            user_env_vars = {**user_secrets, **user_env_vars}
 
         params = {
             "max_iterations": 3,
@@ -249,13 +360,15 @@ def run_agent(thread_id: str, run_id: str, auth: AuthToken = Depends(revokable_a
             "tool_resources": run_model.tools,
             "data_source": data_source,
             "model": run_model.model,
-            "user_env_vars": {},
-            "agent_env_vars": {},
+            "user_env_vars": user_env_vars,
+            "agent_env_vars": agent_env_vars,
         }
         agents = run_model.assistant_id
         runner = _runner_for_env()
+
         framework = "base"
-        print("HERE")
+        if agent_entry and "agent" in agent_entry.details:
+            framework = agent_entry.details["agent"].get("framework", "base")
 
         if runner == "local":
             runner_invoke_url = getenv("RUNNER_INVOKE_URL", None)

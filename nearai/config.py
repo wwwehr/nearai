@@ -79,6 +79,7 @@ class Config(BaseModel):
     nearai_hub: NearAiHubConfig = NearAiHubConfig()
     confirm_commands: bool = True
     auth: Optional[AuthData] = None
+    num_inference_retries: int = 1
 
     def update_with(self, extra_config: Dict[str, Any], map_key: Callable[[str], str] = lambda x: x) -> "Config":
         """Update the config with the given dictionary."""
@@ -104,6 +105,7 @@ class Config(BaseModel):
             auth=CONFIG.auth,
             custom_llm_provider=CONFIG.nearai_hub.custom_llm_provider,
             default_provider=CONFIG.nearai_hub.default_provider,
+            num_inference_retries=CONFIG.num_inference_retries,
         )
 
 

@@ -69,23 +69,25 @@ class InferenceClient(object):
         # NOTE(#246): this is to disable "Provider List" messages.
         litellm.suppress_debug_info = True
 
-        try:
-            result: Union[ModelResponse, CustomStreamWrapper] = litellm_completion(
-                model,
-                messages,
-                stream=stream,
-                custom_llm_provider=self._config.custom_llm_provider,
-                input_cost_per_token=0,
-                output_cost_per_token=0,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                base_url=self._config.base_url,
-                provider=provider,
-                api_key=auth_bearer_token,
-                **kwargs,
-            )
-        except Exception as e:
-            raise ValueError(f"Bad request: {e}") from None
+        for i in range(0, self._config.num_inference_retries):
+            try:
+                result: Union[ModelResponse, CustomStreamWrapper] = litellm_completion(
+                    model,
+                    messages,
+                    stream=stream,
+                    custom_llm_provider=self._config.custom_llm_provider,
+                    input_cost_per_token=0,
+                    output_cost_per_token=0,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    base_url=self._config.base_url,
+                    provider=provider,
+                    api_key=auth_bearer_token,
+                    **kwargs,
+                )
+            except Exception as e:
+                if i == self._config.num_inference_retries - 1:
+                    raise ValueError(f"Bad request: {e}") from None
 
         return result
 

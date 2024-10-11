@@ -195,7 +195,7 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
 
     def start_inference_session(self, task_id: str) -> SolverInferenceSession:
         return SolverInferenceSession(
-            self.agent_obj, self.model_full_path, self.client, self.evaluation_name
+            self.agent_obj, self.model_full_path, self.client, self.evaluation_name()
         ).start_inference_session(task_id)
 
 

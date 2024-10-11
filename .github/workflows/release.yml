@@ -92,7 +92,7 @@ jobs:
         poetry run cz bump --yes --changelog --increment ${{ github.event.inputs.bump }} --check-consistency --changelog-to-stdout > body.md
         git push origin HEAD --tags
       env:
-        GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+        GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
       if: ${{ github.event.inputs.make-release == 'true' }}
 
     - name: Create release

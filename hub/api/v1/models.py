@@ -2,14 +2,14 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime
 from os import getenv
-from typing import Dict, Iterator, List, Literal, Optional
+from typing import Dict, Iterator, List, Optional
 
 from dotenv import load_dotenv
 from openai.types.beta.thread import Thread as OpenAITThread
 from openai.types.beta.threads.message import Message as OpenAITThreadMessage
 from openai.types.beta.threads.message_content import MessageContent
 from openai.types.beta.threads.run import Run as OpenAIRun
-from sqlmodel import JSON, Column, Field, Relationship, Session, SQLModel, create_engine
+from sqlmodel import JSON, Column, Field, Session, SQLModel, create_engine
 
 load_dotenv()
 

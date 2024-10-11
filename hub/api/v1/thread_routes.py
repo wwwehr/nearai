@@ -27,7 +27,7 @@ from hub.api.v1.auth import AuthToken, revokable_auth
 from hub.api.v1.models import Message as MessageModel
 from hub.api.v1.models import Run as RunModel
 from hub.api.v1.models import Thread as ThreadModel
-from hub.api.v1.models import engine, get_session
+from hub.api.v1.models import get_session
 from hub.api.v1.scheduler import get_scheduler
 from hub.api.v1.sql import SqlClient
 
@@ -228,7 +228,10 @@ class RunCreateParamsBase(BaseModel):
     )
     instructions: Optional[str] = Field(
         None,
-        description="Overrides the instructions of the assistant. This is useful for modifying the behavior on a per-run basis.",
+        description=(
+            "Overrides the instructions of the assistant. "
+            "This is useful for modifying the behavior on a per-run basis."
+        ),
     )
     tools: Optional[List[dict]] = Field(None, description="Override the tools the assistant can use for this run.")
     metadata: Optional[dict] = Field(None, description="Set of 16 key-value pairs that can be attached to an object.")

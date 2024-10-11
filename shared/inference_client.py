@@ -85,6 +85,7 @@ class InferenceClient(object):
                     api_key=auth_bearer_token,
                     **kwargs,
                 )
+                break
             except Exception as e:
                 if i == self._config.num_inference_retries - 1:
                     raise ValueError(f"Bad request: {e}") from None

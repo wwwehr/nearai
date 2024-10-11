@@ -100,8 +100,10 @@ jobs:
       with:
         tag_name: ${{ env.REVISION }}
         body_path: "body.md"
+        draft: false
+        prerelease: false
       env:
-        GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+        GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
       if: ${{ github.event.inputs.make-release == 'true' }}
     
     - name: Build site

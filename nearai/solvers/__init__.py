@@ -43,7 +43,9 @@ class SolverStrategyMeta(ABCMeta):
 
 
 class SolverInferenceSession:
-    def __init__(self, agent_obj, model_full_path, client, evaluation_name):
+    def __init__(
+        self, agent_obj, model_full_path, client, evaluation_name, shell_execution_deny_all, shell_execution_allow_all
+    ):
         self.agent_obj = agent_obj
         self.model_full_path = model_full_path
         self.client = client
@@ -51,8 +53,8 @@ class SolverInferenceSession:
         self.path = ""
         self.env = None
         self.messages: List[ChatCompletionMessageParam] = []
-        self.steps_per_task = 1
-        self.max_iterations = 10
+        self.shell_execution_deny_all = shell_execution_deny_all
+        self.shell_execution_allow_all = shell_execution_allow_all
 
     def start_inference_session(self, task_id: str) -> "SolverInferenceSession":
         if self.agent_obj:
@@ -72,8 +74,14 @@ class SolverInferenceSession:
             )
         return self
 
-    def confirm_execution(self, _command):
-        return True
+    def confirm_execution(self, command: str) -> bool:
+        if self.shell_execution_deny_all:
+            return False
+        if self.shell_execution_allow_all:
+            print(f"Shell command running: {command}")
+            return True
+        yes_no = input("> Do you approve running the following command? (y/n): " + command)
+        return yes_no.lower() == "y"
 
     def add_system_message(self, message: str) -> None:
         if self.env:
@@ -84,27 +92,15 @@ class SolverInferenceSession:
     def run_task(self, task: str) -> str:
         if self.env:
             self.env.run(task, max_iterations=1)
-            num_iterations = 1
-            num_steps = 0
-            while not self.env.is_done() and num_iterations < self.max_iterations:
-                messages = self.env.list_messages()
-                num_messages = len(messages)
-                last_message = messages[num_messages - 1]
-                if last_message["role"] == "assistant":
-                    num_steps = num_steps + 1
-                    if num_steps == self.steps_per_task:
-                        break
-                self.env.run(max_iterations=1)
-                num_iterations = num_iterations + 1
-
-            output = ""
+            output = []
             messages = self.env.list_messages()
-            for message in messages:
-                print(f"[{message["role"]}] {message["content"]}")
+            for message in reversed(messages):
+                if message["role"] == "user":
+                    break
                 if message["role"] == "assistant":
-                    output = message["content"]
+                    output.append(message["content"])
 
-            return output
+            return "\n".join(reversed(output))
         else:
             self.messages.append({"role": "user", "content": task})
             completion_response = cast(
@@ -128,7 +124,6 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
     """Abstract class for solver strategies."""
 
     def __init__(self, model: str = "", agent: str = "") -> None:
-        CONFIG.confirm_commands = False
         client_config = ClientConfig(base_url=CONFIG.nearai_hub.base_url, auth=CONFIG.auth)
         self.client = InferenceClient(client_config)
         assert model != "" or agent != ""
@@ -151,6 +146,9 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
                 self.agent_obj.model = self.model_full_path
             if self.provider != "":
                 self.agent_obj.model_provider = self.provider
+
+        self.shell_execution_deny_all = False
+        self.shell_execution_allow_all = False
 
     @property
     def name(self) -> str:
@@ -218,7 +216,12 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
 
     def start_inference_session(self, task_id: str) -> SolverInferenceSession:
         return SolverInferenceSession(
-            self.agent_obj, self.model_full_path, self.client, self.evaluation_name()
+            self.agent_obj,
+            self.model_full_path,
+            self.client,
+            self.evaluation_name(),
+            self.shell_execution_deny_all,
+            self.shell_execution_allow_all,
         ).start_inference_session(task_id)
 
 

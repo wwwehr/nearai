@@ -6,11 +6,12 @@ import pytz
 from datasets import Dataset, DatasetDict  # type: ignore[attr-defined]
 from pydantic import BaseModel
 
-from nearai.solvers import SolverStrategy
+from nearai.solvers import SolverInferenceSession, SolverStrategy
 
 
 class ShellTaskDatum(BaseModel):
     input: str
+    question: str
     input_file: str
     input_file_content: str
     response: str
@@ -31,6 +32,57 @@ class ShellBenchmarkSolverStrategy(SolverStrategy):
 
     def compatible_datasets(self) -> List[str]:  # noqa: D102
         return ["shell_benchmark"]
+
+    def _run_task(  # noqa: D102
+        self,
+        session: SolverInferenceSession,
+        task: str,
+        max_steps: int,
+        correct_answer: str,
+        question: str,
+        max_iterations: int = 10,
+    ) -> str:
+        response = session.run_task(task)
+        if not session.env:
+            return response
+
+        num_iterations = 1
+        num_steps = 0
+        num_messages_parsed = len(session.env.list_messages())
+        print(response)
+        while not session.env.is_done() and num_iterations < max_iterations:
+            messages = session.env.list_messages()
+            num_messages = len(messages)
+            last_message = messages[num_messages - 1]
+            if last_message["role"] == "assistant":
+                num_steps = num_steps + 1
+                if num_steps == max_steps:
+                    return response
+
+            if correct_answer != "" and self._is_response(question, response):
+                return response
+
+            session.env.run(max_iterations=1)
+            num_iterations = num_iterations + 1
+
+            messages = session.env.list_messages()
+            num_messages = len(messages)
+            output = []
+            for i in range(num_messages_parsed, num_messages):
+                if messages[i]["role"] == "assistant":
+                    output.append(messages[i]["content"])
+            response = "\n".join(output)
+            print(response)
+            num_messages_parsed = num_messages
+
+        return response
+
+    def _is_response(self, question: str, response: str) -> bool:
+        session = self.start_inference_session("")
+        question = f"Is '{response}' an answer (and not a command to get an answer) to a question '{question}' (it does not matter if it is a correct answer or not)? Respond with either 'yes' or 'no' and nothing else."
+        answer = session.run_task(question)
+        print(f"[question] {question} [answer] {answer}")
+        return answer == "yes"
 
     def _is_good_response(self, response: str, correct_answer: str) -> bool:
         response = response.strip()
@@ -86,15 +138,24 @@ class ShellBenchmarkSolverStrategy(SolverStrategy):
 
         session = self.start_inference_session("")
         print(f"[path] {session.path}")
+
+        steps = 1
         if task.steps:
-            session.steps_per_task = int(task.steps)
+            steps = int(task.steps)
+        question = task.input
+        if task.question:
+            question = task.question
         if task.input_file:
             file_path = os.path.join(session.path, task.input_file)
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
             with open(os.path.join(session.path, task.input_file), "w") as f:
                 f.write(task.input_file_content)
 
-        response = session.run_task(task.input)
+        try:
+            response = self._run_task(session, task.input, steps, task.response, question)
+        except Exception as e:
+            print(f"{e}")
+            return False
 
         if task.response:
             if not self._is_good_response(response, task.response):

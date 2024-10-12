@@ -39,48 +39,56 @@ def generate_dataset() -> List[dict]:
     # 6
     data.append({
         "input": "What's the current date? You may take advantage of the system environment to determine that. Respond only with date and nothing else.",
+        "question": "What's the current date?",
         "steps": "2",
         "response": "<date>"
     })
     # 7
     data.append({
         "input": "What's the current date? Respond only with date and nothing else.",
+        "question": "What's the current date?",
         "steps": "2",
         "response": "<date>"
     })
     # 8
     data.append({
         "input": "What's the current day of the week? You may take advantage of the system environment to determine that. Respond only with day of the week and nothing else.",
+        "question": "What's the current day of the week?",
         "steps": "2",
         "response": "<day_of_week>"
     })
     # 9
     data.append({
         "input": "What's the current day of the week? Respond only with day of the week and nothing else.",
+        "question": "What's the current day of the week?",
         "steps": "2",
         "response": "<day_of_week>"
     })
     # 10
     data.append({
         "input": "What's the current UTC time hh:mm, 24h format? You may take advantage of the system environment to determine that. Respond only with time and nothing else.",
+        "question": "What's the current UTC time hh:mm, 24h format?",
         "steps": "2",
         "response": "<utc_time>"
     })
     # 11
     data.append({
         "input": "What's the current UTC time hh:mm, 24h format? Respond only with time and nothing else.",
+        "question": "What's the current UTC time hh:mm, 24h format?",
         "steps": "2",
         "response": "<utc_time>"
     })
     # 12
     data.append({
         "input": "What's the current local time hh:mm, 24h format? You may take advantage of the system environment to determine that. Respond only with time and nothing else.",
+        "question": "What's the current local time hh:mm, 24h format?",
         "steps": "2",
         "response": "<local_time>"
     })
     # 13
     data.append({
         "input": "What's the current local time hh:mm, 24h format? Respond only with time and nothing else.",
+        "question": "What's the current local time hh:mm, 24h format?",
         "steps": "2",
         "response": "<local_time>"
     })
@@ -109,18 +117,18 @@ def generate_dataset() -> List[dict]:
     # 17
     data.append({
         "input_file": "input.txt",
-        "input_file_content": "5",
+        "input_file_content": "7",
         "input": "Create a Python script named 'factorial.py' that reads single number from 'input.txt', calculates its factorial and prints it into 'my_favorite_factorial.out'. Run the script.",
-        "steps": "2",
+        "steps": "3",
         "output_file": "my_favorite_factorial.out",
-        "output_file_content": "120"
+        "output_file_content": "5040"
     })
     # 18
     data.append({
         "input_file": "input.txt",
         "input_file_content": "apple banana cherry date elderberry",
         "input": "Create a program to count number of words in input.txt and output the count into 'out.txt'. Run it.",
-        "steps": "2",
+        "steps": "3",
         "output_file": "out.txt",
         "output_file_content": "5"
     })
@@ -190,6 +198,7 @@ if __name__ == "__main__":
     # Create a Hugging Face Dataset
     hf_dataset = Dataset.from_list([{
         "input": d["input"],
+        "question": d.get("question", ""),
         "input_file": d.get("input_file", ""),
         "input_file_content": d.get("input_file_content", ""),
         "steps": d.get("steps", ""),

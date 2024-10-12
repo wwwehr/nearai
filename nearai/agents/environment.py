@@ -3,7 +3,6 @@ import json
 import logging
 import os
 import re
-import shlex
 import shutil
 import subprocess
 import tarfile

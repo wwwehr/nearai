@@ -34,7 +34,7 @@ class BenchmarkExecutor:
         self,
         dataset_info: DatasetInfo,
         solver_strategy: SolverStrategy,
-        benchmark_id: int = -1,
+        benchmark_id: int,
     ):
         self.dataset_info = dataset_info
         self.solver_strategy = solver_strategy
@@ -48,10 +48,9 @@ class BenchmarkExecutor:
             else self.solver_strategy.get_custom_tasks()
         )
 
-        # cache_ = self.client.get_benchmark_result_v1_benchmark_get_result_get(benchmark_id=self.benchmark_id)
+        cache_ = self.client.get_benchmark_result_v1_benchmark_get_result_get(benchmark_id=self.benchmark_id)
         # Need to do json.loads twice to convert back to the same data returned by solvers.
-        # cache = {result.index: (result.solved, json.loads(json.loads(result.info))) for result in cache_}
-        cache = {}
+        cache = {result.index: (result.solved, json.loads(json.loads(result.info))) for result in cache_}
 
         n_true_results = 0
         remaining = len(data_tasks)
@@ -125,12 +124,12 @@ def solve_task(
     else:
         status = result
 
-    # client = BenchmarkApi()
-    # client.add_benchmark_result_v1_benchmark_add_result_get(
-    #     benchmark_id=benchmark_id,
-    #     index=index,
-    #     solved=status,
-    #     info=json.dumps(info),
-    # )
+    client = BenchmarkApi()
+    client.add_benchmark_result_v1_benchmark_add_result_get(
+        benchmark_id=benchmark_id,
+        index=index,
+        solved=status,
+        info=json.dumps(info),
+    )
 
     return (status, info)

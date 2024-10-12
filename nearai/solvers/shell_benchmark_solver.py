@@ -28,7 +28,7 @@ class ShellBenchmarkSolverStrategy(SolverStrategy):
         self.dataset_ref = dataset_ref
 
     def evaluation_name(self) -> str:  # noqa: D102
-        return "shell_benchmark"
+        return "nearai_shell"
 
     def compatible_datasets(self) -> List[str]:  # noqa: D102
         return ["shell_benchmark"]
@@ -79,7 +79,7 @@ class ShellBenchmarkSolverStrategy(SolverStrategy):
 
     def _is_response(self, question: str, response: str) -> bool:
         session = self.start_inference_session("")
-        question = f"Is '{response}' an answer (and not a command to get an answer) to a question '{question}' (it does not matter if it is a correct answer or not)? Respond with either 'yes' or 'no' and nothing else."
+        question = f"Is '{response}' an answer (and not a command to get an answer) to a question '{question}' (it does not matter if it is a correct answer or not)? Respond with either 'yes' or 'no' and nothing else."  # noqa: E501
         answer = session.run_task(question)
         print(f"[question] {question} [answer] {answer}")
         return answer == "yes"

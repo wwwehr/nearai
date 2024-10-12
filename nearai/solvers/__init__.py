@@ -43,7 +43,9 @@ class SolverStrategyMeta(ABCMeta):
 
 
 class SolverInferenceSession:
-    def __init__(self, agent_obj, model_full_path, client, evaluation_name):
+    def __init__(
+        self, agent_obj, model_full_path, client, evaluation_name, shell_execution_deny_all, shell_execution_allow_all
+    ):
         self.agent_obj = agent_obj
         self.model_full_path = model_full_path
         self.client = client
@@ -51,6 +53,8 @@ class SolverInferenceSession:
         self.path = ""
         self.env = None
         self.messages: List[ChatCompletionMessageParam] = []
+        self.shell_execution_deny_all = shell_execution_deny_all
+        self.shell_execution_allow_all = shell_execution_allow_all
 
     def start_inference_session(self, task_id: str) -> "SolverInferenceSession":
         if self.agent_obj:
@@ -70,8 +74,14 @@ class SolverInferenceSession:
             )
         return self
 
-    def confirm_execution(self, _command) -> bool:
-        return True
+    def confirm_execution(self, command: str) -> bool:
+        if self.shell_execution_deny_all:
+            return False
+        if self.shell_execution_allow_all:
+            print(f"Shell command running: {command}")
+            return True
+        yes_no = input("> Do you approve running the following command? (y/n): " + command)
+        return yes_no.lower() == "y"
 
     def add_system_message(self, message: str) -> None:
         if self.env:
@@ -114,7 +124,6 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
     """Abstract class for solver strategies."""
 
     def __init__(self, model: str = "", agent: str = "") -> None:
-        CONFIG.confirm_commands = False
         client_config = ClientConfig(base_url=CONFIG.nearai_hub.base_url, auth=CONFIG.auth)
         self.client = InferenceClient(client_config)
         assert model != "" or agent != ""
@@ -137,6 +146,9 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
                 self.agent_obj.model = self.model_full_path
             if self.provider != "":
                 self.agent_obj.model_provider = self.provider
+
+        self.shell_execution_deny_all = False
+        self.shell_execution_allow_all = False
 
     @property
     def name(self) -> str:
@@ -204,7 +216,12 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
 
     def start_inference_session(self, task_id: str) -> SolverInferenceSession:
         return SolverInferenceSession(
-            self.agent_obj, self.model_full_path, self.client, self.evaluation_name()
+            self.agent_obj,
+            self.model_full_path,
+            self.client,
+            self.evaluation_name(),
+            self.shell_execution_deny_all,
+            self.shell_execution_allow_all,
         ).start_inference_session(task_id)
 
 

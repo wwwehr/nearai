@@ -1,3 +1,15 @@
+# NearAI custom shell benchmark.
+# Data columns:
+# - `input`: input task given to an agent.
+# - `question`: the question in input; it's used by a solver to determine whether the question was answered,
+#               and only if `response` is present.
+# - `input_file`: a solver will add this file before running agent.
+# - `input_file_content`: content of `input_file`.
+# - `steps`: number of steps an agent is expected to take to solve this task.
+# - `response`: expected response, if any.
+# - `output_file`: expected output file, if any.
+# - `output_file_content`: expected content of `output_file`.
+
 import os
 from datetime import date, datetime
 from typing import List, Union
@@ -170,5 +182,4 @@ class ShellBenchmarkSolverStrategy(SolverStrategy):
                         return False
 
         print("Correct")
-        print("-----------------------------------------------------------------------------------------------------")
         return True

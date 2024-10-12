@@ -12,6 +12,7 @@ from shared.inference_client import InferenceClient
 from shared.provider_models import get_provider_namespaced_model
 
 from nearai.agents.agent import Agent
+from nearai.agents.environment import Environment
 from nearai.agents.local_runner import LocalRunner
 from nearai.config import CONFIG
 
@@ -48,8 +49,10 @@ class SolverInferenceSession:
         self.client = client
         self.evaluation_name = evaluation_name
         self.path = ""
-        self.runner = None
+        self.env = None
         self.messages: List[ChatCompletionMessageParam] = []
+        self.steps_per_task = 1
+        self.max_iterations = 10
 
     def start_inference_session(self, task_id: str) -> "SolverInferenceSession":
         if self.agent_obj:
@@ -60,31 +63,47 @@ class SolverInferenceSession:
                 str(int(time.time() * 1000)),
                 str(random.randint(0, 1000)),
             )
-            self.runner = LocalRunner(
+            self.env = Environment(
                 self.path,
                 [self.agent_obj],
-                CONFIG.get_client_config(),
+                self.client,
                 print_system_log=False,
-                confirm_commands=False,
+                approvals={"confirm_execution": self.confirm_execution},
             )
         return self
 
+    def confirm_execution(self, _command):
+        return True
+
     def add_system_message(self, message: str) -> None:
-        if self.runner:
-            self.runner.env.add_message(role="system", message=message)
+        if self.env:
+            self.env.add_message(role="system", message=message)
         else:
             self.messages.append({"role": "system", "content": message})
 
     def run_task(self, task: str) -> str:
-        if self.runner:
-            self.runner.run_task(task, max_iterations=1, record_run=False)
+        if self.env:
+            self.env.run(task, max_iterations=1)
+            num_iterations = 1
+            num_steps = 0
+            while not self.env.is_done() and num_iterations < self.max_iterations:
+                messages = self.env.list_messages()
+                num_messages = len(messages)
+                last_message = messages[num_messages - 1]
+                if last_message["role"] == "assistant":
+                    num_steps = num_steps + 1
+                    if num_steps == self.steps_per_task:
+                        break
+                self.env.run(max_iterations=1)
+                num_iterations = num_iterations + 1
+
             output = ""
-            messages = self.runner.env.list_messages()
-            i = len(messages) - 1
-            while i >= 0 and messages[i]["role"] != "user":
-                if messages[i]["role"] == "assistant":
-                    output = messages[i]["content"] + output
-                i = i - 1
+            messages = self.env.list_messages()
+            for message in messages:
+                print(f"[{message["role"]}] {message["content"]}")
+                if message["role"] == "assistant":
+                    output = message["content"]
+
             return output
         else:
             self.messages.append({"role": "user", "content": task})
@@ -99,6 +118,10 @@ class SolverInferenceSession:
             response_content = str(cast(List[Choices], completion_response.choices)[0].message.content)
             self.messages.append({"role": "assistant", "content": response_content})
             return response_content
+
+    def __del__(self):
+        if self.env:
+            self.env.clear_temp_agent_files()
 
 
 class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
@@ -207,6 +230,7 @@ from nearai.solvers.hellaswag_solver import HellaswagSolverStrategy  # noqa: E40
 from nearai.solvers.livebench_solver import LiveBenchSolverStrategy  # noqa: E402
 from nearai.solvers.mbpp_solver import MBPPSolverStrategy  # noqa: E402
 from nearai.solvers.mmlu_solver import MMLUSolverStrategy  # noqa: E402
+from nearai.solvers.shell_benchmark_solver import ShellBenchmarkSolverStrategy  # noqa: E402
 
 __all__ = [
     "SolverStrategyRegistry",
@@ -216,4 +240,5 @@ __all__ = [
     "HellaswagSolverStrategy",
     "LiveBenchSolverStrategy",
     "GSM8KSolverStrategy",
+    "ShellBenchmarkSolverStrategy",
 ]

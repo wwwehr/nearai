@@ -326,11 +326,13 @@ class Environment(object):
                 "stderr": "Command execution was not approved.",
             }
 
+        print(f"Executing command {command}")
         try:
             process = subprocess.Popen(
-                shlex.split(command),
+                command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
+                shell=True,
                 bufsize=0,
                 universal_newlines=True,
                 cwd=self._path,
@@ -401,6 +403,7 @@ class Environment(object):
         if model != self._last_used_model:
             self._last_used_model = model
             self.add_system_log(f"Connecting to {model}")
+        print(f"Running completions with {messages}")
         return self._client.completions(
             model,
             messages,
@@ -674,7 +677,9 @@ class Environment(object):
 
         while iteration < max_iterations and not self.is_done() and self.get_next_actor() != "user":
             iteration += 1
+            print("self._agents[0].run")
             self._agents[0].run(self, self._agent_temp_dirs[0], task=new_message)
+            print("self._agents[0].run done")
 
         return run_id
 

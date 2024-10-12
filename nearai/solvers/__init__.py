@@ -12,6 +12,7 @@ from shared.inference_client import InferenceClient
 from shared.provider_models import get_provider_namespaced_model
 
 from nearai.agents.agent import Agent
+from nearai.agents.environment import Environment
 from nearai.agents.local_runner import LocalRunner
 from nearai.config import CONFIG
 
@@ -48,7 +49,7 @@ class SolverInferenceSession:
         self.client = client
         self.evaluation_name = evaluation_name
         self.path = ""
-        self.runner = None
+        self.env = None
         self.messages: List[ChatCompletionMessageParam] = []
 
     def start_inference_session(self, task_id: str) -> "SolverInferenceSession":
@@ -60,32 +61,36 @@ class SolverInferenceSession:
                 str(int(time.time() * 1000)),
                 str(random.randint(0, 1000)),
             )
-            self.runner = LocalRunner(
+            self.env = Environment(
                 self.path,
                 [self.agent_obj],
-                CONFIG.get_client_config(),
+                self.client,
                 print_system_log=False,
-                confirm_commands=False,
+                approvals={"confirm_execution": self.confirm_execution},
             )
         return self
 
+    def confirm_execution(self, _command) -> bool:
+        return True
+
     def add_system_message(self, message: str) -> None:
-        if self.runner:
-            self.runner.env.add_message(role="system", message=message)
+        if self.env:
+            self.env.add_message(role="system", message=message)
         else:
             self.messages.append({"role": "system", "content": message})
 
     def run_task(self, task: str) -> str:
-        if self.runner:
-            self.runner.run_task(task, max_iterations=1, record_run=False)
-            output = ""
-            messages = self.runner.env.list_messages()
-            i = len(messages) - 1
-            while i >= 0 and messages[i]["role"] != "user":
-                if messages[i]["role"] == "assistant":
-                    output = messages[i]["content"] + output
-                i = i - 1
-            return output
+        if self.env:
+            self.env.run(task, max_iterations=1)
+            output = []
+            messages = self.env.list_messages()
+            for message in reversed(messages):
+                if message["role"] == "user":
+                    break
+                if message["role"] == "assistant":
+                    output.append(message["content"])
+
+            return "\n".join(reversed(output))
         else:
             self.messages.append({"role": "user", "content": task})
             completion_response = cast(
@@ -99,6 +104,10 @@ class SolverInferenceSession:
             response_content = str(cast(List[Choices], completion_response.choices)[0].message.content)
             self.messages.append({"role": "assistant", "content": response_content})
             return response_content
+
+    def __del__(self):
+        if self.env:
+            self.env.clear_temp_agent_files()
 
 
 class SolverStrategy(ABC, metaclass=SolverStrategyMeta):

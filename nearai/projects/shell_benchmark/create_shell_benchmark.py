@@ -9,6 +9,8 @@
 # - `response`: expected response, if any.
 # - `output_file`: expected output file, if any.
 # - `output_file_content`: expected content of `output_file`.
+#
+# Run benchmark with --max_concurrent=1.
 
 import random
 from typing import List

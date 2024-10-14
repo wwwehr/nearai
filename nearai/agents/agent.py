@@ -41,10 +41,10 @@ class Agent(object):
         unique_id = uuid.uuid4().hex
         temp_dir = os.path.join(tempfile.gettempdir(), f"agent_{unique_id}")
 
-        if isinstance(self.agent_files, List):
+        if isinstance(agent_files, List):
             os.makedirs(temp_dir, exist_ok=True)
 
-            for file_obj in self.agent_files:
+            for file_obj in agent_files:
                 file_path = os.path.join(temp_dir, file_obj["filename"])
 
                 try:
@@ -73,7 +73,7 @@ class Agent(object):
         else:
             # if agent files is a PosixPath, it is a path to the agent directory
             # Copy all agent files including subfolders
-            shutil.copytree(self.agent_files, temp_dir, dirs_exist_ok=True)
+            shutil.copytree(agent_files, temp_dir, dirs_exist_ok=True)
 
         return temp_dir
 

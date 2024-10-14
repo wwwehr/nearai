@@ -12,6 +12,7 @@ import tempfile
 import threading
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union, cast
 
 import psutil
@@ -74,7 +75,7 @@ class Environment(object):
     ) -> None:
         self._path = path
         self._agents = agents
-        self._agent_temp_dirs = [a.write_agent_files_to_temp() for a in agents]
+        self._agent_temp_dirs = [a._write_agent_files_to_temp(a.agent_files) for a in agents]
         self._done = False
         self._client = client
         self._tools = ToolRegistry()
@@ -615,7 +616,7 @@ class Environment(object):
 
     def call_agent(self, agent_index: int, task: str) -> None:
         """Calls agent with given task."""
-        self._agents[agent_index].run(self, task=task)
+        self._agents[agent_index].run(self, temp_dir=self._agent_temp_dirs[agent_index], task=task)
 
     def get_agents(self) -> List[Agent]:
         """Returns list of agents available in environment."""
@@ -749,7 +750,7 @@ class Environment(object):
         while iteration < max_iterations and not self.is_done() and self.get_next_actor() != "user":
             iteration += 1
             print([x.identifier for x in self._agents])
-            self._agents[0].run(self, task=new_message)
+            self._agents[0].run(self, temp_dir=self._agent_temp_dirs[0], task=new_message)
 
         return run_id
 

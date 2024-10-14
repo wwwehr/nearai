@@ -6,9 +6,12 @@ from typing import Dict, Iterator, List, Optional
 
 from dotenv import load_dotenv
 from openai.types.beta.thread import Thread as OpenAITThread
+from openai.types.beta.threads.message import Attachment
 from openai.types.beta.threads.message import Message as OpenAITThreadMessage
 from openai.types.beta.threads.message_content import MessageContent
 from openai.types.beta.threads.run import Run as OpenAIRun
+from openai.types.beta.threads.text import Text
+from openai.types.beta.threads.text_content_block import TextContentBlock
 from sqlmodel import JSON, Column, Field, Session, SQLModel, create_engine
 
 load_dotenv()
@@ -126,15 +129,26 @@ class Message(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.now, nullable=False)
     thread_id: str = Field(nullable=False, foreign_key="threads.id")
     status: str = Field(default="completed", nullable=False)
-    incomplete_details: Dict = Field(default=None, sa_column=Column(JSON))
+    incomplete_details: Optional[Dict] = Field(default=None, sa_column=Column(JSON))
     completed_at: Optional[datetime] = Field(default=None)
     incomplete_at: Optional[datetime] = Field(default=None)
     role: str = Field(nullable=False)
     content: List[MessageContent] = Field(sa_column=Column(JSON))
     assistant_id: Optional[str] = Field(default=None)
     run_id: Optional[str] = Field(default=None)
-    attachments: Optional[List] = Field(default=None, sa_column=Column(JSON))
+    attachments: Optional[List[Attachment]] = Field(default=None, sa_column=Column(JSON))
     meta_data: Optional[Dict] = Field(default=None, sa_column=Column("metadata", JSON))
+
+    def __init__(self, **data):  # noqa: D107
+        super().__init__(**data)
+        if self.attachments:
+            # Convert each attachment to a dictionary
+            self.attachments = [attachment.model_dump() for attachment in self.attachments]
+        if self.content:
+            if isinstance(self.content, str):
+                self.content = [TextContentBlock(text=Text(value=self.content, annotations=[]), type="text")]
+
+            self.content = [content.model_dump() for content in self.content]
 
     def to_openai(self) -> OpenAITThreadMessage:
         """Convert to OpenAI Thread."""

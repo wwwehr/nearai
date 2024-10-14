@@ -1,4 +1,5 @@
 import hashlib
+import io
 import json
 import logging
 import os
@@ -11,7 +12,6 @@ import tempfile
 import threading
 import uuid
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union, cast
 
 import psutil
@@ -26,8 +26,10 @@ from litellm.types.utils import (
 from litellm.utils import CustomStreamWrapper
 from openai import NOT_GIVEN, NotGiven, OpenAI
 from openai.types.beta.threads.message import Message
+from openai.types.beta.threads.message_create_params import Attachment
 from openai.types.beta.threads.run import Run
 from openai.types.beta.vector_store import VectorStore
+from openai.types.file_object import FileObject
 from shared.client_config import DEFAULT_PROVIDER_MODEL
 from shared.inference_client import InferenceClient
 from shared.models import (
@@ -113,6 +115,7 @@ class Environment(object):
         role: Literal["user", "assistant"],
         message: str,
         filename: str = CHAT_FILENAME,
+        attachments: Optional[Iterable[Attachment]] = None,
         **kwargs: Any,
     ):
         """Assistant adds a message to the environment."""
@@ -122,6 +125,7 @@ class Environment(object):
             content=message,
             extra_body={"assistant_id": self._agents[0].identifier},
             metadata=kwargs,
+            attachments=attachments,
         )
 
     def add_system_log(self, log: str, level: int = logging.INFO) -> None:
@@ -187,9 +191,9 @@ class Environment(object):
         with open(path, "r") as f:
             return [json.loads(message) for message in f.read().split(DELIMITER) if message]
 
-    def list_messages(self, filename: str = CHAT_FILENAME) -> List[Message]:
+    def list_messages(self, limit: Union[int, NotGiven] = NOT_GIVEN) -> List[Message]:
         """Returns messages from the environment."""
-        messages = self._hub_client.beta.threads.messages.list(self._thread_id)
+        messages = self._hub_client.beta.threads.messages.list(self._thread_id, limit=limit)
         self.add_system_log(f"Retrieved {len(messages.data)} messages from NearAI Hub")
         return messages.data
 
@@ -213,49 +217,43 @@ class Environment(object):
             callback_url,
         )
 
-    def list_files(self, path: str) -> List[str]:
-        """Lists files in the environment.
-
-        path: The path to list files from.
-        """
-        return os.listdir(os.path.join(self._path, path))
+    def list_files(self, path: str) -> List[FileObject]:
+        """Lists files in the thread."""
+        messages = self.list_messages()
+        # Extract attachments from messages
+        attachments = [a for m in messages if m.attachments for a in m.attachments]
+        # Extract files from attachments
+        file_ids = [a.file_id for a in attachments]
+        files = [self._hub_client.files.retrieve(f) for f in file_ids if f]
+        return files
 
     def get_path(self) -> str:
         """Returns the path of the current directory."""
         return self._path
 
-    def read_file(self, filename: str) -> str:
-        """Read a file from the environment.
+    def read_file(self, file_id: str):
+        """Read a file from the thread."""
+        return self._hub_client.files.content(file_id)
 
-        filename: The name of the file to read.
-        """
-        if os.path.exists(os.path.join(self._path, filename)):
-            file_location = self._path
-        # TODO: fix get_primary_agent => "current" agent
-        elif os.path.exists(os.path.join(self.get_primary_agent().temp_dir, filename)):
-            file_location = self.get_primary_agent().temp_dir
-        else:
-            print(f"File {filename} not found")
-            return ""
-
-        try:
-            with open(os.path.join(file_location, filename), "r") as f:
-                return f.read()
-
-        except Exception as e:
-            return f"failed to read file: {e}"
-
-    def write_file(self, filename: str, content: str) -> str:
+    def write_file(
+        self, filename: str, content: str, encoding: str = "utf-8", filetype: str = "text/plain"
+    ) -> FileObject:
         """Writes a file to the environment.
 
         filename: The name of the file to write to
         content: The content to write to the file.
         """
-        path = Path(self._path) / filename
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w") as f:
-            f.write(content)
-        return f"Successfully wrote {len(content) if content else 0} characters to {filename}"
+        file_data = io.BytesIO(content.encode(encoding))
+        file = self._hub_client.files.create(file=(filename, file_data, filetype), purpose="assistants")
+        res = self.add_message(
+            role="assistant",
+            message=f"Uploaded file {filename} with {len(content)} characters",
+            attachments=[{"file_id": file.id, "tools": [{"type": "file_search"}]}],
+        )
+        self.add_system_log(
+            f"Uploaded file {filename} with {len(content)} characters, id: {file.id}. Added in thread as: {res.id}"
+        )
+        return file
 
     def query_vector_store(self, vector_store_id: str, query: str):
         """Queries a vector store.

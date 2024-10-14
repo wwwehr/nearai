@@ -116,24 +116,15 @@ async def create_message(
         if thread_model is None:
             raise HTTPException(status_code=404, detail="Thread not found")
 
-        content = message.content
-        if isinstance(content, str):
-            content = [{"type": "text", "text": {"value": content, "annotations": []}}]
-        elif isinstance(content, list):
-            content = [
-                {"type": "text", "text": {"value": item["text"]["value"], "annotations": []}}
-                for item in content
-                if item["type"] == "text"
-            ]
-
         message_model = MessageModel(
             thread_id=thread_id,
-            content=content,
+            content=message.content,
             role=message.role,
             assistant_id=message.assistant_id,
             meta_data=message.metadata,
             attachments=message.attachments,
         )
+        logger.info(f"Created message: {message_model}")
         session.add(message_model)
         session.commit()
         return message_model.to_openai()
@@ -291,7 +282,7 @@ async def create_run(
                 messages.append(
                     MessageModel(
                         thread_id=thread_id,
-                        content=[{"type": "text", "text": {"value": message["content"], "annotations": []}}],
+                        content=message["content"],
                         role=message["role"],
                         attachments=message["attachments"] if "attachments" in message else None,
                         meta_data=message["metadata"] if "metadata" in message else None,

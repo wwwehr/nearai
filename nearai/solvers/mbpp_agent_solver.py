@@ -1,13 +1,13 @@
+import json
 import os
 import random
 import time
 from typing import Any, Dict, List, Optional, Union
 
+import openai
 from datasets import Dataset, DatasetDict  # type: ignore[attr-defined]
-from shared.client_config import DEFAULT_PROVIDER, ClientConfig
-from shared.inference_client import InferenceClient
+from shared.client_config import DEFAULT_PROVIDER
 
-from nearai.agents.environment import Environment
 from nearai.agents.local_runner import LocalRunner
 from nearai.config import CONFIG
 from nearai.solvers import SolverStrategy
@@ -22,6 +22,7 @@ class MBPPSolverAgent(SolverStrategy):
     ) -> None:
         super().__init__()
         self.dataset_ref = dataset_ref
+        self.agent_id = agent
         self.agent = LocalRunner.load_agent(agent)
         self.verbose = verbose
         self.num_iterations = num_iterations
@@ -50,12 +51,6 @@ class MBPPSolverAgent(SolverStrategy):
         datum = MBPPDatum(**datum).model_dump()
         function_name = get_function_name(datum["code"])
 
-        client_config = ClientConfig(
-            base_url=CONFIG.nearai_hub.base_url,
-            auth=CONFIG.auth,
-        )
-        client = InferenceClient(client_config)
-
         path = os.path.join(
             "/tmp",
             "mbpp",
@@ -63,12 +58,7 @@ class MBPPSolverAgent(SolverStrategy):
             str(int(time.time() * 1000)),
             str(random.randint(0, 1000)),
         )
-        env = Environment(
-            path,
-            [self.agent],
-            client,
-            approvals={"confirm_execution": lambda _: False},
-        )
+
         new_line = "\n"
         task = f"""{datum["text"]}
 Write a single file with python function named `{function_name}` that solves the above problem and satisfied the following tests:
@@ -76,12 +66,28 @@ Write a single file with python function named `{function_name}` that solves the
         if self.verbose:
             print(task)
             print(path)
-        env.run(task, max_iterations=self.num_iterations)
+
+        hub_client = openai.OpenAI(
+            base_url=CONFIG.nearai_hub.base_url,
+            api_key=f"Bearer {json.dumps(CONFIG.auth)}",
+        )
+        thread = hub_client.beta.threads.create()
+        hub_client.beta.threads.runs.create_and_poll(
+            thread_id=thread.id,
+            instructions=task,
+            assistant_id=self.agent_id,
+            additional_messages=[{"content": "Follow the instructions", "role": "user"}],
+        )
+
+        messages = hub_client.beta.threads.messages.list(thread_id=thread.id)
+        print(messages)
+        attachments = [a for m in messages if m.attachments for a in m.attachments]
+        file_ids = [a.file_id for a in attachments if a.file_id is not None]
 
         code = ""
-        for filename in env.list_files("."):
-            if filename.endswith(".py"):
-                code += env.read_file(filename) + "\n"
+        for file_id in file_ids:
+            file_content = hub_client.files.content(file_id)
+            code += file_content.read().decode("utf-8") + "\n"
 
         try:
             for test in datum["test_list"] + datum["challenge_test_list"]:

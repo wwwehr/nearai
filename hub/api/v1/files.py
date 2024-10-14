@@ -369,6 +369,7 @@ async def get_file_content(file_uri: str) -> bytes:
     Raises:
     ------
         Exception: If there's an error retrieving the file content.
+
     """
     if file_uri.startswith(S3_URI_PREFIX):
         # Extract bucket and key from S3 URI

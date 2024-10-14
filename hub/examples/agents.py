@@ -87,5 +87,20 @@ logger.info("Retrieving the assistant's response")
 messages = client.beta.threads.messages.list(thread_id=thread.id)
 logger.info(f"Messages in thread: {messages}")
 
+
 logger.info("Agent execution process completed")
 
+
+attachments = [a for m in messages if m.attachments for a in m.attachments]
+file_ids = [a.file_id for a in attachments]
+
+if file_ids and file_ids[0] is not None:
+    file = client.files.retrieve(file_ids[0])
+    logger.info(f"File retrieved: {file}")
+
+
+    content_response = client.files.content(file_ids[0])
+    content = content_response.read().decode('utf-8')
+    logger.info(f"File content: {content}")
+else:
+    logger.warning("No valid file IDs found in the attachments.")

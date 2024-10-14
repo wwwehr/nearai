@@ -123,7 +123,7 @@ class Environment(object):
             thread_id=self._thread_id,
             role=role,
             content=message,
-            extra_body={"assistant_id": self._agents[0].identifier},
+            extra_body={"assistant_id": self._agents[0].identifier, "run_id": self._run_id},
             metadata=kwargs,
             attachments=attachments,
         )

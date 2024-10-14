@@ -162,6 +162,10 @@ class Message(SQLModel, table=True):
             status=self.status,
             attachments=self.attachments,
             thread_id=self.thread_id,
+            run_id=self.run_id,
+            assistant_id=self.assistant_id,
+            completed_at=int(self.completed_at.timestamp()) if self.completed_at else None,
+            incomplete_at=int(self.incomplete_at.timestamp()) if self.incomplete_at else None,
         )
 
 

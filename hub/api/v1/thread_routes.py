@@ -104,6 +104,9 @@ class MessageCreateParams(BaseModel):
     assistant_id: Optional[str] = None
     """The ID of the assistant creating the message."""
 
+    run_id: Optional[str] = None
+    """The ID of the run creating the message."""
+
 
 @threads_router.post("/threads/{thread_id}/messages")
 async def create_message(
@@ -123,6 +126,7 @@ async def create_message(
             assistant_id=message.assistant_id,
             meta_data=message.metadata,
             attachments=message.attachments,
+            run_id=message.run_id,
         )
         logger.info(f"Created message: {message_model}")
         session.add(message_model)

@@ -74,6 +74,7 @@ class Environment(object):
     ) -> None:
         self._path = path
         self._agents = agents
+        self._agent_temp_dirs = [a.write_agent_files_to_temp() for a in agents]
         self._done = False
         self._client = client
         self._tools = ToolRegistry()
@@ -624,6 +625,10 @@ class Environment(object):
         """Returns the agent that is invoked first."""
         return self._agents[0]
 
+    def get_primary_agent_temp_dir(self) -> Path:
+        """Returns temp dir for primary agent."""
+        return self._agent_temp_dirs[0]
+
     def is_done(self) -> bool:  # noqa: D102
         return self._done
 
@@ -695,7 +700,7 @@ class Environment(object):
         return f"Environment({self._path})"
 
     def run_agent(self, task: Optional[str]) -> None:  # noqa: D102
-        self._agents[0].run(self, task=task)
+        self._agents[0].run(self, self._agent_temp_dirs[0], task=task)
 
     def request_user_input(self) -> Run:
         """Must be called to request input from the user."""
@@ -707,9 +712,9 @@ class Environment(object):
 
     def clear_temp_agent_files(self) -> None:
         """Remove temp agent files created to be used in `runpy`."""
-        for agent in self._agents:
-            if agent.temp_dir and os.path.exists(agent.temp_dir):
-                shutil.rmtree(agent.temp_dir)
+        for temp_dir in self._agent_temp_dirs:
+            if os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
 
     def set_next_actor(self, who: str) -> None:
         """Set the next actor / action in the dialogue."""

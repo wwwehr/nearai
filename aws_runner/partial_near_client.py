@@ -21,7 +21,7 @@ ENVIRONMENT_FILENAME = "environment.tar.gz"
 class PartialNearClient:
     """Wrap NearAI api registry methods, uses generated NearAI client."""
 
-    def __init__(self, base_url, auth):  # noqa: D107
+    def __init__(self, base_url: str, auth: dict):  # noqa: D107
         configuration = Configuration(access_token=f"Bearer {json.dumps(auth)}", host=base_url)
         client = ApiClient(configuration)
 

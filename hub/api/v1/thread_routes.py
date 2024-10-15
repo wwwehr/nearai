@@ -5,6 +5,8 @@ from typing import Any, Dict, Iterable, List, Literal, Optional, Union
 
 import boto3
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Path, Query
+from nearai.agents.local_runner import LocalRunner
+from nearai.config import load_config_file
 from openai.types.beta.assistant_response_format_option_param import AssistantResponseFormatOptionParam
 from openai.types.beta.thread import Thread
 from openai.types.beta.thread_create_params import ThreadCreateParams
@@ -13,9 +15,8 @@ from openai.types.beta.threads.message_create_params import MessageContentPartPa
 from openai.types.beta.threads.message_update_params import MessageUpdateParams
 from openai.types.beta.threads.run import Run as OpenAIRun
 from openai.types.beta.threads.run_create_params import AdditionalMessage, TruncationStrategy
-from openai.types.beta.threads.runs.run_step_include import RunStepInclude
 from pydantic import BaseModel, Field
-from sqlmodel import select
+from sqlmodel import asc, desc, select
 
 from hub.api.v1.agent_routes import (
     _runner_for_env,
@@ -39,11 +40,6 @@ threads_router = APIRouter(
 
 logger = logging.getLogger(__name__)
 DEFAULT_MODEL = "fireworks::llama-v3p1-70b-instruct"
-
-# scheduler = BackgroundScheduler()
-# pg_job_store = SQLAlchemyJobStore(engine=engine)
-# scheduler.add_jobstore(jobstore=pg_job_store, alias="sqlalchemy")
-# scheduler.start()
 
 
 @threads_router.post("/threads")
@@ -174,8 +170,25 @@ async def list_messages(
         if run_id:
             statement = statement.where(MessageModel.run_id == run_id)
 
+        # Apply order
+        if order == "asc":
+            statement = statement.order_by(asc(MessageModel.created_at))
+        else:
+            statement = statement.order_by(desc(MessageModel.created_at))
+
+        if before:
+            before_message = session.get(MessageModel, before)
+            if before_message:
+                if order == "asc":
+                    statement = statement.where(MessageModel.created_at < before_message.created_at)
+                else:
+                    statement = statement.where(MessageModel.created_at > before_message.created_at)
+
         # Apply limit
         statement = statement.limit(limit)
+
+        # Print the SQL query
+        print("SQL Query:", statement.compile(compile_kwargs={"literal_binds": True}))
 
         messages = session.exec(statement).all()
         logger.info(
@@ -231,7 +244,7 @@ class RunCreateParamsBase(BaseModel):
     tools: Optional[List[dict]] = Field(None, description="Override the tools the assistant can use for this run.")
     metadata: Optional[dict] = Field(None, description="Set of 16 key-value pairs that can be attached to an object.")
 
-    include: List[RunStepInclude] = Field(None, description="A list of additional fields to include in the response.")
+    include: List[dict] = Field(None, description="A list of additional fields to include in the response.")
     additional_instructions: Optional[str] = Field(
         None, description="Appends additional instructions at the end of the instructions for the run."
     )
@@ -398,6 +411,23 @@ def run_agent(thread_id: str, run_id: str, auth: AuthToken = Depends(revokable_a
                 invoke_function_via_curl(runner_invoke_url, agents, thread_id, run_id, auth, "", params)
             else:
                 raise HTTPException(status_code=400, detail="Runner invoke URL not set for local runner")
+        elif runner == "local_runner":
+            """Runs agents directly from the local machine."""
+            auth_data = auth.model_dump()
+
+            if auth_data["nonce"]:
+                if isinstance(auth_data["nonce"], bytes):
+                    auth_data["nonce"] = auth_data["nonce"].decode("utf-8")
+            params["api_url"] = load_config_file()["api_url"]
+
+            LocalRunner(
+                None,
+                run_model.assistant_id,
+                thread_id,
+                run_id,
+                auth_data,
+                params,
+            )
         else:
             function_name = f"{runner}-{framework.lower()}"
             if agent_api_url != "https://api.near.ai":

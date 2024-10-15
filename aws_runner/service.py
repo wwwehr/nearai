@@ -7,10 +7,10 @@ from subprocess import call
 from typing import Optional
 
 import boto3
-import openai
 from aws_runner.partial_near_client import PartialNearClient
 from nearai.agents.agent import Agent
 from nearai.agents.environment import Environment
+from nearai.config import get_hub_client
 from shared.client_config import ClientConfig
 from shared.inference_client import InferenceClient
 from shared.near.sign import SignatureVerificationResult, verify_signed_message
@@ -19,7 +19,6 @@ cloudwatch = boto3.client("cloudwatch", region_name="us-east-2")
 
 PATH = "/tmp/agent-runner-docker/environment-runs"
 RUN_PATH = PATH + "/run"
-FUNCTION_NAME = os.environ["AWS_LAMBDA_FUNCTION_NAME"]
 DEFAULT_API_URL = "https://api.near.ai"
 
 
@@ -88,7 +87,7 @@ def write_metric(metric_name, value, unit="Milliseconds"):
                     "Value": value,
                     "Unit": unit,
                     "Dimensions": [
-                        {"Name": "FunctionName", "Value": FUNCTION_NAME},
+                        {"Name": "FunctionName", "Value": os.environ["AWS_LAMBDA_FUNCTION_NAME"]},
                     ],
                 }
             ],
@@ -170,7 +169,7 @@ def run_with_environment(
         print(f"WARNING: Using custom API URL: {api_url}")
 
     near_client = PartialNearClient(api_url, auth)
-    hub_client = openai.OpenAI(base_url=api_url + "/v1", api_key=f"Bearer {json.dumps(auth)}")
+    hub_client = get_hub_client()
 
     loaded_agents = []
 

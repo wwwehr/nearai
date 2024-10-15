@@ -75,7 +75,8 @@ hub = [
     "python-pptx",
     "pypdf",
     "chardet",
-    "shortuuid"
+    "shortuuid",
+    "apscheduler"
 ]
 torch = ["torch", "torchao", "torchtune"]
 vllm = ["vllm", "torch"]

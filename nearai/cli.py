@@ -28,6 +28,7 @@ from tabulate import tabulate
 
 from nearai.config import (
     CONFIG,
+    get_hub_client,
     update_config,
 )
 from nearai.finetune import FinetuneCli
@@ -429,24 +430,37 @@ class AgentCli:
         print_system_log: bool = True,
         reset: bool = False,
     ) -> None:
-        """Runs agent interactively with environment from given path."""
-        from nearai.agents.local_runner import LocalRunner
-
-        agent_list = self._load_agents(agents, local)
-
-        client_config = CONFIG.get_client_config()
-
-        runner = LocalRunner(
-            path,
-            agent_list,
-            client_config,
-            env_vars=env_vars,
+        """Runs agent interactively."""
+        hub_client = get_hub_client()
+        thread = hub_client.beta.threads.create(
             tool_resources=tool_resources,
-            print_system_log=print_system_log,
-            reset=reset,
-            confirm_commands=CONFIG.get("confirm_commands", True),
         )
-        runner.run_interactive(record_run, load_env)
+
+        last_message_id = None
+        while True:
+            new_message = input("> ")
+            if new_message.lower() == "exit":
+                break
+            run = hub_client.beta.threads.runs.create_and_poll(
+                thread_id=thread.id,
+                assistant_id=agents,
+                instructions="You are a helpful assistant.",
+                additional_messages=[
+                    {
+                        "role": "user",
+                        "content": new_message,
+                    }
+                ],
+                model="fireworks::accounts/fireworks/models/llama-v3p1-405b-instruct",
+            )
+            # List new messages
+            messages = hub_client.beta.threads.messages.list(thread_id=thread.id, after=last_message_id, order="asc")
+            message_list = list(messages)
+            if message_list:
+                print([msg.content[0].text.value for msg in message_list])
+                last_message_id = message_list[-1].id
+            else:
+                print("No new messages")
 
     def task(
         self,
@@ -475,16 +489,16 @@ class AgentCli:
             default_provider=CONFIG.nearai_hub.default_provider,
         )
 
-        runner = LocalRunner(
-            path,
-            agent_list,
-            client_config,
-            env_vars=env_vars,
-            tool_resources=tool_resources,
-            print_system_log=print_system_log,
-            confirm_commands=CONFIG.get("confirm_commands", True),
-        )
-        runner.run_task(task, record_run, load_env, max_iterations)
+        # runner = LocalRunner(
+        #     path,
+        #     agent_list,
+        #     client_config,
+        #     env_vars=env_vars,
+        #     tool_resources=tool_resources,
+        #     print_system_log=print_system_log,
+        #     confirm_commands=CONFIG.get("confirm_commands", True),
+        # )
+        # runner.run_task(task, record_run, load_env, max_iterations)
 
     def run_remote(
         self,

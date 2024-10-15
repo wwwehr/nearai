@@ -96,7 +96,7 @@ export const IframeWithBlob = ({
         height={height}
         ref={iframeRef}
         src={dataUrl}
-        sandbox="allow-scripts"
+        sandbox="allow-scripts allow-popups"
         className={`${s.visibleIframe} ${className}`}
         data-loading={height < 10}
         {...props}

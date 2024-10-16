@@ -17,3 +17,4 @@ class ClientConfig(BaseModel):
     custom_llm_provider: str = "openai"
     auth: Optional[AuthData] = None
     default_provider: Optional[str] = None  # future: remove in favor of api decision
+    num_inference_retries: int = 1

@@ -16,6 +16,7 @@ from openai.types.beta.threads.message_update_params import MessageUpdateParams
 from openai.types.beta.threads.run import Run as OpenAIRun
 from openai.types.beta.threads.run_create_params import AdditionalMessage, TruncationStrategy
 from pydantic import BaseModel, Field
+from shared.client_config import DEFAULT_PROVIDER_MODEL
 from sqlmodel import asc, desc, select
 
 from hub.api.v1.agent_routes import (
@@ -39,7 +40,6 @@ threads_router = APIRouter(
 )
 
 logger = logging.getLogger(__name__)
-DEFAULT_MODEL = "fireworks::llama-v3p1-70b-instruct"
 
 
 @threads_router.post("/threads")
@@ -232,7 +232,7 @@ async def modify_message(
 class RunCreateParamsBase(BaseModel):
     assistant_id: str = Field(..., description="The ID of the assistant to use to execute this run.")
     model: Optional[str] = Field(
-        default=DEFAULT_MODEL, description="The ID of the Model to be used to execute this run."
+        default=DEFAULT_PROVIDER_MODEL, description="The ID of the Model to be used to execute this run."
     )
     instructions: Optional[str] = Field(
         None,

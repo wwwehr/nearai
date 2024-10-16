@@ -2,7 +2,6 @@ import json
 import re
 from typing import List
 
-import openai
 from openapi_client import (
     BodyDownloadEnvironmentV1DownloadEnvironmentPost,
     BodyDownloadFileV1RegistryDownloadFilePost,
@@ -25,7 +24,6 @@ class PartialNearClient:
         configuration = Configuration(access_token=f"Bearer {json.dumps(auth)}", host=base_url)
         client = ApiClient(configuration)
 
-        self.openai_client = openai.OpenAI(api_key=f"Bearer {json.dumps(auth)}", base_url=base_url + "/v1")
         self._client = client
         self.entry_location_pattern = re.compile("^(?P<namespace>[^/]+)/(?P<name>[^/]+)/(?P<version>[^/]+)$")
         self.auth = auth

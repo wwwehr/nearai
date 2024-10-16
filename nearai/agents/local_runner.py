@@ -1,22 +1,6 @@
-import json
 import logging
-import os
-import shutil
-import tarfile
-import tempfile
-from pathlib import Path
-from shutil import rmtree
-from typing import Any, Dict, Optional
 
 from aws_runner.service import run_with_environment
-from openapi_client import EntryLocation, EntryMetadata
-from shared.inference_client import InferenceClient
-
-from nearai import CONFIG, check_metadata, plain_location
-from nearai.agents.agent import Agent
-from nearai.agents.environment import Environment
-from nearai.config import get_hub_client
-from nearai.registry import get_registry_folder, registry
 
 DEFAULT_OUTPUT_PATH = "/tmp/nearai/conversations/"
 
@@ -39,6 +23,5 @@ class LocalRunner:
         )
 
         self._agents = agents
-        self._client_config = CONFIG.get_client_config()
         self._confirm_commands = True
         run_with_environment(agents, auth, thread_id, run_id, params=params)

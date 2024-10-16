@@ -300,7 +300,7 @@ async def retrieve_file(
         created_at=int(file_details.created_at.timestamp()),
         filename=file_details.filename,
         object="file",
-        purpose=file_details.purpose,
+        purpose=file_details.purpose,  # type: ignore
         status="uploaded",
         status_details="File information retrieved successfully",
     )

@@ -141,6 +141,10 @@ class Message(SQLModel, table=True):
 
     def __init__(self, **data):  # noqa: D107
         super().__init__(**data)
+        if not is_valid_message_role(self.role):
+            raise ValueError(f"Invalid role: {self.role}")
+        if not is_valid_message_status(self.status):
+            raise ValueError(f"Invalid status: {self.status}")
         if self.attachments:
             # Convert each attachment to a dictionary
             self.attachments = [attachment.model_dump() for attachment in self.attachments]
@@ -157,9 +161,9 @@ class Message(SQLModel, table=True):
             created_at=int(self.created_at.timestamp()),
             id=self.id,
             object="thread.message",
-            role=self.role,
+            role=self.role,  # type: ignore
             content=self.content,
-            status=self.status,
+            status=self.status,  # type: ignore
             attachments=self.attachments,
             thread_id=self.thread_id,
             run_id=self.run_id,
@@ -219,6 +223,11 @@ class Run(SQLModel, table=True):
     tool_choice: Optional[str] = Field(default=None)
     parallel_tool_calls: bool = Field(default=False)
 
+    def __init__(self, **data):  # noqa: D107
+        super().__init__(**data)
+        if not is_valid_run_status(self.status):
+            raise ValueError(f"Invalid status: {self.status}")
+
     def to_openai(self) -> OpenAIRun:
         """Convert to OpenAI Run object."""
         return OpenAIRun(
@@ -227,7 +236,7 @@ class Run(SQLModel, table=True):
             created_at=int(self.created_at.timestamp()),
             assistant_id=self.assistant_id,
             thread_id=self.thread_id,
-            status=self.status,
+            status=self.status,  # type: ignore
             started_at=int(self.started_at.timestamp()) if self.started_at else None,
             expires_at=int(self.expires_at.timestamp()) if self.expires_at else None,
             cancelled_at=int(self.cancelled_at.timestamp()) if self.cancelled_at else None,
@@ -235,9 +244,8 @@ class Run(SQLModel, table=True):
             completed_at=int(self.completed_at.timestamp()) if self.completed_at else None,
             last_error=None,
             model=self.model,
-            instructions="TODO",
+            instructions=self.instructions or "",
             tools=[],
-            # file_ids=self.file_ids,
             metadata=self.meta_data,
             usage=None,
             temperature=self.temperature,
@@ -291,3 +299,26 @@ SUPPORTED_MIME_TYPES = {
 }
 
 SUPPORTED_TEXT_ENCODINGS = ["utf-8", "utf-16", "ascii"]
+
+
+# Add type checking functions
+def is_valid_message_role(role: str) -> bool:
+    return role in ("user", "assistant")
+
+
+def is_valid_message_status(status: str) -> bool:
+    return status in ("in_progress", "incomplete", "completed")
+
+
+def is_valid_run_status(status: str) -> bool:
+    return status in (
+        "queued",
+        "in_progress",
+        "requires_action",
+        "cancelling",
+        "cancelled",
+        "failed",
+        "completed",
+        "incomplete",
+        "expired",
+    )

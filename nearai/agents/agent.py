@@ -9,6 +9,9 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+from nearai import CONFIG, check_metadata
+from nearai.registry import get_registry_folder, registry
+
 AGENT_FILENAME = "agent.py"
 
 
@@ -126,3 +129,36 @@ class Agent(object):
         finally:
             os.chdir(self.original_cwd)
             sys.path.pop(0)
+
+    @staticmethod
+    def load_agents(agents: str, local: bool = False):
+        """Loads agents from the registry."""
+        return [Agent.load_agent(agent, local) for agent in agents.split(",")]
+
+    @staticmethod
+    def load_agent(name: str, local: bool = False):
+        """Loads a single agent from the registry.
+
+        TODO: should handle local and remote code at once. eg add local::path, remote::path
+        """
+        identifier = None
+        if local:
+            agent_files_path = get_registry_folder() / name
+            if CONFIG.auth is None:
+                namespace = "not-logged-in"
+            else:
+                namespace = CONFIG.auth.account_id
+        else:
+            agent_files_path = registry.download(name)
+            identifier = name
+        assert agent_files_path is not None, f"Agent {name} not found."
+
+        metadata_path = os.path.join(agent_files_path, "metadata.json")
+        check_metadata(Path(metadata_path))
+        with open(metadata_path) as f:
+            metadata: Dict[str, Any] = json.load(f)
+
+        if not identifier:
+            identifier = "/".join([namespace, metadata["name"], metadata["version"]])
+
+        return Agent(identifier, agent_files_path, metadata)

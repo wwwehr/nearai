@@ -12,8 +12,7 @@ from shared.inference_client import InferenceClient
 
 from nearai.agents.agent import Agent
 from nearai.agents.environment import Environment
-from nearai.agents.local_runner import LocalRunner
-from nearai.config import CONFIG, DATA_FOLDER
+from nearai.config import CONFIG, DATA_FOLDER, get_hub_client
 from nearai.dataset import Dataset
 
 from . import SolverStrategy
@@ -78,7 +77,18 @@ async def submit_problem(problem_id: str, code: str, extension: Extensions) -> s
 class DDOTSEnvironment(Environment):
     def __init__(self, agents: List[Agent], problem_id: str, description: str, client):  # noqa: D107
         self.tdir = TemporaryDirectory()
-        super().__init__(self.tdir.name, agents, client, approvals={"confirm_execution": lambda _: False})
+        self.hub_client = get_hub_client()
+        thread = self.hub_client.beta.threads.create()
+        super().__init__(
+            self.tdir.name,
+            agents,
+            client,
+            self.hub_client,
+            thread.id,
+            "todo",
+            "todo",
+            approvals={"confirm_execution": lambda _: False},
+        )
 
         self.problem_id = problem_id
         self.solved = False
@@ -137,7 +147,7 @@ class DDOTSV0Solver(SolverStrategy):
     """
 
     def __init__(self, dataset_ref: Dataset, agents: str, max_iterations: int, save_snapshots: bool = False):  # noqa: D107
-        self.agents = [LocalRunner.load_agent(agent) for agent in agents.split(",")]
+        self.agents = [Agent.load_agent(agent) for agent in agents.split(",")]
         self.max_iterations = max_iterations
 
         date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")

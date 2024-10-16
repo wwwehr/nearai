@@ -170,14 +170,16 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokab
         if runner == "local":
             runner_invoke_url = getenv("RUNNER_INVOKE_URL", None)
             if runner_invoke_url:
-                return invoke_function_via_curl(runner_invoke_url, agents, environment_id, auth, new_message, params)
+                return invoke_function_via_curl(
+                    runner_invoke_url, agents, environment_id, "", auth, new_message, params
+                )
         else:
             function_name = f"{runner}-{framework.lower()}"
             if agent_api_url != "https://api.near.ai":
                 print(f"Passing agent API URL: {agent_api_url}")
             print(f"Running function {function_name} with: agents={agents}, environment_id={environment_id}, ")
 
-            return invoke_function_via_lambda(function_name, agents, environment_id, auth, new_message, params)
+            return invoke_function_via_lambda(function_name, agents, environment_id, "", auth, new_message, params)
 
         raise HTTPException(status_code=400, detail="Invalid runner parameters")
 

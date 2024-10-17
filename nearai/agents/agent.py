@@ -121,11 +121,9 @@ class Agent(object):
         context = {"env": env, "agent": self, "task": task}
 
         try:
-            print(self.temp_dir)
             os.chdir(self.temp_dir)
             sys.path.insert(0, self.temp_dir)
-            res = runpy.run_path(AGENT_FILENAME, init_globals=context, run_name="__main__")
-            print(f"Agent {self.identifier} ran successfully, output: {res}")
+            runpy.run_path(AGENT_FILENAME, init_globals=context, run_name="__main__")
         finally:
             os.chdir(self.original_cwd)
             sys.path.pop(0)

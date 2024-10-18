@@ -147,7 +147,11 @@ class DDOTSV0Solver(SolverStrategy):
     """
 
     def __init__(self, dataset_ref: Dataset, agents: str, max_iterations: int, save_snapshots: bool = False):  # noqa: D107
-        self.agents = [Agent.load_agent(agent) for agent in agents.split(",")]
+        client_config = ClientConfig(
+            base_url=CONFIG.nearai_hub.base_url,
+            auth=CONFIG.auth,
+        )
+        self.agents = [Agent.load_agent(agent, client_config) for agent in agents.split(",")]
         self.max_iterations = max_iterations
 
         date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")

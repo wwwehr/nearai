@@ -114,7 +114,8 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
 
         self.agent_obj = None
         if agent != "":
-            self.agent_obj = Agent.load_agent(agent)
+            self.agent_obj = Agent.load_agent(agent, client_config)
+
             self.agent_obj.model_temperature = 0.0
             if self.model_full_path != "":
                 self.agent_obj.model = self.model_full_path

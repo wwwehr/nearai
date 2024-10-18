@@ -47,6 +47,9 @@ def upgrade() -> None:
         sa.Column("response_format", sa.String(length=50), nullable=True),
         sa.Column("tool_choice", sa.String(length=50), nullable=True),
         sa.Column("parallel_tool_calls", sa.Boolean, nullable=False, server_default=sa.text("false")),
+        sa.Column(
+            "required_action", sa.JSON, nullable=True
+        ),  # https://platform.openai.com/docs/assistants/tools/function-calling/step-3-initiate-a-run
     )
 
 

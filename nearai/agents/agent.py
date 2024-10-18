@@ -9,7 +9,8 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from nearai import CONFIG, check_metadata
+from shared.client_config import ClientConfig
+
 from nearai.registry import get_registry_folder, registry
 
 AGENT_FILENAME = "agent.py"
@@ -37,10 +38,11 @@ class Agent(object):
         self.agent_files = agent_files
         self.original_cwd = os.getcwd()
 
-        self.temp_dir = self._write_agent_files_to_temp(agent_files)
+        self.temp_dir = self.write_agent_files_to_temp(agent_files)
 
     @staticmethod
-    def _write_agent_files_to_temp(agent_files):
+    def write_agent_files_to_temp(agent_files):
+        """Write agent files to a temporary directory."""
         unique_id = uuid.uuid4().hex
         temp_dir = os.path.join(tempfile.gettempdir(), f"agent_{unique_id}")
 
@@ -129,30 +131,32 @@ class Agent(object):
             sys.path.pop(0)
 
     @staticmethod
-    def load_agents(agents: str, local: bool = False):
+    def load_agents(agents: str, config: ClientConfig, local: bool = False):
         """Loads agents from the registry."""
-        return [Agent.load_agent(agent, local) for agent in agents.split(",")]
+        return [Agent.load_agent(agent, config, local) for agent in agents.split(",")]
 
     @staticmethod
-    def load_agent(name: str, local: bool = False):
-        """Loads a single agent from the registry.
-
-        TODO: should handle local and remote code at once. eg add local::path, remote::path
-        """
+    def load_agent(
+        name: str,
+        config: ClientConfig,
+        local: bool = False,
+    ):
+        """Loads a single agent from the registry."""
         identifier = None
         if local:
             agent_files_path = get_registry_folder() / name
-            if CONFIG.auth is None:
+            if config.auth is None:
                 namespace = "not-logged-in"
             else:
-                namespace = CONFIG.auth.account_id
+                namespace = config.auth.account_id
         else:
             agent_files_path = registry.download(name)
             identifier = name
         assert agent_files_path is not None, f"Agent {name} not found."
 
         metadata_path = os.path.join(agent_files_path, "metadata.json")
-        check_metadata(Path(metadata_path))
+        if not os.path.exists(metadata_path):
+            raise FileNotFoundError(f"Metadata file not found: {metadata_path}")
         with open(metadata_path) as f:
             metadata: Dict[str, Any] = json.load(f)
 

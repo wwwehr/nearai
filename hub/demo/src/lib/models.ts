@@ -191,14 +191,8 @@ export const entrySecretModel = z.object({
 });
 
 export const agentWalletTransactionRequestModel = z.object({
-  deposit: z.preprocess(
-    (value) => (typeof value === 'string' ? value : '0'),
-    z.string(),
-  ),
-  gas: z.preprocess(
-    (value) => (typeof value === 'string' ? value : '30000000000000'),
-    z.string(),
-  ),
+  deposit: z.string(),
+  gas: z.string(),
   method: z.string(),
   params: z.record(z.string(), z.unknown()).default({}),
   recipient: z.string(),

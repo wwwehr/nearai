@@ -108,8 +108,7 @@ export function useAgentRequestsWithIframe(
                       {
                         params: {
                           args: request.params,
-                          // deposit: request.deposit,
-                          deposit: '100000000000000000000000',
+                          deposit: request.deposit,
                           gas: request.gas,
                           methodName: request.method,
                         },

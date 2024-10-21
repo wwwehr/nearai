@@ -189,3 +189,25 @@ export const entrySecretModel = z.object({
   value: z.string(),
   category: z.string().optional(),
 });
+
+export const agentWalletTransactionRequestModel = z.object({
+  deposit: z.preprocess(
+    (value) => (typeof value === 'string' ? value : '0'),
+    z.string(),
+  ),
+  gas: z.preprocess(
+    (value) => (typeof value === 'string' ? value : '30000000000000'),
+    z.string(),
+  ),
+  method: z.string(),
+  params: z.record(z.string(), z.unknown()).default({}),
+  recipient: z.string(),
+  requestId: z.string().default(''),
+});
+
+export const agentWalletViewRequestModel = z.object({
+  method: z.string(),
+  params: z.record(z.string(), z.unknown()).default({}),
+  recipient: z.string(),
+  requestId: z.string().default(''),
+});

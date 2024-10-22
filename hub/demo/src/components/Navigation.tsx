@@ -17,6 +17,7 @@ import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 
+import { env } from '~/env';
 import { signInWithNear } from '~/lib/auth';
 import { ENTRY_CATEGORY_LABELS } from '~/lib/entries';
 import { useAuthStore } from '~/stores/auth';
@@ -35,39 +36,47 @@ const navItems = [
     label: 'Agents',
     path: '/agents',
     icon: ENTRY_CATEGORY_LABELS.agent.icon,
+    consumer: true,
   },
   {
     label: 'Models',
     path: '/models',
     icon: ENTRY_CATEGORY_LABELS.model.icon,
+    consumer: false,
   },
   {
     label: 'Datasets',
     path: '/datasets',
     icon: ENTRY_CATEGORY_LABELS.dataset.icon,
+    consumer: false,
   },
   {
     label: 'Benchmarks',
     path: '/benchmarks',
     icon: ENTRY_CATEGORY_LABELS.benchmark.icon,
+    consumer: false,
   },
   {
     label: 'Evaluations',
     path: '/evaluations',
     icon: ENTRY_CATEGORY_LABELS.evaluation.icon,
+    consumer: false,
   },
   {
     label: 'Chat',
     path: '/chat',
     icon: <ChatCircleDots />,
+    consumer: true,
   },
-];
+].filter((item) => !env.NEXT_PUBLIC_CONSUMER_MODE || item.consumer);
 
 export const Navigation = () => {
   const store = useAuthStore();
   const path = usePathname();
   const [mounted, setMounted] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
+
+  const title = env.NEXT_PUBLIC_CONSUMER_MODE ? 'AI Chat' : 'AI Hub';
 
   useEffect(() => {
     setMounted(true);
@@ -76,7 +85,7 @@ export const Navigation = () => {
   return (
     <header className={s.navigation}>
       <Link className={s.logo} href="/">
-        AI Hub
+        {title}
       </Link>
 
       <BreakpointDisplay show="larger-than-tablet" className={s.breakpoint}>

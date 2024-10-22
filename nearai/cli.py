@@ -295,6 +295,7 @@ class BenchmarkCli:
         subset: Optional[str] = None,
         check_compatibility: bool = True,
         record: bool = False,
+        num_inference_retries: int = 10,
         **solver_args: Any,
     ) -> None:
         """Run benchmark on a dataset with a solver strategy.
@@ -305,6 +306,8 @@ class BenchmarkCli:
         from nearai.benchmark import BenchmarkExecutor, DatasetInfo
         from nearai.dataset import get_dataset, load_dataset
         from nearai.solvers import SolverScoringMethod, SolverStrategy, SolverStrategyRegistry
+
+        CONFIG.num_inference_retries = num_inference_retries
 
         args = dict(solver_args)
         if subset is not None:

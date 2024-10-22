@@ -11,8 +11,6 @@ from typing import Any, Dict, List, Optional, Union
 
 from shared.client_config import ClientConfig
 
-from nearai.registry import get_registry_folder, registry
-
 AGENT_FILENAME = "agent.py"
 
 
@@ -108,8 +106,8 @@ class Agent(object):
         if not self.version or not self.name:
             raise ValueError("Both 'version' and 'name' must be non-empty in metadata.")
 
-    def run(self, env: Any, temp_dir: Path, task: Optional[str] = None) -> None:  # noqa: D102
-        if not os.path.exists(os.path.join(temp_dir, AGENT_FILENAME)):
+    def run(self, env: Any, task: Optional[str] = None) -> None:  # noqa: D102
+        if not os.path.exists(os.path.join(self.temp_dir, AGENT_FILENAME)):
             raise ValueError(f"Agent run error: {AGENT_FILENAME} does not exist")
 
         # combine agent.env_vars and env.env_vars
@@ -142,6 +140,8 @@ class Agent(object):
         local: bool = False,
     ):
         """Loads a single agent from the registry."""
+        from nearai.registry import get_registry_folder, registry
+
         identifier = None
         if local:
             agent_files_path = get_registry_folder() / name

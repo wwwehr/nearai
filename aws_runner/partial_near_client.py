@@ -13,6 +13,7 @@ from openapi_client.api.agents_assistants_api import AgentsAssistantsApi
 from openapi_client.api.registry_api import RegistryApi
 from openapi_client.api_client import ApiClient
 from openapi_client.configuration import Configuration
+from shared.auth_data import AuthData
 
 ENVIRONMENT_FILENAME = "environment.tar.gz"
 
@@ -20,8 +21,8 @@ ENVIRONMENT_FILENAME = "environment.tar.gz"
 class PartialNearClient:
     """Wrap NearAI api registry methods, uses generated NearAI client."""
 
-    def __init__(self, base_url: str, auth: dict):  # noqa: D107
-        configuration = Configuration(access_token=f"Bearer {json.dumps(auth)}", host=base_url)
+    def __init__(self, base_url: str, auth: AuthData):  # noqa: D107
+        configuration = Configuration(access_token=f"Bearer {auth.model_dump_json()}", host=base_url)
         client = ApiClient(configuration)
 
         self._client = client
@@ -120,7 +121,7 @@ class PartialNearClient:
         """Saves an environment to NearAI registry."""
         api_instance = RegistryApi(self._client)
 
-        author = self.auth.get("account_id")
+        author = self.auth.account_id
         name = metadata.get("name")
         entry_location = {"namespace": author, "name": name, "version": "0"}
         api_instance.upload_metadata_v1_registry_upload_metadata_post(

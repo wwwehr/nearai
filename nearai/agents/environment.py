@@ -75,7 +75,6 @@ class Environment(object):
     ) -> None:
         self._path = path
         self._agents = agents
-        self._agent_temp_dirs = [a.write_agent_files_to_temp(a.agent_files) for a in agents]
         self._done = False
         self._client = client
         self._tools = ToolRegistry()
@@ -258,16 +257,27 @@ class Environment(object):
         """Returns the path of the current directory."""
         return self._path
 
-    def read_file(self, filename: str):
+    def read_file(self, filename: str, write_to_disk: bool = True):
         """Reads a file from the thread."""
         files = self.list_files("")
 
-        for file in files:
-            if file.filename == filename:
-                print("file returned by api", file)
-                return self.read_file_by_id(file.id)
+        for f in files:
+            if f.filename == filename:
+                file_content = self.read_file_by_id(f.id)
+                break
+        if not file_content:
+            return None
 
-        return None
+        if not write_to_disk:
+            return file_content
+
+        # Write the file content to the local filesystem
+        local_path = os.path.join(self._path, filename)
+
+        with open(local_path, "w") as local_file:
+            local_file.write(file_content)
+
+        return file_content
 
     def read_file_by_id(self, file_id: str):
         """Read a file from the thread."""
@@ -658,7 +668,7 @@ class Environment(object):
 
     def call_agent(self, agent_index: int, task: str) -> None:
         """Calls agent with given task."""
-        self._agents[agent_index].run(self, temp_dir=self._agent_temp_dirs[agent_index], task=task)
+        self._agents[agent_index].run(self, task=task)
 
     def get_agents(self) -> List[Agent]:
         """Returns list of agents available in environment."""
@@ -670,7 +680,7 @@ class Environment(object):
 
     def get_primary_agent_temp_dir(self) -> Path:
         """Returns temp dir for primary agent."""
-        return self._agent_temp_dirs[0]
+        return self._agents[0].temp_dir
 
     def is_done(self) -> bool:  # noqa: D102
         return self._done
@@ -746,7 +756,7 @@ class Environment(object):
         return f"Environment({self._path})"
 
     def run_agent(self, task: Optional[str]) -> None:  # noqa: D102
-        self._agents[0].run(self, self._agent_temp_dirs[0], task=task)
+        self._agents[0].run(self, task=task)
 
     def request_user_input(self) -> Run:
         """Must be called to request input from the user."""
@@ -758,9 +768,9 @@ class Environment(object):
 
     def clear_temp_agent_files(self) -> None:
         """Remove temp agent files created to be used in `runpy`."""
-        for temp_dir in self._agent_temp_dirs:
-            if os.path.exists(temp_dir):
-                shutil.rmtree(temp_dir)
+        for agent in self._agents:
+            if os.path.exists(agent.temp_dir):
+                shutil.rmtree(agent.temp_dir)
 
     def set_next_actor(self, who: str) -> None:
         """Set the next actor / action in the dialogue."""
@@ -795,7 +805,7 @@ class Environment(object):
         while iteration < max_iterations and not self.is_done() and self.get_next_actor() != "user":
             iteration += 1
             print([x.identifier for x in self._agents])
-            self._agents[0].run(self, temp_dir=self._agent_temp_dirs[0], task=new_message)
+            self._agents[0].run(self, task=new_message)
 
         return run_id
 

@@ -16,6 +16,7 @@ from openai.types.beta.threads.message_update_params import MessageUpdateParams
 from openai.types.beta.threads.run import Run as OpenAIRun
 from openai.types.beta.threads.run_create_params import AdditionalMessage, TruncationStrategy
 from pydantic import BaseModel, Field
+from shared.auth_data import AuthData
 from shared.client_config import DEFAULT_PROVIDER_MODEL
 from sqlmodel import asc, desc, select
 
@@ -413,11 +414,7 @@ def run_agent(thread_id: str, run_id: str, auth: AuthToken = Depends(revokable_a
                 raise HTTPException(status_code=400, detail="Runner invoke URL not set for local runner")
         elif runner == "local_runner":
             """Runs agents directly from the local machine."""
-            auth_data = auth.model_dump()
 
-            if auth_data["nonce"]:
-                if isinstance(auth_data["nonce"], bytes):
-                    auth_data["nonce"] = auth_data["nonce"].decode("utf-8")
             params["api_url"] = load_config_file()["api_url"]
 
             LocalRunner(
@@ -425,7 +422,7 @@ def run_agent(thread_id: str, run_id: str, auth: AuthToken = Depends(revokable_a
                 run_model.assistant_id,
                 thread_id,
                 run_id,
-                auth_data,
+                AuthData(**auth.model_dump()),  # TODO: https://github.com/nearai/nearai/issues/421
                 params,
             )
         else:

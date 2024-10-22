@@ -1,5 +1,6 @@
 from typing import Optional
 
+import openai
 from pydantic import BaseModel
 
 from shared.auth_data import AuthData
@@ -17,3 +18,9 @@ class ClientConfig(BaseModel):
     custom_llm_provider: str = "openai"
     auth: Optional[AuthData] = None
     default_provider: Optional[str] = None  # future: remove in favor of api decision
+
+    def get_hub_client(self):
+        """Get the hub client."""
+        signature = f"Bearer {self.auth.model_dump_json()}"
+        base_url = self.base_url
+        return openai.OpenAI(base_url=base_url, api_key=signature)

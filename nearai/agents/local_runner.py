@@ -1,6 +1,7 @@
 import logging
 
 from aws_runner.service import run_with_environment
+from shared.auth_data import AuthData
 
 DEFAULT_OUTPUT_PATH = "/tmp/nearai/conversations/"
 
@@ -14,7 +15,7 @@ class LocalRunner:
         agents,
         thread_id,
         run_id,
-        auth,
+        auth: AuthData,
         params,
     ) -> None:
         print(

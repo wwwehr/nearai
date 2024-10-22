@@ -10,7 +10,7 @@ import boto3
 from aws_runner.partial_near_client import PartialNearClient
 from nearai.agents.agent import Agent
 from nearai.agents.environment import Environment
-from nearai.config import get_hub_client
+from shared.auth_data import AuthData
 from shared.client_config import ClientConfig
 from shared.inference_client import InferenceClient
 from shared.near.sign import SignatureVerificationResult, verify_signed_message
@@ -31,17 +31,16 @@ def handler(event, context):
         missing = list(filter(lambda x: event.get(x) is (None or ""), required_params))
         return f"Missing required parameters: {missing}"
 
-    auth_object = auth if isinstance(auth, dict) else json.loads(auth)
-
+    auth_object = auth if isinstance(auth, AuthData) else AuthData(**auth)
     start_time_val = time.perf_counter()
     verification_result = verify_signed_message(
-        auth_object.get("account_id"),
-        auth_object.get("public_key"),
-        auth_object.get("signature"),
-        auth_object.get("message"),
-        auth_object.get("nonce"),
-        auth_object.get("recipient"),
-        auth_object.get("callback_url"),
+        auth_object.account_id,
+        auth_object.public_key,
+        auth_object.signature,
+        auth_object.message,
+        auth_object.nonce,
+        auth_object.recipient,
+        auth_object.callback_url,
     )
 
     if verification_result == SignatureVerificationResult.VERIFY_ACCESS_KEY_OWNER_SERVICE_NOT_AVAILABLE:
@@ -149,7 +148,7 @@ def save_environment(env, client, run_id, base_id, metric_function=None) -> str:
 
 def run_with_environment(
     agents: str,
-    auth: dict,
+    auth: AuthData,
     thread_id,
     run_id,
     new_message: str = None,
@@ -169,7 +168,6 @@ def run_with_environment(
         print(f"WARNING: Using custom API URL: {api_url}")
 
     near_client = PartialNearClient(api_url, auth)
-    hub_client = get_hub_client()
 
     loaded_agents = []
 
@@ -184,6 +182,7 @@ def run_with_environment(
         auth=auth,
     )
     inference_client = InferenceClient(client_config)
+    hub_client = client_config.get_hub_client()
 
     env = Environment(
         RUN_PATH,

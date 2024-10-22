@@ -15,7 +15,12 @@ from hub.api.v1.registry import S3_BUCKET, get
 from hub.api.v1.sql import SqlClient
 
 S3_ENDPOINT = getenv("S3_ENDPOINT")
-s3 = boto3.client("s3", endpoint_url=S3_ENDPOINT)
+s3 = boto3.client(
+    "s3",
+    endpoint_url=S3_ENDPOINT,
+    aws_access_key_id=getenv("S3_ACCESS_KEY_ID"),
+    aws_secret_access_key=getenv("S3_SECRET_ACCESS_KEY"),
+)
 
 v1_router = APIRouter(
     tags=["agents, assistants"],

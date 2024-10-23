@@ -155,7 +155,7 @@ export const EntryEnvironmentVariables = ({
                         }
                         style={{
                           textDecoration:
-                            variable.urlValue ?? variable.secret
+                            (variable.urlValue ?? variable.secret)
                               ? 'line-through'
                               : undefined,
                         }}

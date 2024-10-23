@@ -1,4 +1,5 @@
 import '~/styles/globals.scss';
+import '@near-wallet-selector/modal-ui/styles.css';
 
 import { ThemeProvider } from 'next-themes';
 import { type ReactNode } from 'react';
@@ -6,6 +7,7 @@ import { type ReactNode } from 'react';
 import { Footer } from '~/components/Footer';
 import { Toaster } from '~/components/lib/Toast';
 import { Navigation } from '~/components/Navigation';
+import { NearInitializer } from '~/components/NearInitializer';
 import { ZustandHydration } from '~/components/ZustandHydration';
 import { env } from '~/env';
 import { TRPCReactProvider } from '~/trpc/react';
@@ -35,6 +37,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <ThemeProvider attribute="class">
           <TRPCReactProvider>
+            <NearInitializer />
             <ZustandHydration />
             <Toaster />
 

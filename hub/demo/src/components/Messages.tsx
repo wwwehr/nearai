@@ -73,68 +73,66 @@ export const Messages = ({
     if (lastLine.startsWith('WRITE ')) return filePathToCodeLanguage(lastLine);
   }
 
+  if (isAuthenticated && loading) {
+    return <PlaceholderCard style={{ marginBottom: 'auto' }} />;
+  }
+
   return (
     <div className={s.wrapper}>
-      {isAuthenticated && loading ? (
-        <PlaceholderCard />
-      ) : (
-        <>
-          {welcomeMessage}
-          {isAuthenticated && (
-            <div className={s.messages} ref={messagesRef}>
-              {messages.map((message, index) => (
-                <Fragment key={index}>
-                  {message.role === 'user' ? (
-                    <Card
-                      animateIn
-                      background="sand-2"
-                      style={{ alignSelf: 'end' }}
-                    >
-                      <Text color="sand-11">{message.content}</Text>
-                    </Card>
+      {welcomeMessage}
+      {isAuthenticated && (
+        <div className={s.messages} ref={messagesRef}>
+          {messages.map((message, index) => (
+            <Fragment key={index}>
+              {message.role === 'user' ? (
+                <Card
+                  animateIn
+                  background="sand-2"
+                  style={{ alignSelf: 'end' }}
+                >
+                  <Text color="sand-11">{message.content}</Text>
+                </Card>
+              ) : (
+                <Card animateIn>
+                  {determineCodeLanguageForMessage(index) ? (
+                    <Code
+                      bleed
+                      source={message.content}
+                      language={determineCodeLanguageForMessage(index)}
+                    />
                   ) : (
-                    <Card animateIn>
-                      {determineCodeLanguageForMessage(index) ? (
-                        <Code
-                          bleed
-                          source={message.content}
-                          language={determineCodeLanguageForMessage(index)}
-                        />
-                      ) : (
-                        <Text color="sand-12">{message.content}</Text>
-                      )}
-
-                      <Flex align="center" gap="m">
-                        <Text
-                          size="text-xs"
-                          style={{
-                            textTransform: 'capitalize',
-                            marginRight: 'auto',
-                          }}
-                        >
-                          - {message.role}
-                        </Text>
-
-                        <Tooltip
-                          asChild
-                          content="Copy message content to clipboard"
-                        >
-                          <Button
-                            label="Copy message to clipboard"
-                            icon={<Copy />}
-                            size="small"
-                            fill="ghost"
-                            onClick={() => copyTextToClipboard(message.content)}
-                          />
-                        </Tooltip>
-                      </Flex>
-                    </Card>
+                    <Text color="sand-12">{message.content}</Text>
                   )}
-                </Fragment>
-              ))}
-            </div>
-          )}
-        </>
+
+                  <Flex align="center" gap="m">
+                    <Text
+                      size="text-xs"
+                      style={{
+                        textTransform: 'capitalize',
+                        marginRight: 'auto',
+                      }}
+                    >
+                      - {message.role}
+                    </Text>
+
+                    <Tooltip
+                      asChild
+                      content="Copy message content to clipboard"
+                    >
+                      <Button
+                        label="Copy message to clipboard"
+                        icon={<Copy />}
+                        size="small"
+                        fill="ghost"
+                        onClick={() => copyTextToClipboard(message.content)}
+                      />
+                    </Tooltip>
+                  </Flex>
+                </Card>
+              )}
+            </Fragment>
+          ))}
+        </div>
       )}
     </div>
   );

@@ -21,6 +21,7 @@ import { env } from '~/env';
 import { signInWithNear } from '~/lib/auth';
 import { ENTRY_CATEGORY_LABELS } from '~/lib/entries';
 import { useAuthStore } from '~/stores/auth';
+import { useWalletStore } from '~/stores/wallet';
 
 import { BreakpointDisplay } from './lib/BreakpointDisplay';
 import { Button } from './lib/Button';
@@ -71,7 +72,10 @@ const navItems = [
 ].filter((item) => !env.NEXT_PUBLIC_CONSUMER_MODE || item.consumer);
 
 export const Navigation = () => {
-  const store = useAuthStore();
+  const auth = useAuthStore((store) => store.auth);
+  const clearAuth = useAuthStore((store) => store.clearAuth);
+  const isAuthenticated = useAuthStore((store) => store.isAuthenticated);
+  const wallet = useWalletStore((store) => store.wallet);
   const path = usePathname();
   const [mounted, setMounted] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
@@ -81,6 +85,14 @@ export const Navigation = () => {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const signOut = () => {
+    if (wallet) {
+      void wallet.signOut();
+    }
+
+    clearAuth();
+  };
 
   return (
     <header className={s.navigation}>
@@ -164,7 +176,7 @@ export const Navigation = () => {
           </Dropdown.Root>
         </BreakpointDisplay>
 
-        {store.isAuthenticated ? (
+        {isAuthenticated ? (
           <Dropdown.Root>
             <Dropdown.Trigger asChild>
               <Button
@@ -183,20 +195,18 @@ export const Navigation = () => {
                     color="sand-12"
                     clampLines={1}
                   >
-                    {store.auth?.account_id}
+                    {auth?.account_id}
                   </Text>
                 </Dropdown.SectionContent>
               </Dropdown.Section>
 
               <Dropdown.Section>
-                <Dropdown.Item href={`/profiles/${store.auth?.account_id}`}>
+                <Dropdown.Item href={`/profiles/${auth?.account_id}`}>
                   <SvgIcon icon={<Cube />} />
                   Your Work
                 </Dropdown.Item>
 
-                <Dropdown.Item
-                  href={`/profiles/${store.auth?.account_id}/starred`}
-                >
+                <Dropdown.Item href={`/profiles/${auth?.account_id}/starred`}>
                   <SvgIcon icon={<Star />} />
                   Your Stars
                 </Dropdown.Item>
@@ -206,7 +216,7 @@ export const Navigation = () => {
                   Settings
                 </Dropdown.Item>
 
-                <Dropdown.Item onSelect={() => store.clearAuth()}>
+                <Dropdown.Item onSelect={signOut}>
                   <SvgIcon icon={<X />} />
                   Sign Out
                 </Dropdown.Item>

@@ -90,6 +90,7 @@ jobs:
     - name: Start Docker Compose
       run: docker compose -f .docker/compose-ci.yml up -d
       env:
+        NEARAICI_SIGNATURE: ${{ secrets.NEARAICI_SIGNATURE }}
         SINGLESTORE_LICENSE: ${{ secrets.SINGLESTORE_LICENSE }}
 
     - name: Exec Integration Tests

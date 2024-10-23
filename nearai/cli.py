@@ -28,6 +28,7 @@ from tabulate import tabulate
 
 from nearai.config import (
     CONFIG,
+    get_hub_client,
     update_config,
 )
 from nearai.finetune import FinetuneCli
@@ -407,12 +408,6 @@ class EvaluationCli:
 
 
 class AgentCli:
-    @staticmethod
-    def _load_agents(agents: str, local: bool = False):
-        from nearai.agents.local_runner import LocalRunner
-
-        return LocalRunner.load_agents(agents, local)
-
     def inspect(self, path: str) -> None:
         """Inspect environment from given path."""
         import subprocess
@@ -423,71 +418,95 @@ class AgentCli:
     def interactive(
         self,
         agents: str,
-        path: Optional[str] = None,
-        record_run: bool = True,
-        env_vars: Optional[Dict[str, Any]] = None,
-        load_env: str = "",
-        local: bool = False,
+        thread_id: Optional[str] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
-        print_system_log: bool = True,
-        reset: bool = False,
     ) -> None:
-        """Runs agent interactively with environment from given path."""
-        from nearai.agents.local_runner import LocalRunner
+        """Runs agent interactively."""
+        last_message_id = None
+        while True:
+            new_message = input("> ")
+            if new_message.lower() == "exit":
+                break
 
-        agent_list = self._load_agents(agents, local)
+            last_message_id = self._task(
+                agents=agents,
+                task=new_message,
+                thread_id=thread_id,
+                tool_resources=tool_resources,
+                record_run=False,
+                last_message_id=last_message_id,
+            )
 
-        client_config = CONFIG.get_client_config()
-
-        runner = LocalRunner(
-            path,
-            agent_list,
-            client_config,
-            env_vars=env_vars,
-            tool_resources=tool_resources,
-            print_system_log=print_system_log,
-            reset=reset,
-            confirm_commands=CONFIG.get("confirm_commands", True),
-        )
-        runner.run_interactive(record_run, load_env)
+            # Update thread_id for the next iteration
+            if thread_id is None:
+                thread_id = self.last_thread_id
 
     def task(
         self,
         agents: str,
         task: str,
-        path: Optional[str] = None,
-        max_iterations: int = 10,
-        record_run: bool = True,
-        env_vars: Optional[Dict[str, Any]] = None,
-        load_env: str = "",
-        local: bool = False,
+        thread_id: Optional[str] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
-        print_system_log: bool = True,
     ) -> None:
-        """Runs agent non interactively with environment from given path."""
-        from shared.client_config import ClientConfig
-
-        from nearai.agents.local_runner import LocalRunner
-
-        agent_list = self._load_agents(agents, local)
-
-        client_config = ClientConfig(
-            base_url=CONFIG.nearai_hub.base_url,
-            auth=CONFIG.auth,
-            custom_llm_provider=CONFIG.nearai_hub.custom_llm_provider,
-            default_provider=CONFIG.nearai_hub.default_provider,
-        )
-
-        runner = LocalRunner(
-            path,
-            agent_list,
-            client_config,
-            env_vars=env_vars,
+        """CLI wrapper for the _task method."""
+        last_message_id = self._task(
+            agents=agents,
+            task=task,
+            thread_id=thread_id,
             tool_resources=tool_resources,
-            print_system_log=print_system_log,
-            confirm_commands=CONFIG.get("confirm_commands", True),
+            record_run=True,
         )
-        runner.run_task(task, record_run, load_env, max_iterations)
+
+        if last_message_id:
+            print(f"Task completed. Thread ID: {self.last_thread_id}")
+            print(f"Last message ID: {last_message_id}")
+
+    def _task(
+        self,
+        agents: str,
+        task: str,
+        thread_id: Optional[str] = None,
+        tool_resources: Optional[Dict[str, Any]] = None,
+        record_run: bool = True,
+        last_message_id: Optional[str] = None,
+    ) -> Optional[str]:
+        """Runs agent non-interactively with a single task."""
+        hub_client = get_hub_client()
+        if thread_id:
+            thread = hub_client.beta.threads.retrieve(thread_id)
+        else:
+            thread = hub_client.beta.threads.create(
+                tool_resources=tool_resources,
+            )
+
+        hub_client.beta.threads.runs.create_and_poll(
+            thread_id=thread.id,
+            assistant_id=agents,
+            instructions="You are a helpful assistant. Complete the given task.",
+            additional_messages=[
+                {
+                    "role": "user",
+                    "content": task,
+                }
+            ],
+            model="fireworks::accounts/fireworks/models/llama-v3p1-405b-instruct",
+        )
+
+        # List new messages
+        messages = hub_client.beta.threads.messages.list(thread_id=thread.id, after=last_message_id, order="asc")
+        message_list = list(messages)
+        if message_list:
+            for msg in message_list:
+                if msg.role == "assistant":
+                    print(f"Assistant: {msg.content[0].text.value}")
+            last_message_id = message_list[-1].id
+        else:
+            print("No new messages")
+
+        # Store the thread_id for potential use in interactive mode
+        self.last_thread_id = thread.id
+
+        return last_message_id
 
     def run_remote(
         self,
@@ -662,6 +681,10 @@ class CLI:
     def version(self):
         """Show nearai version."""
         print(importlib.metadata.version("nearai"))
+
+    def task(self, *args, **kwargs):
+        """CLI command for running a single task."""
+        self.agent.task_cli(*args, **kwargs)
 
 
 def check_update():

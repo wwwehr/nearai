@@ -33,7 +33,8 @@ export const IframeWithBlob = ({
 
   const executePostMessage = useDebouncedFunction((message: unknown) => {
     console.log('Sending postMessage to <IframeWithBlob />', message);
-    iframeRef.current?.contentWindow?.postMessage(message);
+    // TODO Shall we replace '*' with the app's targetOrigin (app.near.ai)?
+    iframeRef.current?.contentWindow?.postMessage(message, '*');
   }, 10);
 
   const resizeIframe = () => {

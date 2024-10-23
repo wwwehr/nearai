@@ -33,8 +33,12 @@ export const IframeWithBlob = ({
 
   const executePostMessage = useDebouncedFunction((message: unknown) => {
     console.log('Sending postMessage to <IframeWithBlob />', message);
-    // TODO Shall we replace '*' with the app's targetOrigin (app.near.ai)?
     iframeRef.current?.contentWindow?.postMessage(message, '*');
+    /*
+      NOTE: Since our iframe is sandboxed and doesn't have access to "allow-same-origin",
+      it won't have an origin to check against. This forces us to use "*". Due to how this 
+      component is utilized, we can safely use "*" as our postMessage origin.
+    */
   }, 10);
 
   const resizeIframe = () => {

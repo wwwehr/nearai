@@ -74,7 +74,7 @@ async def update_job(
         result = session.exec(select(Jobs).where(Jobs.id == job_id)).first()
         if result.status != "processing":
             raise HTTPException(
-                status_code=400, detail=f"Job satus is not `processing`, instead it is `{result.status}`."
+                status_code=400, detail=f"Job status is not `processing`, instead it is `{result.status}`."
             )
         session.exec(update(Jobs).where(Jobs.id == job_id).values(status="done", result=json.loads(result_json)))
         session.commit()

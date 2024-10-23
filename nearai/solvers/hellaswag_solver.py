@@ -32,7 +32,7 @@ class HellaswagSolverStrategy(SolverStrategy):
         self.shots = shots
 
     def evaluation_name(self) -> str:  # noqa: D102
-        return "hellaswag"
+        return f"hellaswag_{self.shots}shots"
 
     def compatible_datasets(self) -> List[str]:  # noqa: D102
         return ["hellaswag"]

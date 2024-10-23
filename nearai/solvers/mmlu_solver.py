@@ -26,7 +26,7 @@ class MMLUSolverStrategy(SolverStrategy):
         self.shots = shots
 
     def evaluation_name(self) -> str:  # noqa: D102
-        return "mmlu"
+        return f"mmlu_{self.shots}shots"
 
     def compatible_datasets(self) -> List[str]:  # noqa: D102
         return ["mmlu"]

@@ -52,8 +52,6 @@ async def create_benchmark(
         benchmark_id = benchmark.id
     return benchmark_id
 
-# poetry run nearai benchmark run nearaici.near/hellaswag/0.0.1 HellaswagSolverStrategy --model 'local::Qwen/Qwen2.5-0.5B-Instruct' --subset test --max_concurrent=1
-
 
 @v1_router.get("/get")
 async def get_benchmark(

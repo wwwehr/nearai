@@ -1,4 +1,5 @@
 import hashlib
+import io
 import json
 import logging
 import os
@@ -17,10 +18,19 @@ from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union, c
 import psutil
 import shared.near.sign as near
 from litellm.types.completion import ChatCompletionMessageParam
-from litellm.types.utils import ChatCompletionMessageToolCall, Choices, Function, ModelResponse
+from litellm.types.utils import (
+    ChatCompletionMessageToolCall,
+    Choices,
+    Function,
+    ModelResponse,
+)
 from litellm.utils import CustomStreamWrapper
-from openai import NOT_GIVEN, NotGiven
+from openai import NOT_GIVEN, NotGiven, OpenAI
+from openai.types.beta.threads.message import Message
+from openai.types.beta.threads.message_create_params import Attachment
+from openai.types.beta.threads.run import Run
 from openai.types.beta.vector_store import VectorStore
+from openai.types.file_object import FileObject
 from shared.client_config import DEFAULT_PROVIDER_MODEL
 from shared.inference_client import InferenceClient
 from shared.models import (
@@ -53,6 +63,10 @@ class Environment(object):
         path: str,
         agents: List[Agent],
         client: InferenceClient,
+        hub_client: OpenAI,
+        thread_id: str,
+        run_id: str,
+        model: str,
         create_files: bool = True,
         env_vars: Optional[Dict[str, Any]] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
@@ -61,7 +75,6 @@ class Environment(object):
     ) -> None:
         self._path = path
         self._agents = agents
-        self._agent_temp_dirs = [a.write_agent_files_to_temp() for a in agents]
         self._done = False
         self._client = client
         self._tools = ToolRegistry()
@@ -71,6 +84,10 @@ class Environment(object):
         self.tool_resources: Dict[str, Any] = tool_resources if tool_resources else {}
         self.print_system_log = print_system_log
         self._approvals = approvals
+        self._hub_client = hub_client
+        self._thread_id = thread_id
+        self._model = model
+        self._run_id = run_id
 
         if create_files:
             os.makedirs(self._path, exist_ok=True)
@@ -96,10 +113,31 @@ class Environment(object):
         reg.register_tool(self.list_files)
         reg.register_tool(self.query_vector_store)
 
-    def add_message(self, role: str, message: str, filename: str = CHAT_FILENAME, **kwargs: Any) -> None:
-        """Adds a message to the chat file."""
-        with open(os.path.join(self._path, filename), "a") as f:
-            f.write(json.dumps({"role": role, "content": message, **kwargs}) + DELIMITER)
+    def add_message(
+        self,
+        role: str,
+        message: str,
+        attachments: Optional[Iterable[Attachment]] = None,
+        **kwargs: Any,
+    ):
+        """Assistant adds a message to the environment."""
+        if role not in [
+            "user",
+            "assistant",
+        ]:  # backwards compatibility with agents adding messages has `system` and others.
+            role = "assistant"
+
+        return self._hub_client.beta.threads.messages.create(
+            thread_id=self._thread_id,
+            role=role,  # type: ignore
+            content=message,
+            extra_body={
+                "assistant_id": self._agents[0].identifier,
+                "run_id": self._run_id,
+            },
+            metadata=kwargs,
+            attachments=attachments,
+        )
 
     def add_system_log(self, log: str, level: int = logging.INFO) -> None:
         """Add system log with timestamp and log level."""
@@ -156,10 +194,6 @@ class Environment(object):
 
     def list_terminal_commands(self, filename: str = TERMINAL_FILENAME) -> List[Any]:
         """Returns the terminal commands from the terminal file."""
-        return self.list_messages(filename)
-
-    def list_messages(self, filename: str = CHAT_FILENAME) -> List[Any]:
-        """Returns messages from a specified file."""
         path = os.path.join(self._path, filename)
 
         if not os.path.exists(path):
@@ -168,57 +202,114 @@ class Environment(object):
         with open(path, "r") as f:
             return [json.loads(message) for message in f.read().split(DELIMITER) if message]
 
+    def _list_messages(
+        self,
+        limit: Union[int, NotGiven] = NOT_GIVEN,
+        order: Literal["asc", "desc"] = "asc",
+    ) -> List[Message]:
+        """Returns messages from the environment."""
+        messages = self._hub_client.beta.threads.messages.list(self._thread_id, limit=limit, order=order)
+        self.add_system_log(f"Retrieved {len(messages.data)} messages from NearAI Hub")
+        return messages.data
+
+    def list_messages(self):
+        """Backwards compatibility for chat_completions messages."""
+        messages = self._list_messages()
+        legacy_messages = [
+            {
+                "id": m.id,
+                "content": "\n".join([c.text.value for c in m.content]),
+                "role": m.role,
+            }
+            for m in messages
+        ]
+        return legacy_messages
+
     def verify_message(
-        self, account_id: str, public_key: str, signature: str, message: str, nonce: str, callback_url: str
+        self,
+        account_id: str,
+        public_key: str,
+        signature: str,
+        message: str,
+        nonce: str,
+        callback_url: str,
     ) -> near.SignatureVerificationResult:
         """Verifies that the user message is signed with NEAR Account."""
         return near.verify_signed_message(
-            account_id, public_key, signature, message, nonce, self._agents[0].name, callback_url
+            account_id,
+            public_key,
+            signature,
+            message,
+            nonce,
+            self._agents[0].name,
+            callback_url,
         )
 
-    def list_files(self, path: str) -> List[str]:
-        """Lists files in the environment.
-
-        path: The path to list files from.
-        """
-        return os.listdir(os.path.join(self._path, path))
+    def list_files(self, path: str, order: Literal["asc", "desc"] = "asc") -> List[FileObject]:
+        """Lists files in the thread."""
+        messages = self._list_messages(order=order)
+        # Extract attachments from messages
+        attachments = [a for m in messages if m.attachments for a in m.attachments]
+        # Extract files from attachments
+        file_ids = [a.file_id for a in attachments]
+        files = [self._hub_client.files.retrieve(f) for f in file_ids if f]
+        return files
 
     def get_path(self) -> str:
         """Returns the path of the current directory."""
         return self._path
 
-    def read_file(self, filename: str) -> str:
-        """Read a file from the environment.
+    def read_file(self, filename: str, write_to_disk: bool = True):
+        """Reads a file from the thread."""
+        files = self.list_files("")
 
-        filename: The name of the file to read.
-        """
-        if os.path.exists(os.path.join(self._path, filename)):
-            file_location = self._path
-        # TODO: fix get_primary_agent => "current" agent
-        elif os.path.exists(os.path.join(self.get_primary_agent_temp_dir(), filename)):
-            file_location = str(self.get_primary_agent_temp_dir())
-        else:
-            print(f"File {filename} not found")
-            return ""
+        for f in files:
+            if f.filename == filename:
+                file_content = self.read_file_by_id(f.id)
+                break
+        if not file_content:
+            return None
 
-        try:
-            with open(os.path.join(file_location, filename), "r") as f:
-                return f.read()
+        if not write_to_disk:
+            return file_content
 
-        except Exception as e:
-            return f"failed to read file: {e}"
+        # Write the file content to the local filesystem
+        local_path = os.path.join(self._path, filename)
 
-    def write_file(self, filename: str, content: str) -> str:
+        with open(local_path, "w") as local_file:
+            local_file.write(file_content)
+
+        return file_content
+
+    def read_file_by_id(self, file_id: str):
+        """Read a file from the thread."""
+        content = self._hub_client.files.content(file_id).content.decode("utf-8")
+        print("file content returned by api", content)
+        return content
+
+    def write_file(
+        self,
+        filename: str,
+        content: str,
+        encoding: str = "utf-8",
+        filetype: str = "text/plain",
+    ) -> FileObject:
         """Writes a file to the environment.
 
         filename: The name of the file to write to
         content: The content to write to the file.
         """
-        path = Path(self._path) / filename
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w") as f:
-            f.write(content)
-        return f"Successfully wrote {len(content) if content else 0} characters to {filename}"
+        file_data = io.BytesIO(content.encode(encoding))
+        file = self._hub_client.files.create(file=(filename, file_data, filetype), purpose="assistants")
+        res = self.add_message(
+            role="assistant",
+            message=f"Successfully wrote {len(content) if content else 0} characters to {filename}",
+            attachments=[{"file_id": file.id, "tools": [{"type": "file_search"}]}],
+        )
+        self.add_system_log(
+            f"Uploaded file {filename} with {len(content)} characters, id: {file.id}. Added in thread as: {res.id}"
+        )
+        return file
 
     def query_vector_store(self, vector_store_id: str, query: str):
         """Queries a vector store.
@@ -229,7 +320,9 @@ class Environment(object):
         return self._client.query_vector_store(vector_store_id, query)
 
     def upload_file(
-        self, file_content: str, purpose: Literal["assistants", "batch", "fine-tune", "vision"] = "assistants"
+        self,
+        file_content: str,
+        purpose: Literal["assistants", "batch", "fine-tune", "vision"] = "assistants",
     ):
         """Uploads a file to the registry."""
         return self._client.upload_file(file_content, purpose)
@@ -391,7 +484,10 @@ class Environment(object):
     ) -> Union[ModelResponse, CustomStreamWrapper]:
         """Run inference completions for given parameters."""
         if isinstance(messages, str):
-            self.add_system_log("Deprecated completions call. Pass `messages` as a first parameter.", logging.WARNING)
+            self.add_system_log(
+                "Deprecated completions call. Pass `messages` as a first parameter.",
+                logging.WARNING,
+            )
             messages_or_model = messages
             model_or_messages = model
             model = cast(str, messages_or_model)
@@ -448,7 +544,13 @@ class Environment(object):
 
         return response
 
-    def _handle_tool_calls(self, response_message, add_responses_to_messages, agent_role_name, tool_role_name):
+    def _handle_tool_calls(
+        self,
+        response_message,
+        add_responses_to_messages,
+        agent_role_name,
+        tool_role_name,
+    ):
         (message_without_tool_call, tool_calls) = self._parse_tool_call(response_message)
         if add_responses_to_messages and response_message.content:
             self.add_message(agent_role_name, message_without_tool_call)
@@ -468,16 +570,26 @@ class Environment(object):
                         function_response_json = json.dumps(function_response) if function_response else ""
                         if add_responses_to_messages:
                             self.add_message(
-                                tool_role_name, function_response_json, tool_call_id=tool_call.id, name=function_name
+                                tool_role_name,
+                                function_response_json,
+                                tool_call_id=tool_call.id,
+                                name=function_name,
                             )
                 except Exception as e:
                     error_message = f"Error calling tool {function_name}: {e}"
                     self.add_system_log(error_message, level=logging.ERROR)
                     if add_responses_to_messages:
-                        self.add_message(tool_role_name, error_message, tool_call_id=tool_call.id, name=function_name)
+                        self.add_message(
+                            tool_role_name,
+                            error_message,
+                            tool_call_id=tool_call.id,
+                            name=function_name,
+                        )
 
     @staticmethod
-    def _parse_tool_call(response_message) -> Tuple[Optional[str], Optional[List[ChatCompletionMessageToolCall]]]:
+    def _parse_tool_call(
+        response_message,
+    ) -> Tuple[Optional[str], Optional[List[ChatCompletionMessageToolCall]]]:
         if hasattr(response_message, "tool_calls") and response_message.tool_calls:
             return response_message.content, response_message.tool_calls
         content = response_message.content
@@ -547,15 +659,18 @@ class Environment(object):
         """Returns a completion for the given messages using the given model and runs tools."""
         completion_tools_response = self.completions_and_run_tools(messages, model, tools, **kwargs)
         assert all(
-            map(lambda choice: isinstance(choice, Choices), completion_tools_response.choices)
+            map(
+                lambda choice: isinstance(choice, Choices),
+                completion_tools_response.choices,
+            )
         ), "Expected Choices"
         choices: List[Choices] = completion_tools_response.choices  # type: ignore
         response_content = choices[0].message.content
         return response_content
 
-    def call_agent(self, agent_path: int, task: str) -> None:
+    def call_agent(self, agent_index: int, task: str) -> None:
         """Calls agent with given task."""
-        self._agents[agent_path].run(self, self._agent_temp_dirs[agent_path], task=task)
+        self._agents[agent_index].run(self, task=task)
 
     def get_agents(self) -> List[Agent]:
         """Returns list of agents available in environment."""
@@ -567,13 +682,24 @@ class Environment(object):
 
     def get_primary_agent_temp_dir(self) -> Path:
         """Returns temp dir for primary agent."""
-        return self._agent_temp_dirs[0]
+        return self._agents[0].temp_dir
 
     def is_done(self) -> bool:  # noqa: D102
         return self._done
 
-    def mark_done(self) -> None:  # noqa: D102
+    def mark_done(self) -> Run:  # noqa: D102
         self._done = True
+        self.add_system_log("Marking environment run as completed", logging.INFO)
+        res = self._hub_client.beta.threads.runs.update(
+            thread_id=self._thread_id,
+            run_id=self._run_id,
+            extra_body={
+                "status": "completed",
+                "completed_at": datetime.now().isoformat(),
+            },
+        )
+        self.add_system_log("Environment run completed", logging.INFO)
+        return res
 
     def create_snapshot(self) -> bytes:
         """Create an in memory snapshot."""
@@ -632,17 +758,21 @@ class Environment(object):
         return f"Environment({self._path})"
 
     def run_agent(self, task: Optional[str]) -> None:  # noqa: D102
-        self._agents[0].run(self, self._agent_temp_dirs[0], task=task)
+        self._agents[0].run(self, task=task)
 
-    def request_user_input(self) -> None:
+    def request_user_input(self) -> Run:
         """Must be called to request input from the user."""
-        self.set_next_actor("user")
+        return self._hub_client.beta.threads.runs.update(
+            thread_id=self._thread_id,
+            run_id=self._run_id,
+            extra_body={"status": "requires_action"},
+        )
 
     def clear_temp_agent_files(self) -> None:
         """Remove temp agent files created to be used in `runpy`."""
-        for temp_dir in self._agent_temp_dirs:
-            if os.path.exists(temp_dir):
-                shutil.rmtree(temp_dir)
+        for agent in self._agents:
+            if os.path.exists(agent.temp_dir):
+                shutil.rmtree(agent.temp_dir)
 
     def set_next_actor(self, who: str) -> None:
         """Set the next actor / action in the dialogue."""
@@ -676,7 +806,8 @@ class Environment(object):
 
         while iteration < max_iterations and not self.is_done() and self.get_next_actor() != "user":
             iteration += 1
-            self._agents[0].run(self, self._agent_temp_dirs[0], task=new_message)
+            print([x.identifier for x in self._agents])
+            self._agents[0].run(self, task=new_message)
 
         return run_id
 

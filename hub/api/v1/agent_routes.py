@@ -70,7 +70,7 @@ class CreateThreadAndRunRequest(BaseModel):
     )
 
 
-def invoke_function_via_curl(runner_invoke_url, agents, environment_id, auth: AuthToken, new_message, params):
+def invoke_function_via_curl(runner_invoke_url, agents, thread_id, run_id, auth: AuthToken, new_message, params):
     auth_data = auth.model_dump()
 
     if auth_data["nonce"]:
@@ -79,7 +79,8 @@ def invoke_function_via_curl(runner_invoke_url, agents, environment_id, auth: Au
 
     payload = {
         "agents": agents,
-        "environment_id": environment_id,
+        "thread_id": thread_id,
+        "run_id": run_id,
         "auth": auth_data,
         "new_message": new_message,
         "params": params,
@@ -95,13 +96,14 @@ def invoke_function_via_curl(runner_invoke_url, agents, environment_id, auth: Au
         raise Exception(f"Request failed with status code {response.status_code}: {response.text}")
 
 
-def invoke_function_via_lambda(function_name, agents, environment_id, auth: AuthToken, new_message, params):
+def invoke_function_via_lambda(function_name, agents, thread_id, run_id, auth: AuthToken, new_message, params):
     wrapper = LambdaWrapper(boto3.client("lambda", region_name="us-east-2"))
     result = wrapper.invoke_function(
         function_name,
         {
             "agents": agents,
-            "environment_id": environment_id,
+            "thread_id": thread_id,
+            "run_id": run_id,
             "auth": auth.model_dump(),
             "new_message": new_message,
             "params": params,
@@ -173,14 +175,16 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokab
         if runner == "local":
             runner_invoke_url = getenv("RUNNER_INVOKE_URL", None)
             if runner_invoke_url:
-                return invoke_function_via_curl(runner_invoke_url, agents, environment_id, auth, new_message, params)
+                return invoke_function_via_curl(
+                    runner_invoke_url, agents, environment_id, "", auth, new_message, params
+                )
         else:
             function_name = f"{runner}-{framework.lower()}"
             if agent_api_url != "https://api.near.ai":
                 print(f"Passing agent API URL: {agent_api_url}")
             print(f"Running function {function_name} with: agents={agents}, environment_id={environment_id}, ")
 
-            return invoke_function_via_lambda(function_name, agents, environment_id, auth, new_message, params)
+            return invoke_function_via_lambda(function_name, agents, environment_id, "", auth, new_message, params)
 
         raise HTTPException(status_code=400, detail="Invalid runner parameters")
 

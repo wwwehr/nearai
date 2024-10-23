@@ -12,7 +12,6 @@ from shared.inference_client import InferenceClient
 from shared.provider_models import get_provider_namespaced_model
 
 from nearai.agents.agent import Agent
-from nearai.agents.local_runner import LocalRunner
 from nearai.config import CONFIG
 
 
@@ -42,8 +41,8 @@ class SolverStrategyMeta(ABCMeta):
 
 
 class SolverInferenceSession:
-    def __init__(self, agent_obj, model_full_path, client, evaluation_name):
-        self.agent_obj = agent_obj
+    def __init__(self, agent_obj, model_full_path, client: InferenceClient, evaluation_name):
+        self.agent = agent_obj
         self.model_full_path = model_full_path
         self.client = client
         self.evaluation_name = evaluation_name
@@ -52,7 +51,7 @@ class SolverInferenceSession:
         self.messages: List[ChatCompletionMessageParam] = []
 
     def start_inference_session(self, task_id: str) -> "SolverInferenceSession":
-        if self.agent_obj:
+        if self.agent:
             self.path = os.path.join(
                 "/tmp",
                 self.evaluation_name,
@@ -60,31 +59,24 @@ class SolverInferenceSession:
                 str(int(time.time() * 1000)),
                 str(random.randint(0, 1000)),
             )
-            self.runner = LocalRunner(
-                self.path,
-                [self.agent_obj],
-                CONFIG.get_client_config(),
-                print_system_log=False,
-                confirm_commands=False,
-            )
         return self
 
     def add_system_message(self, message: str) -> None:
         if self.runner:
-            self.runner.env.add_message(role="system", message=message)
+            self.client.threads_messages_create(thread_id=self.run.thread_id, content=message, role="assistant")
         else:
             self.messages.append({"role": "system", "content": message})
 
     def run_task(self, task: str) -> str:
         if self.runner:
-            self.runner.run_task(task, max_iterations=1, record_run=False)
+            self.run = self.client.threads_create_and_run_poll(
+                self.agent, self.model_full_path, [{"role": "user", "content": task}]
+            )
             output = ""
-            messages = self.runner.env.list_messages()
-            i = len(messages) - 1
-            while i >= 0 and messages[i]["role"] != "user":
-                if messages[i]["role"] == "assistant":
-                    output = messages[i]["content"] + output
-                i = i - 1
+            messages = self.client.threads_list_messages(self.run.thread_id)
+            for m in messages:
+                if m.role == "assistant":
+                    output += m.content
             return output
         else:
             self.messages.append({"role": "user", "content": task})
@@ -122,7 +114,8 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
 
         self.agent_obj = None
         if agent != "":
-            self.agent_obj = LocalRunner.load_agent(agent)
+            self.agent_obj = Agent.load_agent(agent, client_config)
+
             self.agent_obj.model_temperature = 0.0
             if self.model_full_path != "":
                 self.agent_obj.model = self.model_full_path

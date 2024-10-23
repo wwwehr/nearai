@@ -1,3 +1,4 @@
+import io
 import logging
 import mimetypes
 import os
@@ -9,7 +10,8 @@ import boto3
 import chardet
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, UploadFile
+from fastapi.responses import StreamingResponse
 from nearai.config import DATA_FOLDER
 from openai.types.file_create_params import FileTypes
 from openai.types.file_object import FileObject
@@ -264,3 +266,139 @@ def check_text_encoding(content: bytes) -> Optional[str]:
             status_code=400, detail=f"Unsupported text encoding. Must be one of: {', '.join(SUPPORTED_TEXT_ENCODINGS)}"
         )
     return detected_encoding
+
+
+@files_router.get("/files/{file_id}")
+async def retrieve_file(
+    file_id: str = Path(..., description="The ID of the file to retrieve"),
+    auth: AuthToken = Depends(revokable_auth),
+) -> FileObject:
+    """Retrieve information about a specific file.
+
+    Args:
+    ----
+        file_id (str): The ID of the file to retrieve.
+        auth (AuthToken): The authentication token for the current user.
+
+    Returns:
+    -------
+        FileObject: An object containing details of the requested file.
+
+    Raises:
+    ------
+        HTTPException:
+            - 404 if the file is not found.
+            - 403 if the user doesn't have permission to access the file.
+
+    """
+    logger.info(f"File retrieval request received for user: {auth.account_id}, file_id: {file_id}")
+
+    sql_client = SqlClient()
+    try:
+        file_details = sql_client.get_file_details_by_account(file_id=file_id, account_id=auth.account_id)
+    except Exception as e:
+        logger.error(f"Database operation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve file information") from e
+
+    if not file_details:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    logger.info(f"File information retrieved successfully: {file_id}")
+    return FileObject(
+        id=str(file_details.id),
+        bytes=file_details.file_size,
+        created_at=int(file_details.created_at.timestamp()),
+        filename=file_details.filename,
+        object="file",
+        purpose=file_details.purpose,  # type: ignore
+        status="uploaded",
+        status_details="File information retrieved successfully",
+    )
+
+
+@files_router.get("/files/{file_id}/content")
+async def retrieve_file_content(
+    file_id: str = Path(..., description="The ID of the file to retrieve"),
+    auth: AuthToken = Depends(revokable_auth),
+):
+    """Retrieve the contents of a specific file.
+
+    Args:
+    ----
+        file_id (str): The ID of the file to retrieve.
+        auth (AuthToken): The authentication token for the current user.
+
+    Returns:
+    -------
+        StreamingResponse: A streaming response containing the file content.
+
+    Raises:
+    ------
+        HTTPException:
+            - 404 if the file is not found.
+            - 403 if the user doesn't have permission to access the file.
+            - 500 if there's an error retrieving the file content.
+
+    """
+    logger.info(f"File content retrieval request received for user: {auth.account_id}, file_id: {file_id}")
+
+    sql_client = SqlClient()
+    try:
+        file_details = sql_client.get_file_details_by_account(file_id=file_id, account_id=auth.account_id)
+    except Exception as e:
+        logger.error(f"Database operation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve file information") from e
+
+    if not file_details:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    try:
+        file_content = await get_file_content(file_details.file_uri)
+    except Exception as e:
+        logger.error(f"Failed to retrieve file content: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve file content") from e
+
+    return StreamingResponse(
+        io.BytesIO(file_content),
+        media_type=file_details.content_type,
+        headers={"Content-Disposition": f'attachment; filename="{file_details.filename}"'},
+    )
+
+
+async def get_file_content(file_uri: str) -> bytes:
+    """Retrieve the content of a file from the storage system.
+
+    Args:
+    ----
+        file_uri (str): The URI of the file to retrieve.
+
+    Returns:
+    -------
+        bytes: The content of the file.
+
+    Raises:
+    ------
+        Exception: If there's an error retrieving the file content.
+
+    """
+    if file_uri.startswith(S3_URI_PREFIX):
+        # Extract bucket and key from S3 URI
+        s3_path = file_uri[len(S3_URI_PREFIX) :]
+        bucket, key = s3_path.split("/", 1)
+        try:
+            response = s3_client.get_object(Bucket=bucket, Key=key)
+            return response["Body"].read()
+        except Exception as e:
+            logger.error(f"Failed to retrieve file from S3: {str(e)}")
+            raise
+    elif file_uri.startswith(FILE_URI_PREFIX):
+        # Extract local file path
+        file_path = file_uri[len(FILE_URI_PREFIX) :]
+        try:
+            with open(file_path, "rb") as file:
+                return file.read()
+        except Exception as e:
+            logger.error(f"Failed to read local file: {str(e)}")
+            raise
+    else:
+        raise ValueError(f"Unsupported file URI: {file_uri}")

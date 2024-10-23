@@ -48,7 +48,7 @@ async def get_pending_job(auth: AuthToken = Depends(requires_permission(Permissi
                 return SelectedJob(selected=False, job_id=None, registry_path=None, info="No pending jobs.")
 
             session.exec(
-                update(Jobs).where(Jobs.id == job.id).where(Jobs.status == "pending").values(status=rand_status)
+                update(Jobs).where(Jobs.id == job.id).where(Jobs.status == "pending").values(status=rand_status)  # type: ignore
             )
             session.commit()
 
@@ -57,7 +57,7 @@ async def get_pending_job(auth: AuthToken = Depends(requires_permission(Permissi
 
             if final_job is not None:
                 # We grabbed this job.
-                session.exec(update(Jobs).where(Jobs.id == final_job.id).values(status="processing"))
+                session.exec(update(Jobs).where(Jobs.id == final_job.id).values(status="processing"))  # type: ignore
                 session.commit()
                 return SelectedJob(
                     selected=True, job_id=final_job.id, registry_path=final_job.registry_path, info="Job selected."
@@ -72,9 +72,12 @@ async def update_job(
 ):
     with get_session() as session:
         result = session.exec(select(Jobs).where(Jobs.id == job_id)).first()
+        if result is None:
+            raise HTTPException(status_code=404, detail=f"Job with id `{job_id}` not found.")
+
         if result.status != "processing":
             raise HTTPException(
                 status_code=400, detail=f"Job status is not `processing`, instead it is `{result.status}`."
             )
-        session.exec(update(Jobs).where(Jobs.id == job_id).values(status="done", result=json.loads(result_json)))
+        session.exec(update(Jobs).where(Jobs.id == job_id).values(status="done", result=json.loads(result_json)))  # type: ignore
         session.commit()

@@ -1,7 +1,7 @@
 from enum import Enum
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import delete, select
+from sqlmodel import select
 
 from hub.api.v1.auth import AuthToken, revokable_auth
 from hub.api.v1.models import Permissions, get_session
@@ -60,11 +60,11 @@ async def revoke_permission(
 
     with get_session() as session:
         if permission:
-            session.exec(
-                delete(Permissions)
+            session.delete(
+                select(Permissions)
                 .where(Permissions.account_id == account_id)
                 .where(Permissions.permission == permission)
             )
         else:
-            session.exec(delete(Permissions).where(Permissions.account_id == account_id))
+            session.delete(select(Permissions).where(Permissions.account_id == account_id))
         session.commit()

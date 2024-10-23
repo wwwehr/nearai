@@ -196,12 +196,17 @@ export const agentWalletTransactionRequestModel = z.object({
   method: z.string(),
   params: z.record(z.string(), z.unknown()).default({}),
   recipient: z.string(),
-  requestId: z.string().default(''),
+  requestId: z.string().nullable().default(''),
 });
 
 export const agentWalletViewRequestModel = z.object({
   method: z.string(),
   params: z.record(z.string(), z.unknown()).default({}),
   recipient: z.string(),
-  requestId: z.string().default(''),
+  requestId: z.string().nullable().default(''),
+});
+
+export const agentWalletAccountRequestModel = z.object({
+  accountId: z.string().nullable().default(''),
+  requestId: z.string().nullable().default(''),
 });

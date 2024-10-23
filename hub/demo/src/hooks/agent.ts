@@ -1,4 +1,5 @@
 import { type FinalExecutionOutcome } from '@near-wallet-selector/core';
+import { formatNearAmount } from 'near-api-js/lib/utils/format';
 import { useCallback, useEffect, useState } from 'react';
 import { type z } from 'zod';
 
@@ -8,6 +9,7 @@ import {
 } from '~/components/AgentPermissionsModal';
 import { type IframePostMessageEventHandler } from '~/components/lib/IframeWithBlob';
 import {
+  agentWalletAccountRequestModel,
   agentWalletTransactionRequestModel,
   agentWalletViewRequestModel,
   chatWithAgentModel,
@@ -34,9 +36,11 @@ export function useAgentRequestsWithIframe(
     'transactionHashes',
     'transactionRequestId',
   ]);
+  const selector = useWalletStore((store) => store.selector);
   const wallet = useWalletStore((store) => store.wallet);
   const walletSignInModal = useWalletStore((store) => store.modal);
   const nearViewAccount = useNearStore((store) => store.viewAccount);
+  const near = useNearStore((store) => store.near);
   const [iframePostMessage, setIframePostMessage] = useState<unknown>(null);
   const [agentRequestsNeedingPermissions, setAgentRequestsNeedingPermissions] =
     useState<AgentRequest[] | null>(null);
@@ -44,7 +48,7 @@ export function useAgentRequestsWithIframe(
   const handleWalletTransactionResponse = useCallback(
     (options: {
       result: FinalExecutionOutcome[] | string;
-      requestId?: string;
+      requestId?: string | null;
     }) => {
       const transactionHashes =
         typeof options.result === 'string'
@@ -146,6 +150,7 @@ export function useAgentRequestsWithIframe(
 
   const onIframePostMessage: IframePostMessageEventHandler<{
     action:
+      | 'near_account'
       | 'near_call'
       | 'near_view'
       | 'remote_agent_run'
@@ -174,6 +179,35 @@ export function useAgentRequestsWithIframe(
           requestId: request.requestId,
           result,
         });
+      } else if (action === 'near_account') {
+        const request = agentWalletAccountRequestModel.parse(event.data.data);
+
+        let accountId = request.accountId;
+
+        if (!accountId && selector) {
+          // get current accountId
+          const isSignedIn = selector.isSignedIn();
+          if (isSignedIn) {
+            const accounts = selector.store.getState().accounts;
+            if (accounts.length > 0) {
+              accountId = accounts[0]?.accountId ?? '';
+            }
+          }
+        }
+
+        if (near && accountId) {
+          const account = await near.account(accountId);
+          const accountBalance = await account.getAccountBalance();
+          const yNEAR = accountBalance.total;
+          const NEAR = formatNearAmount(yNEAR, 2).replace(/,/g, '');
+          setIframePostMessage({
+            action: 'near_account_response',
+            requestId: request.requestId,
+            result: { accountId, balance: NEAR, yNEAR },
+          });
+        } else {
+          console.error('Missing data read `near_account`');
+        }
       } else if (action === 'refresh_environment_id') {
         const chat = chatWithAgentModel.parse(event.data.data);
         if (chat.environment_id) {

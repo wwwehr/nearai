@@ -5,9 +5,9 @@ from typing import Any, Dict, List, Optional, Union
 
 from openapi_client import EntryInformation, EntryLocation, EntryMetadata, EntryMetadataInput
 from openapi_client.api.registry_api import (
-    BodyDownloadFileV1RegistryDownloadFilePost,
-    BodyDownloadMetadataV1RegistryDownloadMetadataPost,
-    BodyListFilesV1RegistryListFilesPost,
+    BodyDownloadFileAsyncV1RegistryDownloadFilePost,
+    BodyDownloadMetadataAsyncV1RegistryDownloadMetadataPost,
+    BodyListFilesAsyncV1RegistryListFilesPost,
     BodyUploadMetadataV1RegistryUploadMetadataPost,
     RegistryApi,
 )
@@ -72,7 +72,7 @@ class Registry:
         """Get metadata of a entry in the registry."""
         try:
             return self.api.download_metadata_v1_registry_download_metadata_post(
-                BodyDownloadMetadataV1RegistryDownloadMetadataPost.from_dict(dict(entry_location=entry_location))
+                BodyDownloadMetadataAsyncV1RegistryDownloadMetadataPost.from_dict(dict(entry_location=entry_location))
             )
         except NotFoundException:
             return None
@@ -100,7 +100,7 @@ class Registry:
     def download_file(self, entry_location: EntryLocation, path: Path, local_path: Path):
         """Download a file from the registry."""
         result = self.api.download_file_v1_registry_download_file_post_without_preload_content(
-            BodyDownloadFileV1RegistryDownloadFilePost.from_dict(
+            BodyDownloadFileAsyncV1RegistryDownloadFilePost.from_dict(
                 dict(
                     entry_location=entry_location,
                     path=str(path),
@@ -261,7 +261,7 @@ class Registry:
         Return the relative paths to all files with respect to the root of the entry.
         """
         result = self.api.list_files_v1_registry_list_files_post(
-            BodyListFilesV1RegistryListFilesPost.from_dict(dict(entry_location=entry_location))
+            BodyListFilesAsyncV1RegistryListFilesPost.from_dict(dict(entry_location=entry_location))
         )
         return [file.filename for file in result]
 

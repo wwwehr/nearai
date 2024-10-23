@@ -1,8 +1,10 @@
 import importlib.metadata
+import io
 import json
 import os
 import runpy
 import sys
+import tarfile
 from collections import OrderedDict
 from dataclasses import asdict
 from pathlib import Path
@@ -15,6 +17,8 @@ from openapi_client import EntryLocation, EntryMetadataInput
 from openapi_client.api.benchmark_api import BenchmarkApi
 from openapi_client.api.default_api import DefaultApi
 from openapi_client.api.evaluation_api import EvaluationApi
+from openapi_client.api.jobs_api import JobsApi
+from openapi_client.api.permissions_api import PermissionsApi
 from shared.client_config import (
     DEFAULT_MODEL,
     DEFAULT_MODEL_MAX_TOKENS,
@@ -393,7 +397,7 @@ class EvaluationCli:
         from nearai.evaluation import print_evaluation_table
 
         api = EvaluationApi()
-        table = api.get_evaluation_table_v1_evaluation_table_get()
+        table = api.table_v1_evaluation_table_get()
 
         print_evaluation_table(
             table.rows,
@@ -638,6 +642,19 @@ class LoginCLI:
             print("Missing data")
 
 
+class PermissionCli:
+    def __init__(self) -> None:  # noqa: D107
+        self.client = PermissionsApi()
+
+    def grant(self, account_id: str, permission: str):
+        """Grant permission to an account."""
+        self.client.grant_permission_v1_permissions_grant_permission_post(account_id, permission)
+
+    def revoke(self, account_id: str, permission: str = ""):
+        """Revoke permission from an account. If permission is empty all permissions are revoked."""
+        self.client.revoke_permission_v1_permissions_revoke_permission_post(account_id, permission)
+
+
 class CLI:
     def __init__(self) -> None:  # noqa: D107
         self.registry = RegistryCli()
@@ -652,6 +669,20 @@ class CLI:
         self.finetune = FinetuneCli()
         self.tensorboard = TensorboardCli()
         self.vllm = VllmCli()
+        self.permission = PermissionCli()
+
+    def submit(self, path: Optional[str] = None):
+        """Submit a task to be executed by a worker."""
+        if path is None:
+            path = os.getcwd()
+
+        tar_stream = io.BytesIO()
+        with tarfile.open(fileobj=tar_stream, mode="w:gz") as tar:
+            tar.add(path, arcname=os.path.basename(path))
+        tar_stream.seek(0)
+
+        client = JobsApi()
+        client.add_job_v1_jobs_add_job_post(tar_stream.read())
 
     def location(self) -> None:  # noqa: D102
         """Show location where nearai is installed."""

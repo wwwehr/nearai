@@ -35,8 +35,7 @@ class CreateThreadAndRunRequest(BaseModel):
     record_run: Optional[StrictBool] = None
     tool_resources: Optional[Dict[str, Any]] = None
     user_env_vars: Optional[Dict[str, Any]] = None
-    agent_env_vars: Optional[Dict[str, Any]] = None
-    __properties: ClassVar[List[str]] = ["agent_id", "assistant_id", "environment_id", "thread", "new_message", "max_iterations", "record_run", "tool_resources", "user_env_vars", "agent_env_vars"]
+    __properties: ClassVar[List[str]] = ["agent_id", "assistant_id", "environment_id", "thread", "new_message", "max_iterations", "record_run", "tool_resources", "user_env_vars"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -122,11 +121,6 @@ class CreateThreadAndRunRequest(BaseModel):
         if self.user_env_vars is None and "user_env_vars" in self.model_fields_set:
             _dict['user_env_vars'] = None
 
-        # set to None if agent_env_vars (nullable) is None
-        # and model_fields_set contains the field
-        if self.agent_env_vars is None and "agent_env_vars" in self.model_fields_set:
-            _dict['agent_env_vars'] = None
-
         return _dict
 
     @classmethod
@@ -147,8 +141,7 @@ class CreateThreadAndRunRequest(BaseModel):
             "max_iterations": obj.get("max_iterations"),
             "record_run": obj.get("record_run"),
             "tool_resources": obj.get("tool_resources"),
-            "user_env_vars": obj.get("user_env_vars"),
-            "agent_env_vars": obj.get("agent_env_vars")
+            "user_env_vars": obj.get("user_env_vars")
         })
         return _obj
 

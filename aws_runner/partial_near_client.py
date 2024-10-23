@@ -4,9 +4,9 @@ from typing import List
 
 from openapi_client import (
     BodyDownloadEnvironmentV1DownloadEnvironmentPost,
-    BodyDownloadFileV1RegistryDownloadFilePost,
-    BodyDownloadMetadataV1RegistryDownloadMetadataPost,
-    BodyListFilesV1RegistryListFilesPost,
+    BodyDownloadFileAsyncV1RegistryDownloadFilePost,
+    BodyDownloadMetadataAsyncV1RegistryDownloadMetadataPost,
+    BodyListFilesAsyncV1RegistryListFilesPost,
     BodyUploadMetadataV1RegistryUploadMetadataPost,
 )
 from openapi_client.api.agents_assistants_api import AgentsAssistantsApi
@@ -47,7 +47,7 @@ class PartialNearClient:
         """Fetches a file from NearAI registry."""
         api_instance = RegistryApi(self._client)
         result = api_instance.download_file_v1_registry_download_file_post(
-            BodyDownloadFileV1RegistryDownloadFilePost.from_dict(
+            BodyDownloadFileAsyncV1RegistryDownloadFilePost.from_dict(
                 dict(
                     entry_location=entry_location,
                     path=path,
@@ -63,7 +63,7 @@ class PartialNearClient:
         """
         api_instance = RegistryApi(self._client)
         result = api_instance.list_files_v1_registry_list_files_post(
-            BodyListFilesV1RegistryListFilesPost.from_dict(dict(entry_location=entry_location))
+            BodyListFilesAsyncV1RegistryListFilesPost.from_dict(dict(entry_location=entry_location))
         )
         return [file.filename for file in result]
 
@@ -76,7 +76,7 @@ class PartialNearClient:
 
         for path in files:
             result = api_instance.download_file_v1_registry_download_file_post(
-                BodyDownloadFileV1RegistryDownloadFilePost.from_dict(
+                BodyDownloadFileAsyncV1RegistryDownloadFilePost.from_dict(
                     dict(
                         entry_location=entry_location,
                         path=path,
@@ -91,7 +91,7 @@ class PartialNearClient:
         api_instance = RegistryApi(self._client)
         entry_location = self.parse_location(identifier)
         result = api_instance.download_metadata_v1_registry_download_metadata_post(
-            BodyDownloadMetadataV1RegistryDownloadMetadataPost.from_dict(dict(entry_location=entry_location))
+            BodyDownloadMetadataAsyncV1RegistryDownloadMetadataPost.from_dict(dict(entry_location=entry_location))
         )
         return result.to_dict()
 

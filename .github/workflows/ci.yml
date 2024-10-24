@@ -86,6 +86,8 @@ jobs:
     
     - name: Build Docker Images
       run: docker compose -f .docker/compose-ci.yml build
+      env:
+        NEARAICI_SIGNATURE: ${{ secrets.NEARAICI_SIGNATURE }}
 
     - name: Start Docker Compose
       run: docker compose -f .docker/compose-ci.yml up -d

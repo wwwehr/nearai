@@ -5,8 +5,10 @@ from typing import Any, Dict, Optional
 import boto3
 import requests
 from fastapi import APIRouter, Body, Depends, HTTPException, Response
+from nearai.agents.local_runner import LocalRunner
 from nearai.clients.lambda_client import LambdaWrapper
 from pydantic import BaseModel, Field
+from shared.auth_data import AuthData
 
 from hub.api.v1.auth import AuthToken, revokable_auth
 from hub.api.v1.entry_location import IDENTIFIER_PATTERN, EntryLocation
@@ -183,6 +185,7 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokab
         if not thread_id:
             thread_model = ThreadModel(
                 messages=messages,
+                owner_id=auth.account_id,
             )
             session.add(thread_model)
             session.commit()
@@ -207,6 +210,17 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokab
             runner_invoke_url = getenv("RUNNER_INVOKE_URL", None)
             if runner_invoke_url:
                 invoke_function_via_curl(runner_invoke_url, agents, thread_id, run_id, auth, new_message, params)
+        elif runner == "local_runner":
+            """Runs agents directly from the local machine."""
+
+            LocalRunner(
+                None,
+                agents,
+                thread_id,
+                run_id,
+                AuthData(**auth.model_dump()),  # TODO: https://github.com/nearai/nearai/issues/421
+                params,
+            )
         else:
             function_name = f"{runner}-{framework.lower()}"
             if agent_api_url != "https://api.near.ai":

@@ -277,7 +277,7 @@ class Registry:
         starred_by: str = "",
     ) -> List[EntryInformation]:
         """List and filter entries in the registry."""
-        return self.api.list_entries_v1_registry_list_entries_post(
+        return self.api.list_entries_async_v1_registry_list_entries_post(
             namespace=namespace,
             category=category,
             tags=tags,

@@ -90,7 +90,7 @@ class PartialNearClient:
         """Fetches metadata for an agent from NearAI registry."""
         api_instance = RegistryApi(self._client)
         entry_location = self.parse_location(identifier)
-        result = api_instance.download_metadata_v1_registry_download_metadata_post(
+        result = api_instance.download_metadata_async_v1_registry_download_metadata_post(
             BodyDownloadMetadataAsyncV1RegistryDownloadMetadataPost.from_dict(dict(entry_location=entry_location))
         )
         return result.to_dict()

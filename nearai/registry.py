@@ -71,7 +71,7 @@ class Registry:
     def info(self, entry_location: EntryLocation) -> Optional[EntryMetadata]:
         """Get metadata of a entry in the registry."""
         try:
-            return self.api.download_metadata_v1_registry_download_metadata_post(
+            return self.api.download_metadata_async_v1_registry_download_metadata_post(
                 BodyDownloadMetadataAsyncV1RegistryDownloadMetadataPost.from_dict(dict(entry_location=entry_location))
             )
         except NotFoundException:

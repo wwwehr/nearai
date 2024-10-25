@@ -245,7 +245,7 @@ class Environment(object):
             callback_url,
         )
 
-    def list_files(self, path: str, order: Literal["asc", "desc"] = "asc") -> List[FileObject]:
+    def list_files(self, order: Literal["asc", "desc"] = "asc") -> List[FileObject]:
         """Lists files in the thread."""
         messages = self._list_messages(order=order)
         # Extract attachments from messages

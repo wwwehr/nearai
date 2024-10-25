@@ -22,8 +22,8 @@ from sqlmodel import asc, desc, select
 from hub.api.v1.agent_routes import (
     _runner_for_env,
     get_agent_entry,
-    invoke_function_via_curl,
-    invoke_function_via_lambda,
+    invoke_agent_via_lambda,
+    invoke_agent_via_url,
 )
 from hub.api.v1.auth import AuthToken, revokable_auth
 from hub.api.v1.models import Message as MessageModel
@@ -536,7 +536,7 @@ def run_agent(thread_id: str, run_id: str, auth: AuthToken = Depends(revokable_a
         if runner == "custom_runner":
             custom_runner_url = getenv("CUSTOM_RUNNER_URL", None)
             if custom_runner_url:
-                invoke_function_via_curl(custom_runner_url, agents, thread_id, run_id, auth, "", params)
+                invoke_agent_via_url(custom_runner_url, agents, thread_id, run_id, auth, "", params)
             else:
                 raise HTTPException(status_code=400, detail="Runner invoke URL not set for local runner")
         elif runner == "local_runner":
@@ -561,7 +561,7 @@ def run_agent(thread_id: str, run_id: str, auth: AuthToken = Depends(revokable_a
                 f"assistant_id={run_model.assistant_id}, "
                 f"thread_id={thread_id}, run_id={run_id}"
             )
-            invoke_function_via_lambda(function_name, agents, thread_id, run_id, auth, "", params)
+            invoke_agent_via_lambda(function_name, agents, thread_id, run_id, auth, "", params)
 
         return run_model.to_openai()
 

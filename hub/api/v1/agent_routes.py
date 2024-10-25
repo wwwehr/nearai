@@ -74,7 +74,7 @@ class CreateThreadAndRunRequest(BaseModel):
     )
 
 
-def invoke_function_via_curl(custom_runner_url, agents, thread_id, run_id, auth: AuthToken, new_message, params):
+def invoke_agent_via_url(custom_runner_url, agents, thread_id, run_id, auth: AuthToken, new_message, params):
     auth_data = auth.model_dump()
 
     if auth_data["nonce"]:
@@ -100,7 +100,7 @@ def invoke_function_via_curl(custom_runner_url, agents, thread_id, run_id, auth:
         raise Exception(f"Request failed with status code {response.status_code}: {response.text}")
 
 
-def invoke_function_via_lambda(function_name, agents, thread_id, run_id, auth: AuthToken, new_message, params):
+def invoke_agent_via_lambda(function_name, agents, thread_id, run_id, auth: AuthToken, new_message, params):
     wrapper = LambdaWrapper(boto3.client("lambda", region_name="us-east-2"))
     result = wrapper.invoke_function(
         function_name,
@@ -209,7 +209,7 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokab
         if runner == "custom_runner":
             custom_runner_url = getenv("CUSTOM_RUNNER_URL", None)
             if custom_runner_url:
-                invoke_function_via_curl(custom_runner_url, agents, thread_id, run_id, auth, new_message, params)
+                invoke_agent_via_url(custom_runner_url, agents, thread_id, run_id, auth, new_message, params)
         elif runner == "local_runner":
             """Runs agents directly from the local machine."""
 
@@ -226,7 +226,7 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokab
             if agent_api_url != "https://api.near.ai":
                 print(f"Passing agent API URL: {agent_api_url}")
 
-            invoke_function_via_lambda(function_name, agents, thread_id, run_id, auth, new_message, params)
+            invoke_agent_via_lambda(function_name, agents, thread_id, run_id, auth, new_message, params)
 
     with get_session() as session:
         completed_run_model = session.get(RunModel, run_id)

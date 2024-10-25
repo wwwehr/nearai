@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
+import openai
 from openapi_client import ApiClient, Configuration
 from pydantic import BaseModel
 from shared.auth_data import AuthData
@@ -126,6 +127,12 @@ def setup_api_client():
     configuration = Configuration(**kwargs)
     client = ApiClient(configuration)
     ApiClient.set_default(client)
+
+
+def get_hub_client():
+    signature = CONFIG.auth.model_dump_json()
+    base_url = CONFIG.api_url + "/v1"
+    return openai.OpenAI(base_url=base_url, api_key=signature)
 
 
 setup_api_client()

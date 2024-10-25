@@ -7,6 +7,7 @@ import { type entryModel } from '~/lib/models';
 
 type AgentSettings = Partial<{
   allowRemoteRunCallsToOtherAgents: boolean;
+  allowWalletTransactionRequests: boolean;
 }>;
 
 type AgentSettingsStore = {

@@ -37,6 +37,7 @@ class GSM8KSolverStrategy(SolverStrategy):
                 problem_shots_indices,
             )
         )
+
         session = self.start_inference_session("")
         session.add_system_message(
             dedent(

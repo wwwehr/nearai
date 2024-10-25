@@ -18,10 +18,7 @@ import {
 import { Controller, type SubmitHandler } from 'react-hook-form';
 import { type z } from 'zod';
 
-import {
-  AgentRunPermissionsModal,
-  checkAgentRunPermissions,
-} from '~/components/AgentRunPermissionsModal';
+import { AgentPermissionsModal } from '~/components/AgentPermissionsModal';
 import { AgentWelcome } from '~/components/AgentWelcome';
 import { EntryEnvironmentVariables } from '~/components/EntryEnvironmentVariables';
 import { BreakpointDisplay } from '~/components/lib/BreakpointDisplay';
@@ -31,10 +28,7 @@ import { Code, filePathToCodeLanguage } from '~/components/lib/Code';
 import { Dialog } from '~/components/lib/Dialog';
 import { Flex } from '~/components/lib/Flex';
 import { Form } from '~/components/lib/Form';
-import {
-  type IframePostMessageEventHandler,
-  IframeWithBlob,
-} from '~/components/lib/IframeWithBlob';
+import { IframeWithBlob } from '~/components/lib/IframeWithBlob';
 import { InputTextarea } from '~/components/lib/InputTextarea';
 import { Sidebar } from '~/components/lib/Sidebar';
 import { Slider } from '~/components/lib/Slider';
@@ -44,6 +38,7 @@ import { Messages } from '~/components/Messages';
 import { SignInPrompt } from '~/components/SignInPrompt';
 import { ThreadsSidebar } from '~/components/ThreadsSidebar';
 import { env } from '~/env';
+import { useAgentRequestsWithIframe } from '~/hooks/agent';
 import {
   useCurrentEntry,
   useCurrentEntryEnvironmentVariables,
@@ -57,7 +52,6 @@ import { api } from '~/trpc/react';
 import { copyTextToClipboard } from '~/utils/clipboard';
 import { handleClientError } from '~/utils/error';
 import { formatBytes } from '~/utils/number';
-import { unreachable } from '~/utils/unreachable';
 
 import { PlaceholderSection } from './lib/Placeholder';
 
@@ -86,6 +80,8 @@ export const AgentRunner = ({
   const { queryParams, updateQueryPath } = useQueryParams([
     'environmentId',
     'view',
+    'transactionHashes',
+    'transactionRequestId',
   ]);
   const entryEnvironmentVariables = useCurrentEntryEnvironmentVariables(
     'agent',
@@ -95,6 +91,14 @@ export const AgentRunner = ({
   const chatMutation = api.hub.chatWithAgent.useMutation();
   const { threadsQuery } = useThreads();
   const utils = api.useUtils();
+
+  const {
+    agentRequestsNeedingPermissions,
+    setAgentRequestsNeedingPermissions,
+    conditionallyProcessAgentRequests,
+    iframePostMessage,
+    onIframePostMessage,
+  } = useAgentRequestsWithIframe(currentEntry, chatMutation, environmentId);
 
   const form = useZodForm(chatWithAgentModel, {
     defaultValues: { agent_id: agentId, max_iterations: 1 },
@@ -107,9 +111,6 @@ export const AgentRunner = ({
   const [threadsOpenForSmallScreens, setThreadsOpenForSmallScreens] =
     useState(false);
   const formRef = useRef<HTMLFormElement | null>(null);
-
-  const [runRequestNeedingPermissions, setRunRequestNeedingPermissions] =
-    useState<z.infer<typeof chatWithAgentModel> | null>(null);
 
   const environmentQuery = api.hub.environment.useQuery(
     {
@@ -224,56 +225,6 @@ export const AgentRunner = ({
     form.setFocus('new_message');
   };
 
-  const conditionallyRunAgent = async (
-    request: z.infer<typeof chatWithAgentModel>,
-    allowedBypass?: boolean,
-  ) => {
-    if (!currentEntry) return;
-    const permissionsCheck = checkAgentRunPermissions(currentEntry, request);
-    if (allowedBypass ?? permissionsCheck.allowed) {
-      const response = await chatMutation.mutateAsync(request);
-      updateQueryPath(
-        { environmentId: response.environmentId },
-        'replace',
-        false,
-      );
-    } else {
-      setRunRequestNeedingPermissions(request);
-    }
-  };
-
-  const onIframePostMessage: IframePostMessageEventHandler<{
-    action: 'remote_agent_run' | 'refresh_environment_id';
-    data: unknown;
-  }> = async (event) => {
-    try {
-      const chat = chatWithAgentModel.parse(event.data.data);
-
-      switch (event.data.action) {
-        case 'remote_agent_run':
-          chat.max_iterations = Number(chat.max_iterations) || 1;
-          chat.environment_id = chat.environment_id ?? environmentId;
-          void conditionallyRunAgent(chat);
-          break;
-
-        case 'refresh_environment_id':
-          if (chat.environment_id) {
-            updateQueryPath(
-              { environmentId: chat.environment_id },
-              'replace',
-              false,
-            );
-          }
-          break;
-
-        default:
-          unreachable(event.data.action);
-      }
-    } catch (error) {
-      console.error(`Unable to handle message in onIframePostMessage()`, error);
-    }
-  };
-
   useEffect(() => {
     const files = environmentQuery?.data?.files;
     const htmlFile = files?.['index.html'];
@@ -342,6 +293,7 @@ export const AgentRunner = ({
               <IframeWithBlob
                 html={htmlOutput}
                 onPostMessage={onIframePostMessage}
+                postMessage={iframePostMessage}
               />
 
               {latestAssistantMessages.length > 0 && (
@@ -518,10 +470,12 @@ export const AgentRunner = ({
         </Sidebar.Sidebar>
       </Sidebar.Root>
 
-      <AgentRunPermissionsModal
-        onAllow={(request) => conditionallyRunAgent(request, true)}
-        request={runRequestNeedingPermissions}
-        setRequest={setRunRequestNeedingPermissions}
+      <AgentPermissionsModal
+        onAllow={(requests) =>
+          conditionallyProcessAgentRequests(requests, true)
+        }
+        requests={agentRequestsNeedingPermissions}
+        clearRequests={() => setAgentRequestsNeedingPermissions(null)}
       />
 
       <Dialog.Root

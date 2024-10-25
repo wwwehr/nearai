@@ -1,5 +1,7 @@
 import { type ComponentProps, useEffect, useRef, useState } from 'react';
 
+import { useDebouncedFunction } from '~/hooks/debounce';
+
 import s from './IframeWithBlob.module.scss';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -12,12 +14,14 @@ export type IframePostMessageEventHandler<T = any> = (
 type Props = ComponentProps<'iframe'> & {
   html: string;
   onPostMessage?: IframePostMessageEventHandler;
+  postMessage?: unknown;
 };
 
 export const IframeWithBlob = ({
   className = '',
   html,
   onPostMessage,
+  postMessage,
   ...props
 }: Props) => {
   const hiddenHeightCalculationIframeRef = useRef<HTMLIFrameElement | null>(
@@ -26,6 +30,16 @@ export const IframeWithBlob = ({
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [dataUrl, setDataUrl] = useState('');
   const [height, setHeight] = useState(0);
+
+  const executePostMessage = useDebouncedFunction((message: unknown) => {
+    console.log('Sending postMessage to <IframeWithBlob />', message);
+    iframeRef.current?.contentWindow?.postMessage(message, '*');
+    /*
+      NOTE: Since our iframe is sandboxed and doesn't have access to "allow-same-origin",
+      it won't have an origin to check against. This forces us to use "*". Due to how this 
+      component is utilized, we can safely use "*" as our postMessage origin.
+    */
+  }, 10);
 
   const resizeIframe = () => {
     const iframe = hiddenHeightCalculationIframeRef.current;
@@ -57,6 +71,7 @@ export const IframeWithBlob = ({
   useEffect(() => {
     function messageListener(event: MessageEvent) {
       if (event.source !== iframeRef.current?.contentWindow) return;
+      console.log('Received postMessage from <IframeWithBlob />', event.data);
       onPostMessage?.(event);
     }
 
@@ -66,6 +81,12 @@ export const IframeWithBlob = ({
       window.removeEventListener('message', messageListener);
     };
   }, [onPostMessage]);
+
+  useEffect(() => {
+    if (postMessage) {
+      executePostMessage(postMessage);
+    }
+  }, [executePostMessage, postMessage]);
 
   /*
     SECURITY NOTE:

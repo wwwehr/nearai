@@ -189,6 +189,63 @@ class MessageCreateParams(BaseModel):
     """The ID of the run creating the message."""
 
 
+class ThreadForkResponse(BaseModel):
+    id: str
+    object: str = "thread"
+    created_at: int
+    metadata: Optional[dict] = None
+
+
+@threads_router.post("/threads/{thread_id}/fork")
+async def fork_thread(
+    thread_id: str,
+    auth: AuthToken = Depends(revokable_auth),
+) -> ThreadForkResponse:
+    with get_session() as session:
+        # Get the original thread
+        original_thread = session.get(ThreadModel, thread_id)
+        if original_thread is None:
+            raise HTTPException(status_code=404, detail="Thread not found")
+
+        if original_thread.owner_id != auth.account_id:
+            raise HTTPException(status_code=403, detail="You don't have permission to fork this thread")
+
+        # Create a new thread as a copy of the original
+        forked_thread = ThreadModel(
+            messages=[],  # Start with an empty message list
+            meta_data=original_thread.meta_data,
+            tool_resources=original_thread.tool_resources,
+            owner_id=auth.account_id,
+        )
+        session.add(forked_thread)
+        session.flush()  # Flush to generate the new thread's ID
+
+        # Copy messages from the original thread to the forked thread
+        messages = session.exec(
+            select(MessageModel).where(MessageModel.thread_id == thread_id).order_by(asc(MessageModel.created_at))
+        ).all()
+
+        for message in messages:
+            forked_message = MessageModel(
+                thread_id=forked_thread.id,
+                content=message.content,
+                role=message.role,
+                assistant_id=message.assistant_id,
+                meta_data=message.meta_data,
+                attachments=message.attachments,
+                run_id=message.run_id,
+            )
+            session.add(forked_message)
+
+        session.commit()
+
+        return ThreadForkResponse(
+            id=forked_thread.id,
+            created_at=int(forked_thread.created_at.timestamp()),
+            metadata=forked_thread.meta_data,
+        )
+
+
 @threads_router.post("/threads/{thread_id}/messages")
 async def create_message(
     thread_id: str,

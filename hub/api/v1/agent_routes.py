@@ -9,9 +9,10 @@ from nearai.agents.local_runner import LocalRunner
 from nearai.clients.lambda_client import LambdaWrapper
 from pydantic import BaseModel, Field
 from shared.auth_data import AuthData
+from shared.client_config import IDENTIFIER_PATTERN
 
 from hub.api.v1.auth import AuthToken, revokable_auth
-from hub.api.v1.entry_location import IDENTIFIER_PATTERN, EntryLocation
+from hub.api.v1.entry_location import EntryLocation
 from hub.api.v1.models import Message as MessageModel
 from hub.api.v1.models import RegistryEntry, get_session
 from hub.api.v1.models import Run as RunModel
@@ -73,7 +74,7 @@ class CreateThreadAndRunRequest(BaseModel):
     )
 
 
-def invoke_function_via_curl(runner_invoke_url, agents, thread_id, run_id, auth: AuthToken, new_message, params):
+def invoke_function_via_curl(custom_runner_url, agents, thread_id, run_id, auth: AuthToken, new_message, params):
     auth_data = auth.model_dump()
 
     if auth_data["nonce"]:
@@ -91,7 +92,7 @@ def invoke_function_via_curl(runner_invoke_url, agents, thread_id, run_id, auth:
 
     headers = {"Content-Type": "application/json"}
 
-    response = requests.post(runner_invoke_url, data=json.dumps(payload), headers=headers)
+    response = requests.post(custom_runner_url, data=json.dumps(payload), headers=headers)
 
     if response.status_code == 200:
         return response.json()
@@ -205,10 +206,10 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokab
     if framework == "prompt":
         raise HTTPException(status_code=400, detail="Prompt only agents are not implemented yet.")
     else:
-        if runner == "local":
-            runner_invoke_url = getenv("RUNNER_INVOKE_URL", None)
-            if runner_invoke_url:
-                invoke_function_via_curl(runner_invoke_url, agents, thread_id, run_id, auth, new_message, params)
+        if runner == "custom_runner":
+            custom_runner_url = getenv("CUSTOM_RUNNER_URL", None)
+            if custom_runner_url:
+                invoke_function_via_curl(custom_runner_url, agents, thread_id, run_id, auth, new_message, params)
         elif runner == "local_runner":
             """Runs agents directly from the local machine."""
 
@@ -248,7 +249,7 @@ def download_environment(entry: RegistryEntry = Depends(get), path: str = Body()
 
 
 def _runner_for_env():
-    runner_env = getenv("RUNNER_ENVIRONMENT", "local")
+    runner_env = getenv("RUNNER_ENVIRONMENT", "local_runner")
     if runner_env == "production":
         return "production-agent-runner"
     elif runner_env == "staging":

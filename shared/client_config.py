@@ -1,3 +1,4 @@
+import re
 from typing import Optional
 
 import openai
@@ -11,6 +12,8 @@ DEFAULT_PROVIDER = "fireworks"
 DEFAULT_MODEL = "llama-v3p1-405b-instruct-long"
 DEFAULT_PROVIDER_MODEL = f"fireworks::accounts/fireworks/models/{DEFAULT_MODEL}"
 DEFAULT_NAMESPACE = "near.ai"
+
+IDENTIFIER_PATTERN = re.compile(r"^[a-zA-Z0-9_\-.]+$")
 
 
 class ClientConfig(BaseModel):

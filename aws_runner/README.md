@@ -46,8 +46,8 @@ EOF
 By default, an AWS Lambda runner is used to execute the agent's code, but you can switch to using local runner by specifying the environment variables (which can be set in `/hub/.env`):
 
 ```
-RUNNER_ENVIRONMENT="local"
-RUNNER_INVOKE_URL=http://localhost:9000/2015-03-31/functions/function/invocations
+RUNNER_ENVIRONMENT="custom_runner"
+CUSTOM_RUNNER_URL=http://localhost:9000/2015-03-31/functions/function/invocations
 API_URL=http://host.docker.internal:8081
 ```
 

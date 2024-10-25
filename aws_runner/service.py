@@ -15,7 +15,7 @@ from shared.client_config import ClientConfig
 from shared.inference_client import InferenceClient
 from shared.near.sign import SignatureVerificationResult, verify_signed_message
 
-from hub.api.v1.entry_location import IDENTIFIER_PATTERN
+from shared.client_config import IDENTIFIER_PATTERN
 
 cloudwatch = boto3.client("cloudwatch", region_name="us-east-2")
 

@@ -533,10 +533,10 @@ def run_agent(thread_id: str, run_id: str, auth: AuthToken = Depends(revokable_a
         session.add(run_model)
         session.commit()
 
-        if runner == "local":
-            runner_invoke_url = getenv("RUNNER_INVOKE_URL", None)
-            if runner_invoke_url:
-                invoke_function_via_curl(runner_invoke_url, agents, thread_id, run_id, auth, "", params)
+        if runner == "custom_runner":
+            custom_runner_url = getenv("CUSTOM_RUNNER_URL", None)
+            if custom_runner_url:
+                invoke_function_via_curl(custom_runner_url, agents, thread_id, run_id, auth, "", params)
             else:
                 raise HTTPException(status_code=400, detail="Runner invoke URL not set for local runner")
         elif runner == "local_runner":

@@ -3,7 +3,6 @@ import json
 import os
 import runpy
 import sys
-import shutil
 from collections import OrderedDict
 from dataclasses import asdict
 from pathlib import Path
@@ -27,11 +26,7 @@ from shared.naming import NamespacedName, create_registry_name
 from shared.provider_models import ProviderModels, get_provider_namespaced_model
 from tabulate import tabulate
 
-from nearai.config import (
-    CONFIG,
-    get_hub_client,
-    update_config,
-)
+from nearai.config import CONFIG, get_hub_client, update_config
 from nearai.finetune import FinetuneCli
 from nearai.lib import check_metadata, parse_location, parse_tags
 from nearai.registry import get_registry_folder, registry
@@ -549,8 +544,7 @@ class AgentCli:
             print(f"Error running agent remotely: {e}")
 
     def create(self, name: Optional[str] = None, description: Optional[str] = None, fork: Optional[str] = None) -> None:
-        """
-        Create a new agent or fork an existing one.
+        """Create a new agent or fork an existing one.
 
         Usage:
           nearai agent create
@@ -562,13 +556,13 @@ class AgentCli:
           --description   Description of the new agent.
           --fork          Fork an existing agent specified by namespace/agent_name/version.
 
-        Examples:
+        Examples
+        --------
           nearai agent create
           nearai agent create --name my_agent --description "My new agent"
           nearai agent create --fork agentic.near/summary/0.0.3 --name new_summary_agent
-        """
-        import shutil
 
+        """
         # Check if the user is authenticated
         if CONFIG.auth is None or CONFIG.auth.account_id is None:
             print("Please login with `nearai login` before creating an agent.")

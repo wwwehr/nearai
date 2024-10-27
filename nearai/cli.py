@@ -3,6 +3,7 @@ import json
 import os
 import runpy
 import sys
+import shutil
 from collections import OrderedDict
 from dataclasses import asdict
 from pathlib import Path
@@ -95,6 +96,7 @@ class RegistryCli:
                 }
 
             json.dump(metadata, f, indent=2)
+
 
     def list(
         self,
@@ -546,7 +548,139 @@ class AgentCli:
         except Exception as e:
             print(f"Error running agent remotely: {e}")
 
+    def create(self, name: Optional[str] = None, description: Optional[str] = None, fork: Optional[str] = None) -> None:
+        """
+        Create a new agent or fork an existing one.
 
+        Usage:
+          nearai agent create
+          nearai agent create --name <agent_name> --description <description>
+          nearai agent create --fork <namespace/agent_name/version> [--name <new_agent_name>]
+
+        Options:
+          --name          Name of the new agent.
+          --description   Description of the new agent.
+          --fork          Fork an existing agent specified by namespace/agent_name/version.
+
+        Examples:
+          nearai agent create
+          nearai agent create --name my_agent --description "My new agent"
+          nearai agent create --fork other_user/agent/1.0.0 --name my_forked_agent
+        """
+        import shutil
+
+        # Check if the user is authenticated
+        if CONFIG.auth is None or CONFIG.auth.account_id is None:
+            print("Please login with `nearai login` before creating an agent.")
+            return
+
+        namespace = CONFIG.auth.account_id
+
+        if fork:
+            # Fork an existing agent
+            self._fork_agent(fork, namespace, name)
+        else:
+            # Create a new agent from scratch
+            self._create_new_agent(namespace, name, description)
+
+    def _create_new_agent(self, namespace: str, name: Optional[str], description: Optional[str]) -> None:
+        """Create a new agent from scratch."""
+        # Prompt for agent name if not provided
+        if not name:
+            name = input("Name: ").strip()
+            if not name:
+                print("Agent name cannot be empty.")
+                return
+
+        # Prompt for description if not provided
+        if not description:
+            description = input("Description: ").strip()
+
+        # Set the agent path
+        agent_path = get_registry_folder() / namespace / name / "0.0.1"
+        agent_path.mkdir(parents=True, exist_ok=True)
+
+        # Create metadata.json
+        metadata = {
+            "name": name,
+            "version": "0.0.1",
+            "description": description,
+            "category": "agent",
+            "tags": [],
+            "details": {
+                "agent": {
+                    "defaults": {
+                        "model": DEFAULT_MODEL,
+                        "model_provider": DEFAULT_PROVIDER,
+                        "model_temperature": DEFAULT_MODEL_TEMPERATURE,
+                        "model_max_tokens": DEFAULT_MODEL_MAX_TOKENS,
+                    }
+                }
+            },
+            "show_entry": True,
+        }
+
+        metadata_path = agent_path / "metadata.json"
+        with open(metadata_path, "w") as f:
+            json.dump(metadata, f, indent=2)
+
+        # Create a default agent.py
+        agent_py_content = """# agent.py
+
+    def run(env):
+        # Your agent code here
+        # Example:
+        # prompt = {"role": "system", "content": "You are a helpful assistant."}
+        # result = env.completion([prompt] + env.list_messages())
+        # env.add_message("agent", result)
+        pass
+    """
+        agent_py_path = agent_path / "agent.py"
+        with open(agent_py_path, "w") as f:
+            f.write(agent_py_content)
+
+        print(f"\nAgent created at: {agent_path}")
+        print("\nUseful commands:")
+        print(f"  > nearai agent interactive {name} --local")
+        print(f"  > nearai registry upload {agent_path}")
+
+    def _fork_agent(self, fork: str, namespace: str, new_name: Optional[str]) -> None:
+        """Fork an existing agent."""
+        import shutil
+
+        # Parse the fork parameter
+        try:
+            entry_location = parse_location(fork)
+            fork_namespace = entry_location.namespace
+            fork_name = entry_location.name
+            fork_version = entry_location.version
+        except ValueError:
+            print("Invalid fork parameter format. Expected format: <namespace>/<agent-name>/<version>")
+            return
+
+        # Download the agent from the registry
+        agent_location = f"{fork_namespace}/{fork_name}/{fork_version}"
+        print(f"Downloading agent '{agent_location}'...")
+        registry.download(agent_location, force=False, show_progress=True)
+        source_path = get_registry_folder() / fork_namespace / fork_name / fork_version
+
+        # Prompt for the new agent name if not provided
+        if not new_name:
+            new_name = input("Enter the new agent name: ").strip()
+            if not new_name:
+                print("Agent name cannot be empty.")
+                return
+
+        # Set the destination path
+        dest_path = get_registry_folder() / namespace / new_name / "0.0.1"
+
+        # Copy the agent files
+        shutil.copytree(source_path, dest_path)
+
+        print(f"\nForked agent '{agent_location}' to '{dest_path}'")
+        print("\nUseful commands:")
+        print(f"  > nearai agent interactive {new_name} --local")
+        print(f"  > nearai registry upload {dest_path}")
 class VllmCli:
     def run(self, *args: Any, **kwargs: Any) -> None:  # noqa: D102
         original_argv = sys.argv.copy()

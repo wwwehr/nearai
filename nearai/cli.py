@@ -565,7 +565,7 @@ class AgentCli:
         Examples:
           nearai agent create
           nearai agent create --name my_agent --description "My new agent"
-          nearai agent create --fork other_user/agent/1.0.0 --name my_forked_agent
+          nearai agent create --fork agentic.near/summary/0.0.3 --name new_summary_agent
         """
         import shutil
 

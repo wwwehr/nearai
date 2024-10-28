@@ -1,6 +1,6 @@
 import json
 from os import getenv
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 import boto3
 import requests
@@ -140,7 +140,7 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokab
     agent_env_vars: Dict[str, Any] = {}
     user_env_vars = body.user_env_vars or {}
 
-    agent_entry: RegistryEntry | None = None
+    agent_entry: Union[RegistryEntry, None] = None
     for agent in reversed(agents.split(",")):
         agent_entry = get_agent_entry(agent, data_source, auth.account_id)
 
@@ -182,21 +182,17 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokab
             session.commit()
             thread_id = thread_model.id
 
-        if new_message:
-            message_model = MessageModel(
-                thread_id=thread_id,
-                content=new_message,
-                role="user",
-            )
-            session.add(message_model)
-            session.commit()
-
         run_model = RunModel(
             thread_id=thread_id,
             assistant_id=agents,  # needs primary agent
             model="agent_specified",
             status="queued",
         )
+
+        if new_message:
+            message_model = MessageModel(thread_id=thread_id, content=new_message, role="user", run_id=run_model.id)
+            session.add(message_model)
+            session.commit()
 
     session.add(run_model)
     session.commit()
@@ -258,7 +254,7 @@ def _runner_for_env():
         return runner_env
 
 
-def get_agent_entry(agent, data_source: str, account_id: str) -> RegistryEntry | None:
+def get_agent_entry(agent, data_source: str, account_id: str) -> Union[RegistryEntry, None]:
     if data_source == "registry":
         return get(EntryLocation.from_str(agent))
     elif data_source == "local_files":

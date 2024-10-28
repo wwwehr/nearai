@@ -15,6 +15,7 @@ from hub.api.v1.hub_secrets import hub_secrets_router
 from hub.api.v1.registry import v1_router as registry_router
 from hub.api.v1.routes import v1_router
 from hub.api.v1.stars import v1_router as stars_router
+from hub.api.v1.streaming import streaming_router
 from hub.api.v1.thread_routes import threads_router
 from hub.api.v1.vector_stores import vector_stores_router
 
@@ -48,6 +49,7 @@ app.include_router(evaluation_router, prefix="/v1")
 app.include_router(stars_router, prefix="/v1")
 app.include_router(hub_secrets_router, prefix="/v1")
 app.include_router(threads_router, prefix="/v1")
+app.include_router(streaming_router, prefix="/v1")
 
 
 @app.get("/health")

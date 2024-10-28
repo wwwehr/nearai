@@ -15,7 +15,6 @@ from openapi_client import EntryLocation, EntryMetadataInput
 from openapi_client.api.benchmark_api import BenchmarkApi
 from openapi_client.api.default_api import DefaultApi
 from openapi_client.api.evaluation_api import EvaluationApi
-from hub.api.v1.entry_location import valid_identifier
 from shared.client_config import (
     DEFAULT_MODEL,
     DEFAULT_MODEL_MAX_TOKENS,
@@ -665,7 +664,10 @@ class AgentCli:
             if not new_name:
                 print("Agent name cannot be empty.")
                 return
-            else if not valid_identifier(new_name)
+
+            # confirm pattern is ok
+            IDENTIFIER_PATTERN = re.compile(r"^[a-zA-Z0-9_\-.]+$")
+            if IDENTIFIER_PATTERN.match(identifier) is None:
                 print("Invalid Name, please choose something different")
                 return
 

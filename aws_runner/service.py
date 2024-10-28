@@ -4,12 +4,17 @@ import os
 import shutil
 import time
 from subprocess import call
-from typing import Optional
+from typing import Optional, Union
 
 import boto3
+import uvicorn
 from aws_runner.partial_near_client import PartialNearClient
+from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
+
 from nearai.agents.agent import Agent
 from nearai.agents.environment import Environment
+from pydantic import BaseModel
 from shared.auth_data import AuthData
 from shared.client_config import IDENTIFIER_PATTERN, ClientConfig
 from shared.inference_client import InferenceClient
@@ -21,15 +26,28 @@ PATH = "/tmp/agent-runner-docker/environment-runs"
 RUN_PATH = PATH + "/run"
 DEFAULT_API_URL = "https://api.near.ai"
 
+app = FastAPI()
 
-def handler(event, context):
+
+class RunParams(BaseModel):
+    agents: str
+    auth: Union[str, dict]
+    environment_id: Optional[str] = None
+    new_message: Optional[str] = None
+    thread_id: Optional[str] = None
+    run_id: Optional[str] = None
+    params: Optional[dict] = {}
+
+
+@app.post("/")
+def new_handler(body: RunParams):
+    return StreamingResponse(handler(body, None), media_type="text/event-stream")
+
+
+async def handler(event, context):
     start_time = time.perf_counter()
-    required_params = ["agents", "auth"]
-    agents = event.get("agents")
-    auth = event.get("auth")
-    if not agents or not auth:
-        missing = list(filter(lambda x: event.get(x) is (None or ""), required_params))
-        return f"Missing required parameters: {missing}"
+    agents = event.agents
+    auth = event.auth
 
     auth_object = auth if isinstance(auth, AuthData) else AuthData(**auth)
     start_time_val = time.perf_counter()
@@ -52,12 +70,11 @@ def handler(event, context):
         stop_time_val = time.perf_counter()
         write_metric("VerifySignatureDuration", stop_time_val - start_time_val)
 
-    environment_id = event.get("environment_id")
-    new_message = event.get("new_message")
-    thread_id = event.get("thread_id")
-    run_id = event.get("run_id")
+    new_message = event.new_message
+    thread_id = event.thread_id
+    run_id = event.run_id
 
-    params = event.get("params", {})
+    params = event.params
 
     new_environment_registry_id = run_with_environment(
         agents,
@@ -67,8 +84,6 @@ def handler(event, context):
         new_message,
         params,
     )
-    if not new_environment_registry_id:
-        return f"Run not recorded. Ran {agents} agent(s) with generated near client and environment {environment_id}"
 
     call("rm -rf /tmp/..?* /tmp/.[!.]* /tmp/*", shell=True)
     stop_time = time.perf_counter()
@@ -227,3 +242,7 @@ def get_local_agent_files(agent_identifier: str):
                 print(f"Error {path}: {e}")
 
     return results
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", "8080")))

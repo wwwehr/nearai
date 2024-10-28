@@ -1,17 +1,20 @@
-FROM public.ecr.aws/lambda/python:3.12
+FROM public.ecr.aws/docker/library/python:3.12.0-slim-bullseye
+# enable streaming responses
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.4 /lambda-adapter /opt/extensions/lambda-adapter
 
 # pass with --build-arg FRAMEWORK=-langgraph
 ARG FRAMEWORK=""
 
-COPY aws_runner/frameworks/requirements${FRAMEWORK}.txt ${LAMBDA_TASK_ROOT}
+WORKDIR /aws_runner
+COPY aws_runner/frameworks/requirements${FRAMEWORK}.txt /aws_runner
 
 RUN pip install -r requirements${FRAMEWORK}.txt
 
-RUN mkdir ${LAMBDA_TASK_ROOT}/aws_runner
-RUN mkdir ${LAMBDA_TASK_ROOT}/nearai
-COPY aws_runner/service.py aws_runner/partial_near_client.py ${LAMBDA_TASK_ROOT}/aws_runner/
-COPY nearai/agents ${LAMBDA_TASK_ROOT}/nearai/agents
-COPY openapi_client ${LAMBDA_TASK_ROOT}/openapi_client
-COPY shared ${LAMBDA_TASK_ROOT}/shared
+RUN mkdir /aws_runner/nearai
+COPY aws_runner/service.py /aws_runner/
+COPY aws_runner/partial_near_client.py /aws_runner/aws_runner/
+COPY nearai/agents /aws_runner/nearai/agents
+COPY openapi_client /aws_runner/openapi_client
+COPY shared /aws_runner/shared
 
-CMD [ "aws_runner/service.handler" ]
+CMD ["python", "/aws_runner/service.py" ]

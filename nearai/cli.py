@@ -1,6 +1,7 @@
 import importlib.metadata
 import json
 import os
+import re
 import runpy
 import sys
 from collections import OrderedDict
@@ -666,8 +667,8 @@ class AgentCli:
                 return
 
             # confirm pattern is ok
-            IDENTIFIER_PATTERN = re.compile(r"^[a-zA-Z0-9_\-.]+$")
-            if IDENTIFIER_PATTERN.match(identifier) is None:
+            identifier_pattern = re.compile(r"^[a-zA-Z0-9_\-.]+$")
+            if identifier_pattern.match(new_name) is None:
                 print("Invalid Name, please choose something different")
                 return
 
@@ -681,10 +682,10 @@ class AgentCli:
         metadata_path = dest_path / "metadata.json"
         with open(metadata_path, 'r') as file:
             metadata = json.load(file)
-            
+
         metadata['name'] = new_name
         metadata['version'] = "0.0.1"
-        
+
         with open(metadata_path, 'w') as file:
             json.dump(metadata, file, indent=2)
 

@@ -15,6 +15,7 @@ from openapi_client import EntryLocation, EntryMetadataInput
 from openapi_client.api.benchmark_api import BenchmarkApi
 from openapi_client.api.default_api import DefaultApi
 from openapi_client.api.evaluation_api import EvaluationApi
+from hub.api.v1.entry_location import valid_identifier
 from shared.client_config import (
     DEFAULT_MODEL,
     DEFAULT_MODEL_MAX_TOKENS,
@@ -664,6 +665,9 @@ class AgentCli:
             if not new_name:
                 print("Agent name cannot be empty.")
                 return
+            else if not valid_identifier(new_name)
+                print("Invalid Name, please choose something different")
+                return
 
         # Set the destination path
         dest_path = get_registry_folder() / namespace / new_name / "0.0.1"
@@ -671,7 +675,19 @@ class AgentCli:
         # Copy the agent files
         shutil.copytree(source_path, dest_path)
 
+        # Update metadata.json
+        metadata_path = dest_path / "metadata.json"
+        with open(metadata_path, 'r') as file:
+            metadata = json.load(file)
+            
+        metadata['name'] = new_name
+        metadata['version'] = "0.0.1"
+        
+        with open(metadata_path, 'w') as file:
+            json.dump(metadata, file, indent=2)
+
         print(f"\nForked agent '{agent_location}' to '{dest_path}'")
+        print(f"Agent '{new_name}' created at '{dest_path}' with updated metadata.")
         print("\nUseful commands:")
         print(f"  > nearai agent interactive {new_name} --local")
         print(f"  > nearai registry upload {dest_path}")

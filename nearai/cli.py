@@ -614,13 +614,16 @@ class AgentCli:
         # Prompt for agent name if not provided
         if not name:
             name = input("Name: ").strip()
-            if not name:
+            while not name:
                 print("Agent name cannot be empty.")
+                name = input("Name: ").strip()
                 return
 
         # Prompt for description if not provided
-        if not description:
+        while not description or not isinstance(description, str):
+            print("Description are needed for agent matching andcannot be empty.")
             description = input("Description: ").strip()
+
 
         # Set the agent path
         agent_path = get_registry_folder() / namespace / name / "0.0.1"

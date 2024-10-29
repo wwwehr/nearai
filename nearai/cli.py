@@ -26,7 +26,6 @@ from shared.client_config import (
 from shared.naming import NamespacedName, create_registry_name
 from shared.provider_models import ProviderModels, get_provider_namespaced_model
 from tabulate import tabulate
-
 from nearai.agents.local_runner import LocalRunner
 from nearai.config import (
     CONFIG,

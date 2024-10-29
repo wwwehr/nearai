@@ -617,11 +617,10 @@ class AgentCli:
             while not name or not isinstance(name, str):
                 print("Agent name cannot be empty.")
                 name = input("Name: ").strip()
-                return
 
         # Prompt for description if not provided
         while not description or not isinstance(description, str):
-            print("Description are needed for agent matching andcannot be empty.")
+            print("A description is needed for agent matching and cannot be empty.")
             description = input("Description: ").strip()
 
 

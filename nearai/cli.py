@@ -612,9 +612,9 @@ class AgentCli:
     def _create_new_agent(self, namespace: str, name: Optional[str], description: Optional[str]) -> None:
         """Create a new agent from scratch."""
         # Prompt for agent name if not provided
-        if not name:
+        if not name or not isinstance(name, str):
             name = input("Name: ").strip()
-            while not name:
+            while not name or not isinstance(name, str):
                 print("Agent name cannot be empty.")
                 name = input("Name: ").strip()
                 return

@@ -8,12 +8,12 @@ docs/agent_quickstart.sh
 ## QUICKSTART: build and run a python agent on NearAI
 1. [Install](https://github.com/nearai/nearai/#setup) the NearAI CLI.
 
-2. Create a new folder for your agent; 
+2. Create a new folder for your agent:
 
     we recommend placing it inside your local registry `mkdir -p ~/.nearai/registry/example_agent`. 
 
 
-3. Create files for your agent
+3. Create files for your agent:
 
 The fastest way to create both your metadata and agent .py file would be the create or clone functions
 

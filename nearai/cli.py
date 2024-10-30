@@ -98,7 +98,6 @@ class RegistryCli:
 
             json.dump(metadata, f, indent=2)
 
-
     def list(
         self,
         namespace: str = "",
@@ -623,7 +622,6 @@ class AgentCli:
             print("A description is needed for agent matching and cannot be empty.")
             description = input("Description: ").strip()
 
-
         # Set the agent path
         agent_path = get_registry_folder() / namespace / name / "0.0.1"
         agent_path.mkdir(parents=True, exist_ok=True)
@@ -713,13 +711,13 @@ class AgentCli:
 
         # Update metadata.json
         metadata_path = dest_path / "metadata.json"
-        with open(metadata_path, 'r') as file:
+        with open(metadata_path, "r") as file:
             metadata = json.load(file)
 
-        metadata['name'] = new_name
-        metadata['version'] = "0.0.1"
+        metadata["name"] = new_name
+        metadata["version"] = "0.0.1"
 
-        with open(metadata_path, 'w') as file:
+        with open(metadata_path, "w") as file:
             json.dump(metadata, file, indent=2)
 
         print(f"\nForked agent '{agent_location}' to '{dest_path}'")
@@ -727,6 +725,8 @@ class AgentCli:
         print("\nUseful commands:")
         print(f"  > nearai agent interactive {new_name} --local")
         print(f"  > nearai registry upload {dest_path}")
+
+
 class VllmCli:
     def run(self, *args: Any, **kwargs: Any) -> None:  # noqa: D102
         original_argv = sys.argv.copy()

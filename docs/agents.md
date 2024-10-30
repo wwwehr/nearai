@@ -12,15 +12,18 @@ docs/agent_quickstart.sh
 
     we recommend placing it inside your local registry `mkdir -p ~/.nearai/registry/example_agent`. 
 
-3. Create a metadata.json file for your agent
 
-   `nearai registry metadata_template ~/.nearai/registry/example_agent agent "Example agent"` and edit it.
+3. Create files for your agent
 
-4. Create an `agent.py` file in that folder.
-     * Write your agent, in agent.py, using the [environment API](#the-environment-api) described below.
-     * Or paste in the [example agent.py](#example-agentpy) below.
+The fastest way to create both your metadata and agent .py file would be the create or clone functions
 
-5. Run your agent locally using the cli and passing it a folder to write output to. 
+* `nearai agent create --name <agent_name> --description <description>` allows you to create clean agent
+* `nearai agent create --fork <namespace/agent_name/version> [--name <new_agent_name>]` forks an existing codebase 
+* `nearai registry list` can tell you what agents are forkable.
+* otherwise you can use `nearai registry metadata_template ~/.nearai/registry/example_agent agent "Example agent"` and edit it, as well as a created agent.py, [example of which is below](#example-agentpy) using the [environment API](#the-environment-api).
+
+
+4. Run your agent locally using the cli and passing it a folder to write output to. 
 ```shell
 nearai agent interactive example_agent /tmp/example_agent_run_1 --local
 ```

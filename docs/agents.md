@@ -6,24 +6,24 @@ docs/agent_quickstart.sh
 ```
 
 ## QUICKSTART: build and run a python agent on NearAI
-1. [Install](https://github.com/nearai/nearai/#setup) the NearAI CLI.
+#### 1. [Install](https://github.com/nearai/nearai/#setup) the NearAI CLI.
 
-2. Create a new folder for your agent:
+#### 2. Create a new folder for your agent:
 
     we recommend placing it inside your local registry `mkdir -p ~/.nearai/registry/example_agent`. 
 
 
-3. Create files for your agent:
+#### 3. Create files for your agent:
 
-The fastest way to create both your metadata and agent .py file would be the create or clone functions
+  The fastest way to create both your metadata and agent .py file would be the create or clone functions
 
-* `nearai agent create --name <agent_name> --description <description>` allows you to create clean agent
-* `nearai agent create --fork <namespace/agent_name/version> [--name <new_agent_name>]` forks an existing codebase 
-* `nearai registry list` can tell you what agents are forkable.
-* otherwise you can use `nearai registry metadata_template ~/.nearai/registry/example_agent agent "Example agent"` and edit it, as well as a created agent.py, [example of which is below](#example-agentpy) using the [environment API](#the-environment-api).
+  * `nearai agent create --name <agent_name> --description <description>` allows you to create clean agent
+  * `nearai agent create --fork <namespace/agent_name/version> [--name <new_agent_name>]` forks an existing codebase 
+  * `nearai registry list` can tell you what agents are forkable.
+  * otherwise you can use `nearai registry metadata_template ~/.nearai/registry/example_agent agent "Example agent"` and edit it, as well as a created agent.py, [example of which is below](#example-agentpy) using the [environment API](#the-environment-api).
 
 
-4. Run your agent locally using the cli and passing it a folder to write output to. 
+#### 4. Run your agent locally using the cli and passing it a folder to write output to. 
 ```shell
 nearai agent interactive example_agent /tmp/example_agent_run_1 --local
 ```
@@ -106,9 +106,12 @@ nearai agent task flatirons.near/xela-agent/5 "Build a command line chess engine
 
 ### Running an agent through AI Hub
 To run an agent in the [AI Hub](https://app.near.ai/agents):
+
 1. Select the desired agent.
-1. Navigate to the **Run** tab.
-1. Interact with the agent using the chat interface
+
+2. Navigate to the **Run** tab.
+
+3. Interact with the agent using the chat interface
 
 Note:
 . Agent chat through the AI Hub does not yet stream back responses, it takes a few seconds to respond.

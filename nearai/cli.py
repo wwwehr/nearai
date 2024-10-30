@@ -651,15 +651,20 @@ class AgentCli:
             json.dump(metadata, f, indent=2)
 
         # Create a default agent.py
-        agent_py_content = """# agent.py
+        agent_py_content = """
+from nearai.agents.environment import Environment
 
-    def run(env):
-        # Your agent code here
-        # Example:
-        # prompt = {"role": "system", "content": "You are a helpful assistant."}
-        # result = env.completion([prompt] + env.list_messages())
-        # env.add_message("agent", result)
-        pass
+
+def run(env: Environment):
+    env.add_message("assistant", "Hello, world!")
+    # Your agent code here
+    # Example:
+    # prompt = {"role": "system", "content": "You are a helpful assistant."}
+    # result = env.completion([prompt] + env.list_messages())
+    # env.add_message("assistant", result)
+
+
+run(env)
     """
         agent_py_path = agent_path / "agent.py"
         with open(agent_py_path, "w") as f:

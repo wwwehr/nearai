@@ -10,7 +10,7 @@ docs/agent_quickstart.sh
 
 #### 2. Create a new folder for your agent:
 
-    we recommend placing it inside your local registry `mkdir -p ~/.nearai/registry/example_agent`. 
+we recommend placing it inside your local registry `mkdir -p ~/.nearai/registry/example_agent`. 
 
 
 #### 3. Create files for your agent:

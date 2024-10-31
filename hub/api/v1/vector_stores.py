@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 s3_client = boto3.client("s3")
 
 
-@vector_stores_router.post("/vector_stores", response_model=VectorStore)
+@vector_stores_router.post("/vector_stores")
 async def create_vector_store(
     request: CreateVectorStoreRequest, background_tasks: BackgroundTasks, auth: AuthToken = Depends(revokable_auth)
 ):
@@ -382,7 +382,7 @@ async def query_vector_store(
         raise HTTPException(status_code=500, detail="Failed to query vector store") from None
 
 
-@vector_stores_router.post("/vector_stores/from_source", response_model=VectorStore)
+@vector_stores_router.post("/vector_stores/from_source")
 async def create_vector_store_from_source(
     request: CreateVectorStoreFromSourceRequest,
     background_tasks: BackgroundTasks,

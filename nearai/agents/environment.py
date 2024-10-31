@@ -113,6 +113,27 @@ class Environment(object):
         reg.register_tool(self.list_files)
         reg.register_tool(self.query_vector_store)
 
+    def add_reply(
+        self,
+        message: str,
+        attachments: Optional[Iterable[Attachment]] = None,
+        **kwargs: Any,
+    ):
+        """Assistant adds a message to the environment."""
+        # NOTE: message from `user` are not stored in the memory
+
+        return self._hub_client.beta.threads.messages.create(
+            thread_id=self._thread_id,
+            role="assistant",
+            content=message,
+            extra_body={
+                "assistant_id": self._agents[0].identifier,
+                "run_id": self._run_id,
+            },
+            metadata=kwargs,
+            attachments=attachments,
+        )
+
     def add_message(
         self,
         role: str,
@@ -120,12 +141,9 @@ class Environment(object):
         attachments: Optional[Iterable[Attachment]] = None,
         **kwargs: Any,
     ):
-        """Assistant adds a message to the environment."""
-        if role not in [
-            "user",
-            "assistant",
-        ]:  # backwards compatibility with agents adding messages has `system` and others.
-            role = "assistant"
+        """Deprecated. Please use `add_reply` instead. Assistant adds a message to the environment."""
+        # Prevent agent to save messages on behalf of `user` to avoid adding false memory
+        role = "assistant"
 
         return self._hub_client.beta.threads.messages.create(
             thread_id=self._thread_id,
@@ -245,7 +263,11 @@ class Environment(object):
             callback_url,
         )
 
-    def list_files(self, path: Optional[str] = None, order: Literal["asc", "desc"] = "asc") -> List[FileObject]:
+    def list_files(self, path: str, order: Literal["asc", "desc"] = "asc") -> List[str]:
+        """Lists files in the environment."""
+        return os.listdir(os.path.join(self.get_primary_agent_temp_dir(), path))
+
+    def list_files_from_thread(self, order: Literal["asc", "desc"] = "asc") -> List[FileObject]:
         """Lists files in the thread."""
         messages = self._list_messages(order=order)
         # Extract attachments from messages
@@ -255,27 +277,34 @@ class Environment(object):
         files = [self._hub_client.files.retrieve(f) for f in file_ids if f]
         return files
 
-    def get_path(self) -> str:
-        """Returns the path of the current directory."""
-        return self._path
+    def get_system_path(self) -> Path:
+        """Returns the system path where chat.txt & system_log are stored."""
+        return Path(self._path)
 
-    def read_file(self, filename: str, write_to_disk: bool = True):
-        """Reads a file from the thread."""
-        files = self.list_files("")
+    def get_agent_temp_path(self) -> Path:
+        """Returns temp dir for primary agent where execution happens."""
+        return self.get_primary_agent_temp_dir()
 
-        for f in files:
+    def read_file(self, filename: str):
+        """Reads a file from the environment or thread."""
+        # First try to read from local filesystem
+        local_path = os.path.join(self.get_primary_agent_temp_dir(), filename)
+        if os.path.exists(local_path):
+            with open(local_path, "r") as local_file:
+                file_content = local_file.read()
+
+        thread_files = self.list_files_from_thread(order="desc")
+
+        # Then try to read from thread, starting from the most recent
+        for f in thread_files:
             if f.filename == filename:
                 file_content = self.read_file_by_id(f.id)
                 break
+
         if not file_content:
             return None
 
-        if not write_to_disk:
-            return file_content
-
         # Write the file content to the local filesystem
-        local_path = os.path.join(self._path, filename)
-
         with open(local_path, "w") as local_file:
             local_file.write(file_content)
 
@@ -306,6 +335,7 @@ class Environment(object):
         if write_to_disk:
             # Write locally
             path = Path(self._path) / filename
+            path = Path(self.get_primary_agent_temp_dir()) / filename
             path.parent.mkdir(parents=True, exist_ok=True)
             with open(path, "w", encoding=encoding) as f:
                 f.write(content)

@@ -181,7 +181,7 @@ async def get_vector_store(vector_store_id: str, auth: AuthToken = Depends(revok
 
 
 @vector_stores_router.patch("/vector_stores/{vector_store_id}")
-async def update_vector_store():
+async def update_vector_store(vector_store_id: str, auth: AuthToken = Depends(revokable_auth)):
     """Update a vector store. (Not implemented).
 
     This endpoint is a placeholder for future implementation.

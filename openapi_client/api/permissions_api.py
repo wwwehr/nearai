@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from typing_extensions import Annotated
 
 from pydantic import StrictStr
-from typing import Any
+from typing import Any, Optional
 
 from openapi_client.api_client import ApiClient, RequestSerialized
 from openapi_client.api_response import ApiResponse
@@ -40,8 +40,8 @@ class PermissionsApi:
     @validate_call
     def grant_permission_v1_permissions_grant_permission_post(
         self,
-        account_id: StrictStr,
-        permission: StrictStr,
+        account_id: Optional[StrictStr] = None,
+        permission: Optional[StrictStr] = None,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -58,9 +58,9 @@ class PermissionsApi:
         """Grant Permission
 
 
-        :param account_id: (required)
+        :param account_id:
         :type account_id: str
-        :param permission: (required)
+        :param permission:
         :type permission: str
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
@@ -111,8 +111,8 @@ class PermissionsApi:
     @validate_call
     def grant_permission_v1_permissions_grant_permission_post_with_http_info(
         self,
-        account_id: StrictStr,
-        permission: StrictStr,
+        account_id: Optional[StrictStr] = None,
+        permission: Optional[StrictStr] = None,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -129,9 +129,9 @@ class PermissionsApi:
         """Grant Permission
 
 
-        :param account_id: (required)
+        :param account_id:
         :type account_id: str
-        :param permission: (required)
+        :param permission:
         :type permission: str
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
@@ -182,8 +182,8 @@ class PermissionsApi:
     @validate_call
     def grant_permission_v1_permissions_grant_permission_post_without_preload_content(
         self,
-        account_id: StrictStr,
-        permission: StrictStr,
+        account_id: Optional[StrictStr] = None,
+        permission: Optional[StrictStr] = None,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -200,9 +200,9 @@ class PermissionsApi:
         """Grant Permission
 
 
-        :param account_id: (required)
+        :param account_id:
         :type account_id: str
-        :param permission: (required)
+        :param permission:
         :type permission: str
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
@@ -318,8 +318,8 @@ class PermissionsApi:
     @validate_call
     def revoke_permission_v1_permissions_revoke_permission_post(
         self,
-        account_id: StrictStr,
-        permission: StrictStr,
+        account_id: Optional[StrictStr] = None,
+        permission: Optional[StrictStr] = None,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -336,9 +336,9 @@ class PermissionsApi:
         """Revoke Permission
 
 
-        :param account_id: (required)
+        :param account_id:
         :type account_id: str
-        :param permission: (required)
+        :param permission:
         :type permission: str
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
@@ -389,8 +389,8 @@ class PermissionsApi:
     @validate_call
     def revoke_permission_v1_permissions_revoke_permission_post_with_http_info(
         self,
-        account_id: StrictStr,
-        permission: StrictStr,
+        account_id: Optional[StrictStr] = None,
+        permission: Optional[StrictStr] = None,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -407,9 +407,9 @@ class PermissionsApi:
         """Revoke Permission
 
 
-        :param account_id: (required)
+        :param account_id:
         :type account_id: str
-        :param permission: (required)
+        :param permission:
         :type permission: str
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
@@ -460,8 +460,8 @@ class PermissionsApi:
     @validate_call
     def revoke_permission_v1_permissions_revoke_permission_post_without_preload_content(
         self,
-        account_id: StrictStr,
-        permission: StrictStr,
+        account_id: Optional[StrictStr] = None,
+        permission: Optional[StrictStr] = None,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -478,9 +478,9 @@ class PermissionsApi:
         """Revoke Permission
 
 
-        :param account_id: (required)
+        :param account_id:
         :type account_id: str
-        :param permission: (required)
+        :param permission:
         :type permission: str
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request

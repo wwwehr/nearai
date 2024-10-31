@@ -3,9 +3,9 @@ from typing import List
 
 from openapi_client import (
     BodyDownloadEnvironmentV1DownloadEnvironmentPost,
-    BodyDownloadFileAsyncV1RegistryDownloadFilePost,
-    BodyDownloadMetadataAsyncV1RegistryDownloadMetadataPost,
-    BodyListFilesAsyncV1RegistryListFilesPost,
+    BodyDownloadFileV1RegistryDownloadFilePost,
+    BodyDownloadMetadataV1RegistryDownloadMetadataPost,
+    BodyListFilesV1RegistryListFilesPost,
     BodyUploadMetadataV1RegistryUploadMetadataPost,
 )
 from openapi_client.api.agents_assistants_api import AgentsAssistantsApi
@@ -46,8 +46,8 @@ class PartialNearClient:
     def get_file_from_registry(self, entry_location: dict, path: str):
         """Fetches a file from NearAI registry."""
         api_instance = RegistryApi(self._client)
-        result = api_instance.download_file_async_v1_registry_download_file_post(
-            BodyDownloadFileAsyncV1RegistryDownloadFilePost.from_dict(
+        result = api_instance.download_file_v1_registry_download_file_post(
+            BodyDownloadFileV1RegistryDownloadFilePost.from_dict(
                 dict(
                     entry_location=entry_location,
                     path=path,
@@ -62,8 +62,8 @@ class PartialNearClient:
         Return the relative paths to all files with respect to the root of the entry.
         """
         api_instance = RegistryApi(self._client)
-        result = api_instance.list_files_async_v1_registry_list_files_post(
-            BodyListFilesAsyncV1RegistryListFilesPost.from_dict(dict(entry_location=entry_location))
+        result = api_instance.list_files_v1_registry_list_files_post(
+            BodyListFilesV1RegistryListFilesPost.from_dict(dict(entry_location=entry_location))
         )
         return [file.filename for file in result]
 
@@ -75,8 +75,8 @@ class PartialNearClient:
         results = []
 
         for path in files:
-            result = api_instance.download_file_async_v1_registry_download_file_post(
-                BodyDownloadFileAsyncV1RegistryDownloadFilePost.from_dict(
+            result = api_instance.download_file_v1_registry_download_file_post(
+                BodyDownloadFileV1RegistryDownloadFilePost.from_dict(
                     dict(
                         entry_location=entry_location,
                         path=path,
@@ -90,8 +90,8 @@ class PartialNearClient:
         """Fetches metadata for an agent from NearAI registry."""
         api_instance = RegistryApi(self._client)
         entry_location = self.parse_location(identifier)
-        result = api_instance.download_metadata_async_v1_registry_download_metadata_post(
-            BodyDownloadMetadataAsyncV1RegistryDownloadMetadataPost.from_dict(dict(entry_location=entry_location))
+        result = api_instance.download_metadata_v1_registry_download_metadata_post(
+            BodyDownloadMetadataV1RegistryDownloadMetadataPost.from_dict(dict(entry_location=entry_location))
         )
         return result.to_dict()
 

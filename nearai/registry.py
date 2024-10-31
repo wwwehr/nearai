@@ -5,9 +5,9 @@ from typing import Any, Dict, List, Optional, Union
 
 from openapi_client import EntryInformation, EntryLocation, EntryMetadata, EntryMetadataInput
 from openapi_client.api.registry_api import (
-    BodyDownloadFileAsyncV1RegistryDownloadFilePost,
-    BodyDownloadMetadataAsyncV1RegistryDownloadMetadataPost,
-    BodyListFilesAsyncV1RegistryListFilesPost,
+    BodyDownloadFileV1RegistryDownloadFilePost,
+    BodyDownloadMetadataV1RegistryDownloadMetadataPost,
+    BodyListFilesV1RegistryListFilesPost,
     BodyUploadMetadataV1RegistryUploadMetadataPost,
     RegistryApi,
 )
@@ -71,8 +71,8 @@ class Registry:
     def info(self, entry_location: EntryLocation) -> Optional[EntryMetadata]:
         """Get metadata of a entry in the registry."""
         try:
-            return self.api.download_metadata_async_v1_registry_download_metadata_post(
-                BodyDownloadMetadataAsyncV1RegistryDownloadMetadataPost.from_dict(dict(entry_location=entry_location))
+            return self.api.download_metadata_v1_registry_download_metadata_post(
+                BodyDownloadMetadataV1RegistryDownloadMetadataPost.from_dict(dict(entry_location=entry_location))
             )
         except NotFoundException:
             return None
@@ -99,8 +99,8 @@ class Registry:
 
     def download_file(self, entry_location: EntryLocation, path: Path, local_path: Path):
         """Download a file from the registry."""
-        result = self.api.download_file_async_v1_registry_download_file_post_with_http_info(
-            BodyDownloadFileAsyncV1RegistryDownloadFilePost.from_dict(
+        result = self.api.download_file_v1_registry_download_file_post_with_http_info(
+            BodyDownloadFileV1RegistryDownloadFilePost.from_dict(
                 dict(
                     entry_location=entry_location,
                     path=str(path),
@@ -260,8 +260,8 @@ class Registry:
 
         Return the relative paths to all files with respect to the root of the entry.
         """
-        result = self.api.list_files_async_v1_registry_list_files_post(
-            BodyListFilesAsyncV1RegistryListFilesPost.from_dict(dict(entry_location=entry_location))
+        result = self.api.list_files_v1_registry_list_files_post(
+            BodyListFilesV1RegistryListFilesPost.from_dict(dict(entry_location=entry_location))
         )
         return [file.filename for file in result]
 
@@ -277,7 +277,7 @@ class Registry:
         starred_by: str = "",
     ) -> List[EntryInformation]:
         """List and filter entries in the registry."""
-        return self.api.list_entries_async_v1_registry_list_entries_post(
+        return self.api.list_entries_v1_registry_list_entries_post(
             namespace=namespace,
             category=category,
             tags=tags,

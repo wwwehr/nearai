@@ -18,9 +18,9 @@ from typing_extensions import Annotated
 
 from pydantic import StrictBool, StrictBytes, StrictInt, StrictStr
 from typing import Any, List, Optional, Union
-from openapi_client.models.body_download_file_async_v1_registry_download_file_post import BodyDownloadFileAsyncV1RegistryDownloadFilePost
-from openapi_client.models.body_download_metadata_async_v1_registry_download_metadata_post import BodyDownloadMetadataAsyncV1RegistryDownloadMetadataPost
-from openapi_client.models.body_list_files_async_v1_registry_list_files_post import BodyListFilesAsyncV1RegistryListFilesPost
+from openapi_client.models.body_download_file_v1_registry_download_file_post import BodyDownloadFileV1RegistryDownloadFilePost
+from openapi_client.models.body_download_metadata_v1_registry_download_metadata_post import BodyDownloadMetadataV1RegistryDownloadMetadataPost
+from openapi_client.models.body_list_files_v1_registry_list_files_post import BodyListFilesV1RegistryListFilesPost
 from openapi_client.models.body_upload_metadata_v1_registry_upload_metadata_post import BodyUploadMetadataV1RegistryUploadMetadataPost
 from openapi_client.models.entry_information import EntryInformation
 from openapi_client.models.entry_metadata import EntryMetadata
@@ -45,9 +45,9 @@ class RegistryApi:
 
 
     @validate_call
-    def download_file_async_v1_registry_download_file_post(
+    def download_file_v1_registry_download_file_post(
         self,
-        body_download_file_async_v1_registry_download_file_post: BodyDownloadFileAsyncV1RegistryDownloadFilePost,
+        body_download_file_v1_registry_download_file_post: BodyDownloadFileV1RegistryDownloadFilePost,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -61,11 +61,11 @@ class RegistryApi:
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
     ) -> object:
-        """Download File Async
+        """Download File
 
 
-        :param body_download_file_async_v1_registry_download_file_post: (required)
-        :type body_download_file_async_v1_registry_download_file_post: BodyDownloadFileAsyncV1RegistryDownloadFilePost
+        :param body_download_file_v1_registry_download_file_post: (required)
+        :type body_download_file_v1_registry_download_file_post: BodyDownloadFileV1RegistryDownloadFilePost
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -88,8 +88,8 @@ class RegistryApi:
         :return: Returns the result object.
         """ # noqa: E501
 
-        _param = self._download_file_async_v1_registry_download_file_post_serialize(
-            body_download_file_async_v1_registry_download_file_post=body_download_file_async_v1_registry_download_file_post,
+        _param = self._download_file_v1_registry_download_file_post_serialize(
+            body_download_file_v1_registry_download_file_post=body_download_file_v1_registry_download_file_post,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -112,9 +112,9 @@ class RegistryApi:
 
 
     @validate_call
-    def download_file_async_v1_registry_download_file_post_with_http_info(
+    def download_file_v1_registry_download_file_post_with_http_info(
         self,
-        body_download_file_async_v1_registry_download_file_post: BodyDownloadFileAsyncV1RegistryDownloadFilePost,
+        body_download_file_v1_registry_download_file_post: BodyDownloadFileV1RegistryDownloadFilePost,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -128,11 +128,11 @@ class RegistryApi:
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
     ) -> ApiResponse[object]:
-        """Download File Async
+        """Download File
 
 
-        :param body_download_file_async_v1_registry_download_file_post: (required)
-        :type body_download_file_async_v1_registry_download_file_post: BodyDownloadFileAsyncV1RegistryDownloadFilePost
+        :param body_download_file_v1_registry_download_file_post: (required)
+        :type body_download_file_v1_registry_download_file_post: BodyDownloadFileV1RegistryDownloadFilePost
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -155,8 +155,8 @@ class RegistryApi:
         :return: Returns the result object.
         """ # noqa: E501
 
-        _param = self._download_file_async_v1_registry_download_file_post_serialize(
-            body_download_file_async_v1_registry_download_file_post=body_download_file_async_v1_registry_download_file_post,
+        _param = self._download_file_v1_registry_download_file_post_serialize(
+            body_download_file_v1_registry_download_file_post=body_download_file_v1_registry_download_file_post,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -179,9 +179,9 @@ class RegistryApi:
 
 
     @validate_call
-    def download_file_async_v1_registry_download_file_post_without_preload_content(
+    def download_file_v1_registry_download_file_post_without_preload_content(
         self,
-        body_download_file_async_v1_registry_download_file_post: BodyDownloadFileAsyncV1RegistryDownloadFilePost,
+        body_download_file_v1_registry_download_file_post: BodyDownloadFileV1RegistryDownloadFilePost,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -195,11 +195,11 @@ class RegistryApi:
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
     ) -> RESTResponseType:
-        """Download File Async
+        """Download File
 
 
-        :param body_download_file_async_v1_registry_download_file_post: (required)
-        :type body_download_file_async_v1_registry_download_file_post: BodyDownloadFileAsyncV1RegistryDownloadFilePost
+        :param body_download_file_v1_registry_download_file_post: (required)
+        :type body_download_file_v1_registry_download_file_post: BodyDownloadFileV1RegistryDownloadFilePost
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -222,8 +222,8 @@ class RegistryApi:
         :return: Returns the result object.
         """ # noqa: E501
 
-        _param = self._download_file_async_v1_registry_download_file_post_serialize(
-            body_download_file_async_v1_registry_download_file_post=body_download_file_async_v1_registry_download_file_post,
+        _param = self._download_file_v1_registry_download_file_post_serialize(
+            body_download_file_v1_registry_download_file_post=body_download_file_v1_registry_download_file_post,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -241,9 +241,9 @@ class RegistryApi:
         return response_data.response
 
 
-    def _download_file_async_v1_registry_download_file_post_serialize(
+    def _download_file_v1_registry_download_file_post_serialize(
         self,
-        body_download_file_async_v1_registry_download_file_post,
+        body_download_file_v1_registry_download_file_post,
         _request_auth,
         _content_type,
         _headers,
@@ -267,8 +267,8 @@ class RegistryApi:
         # process the header parameters
         # process the form parameters
         # process the body parameter
-        if body_download_file_async_v1_registry_download_file_post is not None:
-            _body_params = body_download_file_async_v1_registry_download_file_post
+        if body_download_file_v1_registry_download_file_post is not None:
+            _body_params = body_download_file_v1_registry_download_file_post
 
 
         # set the HTTP header `Accept`
@@ -316,9 +316,9 @@ class RegistryApi:
 
 
     @validate_call
-    def download_metadata_async_v1_registry_download_metadata_post(
+    def download_metadata_v1_registry_download_metadata_post(
         self,
-        body_download_metadata_async_v1_registry_download_metadata_post: BodyDownloadMetadataAsyncV1RegistryDownloadMetadataPost,
+        body_download_metadata_v1_registry_download_metadata_post: BodyDownloadMetadataV1RegistryDownloadMetadataPost,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -332,11 +332,11 @@ class RegistryApi:
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
     ) -> EntryMetadata:
-        """Download Metadata Async
+        """Download Metadata
 
 
-        :param body_download_metadata_async_v1_registry_download_metadata_post: (required)
-        :type body_download_metadata_async_v1_registry_download_metadata_post: BodyDownloadMetadataAsyncV1RegistryDownloadMetadataPost
+        :param body_download_metadata_v1_registry_download_metadata_post: (required)
+        :type body_download_metadata_v1_registry_download_metadata_post: BodyDownloadMetadataV1RegistryDownloadMetadataPost
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -359,8 +359,8 @@ class RegistryApi:
         :return: Returns the result object.
         """ # noqa: E501
 
-        _param = self._download_metadata_async_v1_registry_download_metadata_post_serialize(
-            body_download_metadata_async_v1_registry_download_metadata_post=body_download_metadata_async_v1_registry_download_metadata_post,
+        _param = self._download_metadata_v1_registry_download_metadata_post_serialize(
+            body_download_metadata_v1_registry_download_metadata_post=body_download_metadata_v1_registry_download_metadata_post,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -383,9 +383,9 @@ class RegistryApi:
 
 
     @validate_call
-    def download_metadata_async_v1_registry_download_metadata_post_with_http_info(
+    def download_metadata_v1_registry_download_metadata_post_with_http_info(
         self,
-        body_download_metadata_async_v1_registry_download_metadata_post: BodyDownloadMetadataAsyncV1RegistryDownloadMetadataPost,
+        body_download_metadata_v1_registry_download_metadata_post: BodyDownloadMetadataV1RegistryDownloadMetadataPost,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -399,11 +399,11 @@ class RegistryApi:
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
     ) -> ApiResponse[EntryMetadata]:
-        """Download Metadata Async
+        """Download Metadata
 
 
-        :param body_download_metadata_async_v1_registry_download_metadata_post: (required)
-        :type body_download_metadata_async_v1_registry_download_metadata_post: BodyDownloadMetadataAsyncV1RegistryDownloadMetadataPost
+        :param body_download_metadata_v1_registry_download_metadata_post: (required)
+        :type body_download_metadata_v1_registry_download_metadata_post: BodyDownloadMetadataV1RegistryDownloadMetadataPost
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -426,8 +426,8 @@ class RegistryApi:
         :return: Returns the result object.
         """ # noqa: E501
 
-        _param = self._download_metadata_async_v1_registry_download_metadata_post_serialize(
-            body_download_metadata_async_v1_registry_download_metadata_post=body_download_metadata_async_v1_registry_download_metadata_post,
+        _param = self._download_metadata_v1_registry_download_metadata_post_serialize(
+            body_download_metadata_v1_registry_download_metadata_post=body_download_metadata_v1_registry_download_metadata_post,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -450,9 +450,9 @@ class RegistryApi:
 
 
     @validate_call
-    def download_metadata_async_v1_registry_download_metadata_post_without_preload_content(
+    def download_metadata_v1_registry_download_metadata_post_without_preload_content(
         self,
-        body_download_metadata_async_v1_registry_download_metadata_post: BodyDownloadMetadataAsyncV1RegistryDownloadMetadataPost,
+        body_download_metadata_v1_registry_download_metadata_post: BodyDownloadMetadataV1RegistryDownloadMetadataPost,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -466,11 +466,11 @@ class RegistryApi:
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
     ) -> RESTResponseType:
-        """Download Metadata Async
+        """Download Metadata
 
 
-        :param body_download_metadata_async_v1_registry_download_metadata_post: (required)
-        :type body_download_metadata_async_v1_registry_download_metadata_post: BodyDownloadMetadataAsyncV1RegistryDownloadMetadataPost
+        :param body_download_metadata_v1_registry_download_metadata_post: (required)
+        :type body_download_metadata_v1_registry_download_metadata_post: BodyDownloadMetadataV1RegistryDownloadMetadataPost
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -493,8 +493,8 @@ class RegistryApi:
         :return: Returns the result object.
         """ # noqa: E501
 
-        _param = self._download_metadata_async_v1_registry_download_metadata_post_serialize(
-            body_download_metadata_async_v1_registry_download_metadata_post=body_download_metadata_async_v1_registry_download_metadata_post,
+        _param = self._download_metadata_v1_registry_download_metadata_post_serialize(
+            body_download_metadata_v1_registry_download_metadata_post=body_download_metadata_v1_registry_download_metadata_post,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -512,9 +512,9 @@ class RegistryApi:
         return response_data.response
 
 
-    def _download_metadata_async_v1_registry_download_metadata_post_serialize(
+    def _download_metadata_v1_registry_download_metadata_post_serialize(
         self,
-        body_download_metadata_async_v1_registry_download_metadata_post,
+        body_download_metadata_v1_registry_download_metadata_post,
         _request_auth,
         _content_type,
         _headers,
@@ -538,8 +538,8 @@ class RegistryApi:
         # process the header parameters
         # process the form parameters
         # process the body parameter
-        if body_download_metadata_async_v1_registry_download_metadata_post is not None:
-            _body_params = body_download_metadata_async_v1_registry_download_metadata_post
+        if body_download_metadata_v1_registry_download_metadata_post is not None:
+            _body_params = body_download_metadata_v1_registry_download_metadata_post
 
 
         # set the HTTP header `Accept`
@@ -587,7 +587,7 @@ class RegistryApi:
 
 
     @validate_call
-    def list_entries_async_v1_registry_list_entries_post(
+    def list_entries_v1_registry_list_entries_post(
         self,
         namespace: Optional[StrictStr] = None,
         category: Optional[StrictStr] = None,
@@ -611,7 +611,7 @@ class RegistryApi:
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
     ) -> List[EntryInformation]:
-        """List Entries Async
+        """List Entries
 
 
         :param namespace:
@@ -654,7 +654,7 @@ class RegistryApi:
         :return: Returns the result object.
         """ # noqa: E501
 
-        _param = self._list_entries_async_v1_registry_list_entries_post_serialize(
+        _param = self._list_entries_v1_registry_list_entries_post_serialize(
             namespace=namespace,
             category=category,
             tags=tags,
@@ -686,7 +686,7 @@ class RegistryApi:
 
 
     @validate_call
-    def list_entries_async_v1_registry_list_entries_post_with_http_info(
+    def list_entries_v1_registry_list_entries_post_with_http_info(
         self,
         namespace: Optional[StrictStr] = None,
         category: Optional[StrictStr] = None,
@@ -710,7 +710,7 @@ class RegistryApi:
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
     ) -> ApiResponse[List[EntryInformation]]:
-        """List Entries Async
+        """List Entries
 
 
         :param namespace:
@@ -753,7 +753,7 @@ class RegistryApi:
         :return: Returns the result object.
         """ # noqa: E501
 
-        _param = self._list_entries_async_v1_registry_list_entries_post_serialize(
+        _param = self._list_entries_v1_registry_list_entries_post_serialize(
             namespace=namespace,
             category=category,
             tags=tags,
@@ -785,7 +785,7 @@ class RegistryApi:
 
 
     @validate_call
-    def list_entries_async_v1_registry_list_entries_post_without_preload_content(
+    def list_entries_v1_registry_list_entries_post_without_preload_content(
         self,
         namespace: Optional[StrictStr] = None,
         category: Optional[StrictStr] = None,
@@ -809,7 +809,7 @@ class RegistryApi:
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
     ) -> RESTResponseType:
-        """List Entries Async
+        """List Entries
 
 
         :param namespace:
@@ -852,7 +852,7 @@ class RegistryApi:
         :return: Returns the result object.
         """ # noqa: E501
 
-        _param = self._list_entries_async_v1_registry_list_entries_post_serialize(
+        _param = self._list_entries_v1_registry_list_entries_post_serialize(
             namespace=namespace,
             category=category,
             tags=tags,
@@ -879,7 +879,7 @@ class RegistryApi:
         return response_data.response
 
 
-    def _list_entries_async_v1_registry_list_entries_post_serialize(
+    def _list_entries_v1_registry_list_entries_post_serialize(
         self,
         namespace,
         category,
@@ -983,9 +983,9 @@ class RegistryApi:
 
 
     @validate_call
-    def list_files_async_v1_registry_list_files_post(
+    def list_files_v1_registry_list_files_post(
         self,
-        body_list_files_async_v1_registry_list_files_post: BodyListFilesAsyncV1RegistryListFilesPost,
+        body_list_files_v1_registry_list_files_post: BodyListFilesV1RegistryListFilesPost,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -999,12 +999,12 @@ class RegistryApi:
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
     ) -> List[Filename]:
-        """List Files Async
+        """List Files
 
         Lists all files that belong to a entry.
 
-        :param body_list_files_async_v1_registry_list_files_post: (required)
-        :type body_list_files_async_v1_registry_list_files_post: BodyListFilesAsyncV1RegistryListFilesPost
+        :param body_list_files_v1_registry_list_files_post: (required)
+        :type body_list_files_v1_registry_list_files_post: BodyListFilesV1RegistryListFilesPost
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -1027,8 +1027,8 @@ class RegistryApi:
         :return: Returns the result object.
         """ # noqa: E501
 
-        _param = self._list_files_async_v1_registry_list_files_post_serialize(
-            body_list_files_async_v1_registry_list_files_post=body_list_files_async_v1_registry_list_files_post,
+        _param = self._list_files_v1_registry_list_files_post_serialize(
+            body_list_files_v1_registry_list_files_post=body_list_files_v1_registry_list_files_post,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -1051,9 +1051,9 @@ class RegistryApi:
 
 
     @validate_call
-    def list_files_async_v1_registry_list_files_post_with_http_info(
+    def list_files_v1_registry_list_files_post_with_http_info(
         self,
-        body_list_files_async_v1_registry_list_files_post: BodyListFilesAsyncV1RegistryListFilesPost,
+        body_list_files_v1_registry_list_files_post: BodyListFilesV1RegistryListFilesPost,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -1067,12 +1067,12 @@ class RegistryApi:
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
     ) -> ApiResponse[List[Filename]]:
-        """List Files Async
+        """List Files
 
         Lists all files that belong to a entry.
 
-        :param body_list_files_async_v1_registry_list_files_post: (required)
-        :type body_list_files_async_v1_registry_list_files_post: BodyListFilesAsyncV1RegistryListFilesPost
+        :param body_list_files_v1_registry_list_files_post: (required)
+        :type body_list_files_v1_registry_list_files_post: BodyListFilesV1RegistryListFilesPost
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -1095,8 +1095,8 @@ class RegistryApi:
         :return: Returns the result object.
         """ # noqa: E501
 
-        _param = self._list_files_async_v1_registry_list_files_post_serialize(
-            body_list_files_async_v1_registry_list_files_post=body_list_files_async_v1_registry_list_files_post,
+        _param = self._list_files_v1_registry_list_files_post_serialize(
+            body_list_files_v1_registry_list_files_post=body_list_files_v1_registry_list_files_post,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -1119,9 +1119,9 @@ class RegistryApi:
 
 
     @validate_call
-    def list_files_async_v1_registry_list_files_post_without_preload_content(
+    def list_files_v1_registry_list_files_post_without_preload_content(
         self,
-        body_list_files_async_v1_registry_list_files_post: BodyListFilesAsyncV1RegistryListFilesPost,
+        body_list_files_v1_registry_list_files_post: BodyListFilesV1RegistryListFilesPost,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -1135,12 +1135,12 @@ class RegistryApi:
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
     ) -> RESTResponseType:
-        """List Files Async
+        """List Files
 
         Lists all files that belong to a entry.
 
-        :param body_list_files_async_v1_registry_list_files_post: (required)
-        :type body_list_files_async_v1_registry_list_files_post: BodyListFilesAsyncV1RegistryListFilesPost
+        :param body_list_files_v1_registry_list_files_post: (required)
+        :type body_list_files_v1_registry_list_files_post: BodyListFilesV1RegistryListFilesPost
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -1163,8 +1163,8 @@ class RegistryApi:
         :return: Returns the result object.
         """ # noqa: E501
 
-        _param = self._list_files_async_v1_registry_list_files_post_serialize(
-            body_list_files_async_v1_registry_list_files_post=body_list_files_async_v1_registry_list_files_post,
+        _param = self._list_files_v1_registry_list_files_post_serialize(
+            body_list_files_v1_registry_list_files_post=body_list_files_v1_registry_list_files_post,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -1182,9 +1182,9 @@ class RegistryApi:
         return response_data.response
 
 
-    def _list_files_async_v1_registry_list_files_post_serialize(
+    def _list_files_v1_registry_list_files_post_serialize(
         self,
-        body_list_files_async_v1_registry_list_files_post,
+        body_list_files_v1_registry_list_files_post,
         _request_auth,
         _content_type,
         _headers,
@@ -1208,8 +1208,8 @@ class RegistryApi:
         # process the header parameters
         # process the form parameters
         # process the body parameter
-        if body_list_files_async_v1_registry_list_files_post is not None:
-            _body_params = body_list_files_async_v1_registry_list_files_post
+        if body_list_files_v1_registry_list_files_post is not None:
+            _body_params = body_list_files_v1_registry_list_files_post
 
 
         # set the HTTP header `Accept`

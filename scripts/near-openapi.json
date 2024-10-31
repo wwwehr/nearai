@@ -331,13 +331,13 @@
         "tags": [
           "registry"
         ],
-        "summary": "Download File Async",
-        "operationId": "download_file_async_v1_registry_download_file_post",
+        "summary": "Download File",
+        "operationId": "download_file_v1_registry_download_file_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Body_download_file_async_v1_registry_download_file_post"
+                "$ref": "#/components/schemas/Body_download_file_v1_registry_download_file_post"
               }
             }
           },
@@ -414,13 +414,13 @@
         "tags": [
           "registry"
         ],
-        "summary": "Download Metadata Async",
-        "operationId": "download_metadata_async_v1_registry_download_metadata_post",
+        "summary": "Download Metadata",
+        "operationId": "download_metadata_v1_registry_download_metadata_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Body_download_metadata_async_v1_registry_download_metadata_post"
+                "$ref": "#/components/schemas/Body_download_metadata_v1_registry_download_metadata_post"
               }
             }
           },
@@ -455,14 +455,14 @@
         "tags": [
           "registry"
         ],
-        "summary": "List Files Async",
+        "summary": "List Files",
         "description": "Lists all files that belong to a entry.",
-        "operationId": "list_files_async_v1_registry_list_files_post",
+        "operationId": "list_files_v1_registry_list_files_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Body_list_files_async_v1_registry_list_files_post"
+                "$ref": "#/components/schemas/Body_list_files_v1_registry_list_files_post"
               }
             }
           },
@@ -478,7 +478,7 @@
                     "$ref": "#/components/schemas/Filename"
                   },
                   "type": "array",
-                  "title": "Response List Files Async V1 Registry List Files Post"
+                  "title": "Response List Files V1 Registry List Files Post"
                 }
               }
             }
@@ -501,8 +501,8 @@
         "tags": [
           "registry"
         ],
-        "summary": "List Entries Async",
-        "operationId": "list_entries_async_v1_registry_list_entries_post",
+        "summary": "List Entries",
+        "operationId": "list_entries_v1_registry_list_entries_post",
         "parameters": [
           {
             "name": "namespace",
@@ -605,7 +605,7 @@
                   "items": {
                     "$ref": "#/components/schemas/EntryInformation"
                   },
-                  "title": "Response List Entries Async V1 Registry List Entries Post"
+                  "title": "Response List Entries V1 Registry List Entries Post"
                 }
               }
             }
@@ -1504,18 +1504,20 @@
           {
             "name": "job_id",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "integer",
+              "default": -1,
               "title": "Job Id"
             }
           },
           {
             "name": "result_json",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "string",
+              "default": "",
               "title": "Result Json"
             }
           }
@@ -1558,18 +1560,20 @@
           {
             "name": "account_id",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "string",
+              "default": "",
               "title": "Account Id"
             }
           },
           {
             "name": "permission",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "string",
+              "default": "",
               "title": "Permission"
             }
           }
@@ -1612,18 +1616,20 @@
           {
             "name": "account_id",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "string",
+              "default": "",
               "title": "Account Id"
             }
           },
           {
             "name": "permission",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "string",
+              "default": "",
               "title": "Permission"
             }
           }
@@ -1784,7 +1790,7 @@
         ],
         "title": "Body_download_environment_v1_download_environment_post"
       },
-      "Body_download_file_async_v1_registry_download_file_post": {
+      "Body_download_file_v1_registry_download_file_post": {
         "properties": {
           "path": {
             "type": "string",
@@ -1799,9 +1805,9 @@
           "path",
           "entry_location"
         ],
-        "title": "Body_download_file_async_v1_registry_download_file_post"
+        "title": "Body_download_file_v1_registry_download_file_post"
       },
-      "Body_download_metadata_async_v1_registry_download_metadata_post": {
+      "Body_download_metadata_v1_registry_download_metadata_post": {
         "properties": {
           "entry_location": {
             "$ref": "#/components/schemas/EntryLocation"
@@ -1811,9 +1817,9 @@
         "required": [
           "entry_location"
         ],
-        "title": "Body_download_metadata_async_v1_registry_download_metadata_post"
+        "title": "Body_download_metadata_v1_registry_download_metadata_post"
       },
-      "Body_list_files_async_v1_registry_list_files_post": {
+      "Body_list_files_v1_registry_list_files_post": {
         "properties": {
           "entry_location": {
             "$ref": "#/components/schemas/EntryLocation"
@@ -1823,7 +1829,7 @@
         "required": [
           "entry_location"
         ],
-        "title": "Body_list_files_async_v1_registry_list_files_post"
+        "title": "Body_list_files_v1_registry_list_files_post"
       },
       "Body_remove_star_v1_stars_remove_star_post": {
         "properties": {
@@ -2251,7 +2257,7 @@
             "title": "Environment Id",
             "description": "The ID of the environment to use to as a base for this run. If not provided, a new environment will be created."
           },
-          "thread": {
+          "thread_id": {
             "anyOf": [
               {
                 "type": "string"
@@ -2260,7 +2266,7 @@
                 "type": "null"
               }
             ],
-            "title": "Thread",
+            "title": "Thread Id",
             "description": "An OpenAI compatibility alias for environment. If no thread is provided, an empty thread will be created."
           },
           "new_message": {

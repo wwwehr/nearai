@@ -422,7 +422,7 @@ class AgentCli:
         thread_id: Optional[str] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
         local: bool = False,
-        env_vars: Optional[Dict[str, Any]] = None
+        env_vars: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Runs agent interactively."""
         last_message_id = None
@@ -439,7 +439,7 @@ class AgentCli:
                 record_run=False,
                 last_message_id=last_message_id,
                 local=local,
-                env_vars=env_vars
+                env_vars=env_vars,
             )
 
             # Update thread_id for the next iteration
@@ -453,7 +453,7 @@ class AgentCli:
         thread_id: Optional[str] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
         local: bool = False,
-        env_vars: Optional[Dict[str, Any]] = None
+        env_vars: Optional[Dict[str, Any]] = None,
     ) -> None:
         """CLI wrapper for the _task method."""
         last_message_id = self._task(
@@ -463,7 +463,7 @@ class AgentCli:
             tool_resources=tool_resources,
             record_run=True,
             local=local,
-            env_vars=env_vars
+            env_vars=env_vars,
         )
         if last_message_id:
             print(f"Task completed. Thread ID: {self.last_thread_id}")
@@ -478,7 +478,7 @@ class AgentCli:
         record_run: bool = True,
         last_message_id: Optional[str] = None,
         local: bool = False,
-        env_vars: Optional[Dict[str, Any]] = None
+        env_vars: Optional[Dict[str, Any]] = None,
     ) -> Optional[str]:
         """Runs agent non-interactively with a single task."""
         hub_client = get_hub_client()

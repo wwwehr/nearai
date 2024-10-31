@@ -161,7 +161,7 @@ class MessageCreateParams(BaseModel):
     content: Union[str, Iterable[MessageContentPartParam]]
     """The text contents of the message."""
 
-    role: Literal["user", "assistant", "agent", "system"]
+    role: Literal["user", "assistant", "system"]
     """The role of the entity that is creating the message. Allowed values include:
 
     - `user`: Indicates the message is sent by an actual user and should be used in

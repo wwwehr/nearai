@@ -453,6 +453,7 @@ class AgentCli:
         thread_id: Optional[str] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
         local: bool = False,
+        env_vars: Optional[Dict[str, Any]] = None
     ) -> None:
         """CLI wrapper for the _task method."""
         last_message_id = self._task(
@@ -462,6 +463,7 @@ class AgentCli:
             tool_resources=tool_resources,
             record_run=True,
             local=local,
+            env_vars=env_vars
         )
         if last_message_id:
             print(f"Task completed. Thread ID: {self.last_thread_id}")

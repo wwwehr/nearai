@@ -98,7 +98,7 @@ jobs:
       run: |
         sleep 60
         docker compose -f .docker/compose-e2e.yml logs
-        docker exec docker-e2e-1 poetry run pytest -m integration ./e2e/
+        docker exec docker-ci-1 poetry run pytest -m integration ./e2e/
     
     - name: Stop Docker Compose
       run: docker compose -f .docker/compose-e2e.yml down

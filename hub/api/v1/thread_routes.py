@@ -62,7 +62,7 @@ SUMMARY_PROMPT = """You are an expert at summarizing conversations in a maximum 
 async def create_thread(
     thread: ThreadCreateParams = Body(...),
     auth: AuthToken = Depends(revokable_auth),
-) -> Thread:
+):
     with get_session() as session:
         thread_model = ThreadModel(
             messages=thread["messages"] if hasattr(thread, "messages") else [],
@@ -78,7 +78,7 @@ async def create_thread(
 @threads_router.get("/threads")
 async def list_threads(
     auth: AuthToken = Depends(revokable_auth),
-) -> List[Thread]:
+):
     with get_session() as session:
         threads = session.exec(select(ThreadModel).where(ThreadModel.owner_id == auth.account_id)).all()
         return [thread.to_openai() for thread in threads]
@@ -88,7 +88,7 @@ async def list_threads(
 async def get_thread(
     thread_id: str,
     auth: AuthToken = Depends(revokable_auth),
-) -> Thread:
+):
     with get_session() as session:
         thread_model = session.get(ThreadModel, thread_id)
         if thread_model is None:
@@ -99,10 +99,8 @@ async def get_thread(
 
 
 class ThreadUpdateParams(BaseModel):
-    metadata: Optional[Dict[str, Any]] = Field(
-        None, description="Set of 16 key-value pairs that can be attached to an object."
-    )
-    tool_resources: Optional[Dict[str, Any]] = Field(
+    metadata: Dict = Field(None, description="Set of 16 key-value pairs that can be attached to an object.")
+    tool_resources: Dict = Field(
         None, description="A set of resources that are made available to the assistant's tools in this thread."
     )
 
@@ -112,7 +110,7 @@ async def update_thread(
     thread_id: str,
     thread: ThreadUpdateParams = Body(...),
     auth: AuthToken = Depends(revokable_auth),
-) -> Thread:
+):
     with get_session() as session:
         thread_model = session.get(ThreadModel, thread_id)
         if thread_model is None:
@@ -253,7 +251,7 @@ async def create_message(
     background_tasks: BackgroundTasks,
     message: MessageCreateParams = Body(...),
     auth: AuthToken = Depends(revokable_auth),
-) -> Message:
+):
     with get_session() as session:
         thread = session.get(ThreadModel, thread_id)
         if thread is None:
@@ -342,7 +340,7 @@ async def list_messages(
     ),
     run_id: str = Query(None, description="Filter messages by the run ID that generated them."),
     auth: AuthToken = Depends(revokable_auth),
-) -> ListMessagesResponse:
+):
     logger.info(f"Listing messages for thread: {thread_id}")
     with get_session() as session:
         statement = select(MessageModel).where(MessageModel.thread_id == thread_id)
@@ -405,7 +403,7 @@ async def modify_message(
     message_id: str,
     message: MessageUpdateParams = Body(...),
     auth: AuthToken = Depends(revokable_auth),
-) -> Message:
+):
     with get_session() as session:
         message_model = session.get(MessageModel, message_id)
         if message_model is None:

@@ -120,9 +120,9 @@ async def upload_file_to_storage(content: bytes, object_key: str) -> str:
 @files_router.post("/files")
 async def upload_file(
     file: UploadFile = File(...),
-    purpose: Literal["assistants", "batch", "fine-tune", "vision"] = Form(...),
+    purpose: str = Form(...),
     auth: AuthToken = Depends(revokable_auth),
-) -> FileObject:
+):
     """Upload a file to the system and create a corresponding database record.
 
     This function handles file uploads, determines the content type, checks for
@@ -285,7 +285,7 @@ def check_text_encoding(content: bytes) -> Optional[str]:
 async def retrieve_file(
     file_id: str = Path(..., description="The ID of the file to retrieve"),
     auth: AuthToken = Depends(revokable_auth),
-) -> FileObject:
+):
     """Retrieve information about a specific file.
 
     Args:

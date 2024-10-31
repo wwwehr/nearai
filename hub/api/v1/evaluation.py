@@ -34,7 +34,7 @@ class EvaluationTable(BaseModel):
 
 
 @v1_router.get("/table")
-async def table() -> EvaluationTable:
+async def table():
     rows, columns, important_columns = evaluation_table()
     list_rows = [
         {**dict(key_tuple), **{m: metrics[m] for m in columns if metrics.get(m)}} for key_tuple, metrics in rows.items()

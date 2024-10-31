@@ -583,7 +583,7 @@ def run_agent(thread_id: str, run_id: str, auth: AuthToken = Depends(revokable_a
             user_env_vars = {**user_secrets, **user_env_vars}
 
         params = {
-            "max_iterations": 3,
+            "max_iterations": 1,
             "record_run": True,
             "api_url": agent_api_url,
             "tool_resources": run_model.tools,

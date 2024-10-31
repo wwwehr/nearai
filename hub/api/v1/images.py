@@ -6,7 +6,7 @@ from fireworks.client.image import Answer, ImageInference
 
 class ImageGenerator(Protocol):
     def generate(self, **kwargs) -> dict:
-        """Generates images"""
+        """Generates images."""
         ...
 
 

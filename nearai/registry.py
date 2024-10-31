@@ -99,7 +99,7 @@ class Registry:
 
     def download_file(self, entry_location: EntryLocation, path: Path, local_path: Path):
         """Download a file from the registry."""
-        result = self.api.download_file_v1_registry_download_file_post_without_preload_content(
+        result = self.api.download_file_async_v1_registry_download_file_post_with_http_info(
             BodyDownloadFileAsyncV1RegistryDownloadFilePost.from_dict(
                 dict(
                     entry_location=entry_location,
@@ -260,7 +260,7 @@ class Registry:
 
         Return the relative paths to all files with respect to the root of the entry.
         """
-        result = self.api.list_files_v1_registry_list_files_post(
+        result = self.api.list_files_async_v1_registry_list_files_post(
             BodyListFilesAsyncV1RegistryListFilesPost.from_dict(dict(entry_location=entry_location))
         )
         return [file.filename for file in result]

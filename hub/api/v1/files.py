@@ -172,9 +172,11 @@ async def upload_file(
 
     # Validate file type and extension
     if content_type not in SUPPORTED_MIME_TYPES:
-        raise HTTPException(status_code=400, detail="Unsupported file type")
+        raise HTTPException(status_code=400, detail=f"Unsupported file type {content_type}")
     if file_extension not in SUPPORTED_MIME_TYPES[content_type]:
-        raise HTTPException(status_code=400, detail="Invalid file extension for the given content type")
+        raise HTTPException(
+            status_code=400, detail=f"Invalid file extension for the given content type {file_extension} {content_type}"
+        )
 
     # Check encoding for text files
     detected_encoding = check_text_encoding(content) if content_type.startswith("text/") else None
@@ -233,7 +235,8 @@ def determine_content_type(file: UploadFile) -> str:
 
     """
     filename = file.filename or ""
-    content_type = file.content_type or mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    # content_type = file.content_type or mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
     if content_type == "application/octet-stream":
         file_extension = os.path.splitext(filename)[1].lower()
         for mime_type, extensions in SUPPORTED_MIME_TYPES.items():

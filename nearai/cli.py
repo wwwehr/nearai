@@ -2,6 +2,7 @@ import importlib.metadata
 import io
 import json
 import os
+import re
 import runpy
 import sys
 import tarfile
@@ -30,6 +31,7 @@ from shared.naming import NamespacedName, create_registry_name
 from shared.provider_models import ProviderModels, get_provider_namespaced_model
 from tabulate import tabulate
 
+from nearai.agents.local_runner import LocalRunner
 from nearai.config import (
     CONFIG,
     get_hub_client,
@@ -424,6 +426,7 @@ class AgentCli:
         agents: str,
         thread_id: Optional[str] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
+        local: bool = False,
     ) -> None:
         """Runs agent interactively."""
         last_message_id = None
@@ -439,6 +442,7 @@ class AgentCli:
                 tool_resources=tool_resources,
                 record_run=False,
                 last_message_id=last_message_id,
+                local=local,
             )
 
             # Update thread_id for the next iteration
@@ -451,6 +455,7 @@ class AgentCli:
         task: str,
         thread_id: Optional[str] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
+        local: bool = False,
     ) -> None:
         """CLI wrapper for the _task method."""
         last_message_id = self._task(
@@ -459,8 +464,8 @@ class AgentCli:
             thread_id=thread_id,
             tool_resources=tool_resources,
             record_run=True,
+            local=local,
         )
-
         if last_message_id:
             print(f"Task completed. Thread ID: {self.last_thread_id}")
             print(f"Last message ID: {last_message_id}")
@@ -473,6 +478,7 @@ class AgentCli:
         tool_resources: Optional[Dict[str, Any]] = None,
         record_run: bool = True,
         last_message_id: Optional[str] = None,
+        local: bool = False,
     ) -> Optional[str]:
         """Runs agent non-interactively with a single task."""
         hub_client = get_hub_client()
@@ -483,18 +489,40 @@ class AgentCli:
                 tool_resources=tool_resources,
             )
 
-        hub_client.beta.threads.runs.create_and_poll(
+        hub_client.beta.threads.messages.create(
             thread_id=thread.id,
-            assistant_id=agents,
-            instructions="You are a helpful assistant. Complete the given task.",
-            additional_messages=[
-                {
-                    "role": "user",
-                    "content": task,
-                }
-            ],
-            model="fireworks::accounts/fireworks/models/llama-v3p1-405b-instruct",
+            role="user",
+            content=task,
         )
+
+        if not local:
+            hub_client.beta.threads.runs.create_and_poll(
+                thread_id=thread.id,
+                assistant_id=agents,
+                instructions="You are a helpful assistant. Complete the given task.",
+                model="fireworks::accounts/fireworks/models/llama-v3p1-405b-instruct",
+            )
+        else:
+            run = hub_client.beta.threads.runs.create(
+                thread_id=thread.id,
+                assistant_id=agents,
+                instructions="You are a helpful assistant. Complete the given task.",
+                model="fireworks::accounts/fireworks/models/llama-v3p1-405b-instruct",
+                extra_body={"delegate_execution": True},
+            )
+            params = {
+                "max_iterations": 3,
+                "record_run": True,
+                "api_url": CONFIG.api_url,
+                "tool_resources": run.tools,
+                "data_source": "local_files",
+                "model": run.model,
+                "user_env_vars": {},
+                "agent_env_vars": {},
+            }
+            auth = CONFIG.auth
+            assert auth is not None
+            LocalRunner(agents, agents, thread.id, run.id, auth, params)
 
         # List new messages
         messages = hub_client.beta.threads.messages.list(thread_id=thread.id, after=last_message_id, order="asc")
@@ -549,6 +577,163 @@ class AgentCli:
             print(f"Agent run finished. New environment is {new_environment}")
         except Exception as e:
             print(f"Error running agent remotely: {e}")
+
+    def create(self, name: Optional[str] = None, description: Optional[str] = None, fork: Optional[str] = None) -> None:
+        """Create a new agent or fork an existing one.
+
+        Usage:
+          nearai agent create
+          nearai agent create --name <agent_name> --description <description>
+          nearai agent create --fork <namespace/agent_name/version> [--name <new_agent_name>]
+
+        Options:
+          --name          Name of the new agent.
+          --description   Description of the new agent.
+          --fork          Fork an existing agent specified by namespace/agent_name/version.
+
+        Examples
+        --------
+          nearai agent create
+          nearai agent create --name my_agent --description "My new agent"
+          nearai agent create --fork agentic.near/summary/0.0.3 --name new_summary_agent
+
+        """
+        # Check if the user is authenticated
+        if CONFIG.auth is None or CONFIG.auth.account_id is None:
+            print("Please login with `nearai login` before creating an agent.")
+            return
+
+        namespace = CONFIG.auth.account_id
+
+        if fork:
+            # Fork an existing agent
+            self._fork_agent(fork, namespace, name)
+        else:
+            # Create a new agent from scratch
+            self._create_new_agent(namespace, name, description)
+
+    def _create_new_agent(self, namespace: str, name: Optional[str], description: Optional[str]) -> None:
+        """Create a new agent from scratch."""
+        # Prompt for agent name if not provided
+        if not name or not isinstance(name, str):
+            name = input("Name: ").strip()
+            while not name or not isinstance(name, str):
+                print("Agent name cannot be empty.")
+                name = input("Name: ").strip()
+
+        # Prompt for description if not provided
+        while not description or not isinstance(description, str):
+            print("A description is needed for agent matching and cannot be empty.")
+            description = input("Description: ").strip()
+
+        # Set the agent path
+        agent_path = get_registry_folder() / namespace / name / "0.0.1"
+        agent_path.mkdir(parents=True, exist_ok=True)
+
+        # Create metadata.json
+        metadata = {
+            "name": name,
+            "version": "0.0.1",
+            "description": description,
+            "category": "agent",
+            "tags": [],
+            "details": {
+                "agent": {
+                    "defaults": {
+                        "model": DEFAULT_MODEL,
+                        "model_provider": DEFAULT_PROVIDER,
+                        "model_temperature": DEFAULT_MODEL_TEMPERATURE,
+                        "model_max_tokens": DEFAULT_MODEL_MAX_TOKENS,
+                    }
+                }
+            },
+            "show_entry": True,
+        }
+
+        metadata_path = agent_path / "metadata.json"
+        with open(metadata_path, "w") as f:
+            json.dump(metadata, f, indent=2)
+
+        # Create a default agent.py
+        agent_py_content = """from nearai.agents.environment import Environment
+
+
+def run(env: Environment):
+    env.add_message("assistant", "Hello, world!")
+    # Your agent code here
+    # Example:
+    # prompt = {"role": "system", "content": "You are a helpful assistant."}
+    # result = env.completion([prompt] + env.list_messages())
+    # env.add_message("assistant", result)
+
+
+run(env)
+
+"""
+        agent_py_path = agent_path / "agent.py"
+        with open(agent_py_path, "w") as f:
+            f.write(agent_py_content)
+
+        print(f"\nAgent created at: {agent_path}")
+        print("\nUseful commands:")
+        print(f"  > nearai agent interactive {name} --local")
+        print(f"  > nearai registry upload {agent_path}")
+
+    def _fork_agent(self, fork: str, namespace: str, new_name: Optional[str]) -> None:
+        """Fork an existing agent."""
+        import shutil
+
+        # Parse the fork parameter
+        try:
+            entry_location = parse_location(fork)
+            fork_namespace = entry_location.namespace
+            fork_name = entry_location.name
+            fork_version = entry_location.version
+        except ValueError:
+            print("Invalid fork parameter format. Expected format: <namespace>/<agent-name>/<version>")
+            return
+
+        # Download the agent from the registry
+        agent_location = f"{fork_namespace}/{fork_name}/{fork_version}"
+        print(f"Downloading agent '{agent_location}'...")
+        registry.download(agent_location, force=False, show_progress=True)
+        source_path = get_registry_folder() / fork_namespace / fork_name / fork_version
+
+        # Prompt for the new agent name if not provided
+        if not new_name:
+            new_name = input("Enter the new agent name: ").strip()
+            if not new_name:
+                print("Agent name cannot be empty.")
+                return
+
+            # confirm pattern is ok
+            identifier_pattern = re.compile(r"^[a-zA-Z0-9_\-.]+$")
+            if identifier_pattern.match(new_name) is None:
+                print("Invalid Name, please choose something different")
+                return
+
+        # Set the destination path
+        dest_path = get_registry_folder() / namespace / new_name / "0.0.1"
+
+        # Copy the agent files
+        shutil.copytree(source_path, dest_path)
+
+        # Update metadata.json
+        metadata_path = dest_path / "metadata.json"
+        with open(metadata_path, "r") as file:
+            metadata = json.load(file)
+
+        metadata["name"] = new_name
+        metadata["version"] = "0.0.1"
+
+        with open(metadata_path, "w") as file:
+            json.dump(metadata, file, indent=2)
+
+        print(f"\nForked agent '{agent_location}' to '{dest_path}'")
+        print(f"Agent '{new_name}' created at '{dest_path}' with updated metadata.")
+        print("\nUseful commands:")
+        print(f"  > nearai agent interactive {new_name} --local")
+        print(f"  > nearai registry upload {dest_path}")
 
 
 class VllmCli:

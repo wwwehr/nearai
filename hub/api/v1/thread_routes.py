@@ -6,6 +6,7 @@ from typing import Any, Dict, Iterable, List, Literal, Optional, Union
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Path, Query
 from nearai.agents.local_runner import LocalRunner
 from nearai.config import CONFIG, load_config_file
+from openai import BaseModel
 from openai.types.beta.assistant_response_format_option_param import AssistantResponseFormatOptionParam
 from openai.types.beta.thread import Thread
 from openai.types.beta.thread_create_params import ThreadCreateParams
@@ -14,7 +15,7 @@ from openai.types.beta.threads.message_create_params import MessageContentPartPa
 from openai.types.beta.threads.message_update_params import MessageUpdateParams
 from openai.types.beta.threads.run import Run as OpenAIRun
 from openai.types.beta.threads.run_create_params import AdditionalMessage, TruncationStrategy
-from pydantic import BaseModel, Field
+from pydantic import Field
 from shared.auth_data import AuthData
 from shared.client_config import DEFAULT_PROVIDER_MODEL, ClientConfig
 from sqlmodel import asc, desc, select
@@ -22,8 +23,8 @@ from sqlmodel import asc, desc, select
 from hub.api.v1.agent_routes import (
     _runner_for_env,
     get_agent_entry,
-    invoke_function_via_curl,
-    invoke_function_via_lambda,
+    invoke_agent_via_lambda,
+    invoke_agent_via_url,
 )
 from hub.api.v1.auth import AuthToken, revokable_auth
 from hub.api.v1.models import Message as MessageModel
@@ -98,7 +99,7 @@ async def get_thread(
 
 
 class ThreadUpdateParams(BaseModel):
-    metadata: Optional[Dict[str, str]] = Field(
+    metadata: Optional[Dict[str, Any]] = Field(
         None, description="Set of 16 key-value pairs that can be attached to an object."
     )
     tool_resources: Optional[Dict[str, Any]] = Field(
@@ -189,6 +190,63 @@ class MessageCreateParams(BaseModel):
     """The ID of the run creating the message."""
 
 
+class ThreadForkResponse(BaseModel):
+    id: str
+    object: str = "thread"
+    created_at: int
+    metadata: Optional[dict] = None
+
+
+@threads_router.post("/threads/{thread_id}/fork")
+async def fork_thread(
+    thread_id: str,
+    auth: AuthToken = Depends(revokable_auth),
+) -> ThreadForkResponse:
+    with get_session() as session:
+        # Get the original thread
+        original_thread = session.get(ThreadModel, thread_id)
+        if original_thread is None:
+            raise HTTPException(status_code=404, detail="Thread not found")
+
+        if original_thread.owner_id != auth.account_id:
+            raise HTTPException(status_code=403, detail="You don't have permission to fork this thread")
+
+        # Create a new thread as a copy of the original
+        forked_thread = ThreadModel(
+            messages=[],  # Start with an empty message list
+            meta_data=original_thread.meta_data,
+            tool_resources=original_thread.tool_resources,
+            owner_id=auth.account_id,
+        )
+        session.add(forked_thread)
+        session.flush()  # Flush to generate the new thread's ID
+
+        # Copy messages from the original thread to the forked thread
+        messages = session.exec(
+            select(MessageModel).where(MessageModel.thread_id == thread_id).order_by(asc(MessageModel.created_at))
+        ).all()
+
+        for message in messages:
+            forked_message = MessageModel(
+                thread_id=forked_thread.id,
+                content=message.content,
+                role=message.role,
+                assistant_id=message.assistant_id,
+                meta_data=message.meta_data,
+                attachments=message.attachments,
+                run_id=message.run_id,
+            )
+            session.add(forked_message)
+
+        session.commit()
+
+        return ThreadForkResponse(
+            id=forked_thread.id,
+            created_at=int(forked_thread.created_at.timestamp()),
+            metadata=forked_thread.meta_data,
+        )
+
+
 @threads_router.post("/threads/{thread_id}/messages")
 async def create_message(
     thread_id: str,
@@ -202,7 +260,7 @@ async def create_message(
             raise HTTPException(status_code=404, detail="Thread not found")
 
         if not thread.meta_data or not thread.meta_data.get("topic"):
-            background_tasks.add_task(update_thread_topic, thread_id)
+            background_tasks.add_task(update_thread_topic, thread_id, AuthData(**auth.model_dump()))
 
         if not message.content:
             message.content = " "  # OpenAI format requires content to be non-empty
@@ -222,7 +280,7 @@ async def create_message(
         return message_model.to_openai()
 
 
-def update_thread_topic(thread_id: str):
+def update_thread_topic(thread_id: str, auth: AuthData):
     with get_session() as session:
         thread = session.get(ThreadModel, thread_id)
         if thread is None:
@@ -236,7 +294,7 @@ def update_thread_topic(thread_id: str):
             .limit(1)
         ).all()
 
-        client = ClientConfig(base_url=CONFIG.nearai_hub.base_url, auth=CONFIG.auth).get_hub_client()
+        client = ClientConfig(base_url=CONFIG.nearai_hub.base_url, auth=auth).get_hub_client()
 
         # TODO(#436): Once thread forking is implemented.
         # Fork the thread and use agent: agentic.near/summary/0.0.3/source. (Same prompt as SUMMARY_PROMPT)
@@ -406,6 +464,8 @@ class RunCreateParamsBase(BaseModel):
     # Custom fields
     schedule_at: Optional[datetime] = Field(None, description="The time at which the run should be scheduled.")
 
+    delegate_execution: bool = Field(False, description="Whether to delegate execution to an external actor.")
+
 
 @threads_router.post("/threads/{thread_id}/runs")
 async def create_run(
@@ -420,6 +480,14 @@ async def create_run(
         thread_model = session.get(ThreadModel, thread_id)
         if thread_model is None:
             raise HTTPException(status_code=404, detail="Thread not found")
+
+        if not thread_model.meta_data:
+            thread_model.meta_data = {}
+        if not thread_model.meta_data.get("agent_ids"):
+            thread_model.meta_data["agent_ids"] = []
+        if run.assistant_id not in thread_model.meta_data["agent_ids"]:
+            thread_model.meta_data["agent_ids"].append(run.assistant_id)
+            session.add(thread_model)
 
         if run.additional_messages:
             messages = []
@@ -460,6 +528,9 @@ async def create_run(
 
         # Add the run and messages in DB
         session.commit()
+
+        if run.delegate_execution:
+            return run_model.to_openai()
 
         # Queue the run
         if not run.schedule_at:
@@ -533,10 +604,10 @@ def run_agent(thread_id: str, run_id: str, auth: AuthToken = Depends(revokable_a
         session.add(run_model)
         session.commit()
 
-        if runner == "local":
-            runner_invoke_url = getenv("RUNNER_INVOKE_URL", None)
-            if runner_invoke_url:
-                invoke_function_via_curl(runner_invoke_url, agents, thread_id, run_id, auth, "", params)
+        if runner == "custom_runner":
+            custom_runner_url = getenv("CUSTOM_RUNNER_URL", None)
+            if custom_runner_url:
+                invoke_agent_via_url(custom_runner_url, agents, thread_id, run_id, auth, "", params)
             else:
                 raise HTTPException(status_code=400, detail="Runner invoke URL not set for local runner")
         elif runner == "local_runner":
@@ -561,7 +632,7 @@ def run_agent(thread_id: str, run_id: str, auth: AuthToken = Depends(revokable_a
                 f"assistant_id={run_model.assistant_id}, "
                 f"thread_id={thread_id}, run_id={run_id}"
             )
-            invoke_function_via_lambda(function_name, agents, thread_id, run_id, auth, "", params)
+            invoke_agent_via_lambda(function_name, agents, thread_id, run_id, auth, "", params)
 
         return run_model.to_openai()
 

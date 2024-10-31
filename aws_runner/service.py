@@ -15,8 +15,6 @@ from shared.client_config import ClientConfig
 from shared.inference_client import InferenceClient
 from shared.near.sign import SignatureVerificationResult, verify_signed_message
 
-from hub.api.v1.entry_location import valid_identifier
-
 cloudwatch = boto3.client("cloudwatch", region_name="us-east-2")
 
 PATH = "/tmp/agent-runner-docker/environment-runs"
@@ -66,8 +64,8 @@ def handler(event, context):
         auth_object,
         thread_id,
         run_id,
-        new_message,
-        params,
+        new_message=new_message,
+        params=params,
     )
     if not new_environment_registry_id:
         return f"Run not recorded. Ran {agents} agent(s) with generated near client and environment {environment_id}"
@@ -97,7 +95,7 @@ def write_metric(metric_name, value, unit="Milliseconds"):
         print(f"Would have written metric {metric_name} with value {value} to cloudwatch")
 
 
-def load_agent(client, agent, params: dict = None, account_id: str = "local") -> Agent:
+def load_agent(client, agent, params: dict, account_id: str = "local", additional_path: str = "") -> Agent:
     agent_metadata = None
 
     if params["data_source"] == "registry":
@@ -107,10 +105,7 @@ def load_agent(client, agent, params: dict = None, account_id: str = "local") ->
         write_metric("GetAgentFromRegistry_Duration", stop_time - start_time)
         agent_metadata = client.get_agent_metadata(agent)
     elif params["data_source"] == "local_files":
-        agent_files = get_local_agent_files(agent)
-
-        if not valid_identifier(agent):
-            agent = f"{account_id}/{agent}/local"
+        agent_files = get_local_agent_files(agent, additional_path)
 
         for file in agent_files:
             if os.path.basename(file["filename"]) == "metadata.json":
@@ -156,11 +151,15 @@ def run_with_environment(
     auth: AuthData,
     thread_id,
     run_id,
+    additional_path: str = "",
     new_message: str = None,
     params: dict = None,
 ) -> Optional[str]:
     """Runs agent against environment fetched from id, optionally passing a new message to the environment."""
-    print("Running with :", agents, auth, new_message, params, thread_id, run_id)
+    print(
+        f"Running with:\nagents: {agents}\nnew_message: {new_message}\nparams: {params}"
+        f"\nthread_id: {thread_id}\nrun_id: {run_id}\nauth: {auth}"
+    )
     params = params or {}
     max_iterations = int(params.get("max_iterations", 2))
     record_run = bool(params.get("record_run", True))
@@ -177,7 +176,7 @@ def run_with_environment(
     loaded_agents = []
 
     for agent_name in agents.split(","):
-        agent = load_agent(near_client, agent_name, params, auth.account_id)
+        agent = load_agent(near_client, agent_name, params, auth.account_id, additional_path)
         # agents secrets has higher priority then agent metadata's env_vars
         agent.env_vars = {**agent.env_vars, **agent_env_vars.get(agent_name, {})}
         loaded_agents.append(agent)
@@ -188,9 +187,8 @@ def run_with_environment(
     )
     inference_client = InferenceClient(client_config)
     hub_client = client_config.get_hub_client()
-
     env = Environment(
-        RUN_PATH,
+        additional_path if additional_path else RUN_PATH,
         loaded_agents,
         inference_client,
         hub_client,
@@ -209,23 +207,26 @@ def run_with_environment(
     return new_environment
 
 
-def get_local_agent_files(agent_identifier: str):
+def get_local_agent_files(agent_identifier: str, additional_path: str = ""):
     """Fetches an agent from local filesystem."""
     # base_path = os.path.join("/root/.nearai/registry", agent_identifier)
     # os.path.expanduser(f"/root/.nearai/registry/{agent_identifier}")
     # base_path = os.path.expanduser(f"/nearai_registry/{agent_identifier}")
     base_path = os.path.expanduser(f"~/.nearai/registry/{agent_identifier}")
 
+    paths = [base_path]
+    if additional_path:
+        paths.append(os.path.join(base_path, additional_path))
+
     results = []
-
-    for root, _dirs, files in os.walk(base_path):
-        for file in files:
-            path = os.path.join(root, file)
-            try:
-                with open(path, "r") as f:
-                    result = f.read()
-                results.append({"filename": os.path.basename(path), "content": result})
-            except Exception as e:
-                print(f"Error {path}: {e}")
-
+    for path in paths:
+        for root, _dirs, files in os.walk(path):
+            for file in files:
+                path = os.path.join(root, file)
+                try:
+                    with open(path, "r") as f:
+                        result = f.read()
+                    results.append({"filename": os.path.basename(path), "content": result})
+                except Exception as e:
+                    print(f"Error {path}: {e}")
     return results

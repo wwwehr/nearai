@@ -29,5 +29,7 @@ USER ${USER}
 RUN python3 -m pip install --user poetry
 WORKDIR /home/${USER}/
 ENV PATH="/home/${USER}/.local/bin:${PATH}"
+COPY poetry.lock pyproject.toml poetry.toml ./
+RUN python3 -m poetry install --extras "hub" --no-root
 COPY . .
 RUN python3 -m poetry install --extras "hub"

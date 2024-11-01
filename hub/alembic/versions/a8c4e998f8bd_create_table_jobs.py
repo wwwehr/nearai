@@ -25,6 +25,7 @@ def upgrade() -> None:
         sa.Column("registry_path", sa.String(255), nullable=False),
         sa.Column("account_id", sa.String(255), nullable=False),
         sa.Column("status", sa.String(255), nullable=False),
+        sa.Column("worker_id", sa.String(255), nullable=True),
         sa.Column("info", sa.JSON),
         sa.Column("result", sa.JSON),
     )

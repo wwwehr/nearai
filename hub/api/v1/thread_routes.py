@@ -18,6 +18,7 @@ from openai.types.beta.threads.run_create_params import AdditionalMessage, Trunc
 from pydantic import Field
 from shared.auth_data import AuthData
 from shared.client_config import DEFAULT_PROVIDER_MODEL, ClientConfig
+from sqlalchemy.orm.attributes import flag_modified
 from sqlmodel import asc, desc, select
 
 from hub.api.v1.agent_routes import (
@@ -308,10 +309,17 @@ def update_thread_topic(thread_id: str, auth: AuthData):
             model=DEFAULT_PROVIDER_MODEL,
         )
 
+    with get_session() as session:
+        thread = session.get(ThreadModel, thread_id)
+
+        if thread is None:
+            raise HTTPException(status_code=404, detail="Thread not found")
+
         if thread.meta_data is None:
             thread.meta_data = {}
+
         thread.meta_data["topic"] = completion.choices[0].message.content
-        session.add(thread)
+        flag_modified(thread, "meta_data")  # SQLAlchemy is not detecting changes in the dict, forcing a commit.
         session.commit()
 
 
@@ -486,7 +494,10 @@ async def create_run(
             thread_model.meta_data["agent_ids"] = []
         if run.assistant_id not in thread_model.meta_data["agent_ids"]:
             thread_model.meta_data["agent_ids"].append(run.assistant_id)
-            session.add(thread_model)
+            flag_modified(
+                thread_model, "meta_data"
+            )  # SQLAlchemy is not detecting changes in the dict, forcing a commit.
+            session.commit()
 
         if run.additional_messages:
             messages = []
@@ -657,6 +668,7 @@ async def get_run(
 class RunUpdateParams(BaseModel):
     status: Optional[Literal["requires_action", "failed", "expired", "completed"]] = None
     completed_at: Optional[datetime] = None
+    failed_at: Optional[datetime] = None
     metadata: Optional[dict] = None
 
 
@@ -678,6 +690,8 @@ async def update_run(
             run_model.completed_at = run.completed_at
         if run.metadata:
             run_model.meta_data = run.metadata
+        if run.failed_at:
+            run_model.failed_at = run.failed_at
 
         session.add(run_model)
         session.commit()

@@ -53,6 +53,8 @@ AGENT_LOG_FILENAME = "agent_log.txt"
 TERMINAL_FILENAME = "terminal.txt"
 
 LLAMA_TOOL_FORMAT_PATTERN = re.compile(r"(.*?)<function=(\w+)>(.*?)(</function>|$|\Z)(.*?)", re.DOTALL | re.MULTILINE)
+LLAMA_TOOL_FORMAT_PATTERN2 = re.compile(r"(.*)<tool_call>\n(.*)\n</tool_call>(.*)", re.DOTALL)
+
 
 default_approvals: Dict[str, Any] = {"confirm_execution": lambda _: True}
 
@@ -289,6 +291,7 @@ class Environment(object):
 
     def read_file(self, filename: str):
         """Reads a file from the environment or thread."""
+        file_content = None
         # First try to read from local filesystem
         local_path = os.path.join(self.get_primary_agent_temp_dir(), filename)
         if os.path.exists(local_path):
@@ -304,7 +307,7 @@ class Environment(object):
                 break
 
         if not file_content:
-            return None
+            raise Exception(f"failed to read file: {filename}")
 
         # Write the file content to the local filesystem
         with open(local_path, "w") as local_file:
@@ -650,6 +653,26 @@ class Environment(object):
                 text += before_call_text + after_call_text
                 tool_calls.append(tool_call)
             return text, tool_calls
+
+        llama_matches = LLAMA_TOOL_FORMAT_PATTERN2.findall(content)
+        if llama_matches:
+            text = ""
+            tool_calls = []
+            for llama_match in llama_matches:
+                before_call_text, function_name_and_args, after_call_text = llama_match
+                try:
+                    parsed_function_name_and_args = json.loads(function_name_and_args)
+                    function_name = parsed_function_name_and_args.get("name")
+                    args = parsed_function_name_and_args.get("arguments")
+                    function = Function(name=function_name, arguments=args)
+                    tool_call = ChatCompletionMessageToolCall(id=str(uuid.uuid4()), function=function)
+                    text += before_call_text + after_call_text
+                    tool_calls.append(tool_call)
+                except json.JSONDecodeError:
+                    print(f"Error parsing tool_call function name and args: {function_name_and_args}")
+                    continue
+            return text, tool_calls
+
         return content, None
 
     @staticmethod
@@ -743,6 +766,17 @@ class Environment(object):
             },
         )
         self.add_system_log("Environment run completed", logging.INFO)
+        return res
+
+    def mark_failed(self) -> Run:
+        """Marks the environment run as failed."""
+        self._done = True
+        self.add_system_log("Environment run failed", logging.ERROR)
+        res = self._hub_client.beta.threads.runs.update(
+            thread_id=self._thread_id,
+            run_id=self._run_id,
+            extra_body={"status": "failed", "failed_at": datetime.now().isoformat()},
+        )
         return res
 
     def create_snapshot(self) -> bytes:
@@ -852,8 +886,16 @@ class Environment(object):
 
         while iteration < max_iterations and not self.is_done() and self.get_next_actor() != "user":
             iteration += 1
-            print([x.identifier for x in self._agents])
-            self._agents[0].run(self, task=new_message)
+            self.add_system_log(
+                f"Running agent {self._agents[0].identifier}, iteration {iteration}/{max_iterations}",
+                logging.INFO,
+            )
+            try:
+                self._agents[0].run(self, task=new_message)
+            except Exception as e:
+                self.add_system_log(f"Environment run failed: {e}", logging.ERROR)
+                self.mark_failed()
+                raise e
 
         self.mark_done()
 

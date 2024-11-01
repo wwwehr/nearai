@@ -6,6 +6,8 @@ from pydantic import BaseModel
 
 from shared.auth_data import AuthData
 
+DEFAULT_TIMEOUT = 10
+DEFAULT_MAX_RETRIES = 3
 DEFAULT_MODEL_TEMPERATURE = 1.0
 DEFAULT_MODEL_MAX_TOKENS = 16384
 DEFAULT_PROVIDER = "fireworks"
@@ -27,4 +29,4 @@ class ClientConfig(BaseModel):
         """Get the hub client."""
         signature = f"Bearer {self.auth.model_dump_json()}"
         base_url = self.base_url
-        return openai.OpenAI(base_url=base_url, api_key=signature)
+        return openai.OpenAI(base_url=base_url, api_key=signature, timeout=DEFAULT_TIMEOUT, max_retries=DEFAULT_MAX_RETRIES)

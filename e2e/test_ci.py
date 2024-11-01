@@ -29,7 +29,9 @@ def test_registry():
     registry_cli.metadata_template(local_path=Path(tmp_dir.name))
 
     registry.upload(Path(tmp_dir.name))
-    assert Path(tmp_dir.name).name in map(lambda x: x.name, registry.list_all_visible())
+    assert Path(tmp_dir.name).name in map(
+        lambda x: x.name, registry.list_all_visible()
+    ), f"Registry should contain {Path(tmp_dir.name).name}"
 
 
 @pytest.mark.integration
@@ -43,7 +45,7 @@ def test_hub_completion():
 
     # list models available from NEAR AI Hub
     models = client.models.list()
-    assert any(model.id == f"local::{MODEL_NAME}" for model in models)
+    assert any(model.id == f"local::{MODEL_NAME}" for model in models), f"Model {MODEL_NAME} should be available"
 
     # create a chat completion
     completion = client.completions.create(
@@ -63,7 +65,7 @@ def test_hub_chat():
 
     # list models available from NEAR AI Hub
     models = client.models.list()
-    assert any(model.id == f"local::{MODEL_NAME}" for model in models)
+    assert any(model.id == f"local::{MODEL_NAME}" for model in models), f"Model {MODEL_NAME} should be available"
 
     # create a chat completion
     chat_completion = client.chat.completions.create(
@@ -238,4 +240,4 @@ def test_example_agent():
     )
 
     messages = list(hub_client.beta.threads.messages.list(thread_id=agent_cli.last_thread_id).data)
-    assert len(messages) == 4, "Thread should have four messages"
+    assert len(messages) == 5, "Thread should have five messages"

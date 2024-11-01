@@ -2,7 +2,7 @@
 import time
 from subprocess import call
 
-from shared.agents.agent_service import run_with_environment, write_metric
+from shared.agents.agent_runner import run_with_environment, write_metric
 from shared.auth_data import AuthData
 from shared.near.sign import SignatureVerificationResult, verify_signed_message
 

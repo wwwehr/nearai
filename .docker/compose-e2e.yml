@@ -90,11 +90,21 @@ services:
       DATABASE_NAME: hub
       PROVIDER_LOCAL_BASE_URL: http://vllm:8000/v1
       PROVIDER_LOCAL_API_KEY: n/a
+      CUSTOM_RUNNER_URL: http://agent_runner:8080/2015-03-31/functions/function/invocations
+      RUNNER_ENVIRONMENT: custom_runner
+      API_URL: http://nearaihub:8081
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
       interval: 10s
       timeout: 5s
       retries: 5
+  
+  agent_runner:
+    build:
+      context: ..
+      dockerfile: .docker/Dockerfile.agent_runner
+      args:
+        FRAMEWORK: -base
   
   ci:
     depends_on:

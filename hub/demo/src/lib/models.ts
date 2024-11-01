@@ -155,7 +155,7 @@ export const entryModel = z.object({
   namespace: z.string(),
   name: z.string(),
   version: z.string(),
-  updated: z.string().datetime(),
+  updated: z.string().datetime().default(new Date().toISOString()),
   description: z.string().default(''),
   tags: z.string().array().default([]),
   show_entry: z.boolean().default(true),

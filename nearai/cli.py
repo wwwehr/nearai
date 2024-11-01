@@ -10,10 +10,11 @@ from collections import OrderedDict
 from dataclasses import asdict
 from pathlib import Path
 from textwrap import fill
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import boto3
 import fire
+from openai.types.beta.threads.message import Attachment
 from openapi_client import EntryLocation, EntryMetadataInput
 from openapi_client.api.benchmark_api import BenchmarkApi
 from openapi_client.api.default_api import DefaultApi
@@ -457,6 +458,7 @@ class AgentCli:
         task: str,
         thread_id: Optional[str] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
+        file_ids: Optional[List[str]] = None,
         local: bool = False,
         env_vars: Optional[Dict[str, Any]] = None,
     ) -> None:
@@ -466,6 +468,7 @@ class AgentCli:
             task=task,
             thread_id=thread_id,
             tool_resources=tool_resources,
+            file_ids=file_ids,
             record_run=True,
             local=local,
             env_vars=env_vars,
@@ -480,6 +483,7 @@ class AgentCli:
         task: str,
         thread_id: Optional[str] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
+        file_ids: Optional[List[str]] = None,
         record_run: bool = True,
         last_message_id: Optional[str] = None,
         local: bool = False,
@@ -498,6 +502,7 @@ class AgentCli:
             thread_id=thread.id,
             role="user",
             content=task,
+            attachments=[Attachment(file_id=file_id) for file_id in file_ids] if file_ids else None,
         )
 
         if not local:

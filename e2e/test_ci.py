@@ -13,7 +13,6 @@ from nearai.cli import AgentCli, BenchmarkCli, RegistryCli
 from nearai.config import get_hub_client
 from nearai.registry import Registry
 from nearai.solvers.hellaswag_solver import HellaswagSolverStrategy
-from openai.types.beta.threads.message import Attachment
 
 MODEL_NAME = "Qwen/Qwen2.5-0.5B-Instruct"
 
@@ -227,17 +226,12 @@ def test_example_agent():
     uploaded_file = hub_client.files.create(
         file=("test.txt", BytesIO(file_content.encode("utf-8"))), purpose="assistants"
     )
-    hub_client.beta.threads.messages.create(
-        thread_id=agent_cli.last_thread_id,
-        role="user",
-        content="what do you think of this file?",
-        attachments=[Attachment(file_id=uploaded_file.id)],
-    )
     agent_cli.task(
         f"{item.namespace}/{item.name}/{item.version}",
-        task="",
+        task="what do you think of this file?",
         thread_id=agent_cli.last_thread_id,
+        file_ids=[uploaded_file.id],
     )
 
     messages = list(hub_client.beta.threads.messages.list(thread_id=agent_cli.last_thread_id).data)
-    assert len(messages) == 5, "Thread should have five messages"
+    assert len(messages) == 4, "Thread should have four messages"

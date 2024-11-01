@@ -50,10 +50,10 @@ def get_pending_job(
 
             session.exec(
                 update(Jobs)
-                .where(Jobs.id == job.id)
-                .where(Jobs.status == "pending")
+                .where(Jobs.id == job.id)  # type: ignore
+                .where(Jobs.status == "pending")  # type: ignore
                 .values(status="processing")
-                .values(worker_id=worker_id)  # type: ignore
+                .values(worker_id=worker_id)
             )
             session.commit()
 

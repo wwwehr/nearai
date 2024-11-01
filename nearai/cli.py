@@ -501,7 +501,7 @@ class AgentCli:
                 tool_resources=tool_resources,
             )
 
-        #set loglevel
+        # set loglevel
         logger = logging.getLogger("system_logger")
         logger.setLevel(getattr(logging, loglevel.upper()))
 

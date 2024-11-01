@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from shared.auth_data import AuthData
 
-DEFAULT_TIMEOUT = 60
+DEFAULT_TIMEOUT = 60 * 3
 DEFAULT_MAX_RETRIES = 3
 DEFAULT_MODEL_TEMPERATURE = 1.0
 DEFAULT_MODEL_MAX_TOKENS = 16384

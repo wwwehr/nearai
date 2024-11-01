@@ -57,6 +57,17 @@ LLAMA_TOOL_FORMAT_PATTERN = re.compile(r"(.*?)<function=(\w+)>(.*?)(</function>|
 default_approvals: Dict[str, Any] = {"confirm_execution": lambda _: True}
 
 
+class CustomLogHandler(logging.Handler):
+    def __init__(self, add_reply_func, log):
+        super().__init__()
+        self.add_reply_func = add_reply_func
+        self.log = log
+
+    def emit(self, record):
+        log_entry = self.format(record)
+        self.add_reply_func(message=f"{self.log} - {log_entry}", message_type="system:log")
+
+
 class Environment(object):
     def __init__(  # noqa: D107
         self,
@@ -117,7 +128,7 @@ class Environment(object):
         self,
         message: str,
         attachments: Optional[Iterable[Attachment]] = None,
-        **kwargs: Any,
+        message_type: Optional[str] = None,
     ):
         """Assistant adds a message to the environment."""
         # NOTE: message from `user` are not stored in the memory
@@ -130,8 +141,8 @@ class Environment(object):
                 "assistant_id": self._agents[0].identifier,
                 "run_id": self._run_id,
             },
-            metadata=kwargs,
             attachments=attachments,
+            metadata={"message_type": message_type} if message_type else None,
         )
 
     def add_message(
@@ -173,6 +184,11 @@ class Environment(object):
                 console_handler.setFormatter(formatter)
                 logger.addHandler(console_handler)
 
+            # Add the custom handler
+            custom_handler = CustomLogHandler(self.add_reply, log)
+            custom_handler.setFormatter(formatter)
+            logger.addHandler(custom_handler)
+
         # Log the message
         logger.log(level, log)
         # Force the handler to write to disk
@@ -189,6 +205,11 @@ class Environment(object):
             formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)
+
+            # Add the custom handler
+            custom_handler = CustomLogHandler(self.add_reply, log)
+            custom_handler.setFormatter(formatter)
+            logger.addHandler(custom_handler)
 
         # Log the message
         logger.log(level, log)
@@ -344,10 +365,10 @@ class Environment(object):
         # Upload to Hub
         file_data = io.BytesIO(content.encode(encoding))
         file = self._hub_client.files.create(file=(filename, file_data, filetype), purpose="assistants")
-        res = self.add_message(
-            role="assistant",
+        res = self.add_reply(
             message=f"Successfully wrote {len(content) if content else 0} characters to {filename}",
             attachments=[{"file_id": file.id, "tools": [{"type": "file_search"}]}],
+            message_type="system:file_write",
         )
         self.add_system_log(
             f"Uploaded file {filename} with {len(content)} characters, id: {file.id}. Added in thread as: {res.id}"

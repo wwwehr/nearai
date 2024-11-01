@@ -12,9 +12,9 @@ from openapi_client.api.agents_assistants_api import AgentsAssistantsApi
 from openapi_client.api.registry_api import RegistryApi
 from openapi_client.api_client import ApiClient
 from openapi_client.configuration import Configuration
-
 from openapi_client.models.entry_location import EntryLocation
 from openapi_client.models.entry_metadata_input import EntryMetadataInput
+
 from shared.auth_data import AuthData
 
 ENVIRONMENT_FILENAME = "environment.tar.gz"

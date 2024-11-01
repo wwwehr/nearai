@@ -1,6 +1,7 @@
 import json
 import re
 import tempfile
+from io import BytesIO
 from pathlib import Path
 from textwrap import dedent
 
@@ -12,6 +13,7 @@ from nearai.cli import AgentCli, BenchmarkCli, RegistryCli
 from nearai.config import get_hub_client
 from nearai.registry import Registry
 from nearai.solvers.hellaswag_solver import HellaswagSolverStrategy
+from openai.types.beta.threads.message import Attachment
 
 MODEL_NAME = "Qwen/Qwen2.5-0.5B-Instruct"
 
@@ -181,9 +183,15 @@ def test_example_agent():
     python_code = dedent("""
     # In local interactive mode, the first user input is collected before the agent runs.
     prompt = {"role": "system", "content": "You are a travel agent that helps users plan trips."}
+    try:
+        env.read_file('test.txt')
+        env.add_message("assistant", "File content: " + env.read_file('test.txt'))
+    except Exception as e:
+        print("Error reading file:", e)
+
     result = env.completion([prompt] + env.list_messages())
-    env.add_message("agent", result)
-    env.request_user_input()
+    env.add_message("assistant", result)
+    env.mark_done()
     """)
     with tempfile.TemporaryDirectory() as tmp_dir:
         agent_path = Path(tmp_dir) / "agent"
@@ -204,10 +212,30 @@ def test_example_agent():
         f"{item.namespace}/{item.name}/{item.version}",
         "Tell me about yourself.",
     )
-    hub_client = get_hub_client()
 
+    hub_client = get_hub_client()
     thread = hub_client.beta.threads.retrieve(agent_cli.last_thread_id)
     assert thread, "Thread should be created"
 
-    messages = list(hub_client.beta.threads.messages.list(thread_id=agent_cli.last_thread_id))
+    messages = list(hub_client.beta.threads.messages.list(thread_id=agent_cli.last_thread_id).data)
     assert len(messages) == 2, "Thread should have two messages"
+
+    ## upload a file, attach in a message
+    file_content = "This is a test file"
+    uploaded_file = hub_client.files.create(
+        file=("test.txt", BytesIO(file_content.encode("utf-8"))), purpose="assistants"
+    )
+    hub_client.beta.threads.messages.create(
+        thread_id=agent_cli.last_thread_id,
+        role="user",
+        content="what do you think of this file?",
+        attachments=[Attachment(file_id=uploaded_file.id)],
+    )
+    agent_cli.task(
+        f"{item.namespace}/{item.name}/{item.version}",
+        task="",
+        thread_id=agent_cli.last_thread_id,
+    )
+
+    messages = list(hub_client.beta.threads.messages.list(thread_id=agent_cli.last_thread_id).data)
+    assert len(messages) == 4, "Thread should have four messages"

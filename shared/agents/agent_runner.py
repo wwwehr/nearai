@@ -40,8 +40,6 @@ def write_metric(metric_name, value, unit="Milliseconds"):
 
 def get_local_agent_files(agent_identifier: str, additional_path: str = ""):
     """Fetches an agent from local filesystem."""
-    print(f"agent_identifier: {agent_identifier}")
-    print(f"additional_path: {additional_path}")
     base_path = os.path.expanduser(f"~/.nearai/registry/{agent_identifier}")
 
     paths = [base_path]
@@ -98,15 +96,13 @@ class EnvironmentRun:
         self.record_run = record_run
 
     def __del__(self) -> None:  # noqa: D105
-        clear_temp_agent_files(self.loaded_agents)
+        clear_temp_agent_files(self.agents)
 
     def run(self, new_message: str = None) -> Optional[str]:  # noqa: D102
         start_time = time.perf_counter()
-        run_id = self.env.run(new_message, self.loaded_agents[0].max_iterations)
+        self.env.run(new_message, self.agents[0].max_iterations)
         new_environment = (
-            save_environment(self.env, self.near_client, run_id, self.thread_id, write_metric)
-            if self.record_run
-            else None
+            save_environment(self.env, self.near_client, self.thread_id, write_metric) if self.record_run else None
         )
         stop_time = time.perf_counter()
         write_metric("ExecuteAgentDuration", stop_time - start_time)
@@ -124,8 +120,7 @@ def start_with_environment(
 ) -> EnvironmentRun:
     """Initializes environment for agent runs."""
     print(
-        f"Running with:\nagents: {agents}\n\nparams: {params}"
-        f"\nthread_id: {thread_id}\nrun_id: {run_id}\nauth: {auth}"
+        f"Running with:\nagents: {agents}\nparams: {params}" f"\nthread_id: {thread_id}\nrun_id: {run_id}\nauth: {auth}"
     )
     params = params or {}
     api_url = str(params.get("api_url", DEFAULT_API_URL))
@@ -137,13 +132,23 @@ def start_with_environment(
 
     near_client = PartialNearClient(api_url, auth)
 
-    loaded_agents = []
+    loaded_agents: list[Agent] = []
 
     for agent_name in agents.split(","):
         agent = load_agent(near_client, agent_name, params, auth.account_id, additional_path)
         # agents secrets has higher priority then agent metadata's env_vars
         agent.env_vars = {**agent.env_vars, **agent_env_vars.get(agent_name, {})}
         loaded_agents.append(agent)
+
+    agent = loaded_agents[0]
+    if "provider" in params:
+        agent.model_provider = params["provider"]
+    if "model" in params:
+        agent.model = params["model"]
+    if "temperature" in params:
+        agent.model_temperature = params["temperature"]
+    if "max_tokens" in params:
+        agent.model_max_tokens = params["max_tokens"]
 
     client_config = ClientConfig(
         base_url=api_url + "/v1",
@@ -161,6 +166,10 @@ def start_with_environment(
         env_vars=user_env_vars,
         print_system_log=print_system_log,
     )
+    if agent.welcome_title:
+        print(agent.welcome_title)
+    if agent.welcome_description:
+        print(agent.welcome_description)
     env.add_agent_start_system_log(agent_idx=0)
     return EnvironmentRun(near_client, loaded_agents, env, thread_id, params.get("record_run", True))
 
@@ -187,10 +196,10 @@ def clear_temp_agent_files(agents):
             shutil.rmtree(agent.temp_dir)
 
 
-def save_environment(env, client, run_id, base_id, metric_function=None) -> str:
+def save_environment(env, client, base_id, metric_function=None) -> str:
     save_start_time = time.perf_counter()
     snapshot = env.create_snapshot()
-    metadata = env.environment_run_info(run_id, base_id, "remote run")
+    metadata = env.environment_run_info(base_id, "remote run")
     name = metadata["name"]
     request_start_time = time.perf_counter()
     registry_id = client.save_environment(snapshot, metadata)

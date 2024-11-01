@@ -433,8 +433,8 @@ class AgentCli:
         env_vars: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Runs agent interactively."""
+        last_message_id = None
         if not local:
-            last_message_id = None
             while True:
                 new_message = input("> ")
                 if new_message.lower() == "exit":
@@ -476,12 +476,29 @@ class AgentCli:
             }
             auth = CONFIG.auth
             assert auth is not None
-            env_run = start_with_environment(agents, auth, thread.id, run.id, params=params)
+            env_run = start_with_environment(
+                agents, auth, thread.id, run.id, additional_path=agents, params=params, print_system_log=True
+            )
+            first_run = True
             while True:
+                # List new messages
+                messages = hub_client.beta.threads.messages.list(
+                    thread_id=thread.id, after=last_message_id, order="asc"
+                )
+                message_list = list(messages)
+                if message_list:
+                    for msg in message_list:
+                        if msg.role == "user" and not first_run:
+                            continue
+                        print(f"{msg.role}: {msg.content[0].text.value}")
+                    last_message_id = message_list[-1].id
+
                 new_message = input("> ")
                 if new_message.lower() == "exit":
                     break
                 env_run.run(new_message)
+
+                first_run = False
 
     def task(
         self,

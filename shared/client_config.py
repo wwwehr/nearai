@@ -29,4 +29,6 @@ class ClientConfig(BaseModel):
         """Get the hub client."""
         signature = f"Bearer {self.auth.model_dump_json()}"
         base_url = self.base_url
-        return openai.OpenAI(base_url=base_url, api_key=signature, timeout=DEFAULT_TIMEOUT, max_retries=DEFAULT_MAX_RETRIES)
+        return openai.OpenAI(
+            base_url=base_url, api_key=signature, timeout=DEFAULT_TIMEOUT, max_retries=DEFAULT_MAX_RETRIES
+        )

@@ -98,7 +98,7 @@ class EnvironmentRun:
     def __del__(self) -> None:  # noqa: D105
         clear_temp_agent_files(self.agents)
 
-    def run(self, new_message: str = None) -> Optional[str]:  # noqa: D102
+    def run(self, new_message: str = "") -> Optional[str]:  # noqa: D102
         start_time = time.perf_counter()
         self.env.run(new_message, self.agents[0].max_iterations)
         new_environment = (
@@ -115,7 +115,7 @@ def start_with_environment(
     thread_id,
     run_id,
     additional_path: str = "",
-    params: dict = None,
+    params: Optional[dict] = None,
     print_system_log: bool = False,
 ) -> EnvironmentRun:
     """Initializes environment for agent runs."""
@@ -180,8 +180,8 @@ def run_with_environment(
     thread_id,
     run_id,
     additional_path: str = "",
-    new_message: str = None,
-    params: dict = None,
+    new_message: str = "",
+    params: Optional[dict] = None,
     print_system_log: bool = False,
 ) -> Optional[str]:
     """Runs agent against environment fetched from id, optionally passing a new message to the environment."""

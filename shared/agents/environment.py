@@ -87,7 +87,7 @@ class Environment(object):
         self._approvals = approvals
         self._hub_client = hub_client
         self._thread_id = thread_id
-        self.run_id = run_id
+        self._run_id = run_id
 
         if create_files:
             os.makedirs(self._path, exist_ok=True)
@@ -124,7 +124,7 @@ class Environment(object):
             content=message,
             extra_body={
                 "assistant_id": self._agents[0].identifier,
-                "run_id": self.run_id,
+                "run_id": self._run_id,
             },
             metadata=kwargs,
             attachments=attachments,
@@ -155,7 +155,7 @@ class Environment(object):
             content=message,
             extra_body={
                 "assistant_id": self._agents[0].identifier,
-                "run_id": self.run_id,
+                "run_id": self._run_id,
             },
             metadata=kwargs,
             attachments=attachments,
@@ -759,7 +759,7 @@ class Environment(object):
         self.add_system_log("Marking environment run as completed", logging.INFO)
         res = self._hub_client.beta.threads.runs.update(
             thread_id=self._thread_id,
-            run_id=self.run_id,
+            run_id=self._run_id,
             extra_body={
                 "status": "completed",
                 "completed_at": datetime.now().isoformat(),
@@ -815,7 +815,7 @@ class Environment(object):
                 "primary_agent_namespace": primary_agent.namespace,
                 "primary_agent_name": primary_agent.name,
                 "primary_agent_version": primary_agent.version,
-                "run_id": self.run_id,
+                "run_id": self._run_id,
                 "run_type": run_type,
             },
             "show_entry": True,
@@ -843,7 +843,7 @@ class Environment(object):
         """Must be called to request input from the user."""
         return self._hub_client.beta.threads.runs.update(
             thread_id=self._thread_id,
-            run_id=self.run_id,
+            run_id=self._run_id,
             extra_body={"status": "requires_action"},
         )
 

@@ -4,7 +4,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
-from sqlmodel import select, update
+from sqlmodel import asc, select, update
 
 from hub.api.v1.auth import AuthToken
 from hub.api.v1.models import Jobs, get_session
@@ -37,30 +37,40 @@ class SelectedJob(BaseModel):
 
 
 @v1_router.post("/get_pending_job")
-async def get_pending_job(auth: AuthToken = Depends(requires_permission(PermissionVariant.WORKER))) -> SelectedJob:
-    rand_status = f"grabbing-{uuid.uuid4().hex[:16]}"
-
+def get_pending_job(
+    worker_id: str,
+    auth: AuthToken = Depends(requires_permission(PermissionVariant.WORKER)),
+) -> SelectedJob:
     with get_session() as session:
         for _ in range(5):
-            job = session.exec(select(Jobs).where(Jobs.status == "pending").limit(1)).first()
+            job = session.exec(select(Jobs).where(Jobs.status == "pending").order_by(asc(Jobs.id)).limit(1)).first()
 
             if job is None:
                 return SelectedJob(selected=False, job_id=None, registry_path=None, info="No pending jobs.")
 
             session.exec(
-                update(Jobs).where(Jobs.id == job.id).where(Jobs.status == "pending").values(status=rand_status)  # type: ignore
+                update(Jobs)
+                .where(Jobs.id == job.id)  # type: ignore
+                .where(Jobs.status == "pending")  # type: ignore
+                .values(status="processing")
+                .values(worker_id=worker_id)
             )
             session.commit()
 
             # Check if we manage to grab this job
-            final_job = session.exec(select(Jobs).where(Jobs.id == job.id).where(Jobs.status == rand_status)).first()
+            final_job = session.exec(
+                select(Jobs)
+                .where(Jobs.id == job.id)
+                .where(Jobs.status == "processing")
+                .where(Jobs.worker_id == worker_id)
+            ).first()
 
             if final_job is not None:
-                # We grabbed this job.
-                session.exec(update(Jobs).where(Jobs.id == final_job.id).values(status="processing"))  # type: ignore
-                session.commit()
                 return SelectedJob(
-                    selected=True, job_id=final_job.id, registry_path=final_job.registry_path, info="Job selected."
+                    selected=True,
+                    job_id=final_job.id,
+                    registry_path=final_job.registry_path,
+                    info="Job selected.",
                 )
 
     return SelectedJob(selected=False, job_id=None, registry_path=None, info="Fail to select a job.")

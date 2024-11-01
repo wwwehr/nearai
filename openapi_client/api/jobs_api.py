@@ -313,6 +313,7 @@ class JobsApi:
     @validate_call
     def get_pending_job_v1_jobs_get_pending_job_post(
         self,
+        worker_id: StrictStr,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -329,6 +330,8 @@ class JobsApi:
         """Get Pending Job
 
 
+        :param worker_id: (required)
+        :type worker_id: str
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -352,6 +355,7 @@ class JobsApi:
         """ # noqa: E501
 
         _param = self._get_pending_job_v1_jobs_get_pending_job_post_serialize(
+            worker_id=worker_id,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -360,6 +364,7 @@ class JobsApi:
 
         _response_types_map: Dict[str, Optional[str]] = {
             '200': "SelectedJob",
+            '422': "HTTPValidationError",
         }
         response_data = self.api_client.call_api(
             *_param,
@@ -375,6 +380,7 @@ class JobsApi:
     @validate_call
     def get_pending_job_v1_jobs_get_pending_job_post_with_http_info(
         self,
+        worker_id: StrictStr,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -391,6 +397,8 @@ class JobsApi:
         """Get Pending Job
 
 
+        :param worker_id: (required)
+        :type worker_id: str
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -414,6 +422,7 @@ class JobsApi:
         """ # noqa: E501
 
         _param = self._get_pending_job_v1_jobs_get_pending_job_post_serialize(
+            worker_id=worker_id,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -422,6 +431,7 @@ class JobsApi:
 
         _response_types_map: Dict[str, Optional[str]] = {
             '200': "SelectedJob",
+            '422': "HTTPValidationError",
         }
         response_data = self.api_client.call_api(
             *_param,
@@ -437,6 +447,7 @@ class JobsApi:
     @validate_call
     def get_pending_job_v1_jobs_get_pending_job_post_without_preload_content(
         self,
+        worker_id: StrictStr,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -453,6 +464,8 @@ class JobsApi:
         """Get Pending Job
 
 
+        :param worker_id: (required)
+        :type worker_id: str
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -476,6 +489,7 @@ class JobsApi:
         """ # noqa: E501
 
         _param = self._get_pending_job_v1_jobs_get_pending_job_post_serialize(
+            worker_id=worker_id,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -484,6 +498,7 @@ class JobsApi:
 
         _response_types_map: Dict[str, Optional[str]] = {
             '200': "SelectedJob",
+            '422': "HTTPValidationError",
         }
         response_data = self.api_client.call_api(
             *_param,
@@ -494,6 +509,7 @@ class JobsApi:
 
     def _get_pending_job_v1_jobs_get_pending_job_post_serialize(
         self,
+        worker_id,
         _request_auth,
         _content_type,
         _headers,
@@ -514,6 +530,10 @@ class JobsApi:
 
         # process the path parameters
         # process the query parameters
+        if worker_id is not None:
+            
+            _query_params.append(('worker_id', worker_id))
+            
         # process the header parameters
         # process the form parameters
         # process the body parameter

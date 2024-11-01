@@ -106,6 +106,7 @@ class Jobs(SQLModel, table=True):
     registry_path: str = Field(nullable=False)
     account_id: str = Field(nullable=False)
     status: str = Field(nullable=False)
+    worker_id: Optional[str] = Field(default=None)
     info: Dict = Field(default_factory=dict, sa_column=Column(JSON))
     result: Dict = Field(default_factory=dict, sa_column=Column(JSON))
 

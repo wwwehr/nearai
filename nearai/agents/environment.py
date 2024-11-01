@@ -304,12 +304,12 @@ class Environment(object):
                 file_content = self.read_file_by_id(f.id)
                 break
 
-        if not file_content:
-            raise Exception(f"failed to read file: {filename}")
-
         # Write the file content to the local filesystem
-        with open(local_path, "w") as local_file:
-            local_file.write(file_content)
+        if file_content:
+            with open(local_path, "w") as local_file:
+                local_file.write(file_content)
+        else:
+            self.add_system_log(f"Error: File {filename} not found during read_file operation")
 
         return file_content
 

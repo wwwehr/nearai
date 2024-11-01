@@ -44,13 +44,15 @@ app.include_router(v1_router, prefix="/v1")
 app.include_router(registry_router, prefix="/v1")
 app.include_router(run_agent_router, prefix="/v1")
 app.include_router(benchmark_router, prefix="/v1")
-app.include_router(vector_stores_router, prefix="/v1")
-app.include_router(files_router, prefix="/v1")
-app.include_router(evaluation_router, prefix="/v1")
 app.include_router(stars_router, prefix="/v1")
 app.include_router(hub_secrets_router, prefix="/v1")
 app.include_router(job_router, prefix="/v1")
 app.include_router(permission_router, prefix="/v1")
+app.include_router(evaluation_router, prefix="/v1")
+
+# TODO: OpenAPI can't be generated for the following routes.
+app.include_router(vector_stores_router, prefix="/v1")
+app.include_router(files_router, prefix="/v1")
 app.include_router(threads_router, prefix="/v1")
 
 

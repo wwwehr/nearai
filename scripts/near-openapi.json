@@ -1144,27 +1144,6 @@
         }
       }
     },
-    "/v1/evaluation/table": {
-      "get": {
-        "tags": [
-          "evaluation"
-        ],
-        "summary": "Table",
-        "operationId": "table_v1_evaluation_table_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EvaluationTable"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/stars/add_star": {
       "post": {
         "tags": [
@@ -1649,6 +1628,27 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/evaluation/table": {
+      "get": {
+        "tags": [
+          "evaluation"
+        ],
+        "summary": "Table",
+        "operationId": "table_v1_evaluation_table_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationTable"
                 }
               }
             }

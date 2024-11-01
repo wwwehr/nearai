@@ -567,7 +567,7 @@ class Environment(object):
         model: str = "",
         tools: Optional[List] = None,
         add_responses_to_messages: bool = True,
-        agent_role_name="agent",
+        agent_role_name="assistant",
         tool_role_name="tool",
         **kwargs: Any,
     ) -> ModelResponse:

@@ -71,15 +71,18 @@ class RegistryCli:
                     )
                 print(tabulate(table, headers=header, tablefmt="simple_grid"))
 
-    def metadata_template(self, local_path: str = ".", category: str = "", description: str = ""):
+    def metadata_template(
+        self, local_path: str = ".", category: str = "", name: str = "", description: str = "", version: str = ""
+    ):
         """Create a metadata template."""
         path = Path(local_path)
 
         metadata_path = path / "metadata.json"
 
-        # Get the name of the folder
-        version = path.name
-        name = path.parent.name
+        if version == "":
+            version = path.name
+        if name == "":
+            name = path.parent.name
 
         with open(metadata_path, "w") as f:
             metadata: Dict[str, Any] = {

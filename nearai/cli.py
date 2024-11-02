@@ -1,6 +1,7 @@
 import importlib.metadata
 import io
 import json
+import logging
 import os
 import re
 import runpy
@@ -41,7 +42,7 @@ from nearai.finetune import FinetuneCli
 from nearai.lib import check_metadata, parse_location, parse_tags
 from nearai.registry import get_registry_folder, registry
 from nearai.tensorboard_feed import TensorboardCli
-import logging
+
 
 class RegistryCli:
     def info(self, entry: str) -> None:
@@ -498,7 +499,6 @@ class AgentCli:
             thread = hub_client.beta.threads.create(
                 tool_resources=tool_resources,
             )
-
 
         # set log_level
         logger = logging.getLogger("system_logger")

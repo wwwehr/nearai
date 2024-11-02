@@ -122,6 +122,7 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
             "temperature": 0.0,
             "record_run": False,
             "verbose": False,
+            "change_to_agent_temp_dir": False,
         }
         if self.model_full_path:
             self.agent_params["model"] = self.model_full_path

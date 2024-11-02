@@ -120,7 +120,9 @@ def load_agent(
     if not agent_metadata:
         print(f"Missing metadata for {agent}")
 
-    return Agent(agent, agent_files, agent_metadata or {})
+    return Agent(
+        agent, agent_files, agent_metadata or {}, change_to_temp_dir=params.get("change_to_agent_temp_dir", True)
+    )
 
 
 def clear_temp_agent_files(agents, verbose=True):

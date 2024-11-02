@@ -3,6 +3,7 @@ import json
 import os
 import runpy
 import shutil
+import sys
 import tempfile
 import uuid
 from pathlib import Path
@@ -14,7 +15,9 @@ AGENT_FILENAME = "agent.py"
 
 
 class Agent(object):
-    def __init__(self, identifier: str, agent_files: Union[List, Path], metadata: Dict):  # noqa: D107
+    def __init__(  # noqa: D107
+        self, identifier: str, agent_files: Union[List, Path], metadata: Dict, change_to_temp_dir: bool = True
+    ):
         self.identifier = identifier
         name_parts = identifier.split("/")
         self.namespace = name_parts[0]
@@ -36,6 +39,7 @@ class Agent(object):
         self.agent_files = agent_files
 
         self.temp_dir = self.write_agent_files_to_temp(agent_files)
+        self.change_to_temp_dir = change_to_temp_dir
 
     @staticmethod
     def write_agent_files_to_temp(agent_files):
@@ -107,6 +111,7 @@ class Agent(object):
             raise ValueError("Both 'version' and 'name' must be non-empty in metadata.")
 
     def run(self, env: Any, task: Optional[str] = None) -> None:  # noqa: D102
+        agent_filename = os.path.join(self.temp_dir, AGENT_FILENAME)
         if not os.path.exists(os.path.join(self.temp_dir, AGENT_FILENAME)):
             raise ValueError(f"Agent run error: {AGENT_FILENAME} does not exist")
 
@@ -120,7 +125,17 @@ class Agent(object):
 
         context = {"env": env, "agent": self, "task": task}
 
-        runpy.run_path(AGENT_FILENAME, init_globals=context, run_name="__main__")
+        if not self.change_to_temp_dir:
+            runpy.run_path(agent_filename, init_globals=context, run_name="__main__")
+        else:
+            original_cwd = os.getcwd()
+            try:
+                os.chdir(self.temp_dir)
+                sys.path.insert(0, self.temp_dir)
+                runpy.run_path(agent_filename, init_globals=context, run_name="__main__")
+            finally:
+                os.chdir(original_cwd)
+                sys.path.pop(0)
 
     @staticmethod
     def load_agents(agents: str, config: ClientConfig, local: bool = False):

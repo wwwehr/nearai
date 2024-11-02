@@ -219,6 +219,7 @@ def test_example_agent():
     assert thread, "Thread should be created"
 
     messages = list(hub_client.beta.threads.messages.list(thread_id=agent_cli.last_thread_id).data)
+    print(messages)
     assert len(messages) == 2, "Thread should have two messages"
 
     ## upload a file, attach in a message

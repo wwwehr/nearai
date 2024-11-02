@@ -12,6 +12,7 @@ from shared.auth_data import AuthData
 from shared.client_config import DEFAULT_API_URL, ClientConfig
 from shared.inference_client import InferenceClient
 from shared.partial_near_client import PartialNearClient
+from shared.provider_models import PROVIDER_MODEL_SEP
 
 cloudwatch = boto3.client("cloudwatch", region_name="us-east-2")
 
@@ -145,6 +146,8 @@ def start_with_environment(
         agent.model_provider = params["provider"]
     if "model" in params:
         agent.model = params["model"]
+        if "provider" not in params and PROVIDER_MODEL_SEP in agent.model:
+            agent.model_provider = ""
     if "temperature" in params:
         agent.model_temperature = params["temperature"]
     if "max_tokens" in params:

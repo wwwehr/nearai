@@ -39,7 +39,7 @@ import { Messages } from '~/components/Messages';
 import { SignInPrompt } from '~/components/SignInPrompt';
 import { ThreadsSidebar } from '~/components/ThreadsSidebar';
 import { env } from '~/env';
-import { useAgentRequestsWithIframe } from '~/hooks/agent';
+import { useAgentRequestsWithIframe } from '~/hooks/agent-iframe-requests';
 import {
   useCurrentEntry,
   useCurrentEntryEnvironmentVariables,
@@ -64,10 +64,13 @@ type Props = {
   showLoadingPlaceholder?: boolean;
 };
 
-export type AgentRunnerFormSchema = Pick<
+type FormSchema = Pick<
   z.infer<typeof chatWithAgentModel>,
   'max_iterations' | 'new_message'
 >;
+
+export type AgentChatMutationInput = FormSchema &
+  Partial<z.infer<typeof chatWithAgentModel>>;
 
 export const AgentRunner = ({
   namespace,
@@ -95,7 +98,7 @@ export const AgentRunner = ({
   const threadId = queryParams.threadId ?? '';
   const utils = api.useUtils();
 
-  const form = useForm<AgentRunnerFormSchema>({
+  const form = useForm<FormSchema>({
     defaultValues: {
       max_iterations: 1,
     },
@@ -138,14 +141,14 @@ export const AgentRunner = ({
 
   const _chatMutation = api.hub.chatWithAgent.useMutation();
   const chatMutation = useMutation({
-    mutationFn: async (data: AgentRunnerFormSchema) => {
+    mutationFn: async (data: AgentChatMutationInput) => {
       try {
         const updatedThread = await _chatMutation.mutateAsync({
-          ...data,
           thread_id: threadId || undefined,
           agent_id: agentId,
           agent_env_vars: entryEnvironmentVariables.metadataVariablesByKey,
           user_env_vars: entryEnvironmentVariables.urlVariablesByKey,
+          ...data,
         });
 
         utils.hub.thread.setData(
@@ -193,7 +196,7 @@ export const AgentRunner = ({
     [updateQueryPath],
   );
 
-  const onSubmit: SubmitHandler<AgentRunnerFormSchema> = async (data) => {
+  const onSubmit: SubmitHandler<FormSchema> = async (data) => {
     if (!data.new_message.trim()) return;
 
     utils.hub.thread.setData(

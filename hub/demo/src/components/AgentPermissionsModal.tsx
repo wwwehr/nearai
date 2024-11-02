@@ -6,7 +6,7 @@ import { type z } from 'zod';
 import { useEntryParams } from '~/hooks/entries';
 import { idForEntry } from '~/lib/entries';
 import {
-  type agentWalletTransactionRequestModel,
+  type agentWalletTransactionsRequestModel,
   type chatWithAgentModel,
   type entryModel,
 } from '~/lib/models';
@@ -22,7 +22,7 @@ import { SignInPrompt } from './SignInPrompt';
 
 export type AgentRequest =
   | z.infer<typeof chatWithAgentModel>
-  | z.infer<typeof agentWalletTransactionRequestModel>;
+  | z.infer<typeof agentWalletTransactionsRequestModel>;
 
 type Props = {
   agent: z.infer<typeof entryModel>;

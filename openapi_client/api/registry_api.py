@@ -1001,7 +1001,7 @@ class RegistryApi:
     ) -> List[Filename]:
         """List Files
 
-        List all files that belong to a entry.
+        Lists all files that belong to a entry.
 
         :param body_list_files_v1_registry_list_files_post: (required)
         :type body_list_files_v1_registry_list_files_post: BodyListFilesV1RegistryListFilesPost
@@ -1069,7 +1069,7 @@ class RegistryApi:
     ) -> ApiResponse[List[Filename]]:
         """List Files
 
-        List all files that belong to a entry.
+        Lists all files that belong to a entry.
 
         :param body_list_files_v1_registry_list_files_post: (required)
         :type body_list_files_v1_registry_list_files_post: BodyListFilesV1RegistryListFilesPost
@@ -1137,7 +1137,7 @@ class RegistryApi:
     ) -> RESTResponseType:
         """List Files
 
-        List all files that belong to a entry.
+        Lists all files that belong to a entry.
 
         :param body_list_files_v1_registry_list_files_post: (required)
         :type body_list_files_v1_registry_list_files_post: BodyListFilesV1RegistryListFilesPost

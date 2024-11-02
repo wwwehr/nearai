@@ -16,7 +16,6 @@ import {
   modelsModel,
   noncesModel,
   revokeNonceModel,
-  threadMessagesModel,
   threadMetadataModel,
   threadsModel,
 } from '~/lib/models';
@@ -26,8 +25,10 @@ import {
   publicProcedure,
 } from '~/server/api/trpc';
 import { loadEntriesFromDirectory } from '~/server/utils/data-source';
-import { loadAttachmentFilesForMessages } from '~/server/utils/files';
-import { runMessageOnAgentThread } from '~/server/utils/threads';
+import {
+  fetchThreadMessagesAndFiles,
+  runMessageOnAgentThread,
+} from '~/server/utils/threads';
 
 const fetchWithZod = createZodFetcher();
 
@@ -35,18 +36,17 @@ export const hubRouter = createTRPCRouter({
   chatWithAgent: protectedProcedure
     .input(chatWithAgentModel)
     .mutation(async ({ ctx, input }) => {
-      try {
-        const { threadId } = await runMessageOnAgentThread(
-          ctx.authorization,
-          input,
-        );
-        return {
-          threadId,
-        };
-      } catch (error) {
-        console.error(error);
-        throw error;
-      }
+      const { threadId } = await runMessageOnAgentThread(
+        ctx.authorization,
+        input,
+      );
+
+      const thread = await fetchThreadMessagesAndFiles(
+        ctx.authorization,
+        threadId,
+      );
+
+      return thread;
     }),
 
   chatWithModel: protectedProcedure
@@ -424,28 +424,11 @@ export const hubRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const url = new URL(
-        `${env.ROUTER_URL}/threads/${input.threadId}/messages`,
-      );
-      url.searchParams.append('limit', '1000');
-      url.searchParams.append('order', 'asc');
-
-      const messages = await fetchWithZod(threadMessagesModel, url.toString(), {
-        headers: {
-          Authorization: ctx.authorization,
-        },
-      });
-
-      const files = await loadAttachmentFilesForMessages(
+      const thread = await fetchThreadMessagesAndFiles(
         ctx.authorization,
-        messages,
+        input.threadId,
       );
-
-      return {
-        id: input.threadId,
-        files,
-        messages: messages.data,
-      };
+      return thread;
     }),
 
   threads: protectedProcedure.query(async ({ ctx }) => {

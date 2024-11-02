@@ -8,6 +8,7 @@ import {
   Gear,
   List,
 } from '@phosphor-icons/react';
+import { useMutation } from '@tanstack/react-query';
 import {
   type KeyboardEventHandler,
   useCallback,
@@ -43,7 +44,6 @@ import {
   useCurrentEntry,
   useCurrentEntryEnvironmentVariables,
 } from '~/hooks/entries';
-import { useThreads } from '~/hooks/threads';
 import { useQueryParams } from '~/hooks/url';
 import { type chatWithAgentModel, type threadMessageModel } from '~/lib/models';
 import { returnOptimisticThreadMessage } from '~/lib/thread';
@@ -53,7 +53,7 @@ import { copyTextToClipboard } from '~/utils/clipboard';
 import { handleClientError } from '~/utils/error';
 import { formatBytes } from '~/utils/number';
 
-import { PlaceholderSection } from './lib/Placeholder';
+import { PlaceholderCard, PlaceholderSection } from './lib/Placeholder';
 
 type RunView = 'conversation' | 'output' | undefined;
 
@@ -64,7 +64,7 @@ type Props = {
   showLoadingPlaceholder?: boolean;
 };
 
-type FormSchema = Pick<
+export type AgentRunnerFormSchema = Pick<
   z.infer<typeof chatWithAgentModel>,
   'max_iterations' | 'new_message'
 >;
@@ -93,19 +93,9 @@ export const AgentRunner = ({
     Object.keys(queryParams),
   );
   const threadId = queryParams.threadId ?? '';
-  const chatMutation = api.hub.chatWithAgent.useMutation();
-  const { threadsQuery } = useThreads();
   const utils = api.useUtils();
 
-  const {
-    agentRequestsNeedingPermissions,
-    setAgentRequestsNeedingPermissions,
-    conditionallyProcessAgentRequests,
-    iframePostMessage,
-    onIframePostMessage,
-  } = useAgentRequestsWithIframe(currentEntry, chatMutation, threadId);
-
-  const form = useForm<FormSchema>({
+  const form = useForm<AgentRunnerFormSchema>({
     defaultValues: {
       max_iterations: 1,
     },
@@ -136,14 +126,53 @@ export const AgentRunner = ({
   const latestAssistantMessages: z.infer<typeof threadMessageModel>[] = [];
   if (thread) {
     for (let i = thread.messages.length - 1; i >= 0; i--) {
-      const message = thread.messages[i];
-      if (message?.role === 'assistant') {
+      const message = thread.messages[i]!;
+      const messageType = message.metadata?.message_type ?? '';
+      if (message.role === 'assistant' && !messageType.startsWith('system:')) {
         latestAssistantMessages.push(message);
       } else {
         break;
       }
     }
   }
+
+  const _chatMutation = api.hub.chatWithAgent.useMutation();
+  const chatMutation = useMutation({
+    mutationFn: async (data: AgentRunnerFormSchema) => {
+      try {
+        const updatedThread = await _chatMutation.mutateAsync({
+          ...data,
+          thread_id: threadId || undefined,
+          agent_id: agentId,
+          agent_env_vars: entryEnvironmentVariables.metadataVariablesByKey,
+          user_env_vars: entryEnvironmentVariables.urlVariablesByKey,
+        });
+
+        utils.hub.thread.setData(
+          {
+            threadId,
+          },
+          updatedThread,
+        );
+
+        updateQueryPath({ threadId: updatedThread.id }, 'replace', false);
+
+        void utils.hub.threads.invalidate();
+      } catch (error) {
+        handleClientError({ error, title: 'Failed to run agent' });
+      }
+    },
+  });
+
+  const {
+    agentRequestsNeedingPermissions,
+    setAgentRequestsNeedingPermissions,
+    conditionallyProcessAgentRequests,
+    iframePostMessage,
+    onIframePostMessage,
+  } = useAgentRequestsWithIframe(currentEntry, chatMutation, threadId);
+
+  const isLoading = threadQuery.isLoading && !chatMutation.isPending;
 
   const [__view, __setView] = useState<RunView>();
   const view = (queryParams.view as RunView) ?? __view;
@@ -164,48 +193,26 @@ export const AgentRunner = ({
     [updateQueryPath],
   );
 
-  const submitMessage = async (data: FormSchema) => {
-    const response = await chatMutation.mutateAsync({
-      ...data,
-      thread_id: threadId || undefined,
-      agent_id: agentId,
-      agent_env_vars: entryEnvironmentVariables.metadataVariablesByKey,
-      user_env_vars: entryEnvironmentVariables.urlVariablesByKey,
-    });
+  const onSubmit: SubmitHandler<AgentRunnerFormSchema> = async (data) => {
+    if (!data.new_message.trim()) return;
 
-    if (response.threadId === threadId) {
-      await threadQuery.refetch();
-    } else {
-      updateQueryPath({ threadId: response.threadId }, 'replace', false);
-    }
+    utils.hub.thread.setData(
+      {
+        threadId,
+      },
+      {
+        id: threadId,
+        files: thread?.files ?? [],
+        messages: [
+          ...(thread?.messages ?? []),
+          returnOptimisticThreadMessage(threadId, data.new_message),
+        ],
+      },
+    );
 
-    void threadsQuery.refetch();
-  };
+    form.setValue('new_message', '');
 
-  const onSubmit: SubmitHandler<FormSchema> = async (data) => {
-    try {
-      if (!data.new_message.trim()) return;
-
-      utils.hub.thread.setData(
-        {
-          threadId,
-        },
-        {
-          id: threadId,
-          files: thread?.files ?? [],
-          messages: [
-            ...(thread?.messages ?? []),
-            returnOptimisticThreadMessage(threadId, data.new_message),
-          ],
-        },
-      );
-
-      form.setValue('new_message', '');
-
-      await submitMessage(data);
-    } catch (error) {
-      handleClientError({ error, title: 'Failed to communicate with agent' });
-    }
+    await chatMutation.mutateAsync(data);
   };
 
   const onKeyDownContent: KeyboardEventHandler<HTMLTextAreaElement> = (
@@ -224,6 +231,12 @@ export const AgentRunner = ({
   };
 
   useEffect(() => {
+    if (threadId && thread?.id !== threadId) {
+      void threadQuery.refetch({ cancelRefetch: true });
+    }
+  }, [thread, threadId, threadQuery]);
+
+  useEffect(() => {
     const files = threadQuery?.data?.files;
     const htmlFile = files?.find((file) => file.filename === 'index.html');
 
@@ -239,12 +252,6 @@ export const AgentRunner = ({
       setView('conversation');
     }
   }, [threadQuery, htmlOutput, agentId, setView]);
-
-  useEffect(() => {
-    if (threadId && threadId !== thread?.id) {
-      void threadQuery.refetch();
-    }
-  }, [thread, threadId, threadQuery]);
 
   useEffect(() => {
     if (!threadId) {
@@ -289,12 +296,11 @@ export const AgentRunner = ({
     const maxIterations = agentDetails?.defaults?.max_iterations ?? 1;
 
     if (initialUserMessage && !threadId && !chatMutation.isPending) {
-      void submitMessage({
+      void chatMutation.mutateAsync({
         max_iterations: maxIterations,
         new_message: initialUserMessage,
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentEntry, threadId, chatMutation]);
 
   if (!currentEntry) {
@@ -312,29 +318,37 @@ export const AgentRunner = ({
         />
 
         <Sidebar.Main>
-          {view === 'output' ? (
+          {isLoading ? (
+            <PlaceholderCard style={{ marginTop: 'auto' }} />
+          ) : (
             <>
-              <IframeWithBlob
-                html={htmlOutput}
-                onPostMessage={onIframePostMessage}
-                postMessage={iframePostMessage}
-              />
+              {view === 'output' ? (
+                <>
+                  <IframeWithBlob
+                    html={htmlOutput}
+                    minHeight={currentEntry.details.agent?.html_minimum_height}
+                    onPostMessage={onIframePostMessage}
+                    postMessage={iframePostMessage}
+                  />
 
-              {latestAssistantMessages.length > 0 && (
+                  {latestAssistantMessages.length > 0 && (
+                    <Messages
+                      grow={false}
+                      messages={latestAssistantMessages}
+                      threadId={threadId}
+                    />
+                  )}
+                </>
+              ) : (
                 <Messages
-                  loading={threadQuery.isLoading}
-                  messages={latestAssistantMessages}
+                  messages={thread?.messages ?? []}
                   threadId={threadId}
+                  welcomeMessage={
+                    <AgentWelcome details={currentEntry.details} />
+                  }
                 />
               )}
             </>
-          ) : (
-            <Messages
-              loading={threadQuery.isLoading}
-              messages={thread?.messages ?? []}
-              threadId={threadId}
-              welcomeMessage={<AgentWelcome details={currentEntry.details} />}
-            />
           )}
 
           <Sidebar.MainStickyFooter>
@@ -405,7 +419,7 @@ export const AgentRunner = ({
                     type="submit"
                     icon={<ArrowRight weight="bold" />}
                     size="small"
-                    loading={form.formState.isSubmitting}
+                    loading={chatMutation.isPending}
                   />
                 </Flex>
               ) : (
@@ -495,6 +509,7 @@ export const AgentRunner = ({
       </Sidebar.Root>
 
       <AgentPermissionsModal
+        agent={currentEntry}
         onAllow={(requests) =>
           conditionallyProcessAgentRequests(requests, true)
         }

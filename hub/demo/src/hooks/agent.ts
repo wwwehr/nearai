@@ -1,4 +1,5 @@
 import { type FinalExecutionOutcome } from '@near-wallet-selector/core';
+import { type UseMutationResult } from '@tanstack/react-query';
 import { formatNearAmount } from 'near-api-js/lib/utils/format';
 import { useCallback, useEffect, useState } from 'react';
 import { type z } from 'zod';
@@ -7,6 +8,7 @@ import {
   type AgentRequest,
   checkAgentPermissions,
 } from '~/components/AgentPermissionsModal';
+import { type AgentRunnerFormSchema } from '~/components/AgentRunner';
 import { type IframePostMessageEventHandler } from '~/components/lib/IframeWithBlob';
 import {
   agentWalletAccountRequestModel,
@@ -26,7 +28,7 @@ const PENDING_TRANSACTION_KEY = 'agent-transaction-request-pending-connection';
 
 export function useAgentRequestsWithIframe(
   currentEntry: z.infer<typeof entryModel> | undefined,
-  chatMutation: ReturnType<typeof api.hub.chatWithAgent.useMutation>,
+  chatMutation: UseMutationResult<void, Error, AgentRunnerFormSchema, unknown>,
   threadId: string | null | undefined,
 ) {
   const { queryParams, updateQueryPath } = useQueryParams([
@@ -89,9 +91,7 @@ export function useAgentRequestsWithIframe(
     if (allowedBypass ?? permissionsCheck.allowed) {
       requests.forEach(async (request) => {
         if ('agent_id' in request) {
-          const { threadId } = await chatMutation.mutateAsync(request);
-          updateQueryPath({ threadId }, 'replace', false);
-          void utils.hub.thread.invalidate({ threadId });
+          await chatMutation.mutateAsync(request);
         } else {
           if (wallet) {
             try {

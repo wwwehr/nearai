@@ -8,7 +8,7 @@ import {
   type AgentRequest,
   checkAgentPermissions,
 } from '~/components/AgentPermissionsModal';
-import { type AgentRunnerFormSchema } from '~/components/AgentRunner';
+import { type AgentChatMutationInput } from '~/components/AgentRunner';
 import { type IframePostMessageEventHandler } from '~/components/lib/IframeWithBlob';
 import {
   agentWalletAccountRequestModel,
@@ -28,7 +28,7 @@ const PENDING_TRANSACTION_KEY = 'agent-transaction-request-pending-connection';
 
 export function useAgentRequestsWithIframe(
   currentEntry: z.infer<typeof entryModel> | undefined,
-  chatMutation: UseMutationResult<void, Error, AgentRunnerFormSchema, unknown>,
+  chatMutation: UseMutationResult<void, Error, AgentChatMutationInput, unknown>,
   threadId: string | null | undefined,
 ) {
   const { queryParams, updateQueryPath } = useQueryParams([

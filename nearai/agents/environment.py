@@ -69,7 +69,6 @@ class CustomLogHandler(logging.Handler):
         log_entry = self.format(record)
         self.add_reply_func(message=log_entry, message_type=f"{self.namespace}:log")
 
-
 class Environment(object):
     def __init__(  # noqa: D107
         self,

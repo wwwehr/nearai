@@ -60,12 +60,12 @@ default_approvals: Dict[str, Any] = {"confirm_execution": lambda _: True}
 
 
 class CustomLogHandler(logging.Handler):
-    def __init__(self, add_reply_func, namespace: str):
+    def __init__(self, add_reply_func, namespace: str):  # noqa: D107
         super().__init__()
         self.add_reply_func = add_reply_func
         self.namespace = namespace
 
-    def emit(self, record):
+    def emit(self, record):  # noqa: D102
         log_entry = self.format(record)
         self.add_reply_func(message=log_entry, message_type=f"{self.namespace}:log")
 
@@ -268,7 +268,8 @@ class Environment(object):
         """Backwards compatibility for chat_completions messages."""
         messages = self._list_messages()
 
-        # Filter out system and agent log messages when running in debug mode. Agent behaviour shouldn't change based on logs.
+        # Filter out system and agent log messages when running in debug mode.
+        # Agent behaviour shouldn't change based on logs.
         if self._debug_mode:
             messages = [
                 m

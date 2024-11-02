@@ -126,10 +126,10 @@ def clear_temp_agent_files(agents):
             shutil.rmtree(agent.temp_dir)
 
 
-def save_environment(env, client, run_id, base_id, metric_function=None) -> str:
+def save_environment(env, client, base_id, metric_function=None) -> str:
     save_start_time = time.perf_counter()
     snapshot = env.create_snapshot()
-    metadata = env.environment_run_info(run_id, base_id, "remote run")
+    metadata = env.environment_run_info(base_id, "remote run")
     name = metadata["name"]
     request_start_time = time.perf_counter()
     registry_id = client.save_environment(snapshot, metadata)
@@ -233,6 +233,7 @@ def start_with_environment(
     if agent.welcome_description:
         print(agent.welcome_description)
     env.add_agent_start_system_log(agent_idx=0)
+<<<<<<< HEAD
     return EnvironmentRun(near_client, loaded_agents, env, thread_id, params.get("record_run", True))
 
 
@@ -249,6 +250,14 @@ def run_with_environment(
     """Runs agent against environment fetched from id, optionally passing a new message to the environment."""
     environment_run = start_with_environment(agents, auth, thread_id, run_id, additional_path, params, print_system_log)
     return environment_run.run(new_message)
+=======
+    env.run(new_message, max_iterations)
+    new_environment = save_environment(env, near_client, thread_id, write_metric) if record_run else None
+    clear_temp_agent_files(loaded_agents)
+    stop_time = time.perf_counter()
+    write_metric("ExecuteAgentDuration", stop_time - start_time)
+    return new_environment
+>>>>>>> environment
 
 
 def get_local_agent_files(agent_identifier: str, additional_path: str = ""):

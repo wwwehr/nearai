@@ -22,6 +22,9 @@ class AuthData(BaseModel):
             if getattr(self, key) is None:
                 raise ValueError(f"Missing required auth data: {key}")
 
+        if self.on_behalf_of is not None:
+            required_keys.add("on_behalf_of")
+
         bearer_data = {key: getattr(self, key) for key in required_keys}
 
         return json.dumps(bearer_data)

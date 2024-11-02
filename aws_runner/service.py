@@ -14,6 +14,7 @@ from shared.auth_data import AuthData
 from shared.client_config import ClientConfig
 from shared.inference_client import InferenceClient
 from shared.near.sign import SignatureVerificationResult, verify_signed_message
+from shared.provider_models import PROVIDER_MODEL_SEP
 
 cloudwatch = boto3.client("cloudwatch", region_name="us-east-2")
 
@@ -205,6 +206,8 @@ def start_with_environment(
         agent.model_provider = params["provider"]
     if "model" in params:
         agent.model = params["model"]
+        if "provider" not in params and PROVIDER_MODEL_SEP in agent.model:
+            agent.model_provider = ""
     if "temperature" in params:
         agent.model_temperature = params["temperature"]
     if "max_tokens" in params:
@@ -233,7 +236,6 @@ def start_with_environment(
     if agent.welcome_description:
         print(agent.welcome_description)
     env.add_agent_start_system_log(agent_idx=0)
-<<<<<<< HEAD
     return EnvironmentRun(near_client, loaded_agents, env, thread_id, params.get("record_run", True))
 
 
@@ -250,14 +252,6 @@ def run_with_environment(
     """Runs agent against environment fetched from id, optionally passing a new message to the environment."""
     environment_run = start_with_environment(agents, auth, thread_id, run_id, additional_path, params, print_system_log)
     return environment_run.run(new_message)
-=======
-    env.run(new_message, max_iterations)
-    new_environment = save_environment(env, near_client, thread_id, write_metric) if record_run else None
-    clear_temp_agent_files(loaded_agents)
-    stop_time = time.perf_counter()
-    write_metric("ExecuteAgentDuration", stop_time - start_time)
-    return new_environment
->>>>>>> environment
 
 
 def get_local_agent_files(agent_identifier: str, additional_path: str = ""):

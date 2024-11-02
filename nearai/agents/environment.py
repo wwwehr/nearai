@@ -891,6 +891,7 @@ class Environment(object):
         """Remove temp agent files created to be used in `runpy`."""
         for agent in self._agents:
             if os.path.exists(agent.temp_dir):
+                print(f"Deleting {agent.temp_dir}")
                 shutil.rmtree(agent.temp_dir)
 
     def set_next_actor(self, who: str) -> None:

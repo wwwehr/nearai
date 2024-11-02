@@ -112,7 +112,7 @@ class Agent(object):
 
     def run(self, env: Any, task: Optional[str] = None) -> None:  # noqa: D102
         agent_filename = os.path.join(self.temp_dir, AGENT_FILENAME)
-        if not os.path.exists(os.path.join(self.temp_dir, AGENT_FILENAME)):
+        if not os.path.exists(agent_filename):
             raise ValueError(f"Agent run error: {AGENT_FILENAME} does not exist")
 
         # combine agent.env_vars and env.env_vars
@@ -125,6 +125,9 @@ class Agent(object):
 
         context = {"env": env, "agent": self, "task": task}
 
+        print(f"self.change_to_temp_dir = {self.change_to_temp_dir}")
+        if not os.path.exists(agent_filename):
+            raise ValueError(f"Agent run error: {AGENT_FILENAME} does not exist")
         if not self.change_to_temp_dir:
             runpy.run_path(agent_filename, init_globals=context, run_name="__main__")
         else:

@@ -136,14 +136,14 @@ Your agent will receive an `env` object that has the following methods:
 tell the agent that it is the user's turn, stop iterating.
   * [`completion`](api.md#nearai.agents.environment.Environment.completion): request inference completions from a provider and model.
 The model format can be either `PROVIDER::MODEL` or simply `MODEL`. 
-By default the provider is `fireworks` and the model is `llama-v3p1-405b-instruct-long`. 
+By default the provider is `fireworks` and the model is `qwen2p5-72b-instruct`. 
 The model can be passed into `completion` function or as an agent metadata:
    ```json
    "details": {
      "agent": {
        "defaults": {
          // All fields below are optional.
-         "model": "llama-v3p1-405b-instruct-long",
+         "model": "qwen2p5-72b-instruct",
          "model_max_tokens": 16384,
          "model_provider": "fireworks",
          "model_temperature": 1.0
@@ -205,13 +205,13 @@ def my_tool():
 tool_registry = env.get_tool_registry()
 tool_registry.register_tool(my_tool)
 tool_def = tool_registry.get_tool_definition('my_tool')
-response = env.completions_and_run_tools(messages, tools=[tool_def], model="llama-v3p1-405b-instruct")
+response = env.completions_and_run_tools(messages, tools=[tool_def])
 ```
 
 To pass all the built in tools plus any you have registered use the `get_all_tool_definitions` method.
 ```python
 all_tools = env.get_tool_registry().get_all_tool_definitions()
-response = env.completions_and_run_tools(messages, tools=all_tools, model="llama-v3p1-405b-instruct")
+response = env.completions_and_run_tools(messages, tools=all_tools)
 ```
 If you do not want to use the built-in tools, use `get_tool_registry(new=True)`
 ```python
@@ -242,7 +242,7 @@ If you do not want to use the built-in tools, use `get_tool_registry(new=True)`
     "agent": {
        "defaults": {
          // All fields below are optional.
-         "model": "llama-v3p1-405b-instruct-long",
+         "model": "qwen2p5-72b-instruct",
          "model_max_tokens": 16384,
          "model_provider": "fireworks",
          "model_temperature": 1.0

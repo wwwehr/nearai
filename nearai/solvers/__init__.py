@@ -6,7 +6,6 @@ from typing import Any, Dict, List, Optional, Tuple, Union, cast
 from aws_runner.service import EnvironmentRun, start_with_environment
 from litellm import Choices, ModelResponse
 from litellm.types.completion import ChatCompletionMessageParam
-from shared.client_config import ClientConfig
 from shared.inference_client import InferenceClient
 from shared.provider_models import get_provider_namespaced_model
 

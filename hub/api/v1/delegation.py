@@ -50,3 +50,4 @@ def revoke_delegation(
             query = query.where(Delegation.delegation_account_id == delegate_account_id)
 
         session.exec(query)
+        session.commit()

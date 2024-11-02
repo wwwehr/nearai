@@ -88,7 +88,7 @@ async def validate_signature(auth: RawAuthToken = Depends(get_auth)):
 
     logging.debug(f"account_id {auth.account_id}: signature verified")
 
-    if auth.on_behalf_of is None:
+    if auth.on_behalf_of is not None:
         # Query is trying to perform an action on behalf of another account. Check if it has permission to do so.
 
         query = (

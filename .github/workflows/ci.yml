@@ -107,7 +107,7 @@ jobs:
       run: |
         mkdir -p /tmp/docker-cache
         docker compose -f .docker/compose-e2e.yml config --images | \
-          xargs -I {} sh -c 'docker save docker-{} -o "/tmp/docker-cache/$(echo {} | tr "/" "_").tar"'
+          xargs -I {} sh -c 'docker save {} -o "/tmp/docker-cache/$(echo {} | tr "/" "_").tar"'
 
     - name: Start Docker Compose
       run: docker compose -f .docker/compose-e2e.yml up -d

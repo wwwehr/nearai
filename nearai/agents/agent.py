@@ -1,10 +1,12 @@
 import io
 import json
 import os
+import random
 import runpy
 import shutil
 import sys
 import tempfile
+import time
 import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -42,8 +44,10 @@ class Agent(object):
     @staticmethod
     def write_agent_files_to_temp(agent_files):
         """Write agent files to a temporary directory."""
-        unique_id = uuid.uuid4().hex
-        temp_dir = os.path.join(tempfile.gettempdir(), f"agent_{unique_id}")
+        unique_id1 = uuid.uuid4().hex
+        unique_id2 = str(int(time.time() * 1000))
+        unique_id3 = str(random.randint(0, 1000))
+        temp_dir = os.path.join(tempfile.gettempdir(), f"agent_{unique_id1}_{unique_id2}_{unique_id3}")
 
         if isinstance(agent_files, List):
             os.makedirs(temp_dir, exist_ok=True)

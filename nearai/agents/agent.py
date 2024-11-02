@@ -3,7 +3,6 @@ import json
 import os
 import runpy
 import shutil
-import sys
 import tempfile
 import uuid
 from pathlib import Path

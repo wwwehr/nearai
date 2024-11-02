@@ -69,6 +69,9 @@ class SolverInferenceSession:
                 params=self.agent_params,
                 print_system_log=False,
             )
+            # Set an inference client with a cli client config.
+            # This is needed to pass num_inference_retries.
+            self.env_run.env.client = self.client
         return self
 
     def add_system_message(self, message: str) -> None:
@@ -101,7 +104,7 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
 
     def __init__(self, model: str = "", agent: str = "") -> None:
         CONFIG.confirm_commands = False
-        self.client_config = ClientConfig(base_url=CONFIG.nearai_hub.base_url, auth=CONFIG.auth)
+        self.client_config = CONFIG.get_client_config()
         self.client = InferenceClient(self.client_config)
         assert model != "" or agent != ""
 

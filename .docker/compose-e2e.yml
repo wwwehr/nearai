@@ -93,6 +93,7 @@ services:
       DATABASE_USER: root
       DATABASE_PASSWORD: change-me
       DATABASE_NAME: hub
+      STORAGE_TYPE: s3
       PROVIDER_LOCAL_BASE_URL: http://vllm:8000/v1
       PROVIDER_LOCAL_API_KEY: n/a
       CUSTOM_RUNNER_URL: http://agent_runner:8080/2015-03-31/functions/function/invocations

@@ -67,6 +67,7 @@ class SolverInferenceSession:
                 run.id,
                 additional_path=self.agent,
                 params=self.agent_params,
+                print_system_log=True,
             )
         return self
 

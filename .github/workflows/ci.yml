@@ -87,19 +87,13 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-docker-cache-
 
-    - uses: docker/bake-action@v5
-      with:
-        set: |
-          *.cache-from=type=local,src=/tmp/docker-cache
-          *.cache-to=type=local,dest=/tmp/docker-cache,mode=max
-
-    # TODO: remove this step, in order to build the child images
-    # we need to have the base image already built
     - name: Build nearai_base Image
-      run: docker compose -f .docker/compose-e2e.yml build nearai_base
+      run: |
+        docker compose -f .docker/compose-e2e.yml build --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from=type=local,src=/tmp/docker-cache nearai_base
     
     - name: Build Docker Images
-      run: docker compose -f .docker/compose-e2e.yml build
+      run: |
+        docker compose -f .docker/compose-e2e.yml build --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from=type=local,src=/tmp/docker-cache --cache-to=type=local,dest=/tmp/docker-cache,mode=max
       env:
         NEARAICI_SIGNATURE: ${{ secrets.NEARAICI_SIGNATURE }}
 

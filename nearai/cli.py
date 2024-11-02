@@ -71,18 +71,17 @@ class RegistryCli:
                     )
                 print(tabulate(table, headers=header, tablefmt="simple_grid"))
 
-    def metadata_template(
-        self, local_path: str = ".", category: str = "", name: str = "", description: str = "", version: str = ""
-    ):
+    def metadata_template(self, local_path: str = ".", category: str = "", description: str = ""):
         """Create a metadata template."""
         path = Path(local_path)
 
         metadata_path = path / "metadata.json"
 
-        if version == "":
-            version = path.name
-        if name == "":
-            name = path.parent.name
+        version = path.name
+        pattern = r"^[0-9]+(?:\.[0-9]+)*$"
+        assert re.match(pattern, version), f"Invalid version format: {version}"
+        name = path.parent.name
+        assert not re.match(pattern, name), f"Invalid agent name: {name}"
 
         with open(metadata_path, "w") as f:
             metadata: Dict[str, Any] = {

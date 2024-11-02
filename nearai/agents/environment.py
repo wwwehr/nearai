@@ -106,10 +106,6 @@ class Environment(object):
             open(os.path.join(self._path, CHAT_FILENAME), "a").close()
         os.chdir(self._path)
 
-    @staticmethod
-    def _generate_run_id() -> str:
-        return uuid.uuid4().hex
-
     def get_tool_registry(self, new: bool = False) -> ToolRegistry:
         """Returns the tool registry, a dictionary of tools that can be called by the agent."""
         if new:
@@ -165,6 +161,15 @@ class Environment(object):
         # Prevent agent to save messages on behalf of `user` to avoid adding false memory
         role = "assistant"
 
+        return self._add_message(role, message, attachments, **kwargs)
+
+    def _add_message(
+        self,
+        role: str,
+        message: str,
+        attachments: Optional[Iterable[Attachment]] = None,
+        **kwargs: Any,
+    ):
         return self._hub_client.beta.threads.messages.create(
             thread_id=self._thread_id,
             role=role,  # type: ignore
@@ -825,7 +830,7 @@ class Environment(object):
             snapshot = f.read()
         return snapshot
 
-    def environment_run_info(self, run_id, base_id, run_type) -> dict:
+    def environment_run_info(self, base_id, run_type) -> dict:
         """Returns the environment run information."""
         if not self._agents or not self._agents[0]:
             raise ValueError("Agent not found")
@@ -833,14 +838,15 @@ class Environment(object):
 
         full_agent_name = "/".join([primary_agent.namespace, primary_agent.name, primary_agent.version])
         safe_agent_name = full_agent_name.replace("/", "_")
-        generated_name = f"environment_run_{safe_agent_name}_{run_id}"
+        uid = uuid.uuid4().hex
+        generated_name = f"environment_run_{safe_agent_name}_{uid}"
         name = generated_name
 
         timestamp = datetime.now(timezone.utc).isoformat()
         return {
             "name": name,
             "version": "0",
-            "description": f"Agent {run_type} {full_agent_name} {run_id} {timestamp}",
+            "description": f"Agent {run_type} {full_agent_name} {uid} {timestamp}",
             "category": "environment",
             "tags": ["environment"],
             "details": {
@@ -850,7 +856,7 @@ class Environment(object):
                 "primary_agent_namespace": primary_agent.namespace,
                 "primary_agent_name": primary_agent.name,
                 "primary_agent_version": primary_agent.version,
-                "run_id": run_id,
+                "run_id": self._run_id,
                 "run_type": run_type,
             },
             "show_entry": True,
@@ -891,6 +897,8 @@ class Environment(object):
     def set_next_actor(self, who: str) -> None:
         """Set the next actor / action in the dialogue."""
         next_action_fn = os.path.join(self._path, ".next_action")
+        if who == "agent":
+            self._done = False
 
         with open(next_action_fn, "w") as f:
             f.write(who)
@@ -909,14 +917,13 @@ class Environment(object):
         self,
         new_message: Optional[str] = None,
         max_iterations: int = 10,
-    ) -> str:
+    ) -> None:
         """Runs agent(s) against a new or previously created environment."""
-        run_id = self._generate_run_id()
+        if new_message:
+            self._add_message("user", new_message)
+
         iteration = 0
         self.set_next_actor("agent")
-
-        if new_message:
-            self.add_message("user", new_message)
 
         while iteration < max_iterations and not self.is_done() and self.get_next_actor() != "user":
             iteration += 1
@@ -933,10 +940,8 @@ class Environment(object):
 
         self.mark_done()
 
-        return run_id
-
     def generate_folder_hash_id(self, path: str) -> str:
-        """Returns id similar to _generate_run_id(), but based on files and their contents in path, including subfolders."""  # noqa: E501
+        """Returns hash based on files and their contents in path, including subfolders."""  # noqa: E501
         hash_obj = hashlib.md5()
 
         for root, _dirs, files in os.walk(path):

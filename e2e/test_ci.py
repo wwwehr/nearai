@@ -181,15 +181,15 @@ def test_example_agent():
         },
         "show_entry": True,
     }
-    python_code = dedent("""
+    python_code = dedent(f"""
     # In local interactive mode, the first user input is collected before the agent runs.
-    prompt = {"role": "system", "content": "You are a travel agent that helps users plan trips."}
+    prompt = {{"role": "system", "content": "You are a travel agent that helps users plan trips."}}
     try:
         env.add_message("assistant", "File content: " + env.read_file('test.txt'))
     except Exception as e:
         print("Error reading file:", e)
 
-    result = env.completion([prompt] + env.list_messages())
+    result = env.completion([prompt] + env.list_messages(), model="local::{MODEL_NAME}")
     env.add_message("assistant", result)
     env.mark_done()
     """)

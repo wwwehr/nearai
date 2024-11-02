@@ -22,6 +22,9 @@
                   },
                   {
                     "$ref": "#/components/schemas/EmbeddingsRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ImageGenerationRequest"
                   }
                 ],
                 "title": "Request"
@@ -74,6 +77,9 @@
                   },
                   {
                     "$ref": "#/components/schemas/EmbeddingsRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ImageGenerationRequest"
                   }
                 ],
                 "title": "Request"
@@ -142,6 +148,9 @@
                   },
                   {
                     "$ref": "#/components/schemas/EmbeddingsRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ImageGenerationRequest"
                   }
                 ],
                 "title": "Request"
@@ -282,6 +291,61 @@
         }
       }
     },
+    "/v1/images/generations": {
+      "post": {
+        "summary": "Generate Images",
+        "operationId": "generate_images_v1_images_generations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ChatCompletionsRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/CompletionsRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/EmbeddingsRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ImageGenerationRequest"
+                  }
+                ],
+                "title": "Request"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/v1/registry/upload_file": {
       "post": {
         "tags": [
@@ -362,7 +426,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/v1/registry/upload_metadata": {
@@ -447,7 +516,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/v1/registry/list_files": {
@@ -493,7 +567,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/v1/registry/list_entries": {
@@ -765,7 +844,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/v1/benchmark/create": {
@@ -2429,6 +2513,11 @@
             "type": "string",
             "title": "Version"
           },
+          "updated": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated"
+          },
           "category": {
             "type": "string",
             "title": "Category"
@@ -2463,6 +2552,7 @@
           "namespace",
           "name",
           "version",
+          "updated",
           "category",
           "description",
           "details",
@@ -2637,6 +2727,36 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "ImageGenerationRequest": {
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": "fireworks::accounts/fireworks/models/playground-v2-5-1024px-aesthetic"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          }
+        },
+        "type": "object",
+        "required": [
+          "prompt"
+        ],
+        "title": "ImageGenerationRequest",
+        "description": "Request for image generation."
       },
       "Message": {
         "properties": {

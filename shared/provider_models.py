@@ -66,6 +66,7 @@ class ProviderModels:
         try:
             models = client.models.list()
 
+            assert len(models.data) > 0
             result: Dict[NamespacedName, Dict[str, str]] = {}
             for model in models.data:
                 provider, namespaced_model = get_provider_namespaced_model(model.id)

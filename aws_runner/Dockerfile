@@ -1,11 +1,11 @@
 FROM public.ecr.aws/lambda/python:3.11
 
+RUN yum install -y gcc libffi-devel openssl-devel
+
 # pass with --build-arg FRAMEWORK=-langgraph
 ARG FRAMEWORK=""
 
 COPY aws_runner/frameworks/requirements${FRAMEWORK}.txt ${LAMBDA_TASK_ROOT}
-
-RUN yum install -y gcc libffi-devel openssl-devel
 
 RUN pip install -r requirements${FRAMEWORK}.txt
 

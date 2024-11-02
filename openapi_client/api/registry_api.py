@@ -295,6 +295,7 @@ class RegistryApi:
 
         # authentication setting
         _auth_settings: List[str] = [
+            'HTTPBearer'
         ]
 
         return self.api_client.param_serialize(
@@ -566,6 +567,7 @@ class RegistryApi:
 
         # authentication setting
         _auth_settings: List[str] = [
+            'HTTPBearer'
         ]
 
         return self.api_client.param_serialize(
@@ -1236,6 +1238,7 @@ class RegistryApi:
 
         # authentication setting
         _auth_settings: List[str] = [
+            'HTTPBearer'
         ]
 
         return self.api_client.param_serialize(

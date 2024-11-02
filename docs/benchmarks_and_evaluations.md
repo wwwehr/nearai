@@ -126,7 +126,7 @@ To check agent functionality to write files:
 To run the benchmark, we will use the `nearai` CLI. We will specify the dataset and solver we want to use.
 
 ```bash
-nearai benchmark run near.ai/3_digit_addition/1.00 ThreeDigitAdditionSolver --agent <my_agent>
+nearai benchmark run near.ai/3_digit_addition/1.00 ThreeDigitAdditionSolver --agent ~/.nearai/registry/<my_agent>
 ```
 
 # Benchmarks Cache
@@ -147,8 +147,8 @@ nearai benchmark run near.ai/mbpp/1.0.0 MBPPSolverStrategy --model 'llama-3p2-1b
 ```bash
 $ nearai benchmark run near.ai/mbpp/1.0.0 MBPPSolverStrategy --model 'llama-3p2-1b-instruct' --subset test
 $ nearai benchmark run near.ai/mmlu/1.0.0 MMLUSolverStrategy --model 'llama-v3p1-405b-instruct' --subset test
-$ nearai benchmark run near.ai/mbpp/1.0.0 MBPPSolverStrategy --model 'qwen2p5-72b-instruct' --subset test --agent flatirons.near/xela-agent/5.0.1
-$ nearai benchmark run near.ai/live_bench/1.0.0 LiveBenchSolverStrategy --model 'qwen2p5-72b-instruct' --agent flatirons.near/xela-agent/5.0.1
+$ nearai benchmark run near.ai/mbpp/1.0.0 MBPPSolverStrategy --model 'qwen2p5-72b-instruct' --subset test --agent ~/.nearai/registry/flatirons.near/example-travel-agent/1
+$ nearai benchmark run near.ai/live_bench/1.0.0 LiveBenchSolverStrategy --model 'qwen2p5-72b-instruct' --agent ~/.nearai/registry/flatirons.near/example-travel-agent/1
 ```
 
 # Evaluations
@@ -187,6 +187,7 @@ https://app.near.ai/evaluations has a functionality to choose any columns.
 
 - [Overwriting existing evaluation entry is currently not supported](https://github.com/nearai/nearai/issues/273)
 - [litellm.Timeout errors when running benchmark](https://github.com/nearai/nearai/issues/367)
+- [Benchmark evaluation of agent on Mac - multithreading not working](https://github.com/nearai/nearai/issues/417)
 - [Feature request: tag individual evaluation metrics](https://github.com/nearai/nearai/issues/242)
 - [Feature request: add view for a metric](https://github.com/nearai/nearai/issues/331)
 - [Feature request: add cost of running benchmark to evaluation results as a separate metric](https://github.com/nearai/nearai/issues/74)

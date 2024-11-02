@@ -67,7 +67,7 @@ class SolverInferenceSession:
                 run.id,
                 additional_path=self.agent,
                 params=self.agent_params,
-                print_system_log=True,
+                print_system_log=False,
             )
         return self
 
@@ -121,6 +121,7 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
             "data_source": "local_files",
             "temperature": 0.0,
             "record_run": False,
+            "verbose": False,
         }
         if self.model_full_path:
             self.agent_params["model"] = self.model_full_path

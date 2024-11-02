@@ -127,7 +127,7 @@ class Environment(object):
             if message.get("role") == role:
                 return message.get("content")
 
-        return None
+        return ""
 
     def add_reply(
         self,

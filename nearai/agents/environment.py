@@ -79,7 +79,6 @@ class Environment(object):
         hub_client: OpenAI,
         thread_id: str,
         run_id: str,
-        model: str,
         create_files: bool = True,
         env_vars: Optional[Dict[str, Any]] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
@@ -99,7 +98,6 @@ class Environment(object):
         self._approvals = approvals
         self._hub_client = hub_client
         self._thread_id = thread_id
-        self._model = model
         self._run_id = run_id
         self._debug_mode = True if self.env_vars.get("DEBUG") else False
 

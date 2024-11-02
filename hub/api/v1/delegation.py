@@ -33,7 +33,7 @@ def delegate(delegate_account_id: str, expires_at: datetime, auth: AuthToken = D
 def list_delegation(auth: AuthToken = Depends(revokable_auth)) -> List[Delegation]:
     with get_session() as session:
         query = select(Delegation).where(Delegation.original_account_id == auth.account_id)
-        return session.exec(query).all()
+        return session.exec(query).all()  # type: ignore
 
 
 @v1_router.post("/revoke_delegation")
@@ -42,12 +42,12 @@ def revoke_delegation(
     auth: AuthToken = Depends(revokable_auth),
 ):
     with get_session() as session:
-        query = delete(Delegation).where(Delegation.original_account_id == auth.account_id)
+        query = delete(Delegation).where(Delegation.original_account_id == auth.account_id)  # type: ignore
 
         # If delegate_account_id is not empty, then only revoke delegation to that account
         # Otherwise revoke all delegations.
         if delegate_account_id != "":
-            query = query.where(Delegation.delegation_account_id == delegate_account_id)
+            query = query.where(Delegation.delegation_account_id == delegate_account_id)  # type: ignore
 
-        session.exec(query)
+        session.exec(query)  # type: ignore
         session.commit()

@@ -234,5 +234,4 @@ def test_example_agent():
     )
 
     messages = list(hub_client.beta.threads.messages.list(thread_id=agent_cli.last_thread_id).data)
-    print(messages)
-    assert len(messages) == 4, "Thread should have four messages"
+    assert len(messages) == 5, "Thread should have five messages"

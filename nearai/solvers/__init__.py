@@ -7,12 +7,14 @@ from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 from litellm import Choices, ModelResponse
 from litellm.types.completion import ChatCompletionMessageParam
+from aws_runner.service import EnvironmentRun
+from shared.agents.agent_runner import start_with_environment
 from shared.client_config import ClientConfig
 from shared.inference_client import InferenceClient
 from shared.provider_models import get_provider_namespaced_model
 
 from nearai.agents.agent import Agent
-from nearai.config import CONFIG
+from nearai.config import CONFIG, get_hub_client
 
 
 class SolverScoringMethod(Enum):
@@ -41,23 +43,33 @@ class SolverStrategyMeta(ABCMeta):
 
 
 class SolverInferenceSession:
-    def __init__(self, agent_obj, model_full_path, client: InferenceClient, evaluation_name):
-        self.agent = agent_obj
+    def __init__(self, agent, agent_params, model_full_path, client: InferenceClient, evaluation_name):
+        self.agent = agent
+        self.agent_params = agent_params
         self.model_full_path = model_full_path
         self.client = client
         self.evaluation_name = evaluation_name
-        self.path = ""
-        self.runner = None
         self.messages: List[ChatCompletionMessageParam] = []
+        self.hub_client = get_hub_client()
+        self.env_run: Optional[EnvironmentRun] = None
 
     def start_inference_session(self, task_id: str) -> "SolverInferenceSession":
         if self.agent:
-            self.path = os.path.join(
-                "/tmp",
-                self.evaluation_name,
-                task_id,
-                str(int(time.time() * 1000)),
-                str(random.randint(0, 1000)),
+            thread = self.hub_client.beta.threads.create()
+            run = self.hub_client.beta.threads.runs.create(
+                thread_id=thread.id,
+                assistant_id=self.agent,
+                extra_body={"delegate_execution": True},
+            )
+            auth = CONFIG.auth
+            assert auth
+            self.env_run = start_with_environment(
+                self.agent,
+                auth,
+                thread.id,
+                run.id,
+                additional_path=self.agent,
+                params=self.agent_params,
             )
         return self
 

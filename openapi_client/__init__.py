@@ -60,6 +60,7 @@ from openapi_client.models.entry_metadata_input import EntryMetadataInput
 from openapi_client.models.evaluation_table import EvaluationTable
 from openapi_client.models.filename import Filename
 from openapi_client.models.http_validation_error import HTTPValidationError
+from openapi_client.models.image_generation_request import ImageGenerationRequest
 from openapi_client.models.input import Input
 from openapi_client.models.message import Message
 from openapi_client.models.remove_hub_secret_request import RemoveHubSecretRequest

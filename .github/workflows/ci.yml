@@ -86,16 +86,28 @@ jobs:
         key: ${{ runner.os }}-docker-cache-${{ hashFiles('**/.docker/**') }}
         restore-keys: |
           ${{ runner.os }}-docker-cache-
+    
+    - name: Load Images
+      run: |
+        for tar in /tmp/docker-cache/*.tar; do
+          [ -f "$tar" ] && docker load -i "$tar" || true
+        done
 
     - name: Build nearai_base Image
       run: |
-        docker compose -f .docker/compose-e2e.yml build --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from=type=local,src=/tmp/docker-cache nearai_base
+        docker compose -f .docker/compose-e2e.yml build nearai_base
     
     - name: Build Docker Images
       run: |
-        docker compose -f .docker/compose-e2e.yml build --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from=type=local,src=/tmp/docker-cache --cache-to=type=local,dest=/tmp/docker-cache,mode=max
+        docker compose -f .docker/compose-e2e.yml build
       env:
         NEARAICI_SIGNATURE: ${{ secrets.NEARAICI_SIGNATURE }}
+    
+    - name: Save Docker Cache
+      run: |
+        mkdir -p /tmp/docker-cache
+        docker compose -f .docker/compose-e2e.yml config --images | \
+          xargs -I {} sh -c 'docker save docker-{} -o "/tmp/docker-cache/$(echo {} | tr "/" "_").tar"'
 
     - name: Start Docker Compose
       run: docker compose -f .docker/compose-e2e.yml up -d

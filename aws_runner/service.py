@@ -177,7 +177,7 @@ class EnvironmentRun:
         start_time = time.perf_counter()
         self.env.run(new_message, self.agents[0].max_iterations)
         stop_time = time.perf_counter()
-        write_metric("ExecuteAgentDuration", stop_time - start_time)
+        write_metric("ExecuteAgentDuration", stop_time - start_time, verbose=self.verbose)
         new_environment = (
             save_environment(self.env, self.near_client, self.thread_id, write_metric) if self.record_run else None
         )

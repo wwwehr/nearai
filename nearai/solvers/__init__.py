@@ -1,15 +1,11 @@
-import os
-from pathlib import Path
-import random
-import time
 from abc import ABC, ABCMeta, abstractmethod
 from enum import Enum
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
+from aws_runner.service import EnvironmentRun, start_with_environment
 from litellm import Choices, ModelResponse
 from litellm.types.completion import ChatCompletionMessageParam
-from aws_runner.service import EnvironmentRun
-from shared.agents.agent_runner import start_with_environment
 from shared.client_config import ClientConfig
 from shared.inference_client import InferenceClient
 from shared.provider_models import get_provider_namespaced_model
@@ -80,7 +76,7 @@ class SolverInferenceSession:
         self.messages.append({"role": "system", "content": message})
 
     def run_task(self, task: str) -> str:
-        if self.runner:
+        if self.agent:
             assert self.env_run
             self.env_run.run(task)
             return self.env_run.env.get_last_message(role="assistant")

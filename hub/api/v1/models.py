@@ -57,6 +57,10 @@ class RegistryEntry(SQLModel, table=True):
             key = f"{key}/{object}"
         return key
 
+    def is_private(self) -> bool:
+        """Check if the entry is private."""
+        return self.details.get("private", False)
+
 
 class HubSecrets(SQLModel, table=True):
     """Encrypted hub secrets stored in the registry."""

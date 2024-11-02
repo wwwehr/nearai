@@ -58,14 +58,14 @@ default_approvals: Dict[str, Any] = {"confirm_execution": lambda _: True}
 
 
 class CustomLogHandler(logging.Handler):
-    def __init__(self, add_reply_func, log):
+    def __init__(self, add_reply_func, namespace: str):
         super().__init__()
         self.add_reply_func = add_reply_func
-        self.log = log
+        self.namespace = namespace
 
     def emit(self, record):
         log_entry = self.format(record)
-        self.add_reply_func(message=f"{self.log} - {log_entry}", message_type="system:log")
+        self.add_reply_func(message=log_entry, message_type=f"{self.namespace}:log")
 
 
 class Environment(object):
@@ -99,6 +99,7 @@ class Environment(object):
         self._thread_id = thread_id
         self._model = model
         self._run_id = run_id
+        self._debug_mode = True if self.env_vars.get("DEBUG") else False
 
         if create_files:
             os.makedirs(self._path, exist_ok=True)
@@ -184,10 +185,11 @@ class Environment(object):
                 console_handler.setFormatter(formatter)
                 logger.addHandler(console_handler)
 
-            # Add the custom handler
-            custom_handler = CustomLogHandler(self.add_reply, log)
-            custom_handler.setFormatter(formatter)
-            logger.addHandler(custom_handler)
+            # Add Thread log handler
+            if self._debug_mode:
+                custom_handler = CustomLogHandler(self.add_reply, "system")
+                custom_handler.setFormatter(formatter)
+                logger.addHandler(custom_handler)
 
         # Log the message
         logger.log(level, log)
@@ -206,10 +208,11 @@ class Environment(object):
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)
 
-            # Add the custom handler
-            custom_handler = CustomLogHandler(self.add_reply, log)
-            custom_handler.setFormatter(formatter)
-            logger.addHandler(custom_handler)
+            # Add Thread log handler
+            if self._debug_mode:
+                custom_handler = CustomLogHandler(self.add_reply, "agent")
+                custom_handler.setFormatter(formatter)
+                logger.addHandler(custom_handler)
 
         # Log the message
         logger.log(level, log)
@@ -254,6 +257,14 @@ class Environment(object):
     def list_messages(self):
         """Backwards compatibility for chat_completions messages."""
         messages = self._list_messages()
+
+        # Filter out system and agent log messages when running in debug mode. Agent behaviour shouldn't change based on logs.
+        if self._debug_mode:
+            messages = [
+                m
+                for m in messages
+                if not (m.metadata and m.metadata.get("message_type") in ["system:log", "agent:log"])
+            ]
         legacy_messages = [
             {
                 "id": m.id,

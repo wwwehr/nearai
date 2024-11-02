@@ -6,11 +6,16 @@ from pydantic import BaseModel
 
 from shared.auth_data import AuthData
 
+DEFAULT_TIMEOUT = 60 * 5
+DEFAULT_MAX_RETRIES = 3
 DEFAULT_MODEL_TEMPERATURE = 1.0
 DEFAULT_MODEL_MAX_TOKENS = 16384
-DEFAULT_PROVIDER = "fireworks"
-DEFAULT_MODEL = "llama-v3p1-405b-instruct-long"
-DEFAULT_PROVIDER_MODEL = f"fireworks::accounts/fireworks/models/{DEFAULT_MODEL}"
+DEFAULT_PROVIDER = "local"
+DEFAULT_MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
+DEFAULT_PROVIDER_MODEL = f"local::{DEFAULT_MODEL}"
+# DEFAULT_PROVIDER = "fireworks"
+# DEFAULT_MODEL = "llama-v3p1-405b-instruct-long"
+# DEFAULT_PROVIDER_MODEL = f"fireworks::accounts/fireworks/models/{DEFAULT_MODEL}"
 DEFAULT_NAMESPACE = "near.ai"
 
 IDENTIFIER_PATTERN = re.compile(r"^[a-zA-Z0-9_\-.]+$")
@@ -27,4 +32,6 @@ class ClientConfig(BaseModel):
         """Get the hub client."""
         signature = f"Bearer {self.auth.model_dump_json()}"
         base_url = self.base_url
-        return openai.OpenAI(base_url=base_url, api_key=signature)
+        return openai.OpenAI(
+            base_url=base_url, api_key=signature, timeout=DEFAULT_TIMEOUT, max_retries=DEFAULT_MAX_RETRIES
+        )

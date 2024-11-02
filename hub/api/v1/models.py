@@ -59,7 +59,7 @@ class RegistryEntry(SQLModel, table=True):
 
     def is_private(self) -> bool:
         """Check if the entry is private."""
-        return self.details.get("private", False)
+        return self.details.get("private_source", False)
 
 
 class HubSecrets(SQLModel, table=True):

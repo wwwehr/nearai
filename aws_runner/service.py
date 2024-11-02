@@ -171,6 +171,11 @@ def run_with_environment(
     near_client = PartialNearClient(api_url, auth)
 
     loaded_agents = []
+    for agent_name in agents.split(","):
+        agent = load_agent(near_client, agent_name, params, auth.account_id, additional_path)
+        # agents secrets has higher priority then agent metadata's env_vars
+        agent.env_vars = {**agent.env_vars, **agent_env_vars.get(agent_name, {})}
+        loaded_agents.append(agent)
 
     agent = loaded_agents[0]
     if "provider" in params:
@@ -183,12 +188,6 @@ def run_with_environment(
         agent.model_max_tokens = params["max_tokens"]
     if "max_iterations" in params:
         agent.max_iterations = params["max_iterations"]
-
-    for agent_name in agents.split(","):
-        agent = load_agent(near_client, agent_name, params, auth.account_id, additional_path)
-        # agents secrets has higher priority then agent metadata's env_vars
-        agent.env_vars = {**agent.env_vars, **agent_env_vars.get(agent_name, {})}
-        loaded_agents.append(agent)
 
     client_config = ClientConfig(
         base_url=api_url + "/v1",

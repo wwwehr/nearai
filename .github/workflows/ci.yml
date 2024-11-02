@@ -96,18 +96,21 @@ jobs:
     - name: Build nearai_base Image
       run: |
         docker compose -f .docker/compose-e2e.yml build nearai_base
+
+    - name: Save nearai_base Image
+      run: |
+        mkdir -p /tmp/docker-cache
+        docker save nearai_base | pv -s $(docker image inspect nearai_base --format='{{.Size}}') > /tmp/docker-cache/nearai_base.tar
     
+    - name: Pull Docker Images
+      run: |
+        docker compose -f .docker/compose-e2e.yml pull
+
     - name: Build Docker Images
       run: |
         docker compose -f .docker/compose-e2e.yml build
       env:
         NEARAICI_SIGNATURE: ${{ secrets.NEARAICI_SIGNATURE }}
-    
-    - name: Save Docker Cache
-      run: |
-        mkdir -p /tmp/docker-cache
-        docker compose -f .docker/compose-e2e.yml config --images | \
-          xargs -I {} sh -c 'docker save {} -o "/tmp/docker-cache/$(echo {} | tr "/" "_").tar"'
 
     - name: Start Docker Compose
       run: docker compose -f .docker/compose-e2e.yml up -d

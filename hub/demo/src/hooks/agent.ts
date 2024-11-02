@@ -59,7 +59,7 @@ export function useAgentRequestsWithIframe(
           : options.result.map((outcome) => outcome.transaction_outcome.id);
 
       setIframePostMessage({
-        action: 'near_call_response',
+        action: 'near_send_transactions_response',
         requestId: options.requestId,
         result: {
           transactionHashes,
@@ -134,7 +134,7 @@ export function useAgentRequestsWithIframe(
   const onIframePostMessage: IframePostMessageEventHandler<{
     action:
       | 'near_account'
-      | 'near_call'
+      | 'near_send_transactions'
       | 'near_view'
       | 'remote_agent_run'
       | 'refresh_thread_id';
@@ -143,20 +143,14 @@ export function useAgentRequestsWithIframe(
     try {
       const action = event.data.action;
 
-      if (action === 'near_call') {
+      if (action === 'near_send_transactions') {
         const request = agentWalletTransactionsRequestModel.parse(
           event.data.data,
         );
         void conditionallyProcessAgentRequests([request]);
       } else if (action === 'near_view') {
         const request = agentWalletViewRequestModel.parse(event.data.data);
-
-        const result: unknown = await nearViewAccount!.viewFunction({
-          ...request,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
-          stringify: request.stringify as any,
-        });
-
+        const result: unknown = await nearViewAccount!.viewFunction(request);
         setIframePostMessage({
           action: 'near_view_response',
           requestId: request.requestId,

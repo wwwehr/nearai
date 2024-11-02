@@ -272,23 +272,34 @@ export const agentWalletTransactionsRequestModel = z.object({
       actions: walletTransactionActionModel.array(),
     })
     .array(),
-  requestId: z.string().nullable().default(''),
+  requestId: z.string().nullish(),
 });
 
 export const agentWalletViewRequestModel = z.object({
   contractId: z.string(),
   methodName: z.string(),
-  gas: z.bigint().optional(),
-  attachedDeposit: z.bigint().optional(),
   args: z.record(z.string(), z.unknown()).optional(),
-  stringify: z.function().optional(),
-  jsContract: z.boolean().optional(),
-  requestId: z.string().nullable().default(''),
+  requestId: z.string().nullish(),
+  blockQuery: z
+    .object({
+      blockId: z.string().or(z.number()),
+    })
+    .or(
+      z.object({
+        finality: z.enum(['optimistic', 'near-final', 'final']),
+      }),
+    )
+    .or(
+      z.object({
+        sync_checkpoint: z.enum(['genesis', 'earliest_available']),
+      }),
+    )
+    .optional(),
 });
 
 export const agentWalletAccountRequestModel = z.object({
   accountId: z.string().nullable().default(''),
-  requestId: z.string().nullable().default(''),
+  requestId: z.string().nullish(),
 });
 
 export const threadMetadataModel = z.intersection(

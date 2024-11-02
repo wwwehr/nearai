@@ -441,7 +441,6 @@ class AgentCli:
                 task=new_message,
                 thread_id=thread_id,
                 tool_resources=tool_resources,
-                record_run=False,
                 last_message_id=last_message_id,
                 local=local,
                 env_vars=env_vars,
@@ -466,7 +465,6 @@ class AgentCli:
             task=task,
             thread_id=thread_id,
             tool_resources=tool_resources,
-            record_run=True,
             local=local,
             env_vars=env_vars,
         )
@@ -480,7 +478,6 @@ class AgentCli:
         task: str,
         thread_id: Optional[str] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
-        record_run: bool = True,
         last_message_id: Optional[str] = None,
         local: bool = False,
         env_vars: Optional[Dict[str, Any]] = None,
@@ -504,24 +501,17 @@ class AgentCli:
             hub_client.beta.threads.runs.create_and_poll(
                 thread_id=thread.id,
                 assistant_id=agents,
-                instructions="You are a helpful assistant. Complete the given task.",
-                model="fireworks::accounts/fireworks/models/llama-v3p1-405b-instruct",
             )
         else:
             run = hub_client.beta.threads.runs.create(
                 thread_id=thread.id,
                 assistant_id=agents,
-                instructions="You are a helpful assistant. Complete the given task.",
-                model="fireworks::accounts/fireworks/models/llama-v3p1-405b-instruct",
                 extra_body={"delegate_execution": True},
             )
             params = {
-                "max_iterations": 1,
-                "record_run": True,
                 "api_url": CONFIG.api_url,
                 "tool_resources": run.tools,
                 "data_source": "local_files",
-                "model": run.model,
                 "user_env_vars": env_vars,
                 "agent_env_vars": {},
             }

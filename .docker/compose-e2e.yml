@@ -72,6 +72,10 @@ services:
   nearaihub:
     depends_on:
       - nearai_base
+      - vllm
+      - singlestore
+      - minio
+      - minio_make_bucket
     restart: unless-stopped
     build:
       context: ..
@@ -110,6 +114,7 @@ services:
   ci:
     depends_on:
       - nearai_base
+      - nearaihub
     build:
       context: ..
       dockerfile: .docker/Dockerfile.ci

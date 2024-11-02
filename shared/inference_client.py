@@ -33,6 +33,7 @@ class InferenceClient(object):
             self._auth = config.auth.generate_bearer_token()
         else:
             self._auth = None
+        self.client = openai.OpenAI(base_url=self._config.base_url, api_key=self._auth)
 
     # This makes sense in the CLI where we don't mind doing this request and caching it.
     # In the aws_runner this is an extra request every time we run.
@@ -69,23 +70,26 @@ class InferenceClient(object):
         # NOTE(#246): this is to disable "Provider List" messages.
         litellm.suppress_debug_info = True
 
-        try:
-            result: Union[ModelResponse, CustomStreamWrapper] = litellm_completion(
-                model,
-                messages,
-                stream=stream,
-                custom_llm_provider=self._config.custom_llm_provider,
-                input_cost_per_token=0,
-                output_cost_per_token=0,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                base_url=self._config.base_url,
-                provider=provider,
-                api_key=auth_bearer_token,
-                **kwargs,
-            )
-        except Exception as e:
-            raise ValueError(f"Bad request: {e}") from None
+        for i in range(0, self._config.num_inference_retries):
+            try:
+                result: Union[ModelResponse, CustomStreamWrapper] = litellm_completion(
+                    model,
+                    messages,
+                    stream=stream,
+                    custom_llm_provider=self._config.custom_llm_provider,
+                    input_cost_per_token=0,
+                    output_cost_per_token=0,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    base_url=self._config.base_url,
+                    provider=provider,
+                    api_key=auth_bearer_token,
+                    **kwargs,
+                )
+                break
+            except Exception as e:
+                if i == self._config.num_inference_retries - 1:
+                    raise ValueError(f"Bad request: {e}") from None
 
         return result
 
@@ -207,3 +211,20 @@ class InferenceClient(object):
         response = requests.get(endpoint)
         response.raise_for_status()
         return VectorStore(**response.json())
+
+    def create_thread(self, messages):
+        """Create a thread."""
+        return self.client.beta.threads.create(messages=messages)
+
+    def threads_messages_create(self, thread_id: str, content: str, role: Literal["user", "assistant"]):
+        """Create a message in a thread."""
+        return self.client.beta.threads.messages.create(thread_id=thread_id, content=content, role=role)
+
+    def threads_create_and_run_poll(self, assistant_id: str, model: str, messages: List[ChatCompletionMessageParam]):
+        """Create a thread and run the assistant."""
+        thread = self.create_thread(messages)
+        return self.client.beta.threads.create_and_run_poll(thread=thread, assistant_id=assistant_id, model=model)
+
+    def threads_list_messages(self, thread_id: str, order: Literal["asc", "desc"] = "asc"):
+        """List messages in a thread."""
+        return self.client.beta.threads.messages.list(thread_id=thread_id, order=order)

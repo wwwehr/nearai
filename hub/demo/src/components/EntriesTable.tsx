@@ -1,6 +1,7 @@
 'use client';
 
-import { CodeBlock, Play } from '@phosphor-icons/react';
+import { ChatCircleDots, CodeBlock, Play } from '@phosphor-icons/react';
+import { format, formatDistanceToNow } from 'date-fns';
 
 import { Badge } from '~/components/lib/Badge';
 import { Button } from '~/components/lib/Button';
@@ -12,6 +13,7 @@ import { Table } from '~/components/lib/Table';
 import { useTable } from '~/components/lib/Table/hooks';
 import { Text } from '~/components/lib/Text';
 import { Tooltip } from '~/components/lib/Tooltip';
+import { env } from '~/env';
 import { useEntriesSearch } from '~/hooks/entries';
 import {
   benchmarkEvaluationsUrlForEntry,
@@ -84,6 +86,9 @@ export const EntriesTable = ({ category, title }: Props) => {
               Creator
             </Table.HeadCell>
             <Table.HeadCell>Version</Table.HeadCell>
+            <Table.HeadCell column="updated" sortable>
+              Updated
+            </Table.HeadCell>
             <Table.HeadCell>Tags</Table.HeadCell>
             <Table.HeadCell
               column="num_stars"
@@ -132,6 +137,16 @@ export const EntriesTable = ({ category, title }: Props) => {
                 <Text size="text-s">{entry.version}</Text>
               </Table.Cell>
 
+              <Table.Cell>
+                <Text size="text-xs">
+                  <Tooltip content={format(entry.updated, 'PPpp')}>
+                    <span>
+                      {formatDistanceToNow(entry.updated, { addSuffix: true })}
+                    </span>
+                  </Tooltip>
+                </Text>
+              </Table.Cell>
+
               <Table.Cell style={{ maxWidth: '14rem', overflow: 'hidden' }}>
                 <Flex gap="xs">
                   {entry.tags.map((tag) => (
@@ -146,35 +161,52 @@ export const EntriesTable = ({ category, title }: Props) => {
 
               <Table.Cell style={{ width: '1px' }}>
                 <Flex align="center" gap="xs">
-                  {benchmarkEvaluationsUrlForEntry(entry) && (
-                    <Tooltip asChild content="View Evaluations">
-                      <Button
-                        label="View Evaluations"
-                        icon={ENTRY_CATEGORY_LABELS.evaluation.icon}
-                        size="small"
-                        fill="ghost"
-                        href={benchmarkEvaluationsUrlForEntry(entry)}
-                      />
-                    </Tooltip>
-                  )}
+                  {!env.NEXT_PUBLIC_CONSUMER_MODE && (
+                    <>
+                      {benchmarkEvaluationsUrlForEntry(entry) && (
+                        <Tooltip asChild content="View Evaluations">
+                          <Button
+                            label="View Evaluations"
+                            icon={ENTRY_CATEGORY_LABELS.evaluation.icon}
+                            size="small"
+                            fill="ghost"
+                            href={benchmarkEvaluationsUrlForEntry(entry)}
+                          />
+                        </Tooltip>
+                      )}
 
-                  {sourceUrlForEntry(entry) && (
-                    <Tooltip asChild content="View Source">
-                      <Button
-                        label="View Source"
-                        icon={<CodeBlock weight="duotone" />}
-                        size="small"
-                        fill="ghost"
-                        href={sourceUrlForEntry(entry)}
-                      />
-                    </Tooltip>
+                      {sourceUrlForEntry(entry) && (
+                        <Tooltip asChild content="View Source">
+                          <Button
+                            label="View Source"
+                            icon={<CodeBlock weight="duotone" />}
+                            size="small"
+                            fill="ghost"
+                            href={sourceUrlForEntry(entry)}
+                          />
+                        </Tooltip>
+                      )}
+                    </>
                   )}
 
                   {category === 'agent' && (
-                    <Tooltip asChild content="Run Agent">
+                    <Tooltip
+                      asChild
+                      content={
+                        env.NEXT_PUBLIC_CONSUMER_MODE
+                          ? 'Chat With Agent'
+                          : 'Run Agent'
+                      }
+                    >
                       <Button
                         label="Run Agent"
-                        icon={<Play weight="duotone" />}
+                        icon={
+                          env.NEXT_PUBLIC_CONSUMER_MODE ? (
+                            <ChatCircleDots weight="duotone" />
+                          ) : (
+                            <Play weight="duotone" />
+                          )
+                        }
                         size="small"
                         fill="ghost"
                         href={`/agents/${entry.namespace}/${entry.name}/${entry.version}/run`}

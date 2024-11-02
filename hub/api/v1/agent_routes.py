@@ -1,23 +1,31 @@
 import json
 from os import getenv
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 import boto3
 import requests
 from fastapi import APIRouter, Body, Depends, HTTPException, Response
+from nearai.agents.local_runner import LocalRunner
 from nearai.clients.lambda_client import LambdaWrapper
 from pydantic import BaseModel, Field
+from shared.auth_data import AuthData
 
 from hub.api.v1.auth import AuthToken, revokable_auth
 from hub.api.v1.entry_location import EntryLocation
-from hub.api.v1.models import RegistryEntry
-from hub.api.v1.registry import S3_BUCKET, get
+from hub.api.v1.models import Message as MessageModel
+from hub.api.v1.models import RegistryEntry, get_session
+from hub.api.v1.models import Run as RunModel
+from hub.api.v1.models import Thread as ThreadModel
+from hub.api.v1.registry import S3_BUCKET, get, get_read_access
 from hub.api.v1.sql import SqlClient
 
 S3_ENDPOINT = getenv("S3_ENDPOINT")
-s3 = boto3.client("s3", endpoint_url=S3_ENDPOINT)
+s3 = boto3.client(
+    "s3",
+    endpoint_url=S3_ENDPOINT,
+)
 
-v1_router = APIRouter(
+run_agent_router = APIRouter(
     tags=["agents, assistants"],
 )
 
@@ -38,7 +46,7 @@ class CreateThreadAndRunRequest(BaseModel):
         description="The ID of the environment to use to as a base for this run. If not provided, a new environment"
         " will be created.",
     )
-    thread: Optional[str] = Field(
+    thread_id: Optional[str] = Field(
         None,
         description="An OpenAI compatibility alias for environment. If no thread is provided, an empty thread"
         " will be created.",
@@ -65,7 +73,7 @@ class CreateThreadAndRunRequest(BaseModel):
     )
 
 
-def invoke_function_via_curl(runner_invoke_url, agents, environment_id, auth: AuthToken, new_message, params):
+def invoke_agent_via_url(custom_runner_url, agents, thread_id, run_id, auth: AuthToken, new_message, params):
     auth_data = auth.model_dump()
 
     if auth_data["nonce"]:
@@ -74,7 +82,8 @@ def invoke_function_via_curl(runner_invoke_url, agents, environment_id, auth: Au
 
     payload = {
         "agents": agents,
-        "environment_id": environment_id,
+        "thread_id": thread_id,
+        "run_id": run_id,
         "auth": auth_data,
         "new_message": new_message,
         "params": params,
@@ -82,7 +91,7 @@ def invoke_function_via_curl(runner_invoke_url, agents, environment_id, auth: Au
 
     headers = {"Content-Type": "application/json"}
 
-    response = requests.post(runner_invoke_url, data=json.dumps(payload), headers=headers)
+    response = requests.post(custom_runner_url, data=json.dumps(payload), headers=headers)
 
     if response.status_code == 200:
         return response.json()
@@ -90,13 +99,14 @@ def invoke_function_via_curl(runner_invoke_url, agents, environment_id, auth: Au
         raise Exception(f"Request failed with status code {response.status_code}: {response.text}")
 
 
-def invoke_function_via_lambda(function_name, agents, environment_id, auth: AuthToken, new_message, params):
+def invoke_agent_via_lambda(function_name, agents, thread_id, run_id, auth: AuthToken, new_message, params):
     wrapper = LambdaWrapper(boto3.client("lambda", region_name="us-east-2"))
     result = wrapper.invoke_function(
         function_name,
         {
             "agents": agents,
-            "environment_id": environment_id,
+            "thread_id": thread_id,
+            "run_id": run_id,
             "auth": auth.model_dump(),
             "new_message": new_message,
             "params": params,
@@ -106,8 +116,8 @@ def invoke_function_via_lambda(function_name, agents, environment_id, auth: Auth
     return result
 
 
-@v1_router.post("/threads/runs", tags=["Agents", "Assistants"])  # OpenAI compatibility
-@v1_router.post("/agent/runs", tags=["Agents", "Assistants"])
+@run_agent_router.post("/threads/runs", tags=["Agents", "Assistants"])  # OpenAI compatibility
+@run_agent_router.post("/agent/runs", tags=["Agents", "Assistants"])
 def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokable_auth)) -> str:
     """Run an agent against an existing or a new environment.
 
@@ -119,7 +129,7 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokab
     db = SqlClient()
 
     agents = body.agent_id or body.assistant_id or ""
-    environment_id = body.environment_id or body.thread
+    thread_id = body.environment_id or body.thread_id
     new_message = body.new_message
 
     runner = _runner_for_env()
@@ -129,9 +139,9 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokab
     agent_env_vars: Dict[str, Any] = {}
     user_env_vars = body.user_env_vars or {}
 
-    agent_entry: RegistryEntry | None = None
+    agent_entry: Union[RegistryEntry, None] = None
     for agent in reversed(agents.split(",")):
-        agent_entry = get_agent_entry(agent, data_source)
+        agent_entry = get_agent_entry(agent, data_source, auth.account_id)
 
         # read secret for every requested agent
         if agent_entry:
@@ -162,29 +172,74 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokab
     agent_details = entry_details.get("agent", {})
     framework = agent_details.get("framework", "base")
 
+    with get_session() as session:
+        if not thread_id:
+            thread_model = ThreadModel(
+                owner_id=auth.account_id,
+                meta_data={
+                    "agent_ids": [agents],
+                },
+            )
+            session.add(thread_model)
+            session.commit()
+            thread_id = thread_model.id
+
+        run_model = RunModel(
+            thread_id=thread_id,
+            assistant_id=agents,  # needs primary agent
+            model="agent_specified",
+            status="queued",
+        )
+
+        if new_message:
+            message_model = MessageModel(thread_id=thread_id, content=new_message, role="user", run_id=run_model.id)
+            session.add(message_model)
+            session.commit()
+
+    session.add(run_model)
+    session.commit()
+
+    run_id = run_model.id
+
     if framework == "prompt":
         raise HTTPException(status_code=400, detail="Prompt only agents are not implemented yet.")
     else:
-        if runner == "local":
-            runner_invoke_url = getenv("RUNNER_INVOKE_URL", None)
-            if runner_invoke_url:
-                return invoke_function_via_curl(runner_invoke_url, agents, environment_id, auth, new_message, params)
+        if runner == "custom_runner":
+            custom_runner_url = getenv("CUSTOM_RUNNER_URL", None)
+            if custom_runner_url:
+                invoke_agent_via_url(custom_runner_url, agents, thread_id, run_id, auth, new_message, params)
+        elif runner == "local_runner":
+            """Runs agents directly from the local machine."""
+
+            LocalRunner(
+                None,
+                agents,
+                thread_id,
+                run_id,
+                AuthData(**auth.model_dump()),  # TODO: https://github.com/nearai/nearai/issues/421
+                params,
+            )
         else:
             function_name = f"{runner}-{framework.lower()}"
             if agent_api_url != "https://api.near.ai":
                 print(f"Passing agent API URL: {agent_api_url}")
-            print(f"Running function {function_name} with: agents={agents}, environment_id={environment_id}, ")
 
-            return invoke_function_via_lambda(function_name, agents, environment_id, auth, new_message, params)
+            invoke_agent_via_lambda(function_name, agents, thread_id, run_id, auth, new_message, params)
 
-        raise HTTPException(status_code=400, detail="Invalid runner parameters")
+    with get_session() as session:
+        completed_run_model = session.get(RunModel, run_id)
+        if completed_run_model:
+            completed_run_model.status = "requires_action"
+            session.commit()
+
+    return thread_id
 
 
-@v1_router.post(
+@run_agent_router.post(
     "/download_environment",
     responses={200: {"content": {"application/gzip": {"schema": {"type": "string", "format": "binary"}}}}},
 )
-def download_environment(entry: RegistryEntry = Depends(get), path: str = Body()):
+def download_environment(entry: RegistryEntry = Depends(get_read_access), path: str = Body()):
     assert isinstance(S3_BUCKET, str)
     file = s3.get_object(Bucket=S3_BUCKET, Key=entry.get_key(path))
     headers = {"Content-Disposition": "attachment; filename=environment.tar.gz"}
@@ -192,7 +247,7 @@ def download_environment(entry: RegistryEntry = Depends(get), path: str = Body()
 
 
 def _runner_for_env():
-    runner_env = getenv("RUNNER_ENVIRONMENT", "local")
+    runner_env = getenv("RUNNER_ENVIRONMENT", "local_runner")
     if runner_env == "production":
         return "production-agent-runner"
     elif runner_env == "staging":
@@ -201,7 +256,7 @@ def _runner_for_env():
         return runner_env
 
 
-def get_agent_entry(agent, data_source: str) -> RegistryEntry | None:
+def get_agent_entry(agent, data_source: str, account_id: str) -> Optional[RegistryEntry]:
     if data_source == "registry":
         return get(EntryLocation.from_str(agent))
     elif data_source == "local_files":

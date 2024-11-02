@@ -5,9 +5,11 @@ import runpy
 import shutil
 import sys
 import tempfile
-import time
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
+
+from shared.client_config import ClientConfig
 
 AGENT_FILENAME = "agent.py"
 
@@ -27,6 +29,7 @@ class Agent(object):
         self.model_provider = ""
         self.model_temperature: Optional[float] = None
         self.model_max_tokens: Optional[int] = None
+        self.max_iterations = 1
         self.welcome_title: Optional[str] = None
         self.welcome_description: Optional[str] = None
 
@@ -34,13 +37,18 @@ class Agent(object):
         self.agent_files = agent_files
         self.original_cwd = os.getcwd()
 
-    def write_agent_files_to_temp(self):  # noqa: D102
-        temp_dir = os.path.join(tempfile.gettempdir(), str(int(time.time())))
+        self.temp_dir = self.write_agent_files_to_temp(agent_files)
 
-        if isinstance(self.agent_files, List):
+    @staticmethod
+    def write_agent_files_to_temp(agent_files):
+        """Write agent files to a temporary directory."""
+        unique_id = uuid.uuid4().hex
+        temp_dir = os.path.join(tempfile.gettempdir(), f"agent_{unique_id}")
+
+        if isinstance(agent_files, List):
             os.makedirs(temp_dir, exist_ok=True)
 
-            for file_obj in self.agent_files:
+            for file_obj in agent_files:
                 file_path = os.path.join(temp_dir, file_obj["filename"])
 
                 try:
@@ -69,7 +77,7 @@ class Agent(object):
         else:
             # if agent files is a PosixPath, it is a path to the agent directory
             # Copy all agent files including subfolders
-            shutil.copytree(self.agent_files, temp_dir, dirs_exist_ok=True)
+            shutil.copytree(agent_files, temp_dir, dirs_exist_ok=True)
 
         return temp_dir
 
@@ -95,12 +103,13 @@ class Agent(object):
                 self.model_provider = defaults.get("model_provider", self.model_provider)
                 self.model_temperature = defaults.get("model_temperature", self.model_temperature)
                 self.model_max_tokens = defaults.get("model_max_tokens", self.model_max_tokens)
+                self.max_iterations = defaults.get("max_iterations", self.max_iterations)
 
         if not self.version or not self.name:
             raise ValueError("Both 'version' and 'name' must be non-empty in metadata.")
 
-    def run(self, env: Any, temp_dir: Path, task: Optional[str] = None) -> None:  # noqa: D102
-        if not os.path.exists(os.path.join(temp_dir, AGENT_FILENAME)):
+    def run(self, env: Any, task: Optional[str] = None) -> None:  # noqa: D102
+        if not os.path.exists(os.path.join(self.temp_dir, AGENT_FILENAME)):
             raise ValueError(f"Agent run error: {AGENT_FILENAME} does not exist")
 
         # combine agent.env_vars and env.env_vars
@@ -114,9 +123,46 @@ class Agent(object):
         context = {"env": env, "agent": self, "task": task}
 
         try:
-            os.chdir(temp_dir)
-            sys.path.insert(0, str(temp_dir))
+            os.chdir(self.temp_dir)
+            sys.path.insert(0, self.temp_dir)
             runpy.run_path(AGENT_FILENAME, init_globals=context, run_name="__main__")
         finally:
             os.chdir(self.original_cwd)
             sys.path.pop(0)
+
+    @staticmethod
+    def load_agents(agents: str, config: ClientConfig, local: bool = False):
+        """Loads agents from the registry."""
+        return [Agent.load_agent(agent, config, local) for agent in agents.split(",")]
+
+    @staticmethod
+    def load_agent(
+        name: str,
+        config: ClientConfig,
+        local: bool = False,
+    ):
+        """Loads a single agent from the registry."""
+        from nearai.registry import get_registry_folder, registry
+
+        identifier = None
+        if local:
+            agent_files_path = get_registry_folder() / name
+            if config.auth is None:
+                namespace = "not-logged-in"
+            else:
+                namespace = config.auth.account_id
+        else:
+            agent_files_path = registry.download(name)
+            identifier = name
+        assert agent_files_path is not None, f"Agent {name} not found."
+
+        metadata_path = os.path.join(agent_files_path, "metadata.json")
+        if not os.path.exists(metadata_path):
+            raise FileNotFoundError(f"Metadata file not found: {metadata_path}")
+        with open(metadata_path) as f:
+            metadata: Dict[str, Any] = json.load(f)
+
+        if not identifier:
+            identifier = "/".join([namespace, metadata["name"], metadata["version"]])
+
+        return Agent(identifier, agent_files_path, metadata)

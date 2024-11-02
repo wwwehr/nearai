@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
+import openai
 from openapi_client import ApiClient, Configuration
 from pydantic import BaseModel
 from shared.auth_data import AuthData
@@ -79,6 +80,7 @@ class Config(BaseModel):
     nearai_hub: NearAiHubConfig = NearAiHubConfig()
     confirm_commands: bool = True
     auth: Optional[AuthData] = None
+    num_inference_retries: int = 1
 
     def update_with(self, extra_config: Dict[str, Any], map_key: Callable[[str], str] = lambda x: x) -> "Config":
         """Update the config with the given dictionary."""
@@ -104,6 +106,7 @@ class Config(BaseModel):
             auth=CONFIG.auth,
             custom_llm_provider=CONFIG.nearai_hub.custom_llm_provider,
             default_provider=CONFIG.nearai_hub.default_provider,
+            num_inference_retries=CONFIG.num_inference_retries,
         )
 
 
@@ -124,6 +127,12 @@ def setup_api_client():
     configuration = Configuration(**kwargs)
     client = ApiClient(configuration)
     ApiClient.set_default(client)
+
+
+def get_hub_client():
+    signature = CONFIG.auth.model_dump_json()
+    base_url = CONFIG.api_url + "/v1"
+    return openai.OpenAI(base_url=base_url, api_key=signature)
 
 
 setup_api_client()

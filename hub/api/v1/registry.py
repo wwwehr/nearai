@@ -1,4 +1,6 @@
+import datetime
 import json
+import logging
 import re
 from collections import defaultdict
 from os import getenv
@@ -34,13 +36,19 @@ load_dotenv()
 S3_BUCKET = getenv("S3_BUCKET")
 
 S3_ENDPOINT = getenv("S3_ENDPOINT")
-s3 = boto3.client("s3", endpoint_url=S3_ENDPOINT)
+s3 = boto3.client(
+    "s3",
+    endpoint_url=S3_ENDPOINT,
+)
 
 v1_router = APIRouter(
     prefix="/registry",
     tags=["registry"],
 )
 
+
+# Add logger configuration
+logger = logging.getLogger(__name__)
 
 tag_pattern = re.compile(r"^[a-zA-Z0-9_\-]+$")
 
@@ -96,6 +104,7 @@ def get_or_create(entry_location: EntryLocation = Depends(with_write_access())) 
 
 
 def get(entry_location: EntryLocation = Body()) -> RegistryEntry:
+    logger.debug(f"Getting entry: {entry_location}")
     with get_session() as session:
         entry = session.exec(
             select(RegistryEntry).where(
@@ -106,9 +115,16 @@ def get(entry_location: EntryLocation = Body()) -> RegistryEntry:
         ).first()
 
         if entry is None:
+            logger.debug(f"Entry not found: {entry_location}")
             raise HTTPException(status_code=404, detail=f"Entry '{entry_location}' not found")
 
         return entry
+
+
+def get_read_access(entry: RegistryEntry = Depends(get), auth: AuthToken = Depends(revokable_auth)) -> RegistryEntry:
+    if entry.is_private() and entry.namespace != auth.account_id:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    return entry
 
 
 class EntryMetadataInput(BaseModel):
@@ -153,14 +169,14 @@ async def upload_file(
 
 
 @v1_router.post("/download_file")
-async def download_file_async(
-    entry: RegistryEntry = Depends(get),
+def download_file(
+    entry: RegistryEntry = Depends(get_read_access),
     path: str = Body(),
 ):
-    return StreamingResponse(download_file(entry, path).iter_chunks())
+    return StreamingResponse(download_file_inner(entry, path).iter_chunks())
 
 
-def download_file(
+def download_file_inner(
     entry: RegistryEntry,
     path: str = Body(),
 ):
@@ -214,11 +230,11 @@ async def upload_metadata(registry_entry_id: int = Depends(get_or_create), metad
 
 
 @v1_router.post("/download_metadata")
-async def download_metadata_async(entry: RegistryEntry = Depends(get)) -> EntryMetadata:
-    return download_metadata(entry)
+def download_metadata(entry: RegistryEntry = Depends(get_read_access)) -> EntryMetadata:
+    return download_metadata_inner(entry)
 
 
-def download_metadata(entry: RegistryEntry) -> EntryMetadata:
+def download_metadata_inner(entry: RegistryEntry) -> EntryMetadata:
     with get_session() as session:
         q_tags = select(Tags).where(Tags.registry_id == entry.id)
         tags = [tag.tag for tag in session.exec(q_tags).all()]
@@ -239,12 +255,13 @@ class Filename(BaseModel):
 
 
 @v1_router.post("/list_files")
-async def list_files_async(entry: RegistryEntry = Depends(get)) -> List[Filename]:
+def list_files(entry: RegistryEntry = Depends(get_read_access)) -> List[Filename]:
     """Lists all files that belong to a entry."""
-    return list_files(entry)
+    logger.info(f"Listing files for entry: {entry}")
+    return list_files_inner(entry)
 
 
-def list_files(entry: RegistryEntry) -> List[Filename]:
+def list_files_inner(entry: RegistryEntry) -> List[Filename]:
     """Lists all files that belong to a entry."""
     source = entry.details.get("_source")
 
@@ -260,7 +277,7 @@ def list_files(entry: RegistryEntry) -> List[Filename]:
         raise HTTPException(status_code=400, detail=f"Unsupported source: {source}")
 
     key = key.strip("/") + "/"
-
+    logger.info(f"Listing files for bucket: {bucket}, key: {key}")
     objects = s3.list_objects(Bucket=bucket, Prefix=key)
     files = [Filename(filename=obj["Key"][len(key) :]) for obj in objects.get("Contents", [])]
     return files
@@ -271,6 +288,7 @@ class EntryInformation(BaseModel):
     namespace: str
     name: str
     version: str
+    updated: datetime.datetime
     category: str
     description: str
     details: Dict[str, Any]
@@ -280,7 +298,7 @@ class EntryInformation(BaseModel):
 
 
 @v1_router.post("/list_entries")
-async def list_entries_async(
+def list_entries(
     namespace: str = "",
     category: str = "",
     tags: str = "",
@@ -291,12 +309,12 @@ async def list_entries_async(
     starred_by: str = "",
     star_point_of_view: str = "",
 ) -> List[EntryInformation]:
-    return list_entries(
+    return list_entries_inner(
         namespace, category, tags, total, offset, show_hidden, show_latest_version, starred_by, star_point_of_view
     )
 
 
-def list_entries(
+def list_entries_inner(
     namespace: str = "",
     category: str = "",
     tags: str = "",
@@ -355,7 +373,7 @@ def list_entries(
                 GROUP BY namespace, name
             )
             SELECT registry.id, registry.namespace, registry.name, registry.version,
-            registry.category, registry.description, registry.details,
+            registry.category, registry.description, registry.details, registry.time,
             CountedStars.num_stars, CountedStars.starred_by_pov
             FROM registry_entry registry
             LEFT JOIN CountedStars
@@ -405,7 +423,7 @@ def list_entries(
                     )
 
                     SELECT registry.id, registry.namespace, registry.name, registry.version,
-                           registry.category, registry.description, registry.details,
+                           registry.category, registry.description, registry.details, registry.time,
                            ranked.num_stars, ranked.starred_by_pov
                     FROM RankedRegistry ranked
                     JOIN registry_entry registry ON ranked.id = registry.id
@@ -419,7 +437,7 @@ def list_entries(
             bind_params["tags"] = tags_list
             bind_params["ntags"] = len(tags_list)
 
-        for id, namespace_, name, version, category_, description, details, num_stars, pov in session.exec(
+        for id, namespace_, name, version, category_, description, details, timestamp, num_stars, pov in session.exec(
             text(query_text).bindparams(**bind_params)
         ).all():  # type: ignore
             print(namespace_, name, version, num_stars)
@@ -429,6 +447,7 @@ def list_entries(
                     namespace=namespace_,
                     name=name,
                     version=version,
+                    updated=timestamp.replace(tzinfo=datetime.timezone.utc),
                     category=category_,
                     description=description,
                     details=json.loads(details),

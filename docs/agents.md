@@ -6,21 +6,24 @@ docs/agent_quickstart.sh
 ```
 
 ## QUICKSTART: build and run a python agent on NearAI
-1. [Install](https://github.com/nearai/nearai/#setup) the NearAI CLI.
+#### 1. [Install](https://github.com/nearai/nearai/#setup) the NearAI CLI.
 
-2. Create a new folder for your agent; 
+#### 2. Create a new folder for your agent:
 
-    we recommend placing it inside your local registry `mkdir -p ~/.nearai/registry/example_agent`. 
+we recommend placing it inside your local registry `mkdir -p ~/.nearai/registry/example_agent`. 
 
-3. Create a metadata.json file for your agent
 
-   `nearai registry metadata_template ~/.nearai/registry/example_agent agent "Example agent"` and edit it.
+#### 3. Create files for your agent:
 
-4. Create an `agent.py` file in that folder.
-     * Write your agent, in agent.py, using the [environment API](#the-environment-api) described below.
-     * Or paste in the [example agent.py](#example-agentpy) below.
+  The fastest way to create both your metadata and agent .py file would be the create or clone functions
 
-5. Run your agent locally using the cli and passing it a folder to write output to. 
+  * `nearai agent create --name <agent_name> --description <description>` allows you to create clean agent
+  * `nearai agent create --fork <namespace/agent_name/version> [--name <new_agent_name>]` forks an existing codebase 
+  * `nearai registry list` can tell you what agents are forkable.
+  * otherwise you can use `nearai registry metadata_template ~/.nearai/registry/example_agent agent "Example agent"` and edit it, as well as a created agent.py, [example of which is below](#example-agentpy) using the [environment API](#the-environment-api).
+
+
+#### 4. Run your agent locally using the cli and passing it a folder to write output to. 
 ```shell
 nearai agent interactive example_agent /tmp/example_agent_run_1 --local
 ```
@@ -35,7 +38,7 @@ This will remove the existing session data and start a new one.
 # In local interactive mode, the first user input is collected before the agent runs.
 prompt = {"role": "system", "content": "You are a travel agent that helps users plan trips."}
 result = env.completion([prompt] + env.list_messages())
-env.add_message("agent", result)
+env.add_reply(result)
 env.request_user_input()
 ```
 
@@ -61,7 +64,7 @@ Example:
 nearai agent interactive example_agent --local
 ```
 
-* The agent can save temporary files to track the progress of a task from the user in case the dialogue execution is interrupted. By default, the entire message history is stored in a file named `chat.txt`. The agent can add messages there by using [`env.add_message()`](api.md#nearai.agents.environment.Environment.add_message). Learn more about [the environment API](#the-environment-api).
+* The agent can save temporary files to track the progress of a task from the user in case the dialogue execution is interrupted. By default, the entire message history is stored in a file named `chat.txt`. The agent can add messages there by using [`env.add_reply()`](api.md#nearai.agents.environment.Environment.add_message). Learn more about [the environment API](#the-environment-api).
 * During its operation, the agent creates a file named `.next_agent`, which stores the role of the next participant expected in the dialogue (either `user` or `agent`) during the next iteration of the loop. The agent can control this value using [`env.set_next_actor()`](api.md#nearai.agents.environment.Environment.set_next_actor).
 * The agent can use local imports from the home folder or its subfolders. It is executed from a temporary folder within a temporary environment.
 
@@ -103,9 +106,12 @@ nearai agent task flatirons.near/xela-agent/5 "Build a command line chess engine
 
 ### Running an agent through AI Hub
 To run an agent in the [AI Hub](https://app.near.ai/agents):
+
 1. Select the desired agent.
-1. Navigate to the **Run** tab.
-1. Interact with the agent using the chat interface
+
+2. Navigate to the **Run** tab.
+
+3. Interact with the agent using the chat interface
 
 Note:
 . Agent chat through the AI Hub does not yet stream back responses, it takes a few seconds to respond.
@@ -120,7 +126,7 @@ conversation = env.list_messages() # the user's new message is added to this lis
 
 agent_response = env.completion([prompt] + conversation)
 
-env.add_message("agent", agent_response)
+env.add_reply(agent_response)
 ```
 
 
@@ -145,16 +151,7 @@ The model can be passed into `completion` function or as an agent metadata:
      }
    }
    ```
-  * [`list_messages`](api.md#nearai.agents.environment.Environment.list_messages): returns the list of messages in the conversation. 
-You have full control to add and remove messages from this list.
-  * [`add_message`](api.md#nearai.agents.environment.Environment.add_message): adds a message to the conversation. Arguments are role and content.
-   ```python
-   env.add_message("user", "Hello, I would like to travel to Paris")
-   ```
-   Normal roles are: 
-    *  `system`: usually your starting prompt
-    *  `agent`: messages from the agent (i.e. llm responses, programmatic responses)
-    *  `user`: messages from the user
+  * [`list_messages`](api.md#nearai.agents.environment.Environment.list_messages): returns the list of messages in the conversation.
 
 ### Additional environment methods
 There are several variations for completions:
@@ -167,7 +164,7 @@ directly or use them through the tool_registry and passing them to a completions
 
  * [`list_terminal_commands`](api.md#nearai.agents.environment.Environment.list_terminal_commands): list the history of terminal commands
  * [`list_files`](api.md#nearai.agents.environment.Environment.list_files): list the files in the current directory
- * [`get_path`](api.md#nearai.agents.environment.Environment.get_path): get the path of the current directory
+ * [`get_path`](api.md#nearai.agents.environment.Environment.get_system_path): get the path of the current directory
  * [`read_file`](api.md#nearai.agents.environment.Environment.read_file): read a file
  * [`write_file`](api.md#nearai.agents.environment.Environment.write_file): write to a file
  * [`exec_command`](api.md#nearai.agents.environment.Environment.exec_command): execute a terminal command
@@ -216,16 +213,17 @@ To pass all the built in tools plus any you have registered use the `get_all_too
 all_tools = env.get_tool_registry().get_all_tool_definitions()
 response = env.completions_and_run_tools(messages, tools=all_tools)
 ```
-If you are registering several tools and do not want to use the built in tools, instantiate a new ToolRegistry
+If you do not want to use the built-in tools, use `get_tool_registry(new=True)`
 ```python
-    tool_registry = ToolRegistry()
+    tool_registry = env.get_tool_registry(new=True)
     tool_registry.register_tool(my_tool)
     tool_registry.register_tool(my_tool2)
     response = env.completions_and_run_tools(messages, tools=tool_registry.get_all_tool_definitions())
 ```
 
 
-## Uploading an agent
+## Uploading an Agent
+ * In order to upload, you must be registered and [logged in with NEAR](login.md) to upload, `nearai login`
  * You need a folder with an `agent.py` file in it, `~/.nearai/registry/example_agent` in this example. 
  * The agent may consist of additional files in the folder.
 
@@ -257,7 +255,6 @@ If you are registering several tools and do not want to use the built in tools, 
 }
 ```
 
- * You must be [logged in with NEAR](login.md) to upload, `nearai login`
  * Upload the agent `nearai registry upload ~/.nearai/registry/example_agent`
 
 ⚠️ You can't remove or overwrite a file once it's uploaded, but you can hide the entire agent by setting the `"show_entry": false` field.

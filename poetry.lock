@@ -231,6 +231,34 @@ test = ["anyio[trio]", "coverage[toml] (>=7)", "exceptiongroup (>=1.2.0)", "hypo
 trio = ["trio (>=0.26.1)"]
 
 [[package]]
+name = "apscheduler"
+version = "3.10.4"
+description = "In-process task scheduler with Cron-like capabilities"
+optional = true
+python-versions = ">=3.6"
+files = [
+    {file = "APScheduler-3.10.4-py3-none-any.whl", hash = "sha256:fb91e8a768632a4756a585f79ec834e0e27aad5860bac7eaa523d9ccefd87661"},
+    {file = "APScheduler-3.10.4.tar.gz", hash = "sha256:e6df071b27d9be898e486bc7940a7be50b4af2e9da7c08f0744a96d4bd4cef4a"},
+]
+
+[package.dependencies]
+pytz = "*"
+six = ">=1.4.0"
+tzlocal = ">=2.0,<3.dev0 || >=4.dev0"
+
+[package.extras]
+doc = ["sphinx", "sphinx-rtd-theme"]
+gevent = ["gevent"]
+mongodb = ["pymongo (>=3.0)"]
+redis = ["redis (>=3.0)"]
+rethinkdb = ["rethinkdb (>=2.4.0)"]
+sqlalchemy = ["sqlalchemy (>=1.4)"]
+testing = ["pytest", "pytest-asyncio", "pytest-cov", "pytest-tornado5"]
+tornado = ["tornado (>=4.3)"]
+twisted = ["twisted"]
+zookeeper = ["kazoo"]
+
+[[package]]
 name = "argcomplete"
 version = "3.5.0"
 description = "Bash tab completion for argparse"
@@ -838,8 +866,8 @@ files = [
 jmespath = ">=0.7.1,<2.0.0"
 python-dateutil = ">=2.1,<3.0.0"
 urllib3 = [
-    {version = ">=1.25.4,<1.27", markers = "python_version < \"3.10\""},
     {version = ">=1.25.4,<2.2.0 || >2.2.0,<3", markers = "python_version >= \"3.10\""},
+    {version = ">=1.25.4,<1.27", markers = "python_version < \"3.10\""},
 ]
 
 [package.extras]
@@ -1433,6 +1461,20 @@ files = [
 test = ["pytest (>=6)"]
 
 [[package]]
+name = "execnet"
+version = "2.1.1"
+description = "execnet: rapid multi-Python deployment"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "execnet-2.1.1-py3-none-any.whl", hash = "sha256:26dee51f1b80cebd6d0ca8e74dd8745419761d3bef34163928cbebbdc4749fdc"},
+    {file = "execnet-2.1.1.tar.gz", hash = "sha256:5189b52c6121c24feae288166ab41b32549c7e2348652736540b9e6e7d4e72e3"},
+]
+
+[package.extras]
+testing = ["hatch", "pre-commit", "pytest", "tox"]
+
+[[package]]
 name = "fabric"
 version = "3.2.2"
 description = "High level SSH command execution"
@@ -1523,6 +1565,27 @@ files = [
 [package.dependencies]
 six = "*"
 termcolor = "*"
+
+[[package]]
+name = "fireworks-ai"
+version = "0.15.7"
+description = "Python client library for the Fireworks.ai Generative AI Platform"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "fireworks_ai-0.15.7-py3-none-any.whl", hash = "sha256:44d6985e245b70e3417c5800a3ef1a1710e2827469f42dab356a82d17d44a45e"},
+    {file = "fireworks_ai-0.15.7.tar.gz", hash = "sha256:70193f1f81954f49a88ba85d77f4a7f42bdb5ac5ffc9f9aa72ba83aef20df22f"},
+]
+
+[package.dependencies]
+httpx = "*"
+httpx-sse = "*"
+httpx-ws = "*"
+Pillow = "*"
+pydantic = "*"
+
+[package.extras]
+flumina = ["gitignore-parser", "openapi-spec-validator", "prance", "tabulate", "torch", "tqdm"]
 
 [[package]]
 name = "flask"
@@ -1942,6 +2005,34 @@ cli = ["click (==8.*)", "pygments (==2.*)", "rich (>=10,<14)"]
 http2 = ["h2 (>=3,<5)"]
 socks = ["socksio (==1.*)"]
 zstd = ["zstandard (>=0.18.0)"]
+
+[[package]]
+name = "httpx-sse"
+version = "0.4.0"
+description = "Consume Server-Sent Event (SSE) messages with HTTPX."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "httpx-sse-0.4.0.tar.gz", hash = "sha256:1e81a3a3070ce322add1d3529ed42eb5f70817f45ed6ec915ab753f961139721"},
+    {file = "httpx_sse-0.4.0-py3-none-any.whl", hash = "sha256:f329af6eae57eaa2bdfd962b42524764af68075ea87370a2de920af5341e318f"},
+]
+
+[[package]]
+name = "httpx-ws"
+version = "0.6.2"
+description = "WebSockets support for HTTPX"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "httpx_ws-0.6.2-py3-none-any.whl", hash = "sha256:24f87427acb757ada200aeab016cc429fa0bc71b0730429c37634867194e305c"},
+    {file = "httpx_ws-0.6.2.tar.gz", hash = "sha256:b07446b9067a30f1012fa9851fdfd14207012cd657c485565884f90553d0854c"},
+]
+
+[package.dependencies]
+anyio = ">=4"
+httpcore = ">=1.0.4"
+httpx = ">=0.23.1"
+wsproto = "*"
 
 [[package]]
 name = "huggingface-hub"
@@ -3680,8 +3771,8 @@ files = [
 
 [package.dependencies]
 numpy = [
-    {version = ">=1.22.4", markers = "python_version < \"3.11\""},
     {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
+    {version = ">=1.22.4", markers = "python_version < \"3.11\""},
     {version = ">=1.23.2", markers = "python_version == \"3.11\""},
 ]
 python-dateutil = ">=2.8.2"
@@ -4167,8 +4258,8 @@ files = [
 annotated-types = ">=0.6.0"
 pydantic-core = "2.23.4"
 typing-extensions = [
-    {version = ">=4.6.1", markers = "python_version < \"3.13\""},
     {version = ">=4.12.2", markers = "python_version >= \"3.13\""},
+    {version = ">=4.6.1", markers = "python_version < \"3.13\""},
 ]
 
 [package.extras]
@@ -4405,6 +4496,26 @@ files = [
 
 [package.dependencies]
 pytest = ">=3.0.0"
+
+[[package]]
+name = "pytest-xdist"
+version = "3.6.1"
+description = "pytest xdist plugin for distributed testing, most importantly across multiple CPUs"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "pytest_xdist-3.6.1-py3-none-any.whl", hash = "sha256:9ed4adfb68a016610848639bb7e02c9352d5d9f03d04809919e2dafc3be4cca7"},
+    {file = "pytest_xdist-3.6.1.tar.gz", hash = "sha256:ead156a4db231eec769737f57668ef58a2084a34b2e55c4a8fa20d861107300d"},
+]
+
+[package.dependencies]
+execnet = ">=2.1"
+pytest = ">=7.0.0"
+
+[package.extras]
+psutil = ["psutil (>=3.0)"]
+setproctitle = ["setproctitle"]
+testing = ["filelock"]
 
 [[package]]
 name = "python-dateutil"
@@ -6356,6 +6467,23 @@ files = [
 ]
 
 [[package]]
+name = "tzlocal"
+version = "5.2"
+description = "tzinfo object for the local timezone"
+optional = true
+python-versions = ">=3.8"
+files = [
+    {file = "tzlocal-5.2-py3-none-any.whl", hash = "sha256:49816ef2fe65ea8ac19d19aa7a1ae0551c834303d5014c6d5a62e4cbda8047b8"},
+    {file = "tzlocal-5.2.tar.gz", hash = "sha256:8d399205578f1a9342816409cc1e46a93ebd5755e39ea2d85334bea911bf0e6e"},
+]
+
+[package.dependencies]
+tzdata = {version = "*", markers = "platform_system == \"Windows\""}
+
+[package.extras]
+devenv = ["check-manifest", "pytest (>=4.3)", "pytest-cov", "pytest-mock (>=3.3)", "zest.releaser"]
+
+[[package]]
 name = "urllib3"
 version = "1.26.20"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
@@ -6876,6 +7004,20 @@ files = [
 ]
 
 [[package]]
+name = "wsproto"
+version = "1.2.0"
+description = "WebSockets state-machine based protocol implementation"
+optional = false
+python-versions = ">=3.7.0"
+files = [
+    {file = "wsproto-1.2.0-py3-none-any.whl", hash = "sha256:b9acddd652b585d75b20477888c56642fdade28bdfd3579aa24a4d2c037dd736"},
+    {file = "wsproto-1.2.0.tar.gz", hash = "sha256:ad565f26ecb92588a3e43bc3d96164de84cd9902482b130d0ddbaa9664a85065"},
+]
+
+[package.dependencies]
+h11 = ">=0.9.0,<1"
+
+[[package]]
 name = "xformers"
 version = "0.0.27.post2"
 description = "XFormers: A collection of composable Transformer building blocks."
@@ -7168,11 +7310,11 @@ type = ["pytest-mypy"]
 
 [extras]
 explatform = ["fabric", "flask", "gunicorn", "requests", "shortuuid"]
-hub = ["chardet", "cryptography", "fastapi", "fastapi-cli", "openpyxl", "pypdf", "python-docx", "python-dotenv", "python-pptx", "shortuuid", "sqlmodel"]
+hub = ["apscheduler", "chardet", "cryptography", "fastapi", "fastapi-cli", "openpyxl", "pypdf", "python-docx", "python-dotenv", "python-pptx", "shortuuid", "sqlmodel"]
 torch = ["torch", "torchao", "torchtune"]
 vllm = ["torch", "vllm"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<4.0"
-content-hash = "277ef4195797b89b31a256aad173417a09d7e518f9247648554a748f4be1ba49"
+content-hash = "831012a6404d019c842dfe0bcc84bfca7180869ee8cfb1544e989af7f023b6de"

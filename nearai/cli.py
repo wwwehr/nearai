@@ -41,9 +41,7 @@ from nearai.finetune import FinetuneCli
 from nearai.lib import check_metadata, parse_location, parse_tags
 from nearai.registry import get_registry_folder, registry
 from nearai.tensorboard_feed import TensorboardCli
-
 import logging
-
 
 class RegistryCli:
     def info(self, entry: str) -> None:
@@ -429,7 +427,7 @@ class AgentCli:
         thread_id: Optional[str] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
         local: bool = False,
-        loglevel: str = "ERROR",
+        log_level: str = "ERROR",
         env_vars: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Runs agent interactively."""
@@ -448,7 +446,7 @@ class AgentCli:
                 last_message_id=last_message_id,
                 local=local,
                 env_vars=env_vars,
-                loglevel=loglevel,
+                log_level=log_level,
             )
 
             # Update thread_id for the next iteration
@@ -463,7 +461,7 @@ class AgentCli:
         tool_resources: Optional[Dict[str, Any]] = None,
         local: bool = False,
         env_vars: Optional[Dict[str, Any]] = None,
-        loglevel: str = "ERROR",
+        log_level: str = "ERROR",
     ) -> None:
         """CLI wrapper for the _task method."""
         last_message_id = self._task(
@@ -474,7 +472,7 @@ class AgentCli:
             record_run=True,
             local=local,
             env_vars=env_vars,
-            loglevel=loglevel,
+            log_level=log_level,
         )
         if last_message_id:
             print(f"Task completed. Thread ID: {self.last_thread_id}")
@@ -490,7 +488,7 @@ class AgentCli:
         last_message_id: Optional[str] = None,
         local: bool = False,
         env_vars: Optional[Dict[str, Any]] = None,
-        loglevel: str = "ERROR",
+        log_level: str = "ERROR",
     ) -> Optional[str]:
         """Runs agent non-interactively with a single task."""
         hub_client = get_hub_client()
@@ -502,9 +500,9 @@ class AgentCli:
             )
 
 
-        # set loglevel
+        # set log_level
         logger = logging.getLogger("system_logger")
-        logger.setLevel(getattr(logging, loglevel.upper()))
+        logger.setLevel(getattr(logging, log_level.upper()))
 
         hub_client.beta.threads.messages.create(
             thread_id=thread.id,

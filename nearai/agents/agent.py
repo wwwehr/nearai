@@ -1,7 +1,6 @@
 import io
 import json
 import os
-import runpy
 import shutil
 import sys
 import tempfile
@@ -17,7 +16,7 @@ AGENT_FILENAME = "agent.py"
 class Agent(object):
     def __init__(  # noqa: D107
         self, identifier: str, agent_files: Union[List, Path], metadata: Dict, change_to_temp_dir: bool = True
-    ):
+    ):  # noqa: D107
         self.identifier = identifier
         name_parts = identifier.split("/")
         self.namespace = name_parts[0]
@@ -37,6 +36,7 @@ class Agent(object):
 
         self.set_agent_metadata(metadata)
         self.agent_files = agent_files
+        self.original_cwd = os.getcwd()
 
         self.temp_dir = self.write_agent_files_to_temp(agent_files)
         self.change_to_temp_dir = change_to_temp_dir
@@ -123,22 +123,29 @@ class Agent(object):
         # save env.env_vars
         env.env_vars = total_env_vars
 
-        context = {"env": env, "agent": self, "task": task}
+        namespace = {
+            "env": env,
+            "agent": self,
+            "task": task,
+            "__name__": "__main__",
+            "__file__": agent_filename,
+        }
 
-        print(f"self.change_to_temp_dir = {self.change_to_temp_dir}")
-        if not os.path.exists(agent_filename):
-            raise ValueError(f"Agent run error: {AGENT_FILENAME} does not exist")
-        if not self.change_to_temp_dir:
-            runpy.run_path(agent_filename, init_globals=context, run_name="__main__")
-        else:
-            original_cwd = os.getcwd()
-            try:
+        try:
+            if self.change_to_temp_dir:
                 os.chdir(self.temp_dir)
-                sys.path.insert(0, self.temp_dir)
-                runpy.run_path(agent_filename, init_globals=context, run_name="__main__")
-            finally:
-                os.chdir(original_cwd)
-                sys.path.pop(0)
+            sys.path.insert(0, self.temp_dir)
+            # NOTE: runpy.run_path does not work in a multithreaded environment when running benchmark.
+            #       The performance of runpy.run_path may also change depending on a system, e.g. it may
+            #       work on Linux but not work on Mac.
+            #       `compile` and `exec` have been tested to work properly in a multithreaded environment.
+            with open(agent_filename, "r") as f:
+                code = compile(f.read(), agent_filename, "exec")
+                exec(code, namespace)
+        finally:
+            sys.path.remove(self.temp_dir)
+            if self.change_to_temp_dir:
+                os.chdir(self.original_cwd)
 
     @staticmethod
     def load_agents(agents: str, config: ClientConfig, local: bool = False):

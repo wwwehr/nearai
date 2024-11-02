@@ -69,6 +69,7 @@ class CustomLogHandler(logging.Handler):
         log_entry = self.format(record)
         self.add_reply_func(message=log_entry, message_type=f"{self.namespace}:log")
 
+
 class Environment(object):
     def __init__(  # noqa: D107
         self,
@@ -891,7 +892,6 @@ class Environment(object):
         """Remove temp agent files created to be used in `runpy`."""
         for agent in self._agents:
             if os.path.exists(agent.temp_dir):
-                print(f"Deleting {agent.temp_dir}")
                 shutil.rmtree(agent.temp_dir)
 
     def set_next_actor(self, who: str) -> None:

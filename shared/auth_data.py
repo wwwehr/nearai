@@ -1,4 +1,5 @@
 import json
+from typing import Optional
 
 from pydantic import BaseModel
 
@@ -11,6 +12,7 @@ class AuthData(BaseModel):
     nonce: str
     recipient: str
     message: str
+    on_behalf_of: Optional[str] = None
 
     def generate_bearer_token(self):
         """Generates a JSON-encoded bearer token containing authentication data."""

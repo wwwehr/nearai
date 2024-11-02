@@ -161,12 +161,9 @@ def run_with_environment(
         f"\nthread_id: {thread_id}\nrun_id: {run_id}\nauth: {auth}"
     )
     params = params or {}
-    max_iterations = int(params.get("max_iterations", 2))
-    record_run = bool(params.get("record_run", True))
     api_url = str(params.get("api_url", DEFAULT_API_URL))
     user_env_vars: dict = params.get("user_env_vars", {})
     agent_env_vars: dict = params.get("agent_env_vars", {})
-    model: str = params.get("model", "")
 
     if api_url != DEFAULT_API_URL:
         print(f"WARNING: Using custom API URL: {api_url}")
@@ -174,6 +171,18 @@ def run_with_environment(
     near_client = PartialNearClient(api_url, auth)
 
     loaded_agents = []
+
+    agent = loaded_agents[0]
+    if "provider" in params:
+        agent.model_provider = params["provider"]
+    if "model" in params:
+        agent.model = params["model"]
+    if "temperature" in params:
+        agent.model_temperature = params["temperature"]
+    if "max_tokens" in params:
+        agent.model_max_tokens = params["max_tokens"]
+    if "max_iterations" in params:
+        agent.max_iterations = params["max_iterations"]
 
     for agent_name in agents.split(","):
         agent = load_agent(near_client, agent_name, params, auth.account_id, additional_path)
@@ -194,13 +203,14 @@ def run_with_environment(
         hub_client,
         thread_id,
         run_id,
-        model,
         env_vars=user_env_vars,
     )
     start_time = time.perf_counter()
     env.add_agent_start_system_log(agent_idx=0)
-    run_id = env.run(new_message, max_iterations)
-    new_environment = save_environment(env, near_client, run_id, thread_id, write_metric) if record_run else None
+    run_id = env.run(new_message, agent.max_iterations)
+    new_environment = (
+        save_environment(env, near_client, run_id, thread_id, write_metric) if params.get("record_run", True) else None
+    )
     clear_temp_agent_files(loaded_agents)
     stop_time = time.perf_counter()
     write_metric("ExecuteAgentDuration", stop_time - start_time)

@@ -60,12 +60,12 @@ default_approvals: Dict[str, Any] = {"confirm_execution": lambda _: True}
 
 
 class CustomLogHandler(logging.Handler):
-    def __init__(self, add_reply_func, namespace: str):
+    def __init__(self, add_reply_func, namespace: str):  # noqa: D107
         super().__init__()
         self.add_reply_func = add_reply_func
         self.namespace = namespace
 
-    def emit(self, record):
+    def emit(self, record):  # noqa: D102
         log_entry = self.format(record)
         self.add_reply_func(message=log_entry, message_type=f"{self.namespace}:log")
 
@@ -79,7 +79,6 @@ class Environment(object):
         hub_client: OpenAI,
         thread_id: str,
         run_id: str,
-        model: str,
         create_files: bool = True,
         env_vars: Optional[Dict[str, Any]] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
@@ -99,7 +98,6 @@ class Environment(object):
         self._approvals = approvals
         self._hub_client = hub_client
         self._thread_id = thread_id
-        self._model = model
         self._run_id = run_id
         self._debug_mode = True if self.env_vars.get("DEBUG") else False
 
@@ -268,7 +266,7 @@ class Environment(object):
         """Backwards compatibility for chat_completions messages."""
         messages = self._list_messages()
 
-        # Filter out system and agent log messages when running in debug mode. Agent behaviour shouldn't change based on logs.
+        # Filter out system and agent log messages when running in debug mode. Agent behavior shouldn't change based on logs.  # noqa: E501
         if self._debug_mode:
             messages = [
                 m

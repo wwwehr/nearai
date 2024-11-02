@@ -59,6 +59,17 @@ LLAMA_TOOL_FORMAT_PATTERN2 = re.compile(r"(.*)<tool_call>\n(.*)\n</tool_call>(.*
 default_approvals: Dict[str, Any] = {"confirm_execution": lambda _: True}
 
 
+class CustomLogHandler(logging.Handler):
+    def __init__(self, add_reply_func, namespace: str):
+        super().__init__()
+        self.add_reply_func = add_reply_func
+        self.namespace = namespace
+
+    def emit(self, record):
+        log_entry = self.format(record)
+        self.add_reply_func(message=log_entry, message_type=f"{self.namespace}:log")
+
+
 class Environment(object):
     def __init__(  # noqa: D107
         self,
@@ -90,6 +101,7 @@ class Environment(object):
         self._thread_id = thread_id
         self._model = model
         self._run_id = run_id
+        self._debug_mode = True if self.env_vars.get("DEBUG") else False
 
         if create_files:
             os.makedirs(self._path, exist_ok=True)
@@ -127,7 +139,7 @@ class Environment(object):
         self,
         message: str,
         attachments: Optional[Iterable[Attachment]] = None,
-        **kwargs: Any,
+        message_type: Optional[str] = None,
     ):
         """Assistant adds a message to the environment."""
         # NOTE: message from `user` are not stored in the memory
@@ -140,8 +152,8 @@ class Environment(object):
                 "assistant_id": self._agents[0].identifier,
                 "run_id": self._run_id,
             },
-            metadata=kwargs,
             attachments=attachments,
+            metadata={"message_type": message_type} if message_type else None,
         )
 
     def add_message(
@@ -183,6 +195,12 @@ class Environment(object):
                 console_handler.setFormatter(formatter)
                 logger.addHandler(console_handler)
 
+            # Add Thread log handler
+            if self._debug_mode:
+                custom_handler = CustomLogHandler(self.add_reply, "system")
+                custom_handler.setFormatter(formatter)
+                logger.addHandler(custom_handler)
+
         # Log the message
         logger.log(level, log)
         # Force the handler to write to disk
@@ -199,6 +217,12 @@ class Environment(object):
             formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)
+
+            # Add Thread log handler
+            if self._debug_mode:
+                custom_handler = CustomLogHandler(self.add_reply, "agent")
+                custom_handler.setFormatter(formatter)
+                logger.addHandler(custom_handler)
 
         # Log the message
         logger.log(level, log)
@@ -243,6 +267,14 @@ class Environment(object):
     def list_messages(self):
         """Backwards compatibility for chat_completions messages."""
         messages = self._list_messages()
+
+        # Filter out system and agent log messages when running in debug mode. Agent behaviour shouldn't change based on logs.
+        if self._debug_mode:
+            messages = [
+                m
+                for m in messages
+                if not (m.metadata and m.metadata.get("message_type") in ["system:log", "agent:log"])
+            ]
         legacy_messages = [
             {
                 "id": m.id,
@@ -354,10 +386,10 @@ class Environment(object):
         # Upload to Hub
         file_data = io.BytesIO(content.encode(encoding))
         file = self._hub_client.files.create(file=(filename, file_data, filetype), purpose="assistants")
-        res = self.add_message(
-            role="assistant",
+        res = self.add_reply(
             message=f"Successfully wrote {len(content) if content else 0} characters to {filename}",
             attachments=[{"file_id": file.id, "tools": [{"type": "file_search"}]}],
+            message_type="system:file_write",
         )
         self.add_system_log(
             f"Uploaded file {filename} with {len(content)} characters, id: {file.id}. Added in thread as: {res.id}"

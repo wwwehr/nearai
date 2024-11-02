@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
+import logging
 import os
 import shutil
 import time
@@ -92,7 +93,7 @@ def write_metric(metric_name, value, unit="Milliseconds"):
             ],
         )
     else:
-        print(f"Would have written metric {metric_name} with value {value} to cloudwatch")
+        logging.info(f"Would have written metric {metric_name} with value {value} to cloudwatch")
 
 
 def load_agent(client, agent, params: dict, account_id: str = "local", additional_path: str = "") -> Agent:
@@ -110,7 +111,7 @@ def load_agent(client, agent, params: dict, account_id: str = "local", additiona
         for file in agent_files:
             if os.path.basename(file["filename"]) == "metadata.json":
                 agent_metadata = json.loads(file["content"])
-                print(f"Loaded {agent_metadata} agents from {agent}")
+                logging.info(f"Loaded {agent_metadata} agents from {agent}")
                 break
 
     if not agent_metadata:
@@ -122,7 +123,7 @@ def load_agent(client, agent, params: dict, account_id: str = "local", additiona
 def clear_temp_agent_files(agents):
     for agent in agents:
         if agent.temp_dir and os.path.exists(agent.temp_dir):
-            print("removed agent.temp_dir", agent.temp_dir)
+            logging.info("removed agent.temp_dir", agent.temp_dir)
             shutil.rmtree(agent.temp_dir)
 
 
@@ -136,7 +137,7 @@ def save_environment(env, client, run_id, base_id, metric_function=None) -> str:
     request_stop_time = time.perf_counter()
     if metric_function:
         metric_function("SaveEnvironmentToRegistry_Duration", request_stop_time - request_start_time)
-    print(
+    logging.info(
         f"Saved environment {registry_id} to registry. To load use flag `--load-env={registry_id}`. "
         f"or `--load-env={name}`"
     )
@@ -156,7 +157,7 @@ def run_with_environment(
     params: dict = None,
 ) -> Optional[str]:
     """Runs agent against environment fetched from id, optionally passing a new message to the environment."""
-    print(
+    logging.info(
         f"Running with:\nagents: {agents}\nnew_message: {new_message}\nparams: {params}"
         f"\nthread_id: {thread_id}\nrun_id: {run_id}\nauth: {auth}"
     )

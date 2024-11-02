@@ -12,7 +12,7 @@ import { type AgentRunnerFormSchema } from '~/components/AgentRunner';
 import { type IframePostMessageEventHandler } from '~/components/lib/IframeWithBlob';
 import {
   agentWalletAccountRequestModel,
-  agentWalletTransactionRequestModel,
+  agentWalletTransactionsRequestModel,
   agentWalletViewRequestModel,
   chatWithAgentModel,
   type entryModel,
@@ -104,22 +104,7 @@ export function useAgentRequestsWithIframe(
               }
 
               const result = await wallet.signAndSendTransactions({
-                transactions: [
-                  {
-                    actions: [
-                      {
-                        params: {
-                          args: request.params,
-                          deposit: request.deposit,
-                          gas: request.gas,
-                          methodName: request.method,
-                        },
-                        type: 'FunctionCall',
-                      },
-                    ],
-                    receiverId: request.recipient,
-                  },
-                ],
+                transactions: request.transactions,
                 callbackUrl: callbackUrl.toString(),
               });
 
@@ -152,14 +137,14 @@ export function useAgentRequestsWithIframe(
       | 'near_call'
       | 'near_view'
       | 'remote_agent_run'
-      | 'refresh_environment_id';
+      | 'refresh_thread_id';
     data: unknown;
   }> = async (event) => {
     try {
       const action = event.data.action;
 
       if (action === 'near_call') {
-        const request = agentWalletTransactionRequestModel.parse(
+        const request = agentWalletTransactionsRequestModel.parse(
           event.data.data,
         );
         void conditionallyProcessAgentRequests([request]);
@@ -167,9 +152,9 @@ export function useAgentRequestsWithIframe(
         const request = agentWalletViewRequestModel.parse(event.data.data);
 
         const result: unknown = await nearViewAccount!.viewFunction({
-          contractId: request.recipient,
-          methodName: request.method,
-          args: request.params,
+          ...request,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+          stringify: request.stringify as any,
         });
 
         setIframePostMessage({
@@ -206,11 +191,11 @@ export function useAgentRequestsWithIframe(
         } else {
           console.error('Missing data read `near_account`');
         }
-      } else if (action === 'refresh_environment_id') {
-        const chat = chatWithAgentModel.parse(event.data.data);
+      } else if (action === 'refresh_thread_id') {
+        const chat = chatWithAgentModel.partial().parse(event.data.data);
         if (chat.thread_id) {
-          updateQueryPath({ threadId: chat.thread_id }, 'replace', false);
           void utils.hub.thread.invalidate({ threadId: chat.thread_id });
+          updateQueryPath({ threadId: chat.thread_id }, 'replace', false);
         }
       } else if (action === 'remote_agent_run') {
         const chat = chatWithAgentModel.parse(event.data.data);

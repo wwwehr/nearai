@@ -1,11 +1,12 @@
 import io
 import json
 import os
-import random
 import runpy
 import shutil
+import socket
 import sys
 import tempfile
+import threading
 import time
 import uuid
 from pathlib import Path
@@ -14,6 +15,62 @@ from typing import Any, Dict, List, Optional, Union
 from shared.client_config import ClientConfig
 
 AGENT_FILENAME = "agent.py"
+
+
+class _UniqueDirectoryGenerator:
+    """Thread-safe unique temporary directory path generator."""
+
+    _lock = threading.Lock()
+    _counter = 0
+
+    @classmethod
+    def generate_unique_path(cls, prefix="agent"):
+        """Generates a guaranteed unique temporary directory path.
+
+        Args:
+            prefix (str): Prefix for the directory name
+
+        Returns:
+            str: Unique temporary directory path
+
+        """
+        with cls._lock:
+            # Increment counter atomically
+            cls._counter += 1
+            counter = cls._counter
+
+        components = [
+            prefix,
+            uuid.uuid4().hex,  # Random UUID
+            str(int(time.time() * 1000000)),  # High-resolution timestamp (microseconds)
+            str(os.getpid()),  # Process ID
+            socket.gethostname(),  # Hostname
+            str(threading.get_ident()),  # Thread ID
+            str(counter),  # Atomic counter
+        ]
+
+        # Create a hash of all components to keep the path length reasonable
+        unique_hash = uuid.uuid5(uuid.NAMESPACE_DNS, "_".join(components)).hex
+
+        return os.path.join(tempfile.gettempdir(), f"{prefix}_{unique_hash}")
+
+    @staticmethod
+    def create_unique_dir(prefix="agent"):
+        """Generates a unique path and creates the directory.
+
+        Args:
+            prefix (str): Prefix for the directory name
+
+        Returns:
+            str: Path to the created directory
+
+        Raises:
+            OSError: If directory creation fails
+
+        """
+        path = _UniqueDirectoryGenerator.generate_unique_path(prefix)
+        os.makedirs(path, exist_ok=False)  # Raises OSError if directory exists
+        return path
 
 
 class Agent(object):
@@ -44,10 +101,7 @@ class Agent(object):
     @staticmethod
     def write_agent_files_to_temp(agent_files):
         """Write agent files to a temporary directory."""
-        unique_id1 = uuid.uuid4().hex
-        unique_id2 = str(int(time.time() * 1000))
-        unique_id3 = str(random.randint(0, 1000))
-        temp_dir = os.path.join(tempfile.gettempdir(), f"agent_{unique_id1}_{unique_id2}_{unique_id3}")
+        temp_dir = _UniqueDirectoryGenerator.create_unique_dir()
 
         if isinstance(agent_files, List):
             os.makedirs(temp_dir, exist_ok=True)

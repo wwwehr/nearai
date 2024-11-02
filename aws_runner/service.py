@@ -194,7 +194,6 @@ def start_with_environment(
     near_client = PartialNearClient(api_url, auth)
 
     loaded_agents: list[Agent] = []
-
     for agent_name in agents.split(","):
         agent = load_agent(near_client, agent_name, params, auth.account_id, additional_path)
         # agents secrets has higher priority then agent metadata's env_vars

@@ -126,10 +126,10 @@ def clear_temp_agent_files(agents):
             shutil.rmtree(agent.temp_dir)
 
 
-def save_environment(env, client, run_id, base_id, metric_function=None) -> str:
+def save_environment(env, client, base_id, metric_function=None) -> str:
     save_start_time = time.perf_counter()
     snapshot = env.create_snapshot()
-    metadata = env.environment_run_info(run_id, base_id, "remote run")
+    metadata = env.environment_run_info(base_id, "remote run")
     name = metadata["name"]
     request_start_time = time.perf_counter()
     registry_id = client.save_environment(snapshot, metadata)
@@ -199,8 +199,8 @@ def run_with_environment(
     )
     start_time = time.perf_counter()
     env.add_agent_start_system_log(agent_idx=0)
-    run_id = env.run(new_message, max_iterations)
-    new_environment = save_environment(env, near_client, run_id, thread_id, write_metric) if record_run else None
+    env.run(new_message, max_iterations)
+    new_environment = save_environment(env, near_client, thread_id, write_metric) if record_run else None
     clear_temp_agent_files(loaded_agents)
     stop_time = time.perf_counter()
     write_metric("ExecuteAgentDuration", stop_time - start_time)

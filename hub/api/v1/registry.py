@@ -121,6 +121,12 @@ def get(entry_location: EntryLocation = Body()) -> RegistryEntry:
         return entry
 
 
+def get_read_access(entry: RegistryEntry = Depends(get), auth: AuthToken = Depends(revokable_auth)) -> RegistryEntry:
+    if entry.is_private() and entry.namespace != auth.account_id:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    return entry
+
+
 class EntryMetadataInput(BaseModel):
     category: str
     description: str
@@ -164,7 +170,7 @@ async def upload_file(
 
 @v1_router.post("/download_file")
 def download_file(
-    entry: RegistryEntry = Depends(get),
+    entry: RegistryEntry = Depends(get_read_access),
     path: str = Body(),
 ):
     return StreamingResponse(download_file_inner(entry, path).iter_chunks())
@@ -224,7 +230,7 @@ async def upload_metadata(registry_entry_id: int = Depends(get_or_create), metad
 
 
 @v1_router.post("/download_metadata")
-def download_metadata(entry: RegistryEntry = Depends(get)) -> EntryMetadata:
+def download_metadata(entry: RegistryEntry = Depends(get_read_access)) -> EntryMetadata:
     return download_metadata_inner(entry)
 
 
@@ -249,7 +255,7 @@ class Filename(BaseModel):
 
 
 @v1_router.post("/list_files")
-def list_files(entry: RegistryEntry = Depends(get)) -> List[Filename]:
+def list_files(entry: RegistryEntry = Depends(get_read_access)) -> List[Filename]:
     """Lists all files that belong to a entry."""
     logger.info(f"Listing files for entry: {entry}")
     return list_files_inner(entry)

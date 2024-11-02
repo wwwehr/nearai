@@ -296,6 +296,12 @@ def update_thread_topic(thread_id: str, auth: AuthData):
 
         client = ClientConfig(base_url=CONFIG.nearai_hub.base_url, auth=auth).get_hub_client()
 
+        # Determine default model
+        default_model = DEFAULT_PROVIDER_MODEL
+        available_models = list(map(lambda m: m.id, client.models.list().data))
+        if DEFAULT_PROVIDER_MODEL not in available_models:
+            default_model = available_models[0]
+
         # TODO(#436): Once thread forking is implemented.
         # Fork the thread and use agent: agentic.near/summary/0.0.3/source. (Same prompt as SUMMARY_PROMPT)
         completion = client.chat.completions.create(
@@ -306,7 +312,7 @@ def update_thread_topic(thread_id: str, auth: AuthData):
                 }
             ]
             + [message.to_completions_model() for message in messages],
-            model=DEFAULT_PROVIDER_MODEL,
+            model=default_model,
         )
 
     with get_session() as session:

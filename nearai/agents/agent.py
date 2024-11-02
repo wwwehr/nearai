@@ -28,9 +28,11 @@ class _UniqueDirectoryGenerator:
         """Generates a guaranteed unique temporary directory path.
 
         Args:
+        ----
             prefix (str): Prefix for the directory name
 
         Returns:
+        -------
             str: Unique temporary directory path
 
         """
@@ -59,12 +61,15 @@ class _UniqueDirectoryGenerator:
         """Generates a unique path and creates the directory.
 
         Args:
+        ----
             prefix (str): Prefix for the directory name
 
         Returns:
+        -------
             str: Path to the created directory
 
         Raises:
+        ------
             OSError: If directory creation fails
 
         """

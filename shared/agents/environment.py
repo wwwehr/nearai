@@ -148,7 +148,7 @@ class Environment(object):
         """Deprecated. Please use `add_reply` instead. Assistant adds a message to the environment."""
         # Prevent agent to save messages on behalf of `user` to avoid adding false memory
         role = "assistant"
-        self._add_message(role, message, attachments, kwargs=kwargs)
+        return self._add_message(role, message, attachments, **kwargs)
 
     def _add_message(
         self,
@@ -159,7 +159,7 @@ class Environment(object):
     ):
         return self._hub_client.beta.threads.messages.create(
             thread_id=self._thread_id,
-            role=role,  # type: ignore
+            role=role,
             content=message,
             extra_body={
                 "assistant_id": self._agents[0].identifier,

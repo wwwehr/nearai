@@ -84,7 +84,7 @@ export async function runMessageOnAgentThread(
         thread_id: thread.id,
         assistant_id: input.agent_id,
         instructions: 'You are a helpful assistant. Complete the given task.',
-        model: 'fireworks::accounts/fireworks/models/llama-v3p1-405b-instruct',
+        model: 'fireworks::accounts/fireworks/models/qwen2p5-72b-instruct',
       }),
     },
   );

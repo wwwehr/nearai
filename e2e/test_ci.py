@@ -211,7 +211,6 @@ def test_example_agent():
     agent_cli.task(
         f"{item.namespace}/{item.name}/{item.version}",
         "Tell me about yourself.",
-        model=f"local::{MODEL_NAME}",
     )
 
     hub_client = get_hub_client()
@@ -231,7 +230,6 @@ def test_example_agent():
         task="what do you think of this file?",
         thread_id=agent_cli.last_thread_id,
         file_ids=[uploaded_file.id],
-        model=f"local::{MODEL_NAME}",
     )
 
     messages = list(hub_client.beta.threads.messages.list(thread_id=agent_cli.last_thread_id).data)

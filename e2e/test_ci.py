@@ -168,14 +168,10 @@ def test_example_agent():
                 "welcome": {"title": "Your Travel Agent", "description": "Where would you like to go?"},
                 "defaults": {
                     "max_iterations": 1,
-                    "models": [
-                        {
-                            "model": f"local::{MODEL_NAME}",
-                            "model_provider": "local",
-                            "model_temperature": 1.0,
-                            "model_max_tokens": 64,
-                        }
-                    ],
+                    "model": f"local::{MODEL_NAME}",
+                    "model_provider": "local",
+                    "model_temperature": 0.0,
+                    "model_max_tokens": 32,
                 },
             },
         },

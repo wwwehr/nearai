@@ -139,6 +139,7 @@ export const AgentRunner = ({
     }
   }
 
+  const chatMutationThreadId = useRef('');
   const _chatMutation = api.hub.chatWithAgent.useMutation();
   const chatMutation = useMutation({
     mutationFn: async (data: AgentChatMutationInput) => {
@@ -150,6 +151,8 @@ export const AgentRunner = ({
           user_env_vars: entryEnvironmentVariables.urlVariablesByKey,
           ...data,
         });
+
+        chatMutationThreadId.current = updatedThread.id;
 
         utils.hub.thread.setData(
           {
@@ -234,10 +237,15 @@ export const AgentRunner = ({
   };
 
   useEffect(() => {
-    if (threadId && thread?.id !== threadId) {
+    if (
+      isAuthenticated &&
+      threadId &&
+      threadId !== thread?.id &&
+      threadId !== chatMutationThreadId.current
+    ) {
       void threadQuery.refetch({ cancelRefetch: true });
     }
-  }, [thread, threadId, threadQuery]);
+  }, [isAuthenticated, thread, threadId, threadQuery]);
 
   useEffect(() => {
     const files = threadQuery?.data?.files;

@@ -4,7 +4,7 @@ import mimetypes
 import os
 import uuid
 from os import getenv
-from typing import Literal, Optional
+from typing import Literal, Optional, Tuple
 
 import boto3
 import chardet
@@ -179,7 +179,10 @@ async def upload_file(
         )
 
     # Check encoding for text files
-    detected_encoding = check_text_encoding(content) if content_type.startswith("text/") else None
+    if content_type.startswith("text/"):
+        detected_encoding, content = check_text_encoding(content)
+    else:
+        detected_encoding = None
 
     # Generate object key and upload to storage
     object_key = f"vector-store-files/{auth.account_id}/{file.filename}"
@@ -257,8 +260,8 @@ def determine_content_type(file: UploadFile) -> str:
     return content_type
 
 
-def check_text_encoding(content: bytes) -> Optional[str]:
-    """Check the encoding of text content.
+def check_text_encoding(content: bytes) -> Tuple[str, bytes]:
+    """Check or convert the encoding of text content to UTF-8 or UTF-16 only.
 
     Args:
     ----
@@ -266,19 +269,28 @@ def check_text_encoding(content: bytes) -> Optional[str]:
 
     Returns:
     -------
-        Optional[str]: The detected encoding if supported, None otherwise.
+        Tuple[str, bytes]: The enforced encoding (either 'utf-8' or 'utf-16') and the converted content.
 
     Raises:
     ------
-        HTTPException: If the encoding is not supported.
+        HTTPException: If the encoding cannot be converted to UTF-8 or UTF-16.
 
     """
     detected_encoding = chardet.detect(content).get("encoding")
-    if not detected_encoding or detected_encoding.lower() not in SUPPORTED_TEXT_ENCODINGS:
-        raise HTTPException(
-            status_code=400, detail=f"Unsupported text encoding. Must be one of: {', '.join(SUPPORTED_TEXT_ENCODINGS)}"
-        )
-    return detected_encoding
+
+    # Check if the detected encoding is in supported encodings
+    if detected_encoding and detected_encoding.lower() in SUPPORTED_TEXT_ENCODINGS:
+        return detected_encoding.lower(), content
+    else:
+        try:
+            # Decode as the detected encoding and re-encode as utf-8
+            decoded_content = content.decode(detected_encoding or "utf-8", errors="ignore").encode("utf-8")
+            return "utf-8", decoded_content
+        except (UnicodeDecodeError, TypeError):
+            raise HTTPException(
+                status_code=400,
+                detail="Failed to convert encoding to UTF-8 or UTF-16. Please use UTF-8 or UTF-16 encoded files."
+            )
 
 
 @files_router.get("/files/{file_id}")

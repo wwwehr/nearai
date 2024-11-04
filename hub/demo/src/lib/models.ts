@@ -199,7 +199,7 @@ export const entrySecretModel = z.object({
   namespace: z.string(),
   name: z.string(),
   version: z.string().optional(),
-  description: z.string().default(''),
+  description: z.string().nullable().default(''),
   key: z.string(),
   value: z.string(),
   category: z.string().optional(),

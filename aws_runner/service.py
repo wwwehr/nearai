@@ -221,7 +221,9 @@ def start_with_environment(
     if "provider" in params:
         agent.model_provider = params["provider"]
     if "model" in params:
-        agent.model = params["model"]
+        model = params["model"]
+        if model:
+            agent.model = model
         if "provider" not in params and PROVIDER_MODEL_SEP in agent.model:
             agent.model_provider = ""
     if "temperature" in params:
@@ -230,6 +232,15 @@ def start_with_environment(
         agent.model_max_tokens = params["max_tokens"]
     if "max_iterations" in params:
         agent.max_iterations = params["max_iterations"]
+    if verbose:
+        print(
+            "Agent info:"
+            f"provider: {agent.model_provider}\n"
+            f"model: {agent.model}\n"
+            f"temperature: {agent.model_temperature}\n"
+            f"max_tokens: {agent.model_max_tokens}\n"
+            f"max_iterations: {agent.max_iterations}\n"
+        )
 
     client_config = ClientConfig(
         base_url=api_url + "/v1",

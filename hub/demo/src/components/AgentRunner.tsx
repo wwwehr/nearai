@@ -148,7 +148,7 @@ export const AgentRunner = ({
 
         utils.hub.thread.setData(
           {
-            threadId,
+            threadId: updatedThread.id,
           },
           updatedThread,
         );

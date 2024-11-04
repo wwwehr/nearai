@@ -2,12 +2,13 @@ import importlib.metadata
 import json
 import logging
 import time
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Dict, Iterable, List, Optional, Union
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security import HTTPBearer
 from pydantic import BaseModel, field_validator
+from shared.cache import async_mem_cache_with_timeout
 from shared.provider_models import PROVIDER_MODEL_SEP, get_provider_model
 
 from hub.api.v1.auth import AuthToken, revokable_auth, validate_signature
@@ -201,9 +202,14 @@ async def chat_completions(
         return JSONResponse(content=json.loads(c))
 
 
-@v1_router.get("/models")
-async def get_models() -> JSONResponse:
-    all_models: List[Dict[str, Any]] = []
+@async_mem_cache_with_timeout(300)
+async def get_models_inner():
+    """Get all models from all providers.
+
+    This function is cached.
+    """
+    logger.info("Refreshing models cache")
+    all_models = []
 
     for p in Provider:
         try:
@@ -212,13 +218,23 @@ async def get_models() -> JSONResponse:
                 model_dict = model.model_dump()
                 model_dict["id"] = f"{p.value}{PROVIDER_MODEL_SEP}{model_dict['id']}"
                 all_models.append(model_dict)
+            logger.info(f"Found {len(provider_models.data)} models from provider {p.value}")
         except Exception as e:
-            logger.error(f"Error getting models from provider {p.value}: {e}")
+            logger.warn(f"Error getting models from provider {p.value}: {e}")
 
-    # Format the response to match OpenAI API structure
-    response = {"object": "list", "data": all_models}
+    logger.info(f"Found {len(all_models)} models")
 
-    return JSONResponse(content=response)
+    if not all_models:
+        raise HTTPException(status_code=500, detail="No models found")
+
+    return all_models
+
+
+@v1_router.get("/models")
+async def get_models() -> JSONResponse:
+    logger.debug("Getting models")
+    all_models = await get_models_inner()
+    return JSONResponse(content={"object": "list", "data": all_models})
 
 
 @v1_router.post("/embeddings")

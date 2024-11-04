@@ -79,7 +79,6 @@ class Environment(object):
         hub_client: OpenAI,
         thread_id: str,
         run_id: str,
-        model: str,
         create_files: bool = True,
         env_vars: Optional[Dict[str, Any]] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
@@ -89,7 +88,7 @@ class Environment(object):
         self._path = path
         self._agents = agents
         self._done = False
-        self._client = client
+        self.client = client
         self._tools = ToolRegistry()
         self.register_standard_tools()
         self.env_vars: Dict[str, Any] = env_vars if env_vars else {}
@@ -99,7 +98,6 @@ class Environment(object):
         self._approvals = approvals
         self._hub_client = hub_client
         self._thread_id = thread_id
-        self._model = model
         self._run_id = run_id
         self._debug_mode = True if self.env_vars.get("DEBUG") else False
 
@@ -123,13 +121,13 @@ class Environment(object):
         reg.register_tool(self.list_files)
         reg.register_tool(self.query_vector_store)
 
-    def get_last_message(self, role: str = "user"):
+    def get_last_message(self, role: str = "user") -> str:
         """Reads last message from the given role and returns it."""
         for message in reversed(self.list_messages()):
             if message.get("role") == role:
-                return message
+                return message.get("content")
 
-        return None
+        return ""
 
     def add_reply(
         self,
@@ -407,7 +405,7 @@ class Environment(object):
         vector_store_id: The id of the vector store to query.
         query: The query to search for.
         """
-        return self._client.query_vector_store(vector_store_id, query)
+        return self.client.query_vector_store(vector_store_id, query)
 
     def upload_file(
         self,
@@ -415,7 +413,7 @@ class Environment(object):
         purpose: Literal["assistants", "batch", "fine-tune", "vision"] = "assistants",
     ):
         """Uploads a file to the registry."""
-        return self._client.upload_file(file_content, purpose)
+        return self.client.upload_file(file_content, purpose)
 
     def create_vector_store_from_source(
         self,
@@ -442,7 +440,7 @@ class Environment(object):
             VectorStore: The created vector store.
 
         """
-        return self._client.create_vector_store_from_source(
+        return self.client.create_vector_store_from_source(
             name=name,
             source=source,
             source_auth=source_auth,
@@ -453,7 +451,7 @@ class Environment(object):
 
     def add_file_to_vector_store(self, vector_store_id: str, file_id: str):
         """Adds a file to the vector store."""
-        return self._client.add_file_to_vector_store(vector_store_id, file_id)
+        return self.client.add_file_to_vector_store(vector_store_id, file_id)
 
     def create_vector_store(
         self,
@@ -478,7 +476,7 @@ class Environment(object):
             VectorStore: The created vector store.
 
         """
-        return self._client.create_vector_store(
+        return self.client.create_vector_store(
             name=name,
             file_ids=file_ids,
             chunking_strategy=chunking_strategy,
@@ -488,7 +486,7 @@ class Environment(object):
 
     def get_vector_store(self, vector_store_id: str) -> VectorStore:
         """Gets a vector store by id."""
-        return self._client.get_vector_store(vector_store_id)
+        return self.client.get_vector_store(vector_store_id)
 
     def exec_command(self, command: str) -> Dict[str, Union[str, int]]:
         """Executes a command in the environment and logs the output.
@@ -562,7 +560,7 @@ class Environment(object):
             model = self._agents[0].model if self._agents else ""
         if model == "":
             return DEFAULT_PROVIDER_MODEL
-        _, model = self._client.provider_models.match_provider_model(model, provider)
+        _, model = self.client.provider_models.match_provider_model(model, provider)
         return model
 
     def _run_inference_completions(
@@ -589,7 +587,7 @@ class Environment(object):
         if model != self._last_used_model:
             self._last_used_model = model
             self.add_system_log(f"Connecting to {model}")
-        return self._client.completions(
+        return self.client.completions(
             model,
             messages,
             stream=stream,

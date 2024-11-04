@@ -8,11 +8,11 @@ import {
   type AgentRequest,
   checkAgentPermissions,
 } from '~/components/AgentPermissionsModal';
-import { type AgentRunnerFormSchema } from '~/components/AgentRunner';
+import { type AgentChatMutationInput } from '~/components/AgentRunner';
 import { type IframePostMessageEventHandler } from '~/components/lib/IframeWithBlob';
 import {
   agentWalletAccountRequestModel,
-  agentWalletTransactionRequestModel,
+  agentWalletTransactionsRequestModel,
   agentWalletViewRequestModel,
   chatWithAgentModel,
   type entryModel,
@@ -28,7 +28,7 @@ const PENDING_TRANSACTION_KEY = 'agent-transaction-request-pending-connection';
 
 export function useAgentRequestsWithIframe(
   currentEntry: z.infer<typeof entryModel> | undefined,
-  chatMutation: UseMutationResult<void, Error, AgentRunnerFormSchema, unknown>,
+  chatMutation: UseMutationResult<void, Error, AgentChatMutationInput, unknown>,
   threadId: string | null | undefined,
 ) {
   const { queryParams, updateQueryPath } = useQueryParams([
@@ -59,7 +59,7 @@ export function useAgentRequestsWithIframe(
           : options.result.map((outcome) => outcome.transaction_outcome.id);
 
       setIframePostMessage({
-        action: 'near_call_response',
+        action: 'near_send_transactions_response',
         requestId: options.requestId,
         result: {
           transactionHashes,
@@ -104,22 +104,7 @@ export function useAgentRequestsWithIframe(
               }
 
               const result = await wallet.signAndSendTransactions({
-                transactions: [
-                  {
-                    actions: [
-                      {
-                        params: {
-                          args: request.params,
-                          deposit: request.deposit,
-                          gas: request.gas,
-                          methodName: request.method,
-                        },
-                        type: 'FunctionCall',
-                      },
-                    ],
-                    receiverId: request.recipient,
-                  },
-                ],
+                transactions: request.transactions,
                 callbackUrl: callbackUrl.toString(),
               });
 
@@ -149,29 +134,23 @@ export function useAgentRequestsWithIframe(
   const onIframePostMessage: IframePostMessageEventHandler<{
     action:
       | 'near_account'
-      | 'near_call'
+      | 'near_send_transactions'
       | 'near_view'
       | 'remote_agent_run'
-      | 'refresh_environment_id';
+      | 'refresh_thread_id';
     data: unknown;
   }> = async (event) => {
     try {
       const action = event.data.action;
 
-      if (action === 'near_call') {
-        const request = agentWalletTransactionRequestModel.parse(
+      if (action === 'near_send_transactions') {
+        const request = agentWalletTransactionsRequestModel.parse(
           event.data.data,
         );
         void conditionallyProcessAgentRequests([request]);
       } else if (action === 'near_view') {
         const request = agentWalletViewRequestModel.parse(event.data.data);
-
-        const result: unknown = await nearViewAccount!.viewFunction({
-          contractId: request.recipient,
-          methodName: request.method,
-          args: request.params,
-        });
-
+        const result: unknown = await nearViewAccount!.viewFunction(request);
         setIframePostMessage({
           action: 'near_view_response',
           requestId: request.requestId,
@@ -206,11 +185,11 @@ export function useAgentRequestsWithIframe(
         } else {
           console.error('Missing data read `near_account`');
         }
-      } else if (action === 'refresh_environment_id') {
-        const chat = chatWithAgentModel.parse(event.data.data);
+      } else if (action === 'refresh_thread_id') {
+        const chat = chatWithAgentModel.partial().parse(event.data.data);
         if (chat.thread_id) {
-          updateQueryPath({ threadId: chat.thread_id }, 'replace', false);
           void utils.hub.thread.invalidate({ threadId: chat.thread_id });
+          updateQueryPath({ threadId: chat.thread_id }, 'replace', false);
         }
       } else if (action === 'remote_agent_run') {
         const chat = chatWithAgentModel.parse(event.data.data);

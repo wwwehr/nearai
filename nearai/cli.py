@@ -10,10 +10,11 @@ from collections import OrderedDict
 from dataclasses import asdict
 from pathlib import Path
 from textwrap import fill
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import boto3
 import fire
+from openai.types.beta.threads.message import Attachment
 from openapi_client import EntryLocation, EntryMetadataInput
 from openapi_client.api.benchmark_api import BenchmarkApi
 from openapi_client.api.default_api import DefaultApi
@@ -441,7 +442,6 @@ class AgentCli:
                 task=new_message,
                 thread_id=thread_id,
                 tool_resources=tool_resources,
-                record_run=False,
                 last_message_id=last_message_id,
                 local=local,
                 env_vars=env_vars,
@@ -457,6 +457,7 @@ class AgentCli:
         task: str,
         thread_id: Optional[str] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
+        file_ids: Optional[List[str]] = None,
         local: bool = False,
         env_vars: Optional[Dict[str, Any]] = None,
     ) -> None:
@@ -466,7 +467,7 @@ class AgentCli:
             task=task,
             thread_id=thread_id,
             tool_resources=tool_resources,
-            record_run=True,
+            file_ids=file_ids,
             local=local,
             env_vars=env_vars,
         )
@@ -480,7 +481,7 @@ class AgentCli:
         task: str,
         thread_id: Optional[str] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
-        record_run: bool = True,
+        file_ids: Optional[List[str]] = None,
         last_message_id: Optional[str] = None,
         local: bool = False,
         env_vars: Optional[Dict[str, Any]] = None,
@@ -498,30 +499,24 @@ class AgentCli:
             thread_id=thread.id,
             role="user",
             content=task,
+            attachments=[Attachment(file_id=file_id) for file_id in file_ids] if file_ids else None,
         )
 
         if not local:
             hub_client.beta.threads.runs.create_and_poll(
                 thread_id=thread.id,
                 assistant_id=agents,
-                instructions="You are a helpful assistant. Complete the given task.",
-                model="fireworks::accounts/fireworks/models/llama-v3p1-405b-instruct",
             )
         else:
             run = hub_client.beta.threads.runs.create(
                 thread_id=thread.id,
                 assistant_id=agents,
-                instructions="You are a helpful assistant. Complete the given task.",
-                model="fireworks::accounts/fireworks/models/llama-v3p1-405b-instruct",
                 extra_body={"delegate_execution": True},
             )
             params = {
-                "max_iterations": 1,
-                "record_run": True,
                 "api_url": CONFIG.api_url,
                 "tool_resources": run.tools,
                 "data_source": "local_files",
-                "model": run.model,
                 "user_env_vars": env_vars,
                 "agent_env_vars": {},
             }

@@ -232,6 +232,15 @@ def start_with_environment(
         agent.model_max_tokens = params["max_tokens"]
     if "max_iterations" in params:
         agent.max_iterations = params["max_iterations"]
+    if verbose:
+        print(
+            "Agent info:"
+            f"provider: {agent.model_provider}\n"
+            f"model: {agent.model}\n"
+            f"temperature: {agent.model_temperature}\n"
+            f"max_tokens: {agent.model_max_tokens}\n"
+            f"max_iterations: {agent.max_iterations}\n"
+        )
 
     client_config = ClientConfig(
         base_url=api_url + "/v1",

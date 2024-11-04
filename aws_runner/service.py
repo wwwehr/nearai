@@ -218,19 +218,17 @@ def start_with_environment(
         loaded_agents.append(agent)
 
     agent = loaded_agents[0]
-    if "provider" in params:
+    if params.get("provider", ""):
         agent.model_provider = params["provider"]
-    if "model" in params:
-        model = params["model"]
-        if model:
-            agent.model = model
-        if "provider" not in params and PROVIDER_MODEL_SEP in agent.model:
+    if params.get("model", ""):
+        agent.model = params["model"]
+        if not params.get("provider", "") and PROVIDER_MODEL_SEP in agent.model:
             agent.model_provider = ""
-    if "temperature" in params:
+    if params.get("temperature", ""):
         agent.model_temperature = params["temperature"]
-    if "max_tokens" in params:
+    if params.get("max_tokens", ""):
         agent.model_max_tokens = params["max_tokens"]
-    if "max_iterations" in params:
+    if params.get("max_iterations", ""):
         agent.max_iterations = params["max_iterations"]
     if verbose:
         print(

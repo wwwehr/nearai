@@ -1,0 +1,2 @@
+FROM nearai_base:latest
+CMD ["poetry", "run", "python", "-m", "worker", "scheduler"]

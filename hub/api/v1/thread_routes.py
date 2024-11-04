@@ -430,7 +430,8 @@ def modify_message(
 
 class RunCreateParamsBase(BaseModel):
     assistant_id: str = Field(..., description="The ID of the assistant to use to execute this run.")
-    model: Optional[str] = Field(default="", description="The ID of the Model to be used to execute this run.")
+    # Overrides model in agent metadata.
+    model: str = Field(default="", description="The ID of the Model to be used to execute this run.")
     instructions: Optional[str] = Field(
         None,
         description=(
@@ -448,9 +449,11 @@ class RunCreateParamsBase(BaseModel):
     additional_messages: Optional[List[AdditionalMessage]] = Field(
         None, description="Adds additional messages to the thread before creating the run."
     )
+    # Ignored
     max_completion_tokens: Optional[int] = Field(
         None, description="The maximum number of completion tokens that may be used over the course of the run."
     )
+    # Ignored
     max_prompt_tokens: Optional[int] = Field(
         None, description="The maximum number of prompt tokens that may be used over the course of the run."
     )
@@ -461,9 +464,11 @@ class RunCreateParamsBase(BaseModel):
         None, description="Specifies the format that the model must output."
     )
     temperature: Optional[float] = Field(None, description="What sampling temperature to use, between 0 and 2.")
+    # Ignored
     tool_choice: Optional[Union[str, dict]] = Field(
         None, description="Controls which (if any) tool is called by the model."
     )
+    # Ignored
     top_p: Optional[float] = Field(
         None, description="An alternative to sampling with temperature, called nucleus sampling."
     )
@@ -597,12 +602,12 @@ def run_agent(thread_id: str, run_id: str, auth: AuthToken = Depends(revokable_a
             user_env_vars = {**user_secrets, **user_env_vars}
 
         params = {
-            "max_iterations": 1,
             "record_run": True,
             "api_url": agent_api_url,
             "tool_resources": run_model.tools,
             "data_source": data_source,
             "model": run_model.model,
+            "temperature": run_model.temperature,
             "user_env_vars": user_env_vars,
             "agent_env_vars": agent_env_vars,
         }

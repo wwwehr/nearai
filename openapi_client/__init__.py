@@ -64,6 +64,8 @@ from openapi_client.models.filename import Filename
 from openapi_client.models.http_validation_error import HTTPValidationError
 from openapi_client.models.image_generation_request import ImageGenerationRequest
 from openapi_client.models.input import Input
+from openapi_client.models.job_status import JobStatus
+from openapi_client.models.jobs import Jobs
 from openapi_client.models.message import Message
 from openapi_client.models.remove_hub_secret_request import RemoveHubSecretRequest
 from openapi_client.models.request import Request

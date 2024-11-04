@@ -1,12 +1,16 @@
 import json
-from typing import Any
+from typing import Any, List, Optional
 
-from openapi_client.api.jobs_api import JobsApi, SelectedJob
+from openapi_client.api.jobs_api import Jobs, JobsApi, JobStatus, SelectedJob
 
 
 def get_pending_job(worker_id: str) -> SelectedJob:
     return JobsApi().get_pending_job_v1_jobs_get_pending_job_post(worker_id)
 
 
-def update_job(job_id: int, result: Any):
-    return JobsApi().update_job_v1_jobs_update_job_post(job_id, json.dumps(result))
+def list_jobs(account_id: Optional[str], status: Optional[JobStatus]) -> List[Jobs]:
+    return JobsApi().list_jobs_v1_jobs_list_jobs_get(account_id=account_id, status=status)
+
+
+def update_job(job_id: int, status: JobStatus, result: Any):
+    return JobsApi().update_job_v1_jobs_update_job_post(job_id, status, json.dumps(result))

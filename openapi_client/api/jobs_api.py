@@ -17,7 +17,9 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from typing_extensions import Annotated
 
 from pydantic import StrictBytes, StrictInt, StrictStr
-from typing import Any, Optional, Union
+from typing import Any, List, Optional, Union
+from openapi_client.models.job_status import JobStatus
+from openapi_client.models.jobs import Jobs
 from openapi_client.models.selected_job import SelectedJob
 
 from openapi_client.api_client import ApiClient, RequestSerialized
@@ -54,7 +56,7 @@ class JobsApi:
         _content_type: Optional[StrictStr] = None,
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
-    ) -> object:
+    ) -> Jobs:
         """Add Job
 
 
@@ -91,7 +93,7 @@ class JobsApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '200': "object",
+            '200': "Jobs",
             '422': "HTTPValidationError",
         }
         response_data = self.api_client.call_api(
@@ -121,7 +123,7 @@ class JobsApi:
         _content_type: Optional[StrictStr] = None,
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
-    ) -> ApiResponse[object]:
+    ) -> ApiResponse[Jobs]:
         """Add Job
 
 
@@ -158,7 +160,7 @@ class JobsApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '200': "object",
+            '200': "Jobs",
             '422': "HTTPValidationError",
         }
         response_data = self.api_client.call_api(
@@ -225,7 +227,7 @@ class JobsApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '200': "object",
+            '200': "Jobs",
             '422': "HTTPValidationError",
         }
         response_data = self.api_client.call_api(
@@ -572,9 +574,288 @@ class JobsApi:
 
 
     @validate_call
+    def list_jobs_v1_jobs_list_jobs_get(
+        self,
+        account_id: Optional[StrictStr],
+        status: Optional[JobStatus],
+        _request_timeout: Union[
+            None,
+            Annotated[StrictFloat, Field(gt=0)],
+            Tuple[
+                Annotated[StrictFloat, Field(gt=0)],
+                Annotated[StrictFloat, Field(gt=0)]
+            ]
+        ] = None,
+        _request_auth: Optional[Dict[StrictStr, Any]] = None,
+        _content_type: Optional[StrictStr] = None,
+        _headers: Optional[Dict[StrictStr, Any]] = None,
+        _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
+    ) -> List[Jobs]:
+        """List Jobs
+
+
+        :param account_id: (required)
+        :type account_id: str
+        :param status: (required)
+        :type status: JobStatus
+        :param _request_timeout: timeout setting for this request. If one
+                                 number provided, it will be total request
+                                 timeout. It can also be a pair (tuple) of
+                                 (connection, read) timeouts.
+        :type _request_timeout: int, tuple(int, int), optional
+        :param _request_auth: set to override the auth_settings for an a single
+                              request; this effectively ignores the
+                              authentication in the spec for a single request.
+        :type _request_auth: dict, optional
+        :param _content_type: force content-type for the request.
+        :type _content_type: str, Optional
+        :param _headers: set to override the headers for a single
+                         request; this effectively ignores the headers
+                         in the spec for a single request.
+        :type _headers: dict, optional
+        :param _host_index: set to override the host_index for a single
+                            request; this effectively ignores the host_index
+                            in the spec for a single request.
+        :type _host_index: int, optional
+        :return: Returns the result object.
+        """ # noqa: E501
+
+        _param = self._list_jobs_v1_jobs_list_jobs_get_serialize(
+            account_id=account_id,
+            status=status,
+            _request_auth=_request_auth,
+            _content_type=_content_type,
+            _headers=_headers,
+            _host_index=_host_index
+        )
+
+        _response_types_map: Dict[str, Optional[str]] = {
+            '200': "List[Jobs]",
+            '422': "HTTPValidationError",
+        }
+        response_data = self.api_client.call_api(
+            *_param,
+            _request_timeout=_request_timeout
+        )
+        response_data.read()
+        return self.api_client.response_deserialize(
+            response_data=response_data,
+            response_types_map=_response_types_map,
+        ).data
+
+
+    @validate_call
+    def list_jobs_v1_jobs_list_jobs_get_with_http_info(
+        self,
+        account_id: Optional[StrictStr],
+        status: Optional[JobStatus],
+        _request_timeout: Union[
+            None,
+            Annotated[StrictFloat, Field(gt=0)],
+            Tuple[
+                Annotated[StrictFloat, Field(gt=0)],
+                Annotated[StrictFloat, Field(gt=0)]
+            ]
+        ] = None,
+        _request_auth: Optional[Dict[StrictStr, Any]] = None,
+        _content_type: Optional[StrictStr] = None,
+        _headers: Optional[Dict[StrictStr, Any]] = None,
+        _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
+    ) -> ApiResponse[List[Jobs]]:
+        """List Jobs
+
+
+        :param account_id: (required)
+        :type account_id: str
+        :param status: (required)
+        :type status: JobStatus
+        :param _request_timeout: timeout setting for this request. If one
+                                 number provided, it will be total request
+                                 timeout. It can also be a pair (tuple) of
+                                 (connection, read) timeouts.
+        :type _request_timeout: int, tuple(int, int), optional
+        :param _request_auth: set to override the auth_settings for an a single
+                              request; this effectively ignores the
+                              authentication in the spec for a single request.
+        :type _request_auth: dict, optional
+        :param _content_type: force content-type for the request.
+        :type _content_type: str, Optional
+        :param _headers: set to override the headers for a single
+                         request; this effectively ignores the headers
+                         in the spec for a single request.
+        :type _headers: dict, optional
+        :param _host_index: set to override the host_index for a single
+                            request; this effectively ignores the host_index
+                            in the spec for a single request.
+        :type _host_index: int, optional
+        :return: Returns the result object.
+        """ # noqa: E501
+
+        _param = self._list_jobs_v1_jobs_list_jobs_get_serialize(
+            account_id=account_id,
+            status=status,
+            _request_auth=_request_auth,
+            _content_type=_content_type,
+            _headers=_headers,
+            _host_index=_host_index
+        )
+
+        _response_types_map: Dict[str, Optional[str]] = {
+            '200': "List[Jobs]",
+            '422': "HTTPValidationError",
+        }
+        response_data = self.api_client.call_api(
+            *_param,
+            _request_timeout=_request_timeout
+        )
+        response_data.read()
+        return self.api_client.response_deserialize(
+            response_data=response_data,
+            response_types_map=_response_types_map,
+        )
+
+
+    @validate_call
+    def list_jobs_v1_jobs_list_jobs_get_without_preload_content(
+        self,
+        account_id: Optional[StrictStr],
+        status: Optional[JobStatus],
+        _request_timeout: Union[
+            None,
+            Annotated[StrictFloat, Field(gt=0)],
+            Tuple[
+                Annotated[StrictFloat, Field(gt=0)],
+                Annotated[StrictFloat, Field(gt=0)]
+            ]
+        ] = None,
+        _request_auth: Optional[Dict[StrictStr, Any]] = None,
+        _content_type: Optional[StrictStr] = None,
+        _headers: Optional[Dict[StrictStr, Any]] = None,
+        _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
+    ) -> RESTResponseType:
+        """List Jobs
+
+
+        :param account_id: (required)
+        :type account_id: str
+        :param status: (required)
+        :type status: JobStatus
+        :param _request_timeout: timeout setting for this request. If one
+                                 number provided, it will be total request
+                                 timeout. It can also be a pair (tuple) of
+                                 (connection, read) timeouts.
+        :type _request_timeout: int, tuple(int, int), optional
+        :param _request_auth: set to override the auth_settings for an a single
+                              request; this effectively ignores the
+                              authentication in the spec for a single request.
+        :type _request_auth: dict, optional
+        :param _content_type: force content-type for the request.
+        :type _content_type: str, Optional
+        :param _headers: set to override the headers for a single
+                         request; this effectively ignores the headers
+                         in the spec for a single request.
+        :type _headers: dict, optional
+        :param _host_index: set to override the host_index for a single
+                            request; this effectively ignores the host_index
+                            in the spec for a single request.
+        :type _host_index: int, optional
+        :return: Returns the result object.
+        """ # noqa: E501
+
+        _param = self._list_jobs_v1_jobs_list_jobs_get_serialize(
+            account_id=account_id,
+            status=status,
+            _request_auth=_request_auth,
+            _content_type=_content_type,
+            _headers=_headers,
+            _host_index=_host_index
+        )
+
+        _response_types_map: Dict[str, Optional[str]] = {
+            '200': "List[Jobs]",
+            '422': "HTTPValidationError",
+        }
+        response_data = self.api_client.call_api(
+            *_param,
+            _request_timeout=_request_timeout
+        )
+        return response_data.response
+
+
+    def _list_jobs_v1_jobs_list_jobs_get_serialize(
+        self,
+        account_id,
+        status,
+        _request_auth,
+        _content_type,
+        _headers,
+        _host_index,
+    ) -> RequestSerialized:
+
+        _host = None
+
+        _collection_formats: Dict[str, str] = {
+        }
+
+        _path_params: Dict[str, str] = {}
+        _query_params: List[Tuple[str, str]] = []
+        _header_params: Dict[str, Optional[str]] = _headers or {}
+        _form_params: List[Tuple[str, str]] = []
+        _files: Dict[str, Union[str, bytes]] = {}
+        _body_params: Optional[bytes] = None
+
+        # process the path parameters
+        # process the query parameters
+        if account_id is not None:
+            
+            _query_params.append(('account_id', account_id))
+            
+        if status is not None:
+            
+            _query_params.append(('status', status.value))
+            
+        # process the header parameters
+        # process the form parameters
+        # process the body parameter
+
+
+        # set the HTTP header `Accept`
+        if 'Accept' not in _header_params:
+            _header_params['Accept'] = self.api_client.select_header_accept(
+                [
+                    'application/json'
+                ]
+            )
+
+
+        # authentication setting
+        _auth_settings: List[str] = [
+            'HTTPBearer'
+        ]
+
+        return self.api_client.param_serialize(
+            method='GET',
+            resource_path='/v1/jobs/list_jobs',
+            path_params=_path_params,
+            query_params=_query_params,
+            header_params=_header_params,
+            body=_body_params,
+            post_params=_form_params,
+            files=_files,
+            auth_settings=_auth_settings,
+            collection_formats=_collection_formats,
+            _host=_host,
+            _request_auth=_request_auth
+        )
+
+
+
+
+    @validate_call
     def update_job_v1_jobs_update_job_post(
         self,
-        job_id: Optional[StrictInt] = None,
+        job_id: StrictInt,
+        status: JobStatus,
         result_json: Optional[StrictStr] = None,
         _request_timeout: Union[
             None,
@@ -592,8 +873,10 @@ class JobsApi:
         """Update Job
 
 
-        :param job_id:
+        :param job_id: (required)
         :type job_id: int
+        :param status: (required)
+        :type status: JobStatus
         :param result_json:
         :type result_json: str
         :param _request_timeout: timeout setting for this request. If one
@@ -620,6 +903,7 @@ class JobsApi:
 
         _param = self._update_job_v1_jobs_update_job_post_serialize(
             job_id=job_id,
+            status=status,
             result_json=result_json,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -645,7 +929,8 @@ class JobsApi:
     @validate_call
     def update_job_v1_jobs_update_job_post_with_http_info(
         self,
-        job_id: Optional[StrictInt] = None,
+        job_id: StrictInt,
+        status: JobStatus,
         result_json: Optional[StrictStr] = None,
         _request_timeout: Union[
             None,
@@ -663,8 +948,10 @@ class JobsApi:
         """Update Job
 
 
-        :param job_id:
+        :param job_id: (required)
         :type job_id: int
+        :param status: (required)
+        :type status: JobStatus
         :param result_json:
         :type result_json: str
         :param _request_timeout: timeout setting for this request. If one
@@ -691,6 +978,7 @@ class JobsApi:
 
         _param = self._update_job_v1_jobs_update_job_post_serialize(
             job_id=job_id,
+            status=status,
             result_json=result_json,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -716,7 +1004,8 @@ class JobsApi:
     @validate_call
     def update_job_v1_jobs_update_job_post_without_preload_content(
         self,
-        job_id: Optional[StrictInt] = None,
+        job_id: StrictInt,
+        status: JobStatus,
         result_json: Optional[StrictStr] = None,
         _request_timeout: Union[
             None,
@@ -734,8 +1023,10 @@ class JobsApi:
         """Update Job
 
 
-        :param job_id:
+        :param job_id: (required)
         :type job_id: int
+        :param status: (required)
+        :type status: JobStatus
         :param result_json:
         :type result_json: str
         :param _request_timeout: timeout setting for this request. If one
@@ -762,6 +1053,7 @@ class JobsApi:
 
         _param = self._update_job_v1_jobs_update_job_post_serialize(
             job_id=job_id,
+            status=status,
             result_json=result_json,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -783,6 +1075,7 @@ class JobsApi:
     def _update_job_v1_jobs_update_job_post_serialize(
         self,
         job_id,
+        status,
         result_json,
         _request_auth,
         _content_type,
@@ -807,6 +1100,10 @@ class JobsApi:
         if job_id is not None:
             
             _query_params.append(('job_id', job_id))
+            
+        if status is not None:
+            
+            _query_params.append(('status', status.value))
             
         if result_json is not None:
             

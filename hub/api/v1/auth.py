@@ -1,12 +1,15 @@
 import logging
+from datetime import datetime
 from typing import Optional
 
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, field_validator
 from shared.near.sign import validate_nonce, verify_signed_message
+from sqlmodel import select
 
 from hub.api.v1.exceptions import TokenValidationError
+from hub.api.v1.models import Delegation, get_session
 from hub.api.v1.sql import SqlClient
 
 bearer = HTTPBearer()
@@ -38,6 +41,23 @@ class AuthToken(BaseModel):
         return validate_nonce(value)
 
 
+class RawAuthToken(AuthToken):
+    on_behalf_of: Optional[str] = None
+    """The account ID on behalf of which the request is made."""
+
+    def unwrap(self) -> AuthToken:
+        """Unwrap the raw auth token."""
+        return AuthToken(
+            account_id=self.account_id,
+            public_key=self.public_key,
+            signature=self.signature,
+            callback_url=self.callback_url,
+            recipient=self.recipient,
+            nonce=self.nonce,
+            message=self.message,
+        )
+
+
 async def get_auth(token: HTTPAuthorizationCredentials = Depends(bearer)):
     if token.credentials == "":
         raise HTTPException(status_code=401, detail="Invalid token")
@@ -46,12 +66,12 @@ async def get_auth(token: HTTPAuthorizationCredentials = Depends(bearer)):
     try:
         token.credentials = token.credentials.replace("Bearer ", "")
         logger.debug(f"Token: {token.credentials}")
-        return AuthToken.model_validate_json(token.credentials)
+        return RawAuthToken.model_validate_json(token.credentials)
     except Exception as e:
         raise TokenValidationError(detail=str(e)) from None
 
 
-async def validate_signature(auth: AuthToken = Depends(get_auth)):
+async def validate_signature(auth: RawAuthToken = Depends(get_auth)):
     logging.debug(f"account_id {auth.account_id}: verifying signature")
     is_valid = verify_signed_message(
         auth.account_id,
@@ -68,7 +88,31 @@ async def validate_signature(auth: AuthToken = Depends(get_auth)):
 
     logging.debug(f"account_id {auth.account_id}: signature verified")
 
-    return auth
+    if auth.on_behalf_of is not None:
+        # Query is trying to perform an action on behalf of another account. Check if it has permission to do so.
+
+        query = (
+            select(Delegation)
+            .where(Delegation.original_account_id == auth.on_behalf_of)
+            .where(Delegation.delegation_account_id == auth.account_id)
+            .limit(1)
+        )
+
+        with get_session() as session:
+            result = session.exec(query).first()
+
+            if result is None:
+                err_msg = f"{auth.account_id} don't have permission to execute action on behalf of {auth.on_behalf_of}."
+                raise HTTPException(status_code=401, detail=err_msg)
+
+            if result.expires_at is not None and result.expires_at < datetime.now():
+                err_msg = f"{auth.account_id} permission to operate on behalf of {auth.on_behalf_of} expired."
+                raise HTTPException(status_code=401, detail=err_msg)
+
+        # TODO(517): Instead of altering the account_id we should keep the object as is.
+        auth.account_id = auth.on_behalf_of
+
+    return auth.unwrap()
 
 
 async def revokable_auth(auth: AuthToken = Depends(validate_signature)):

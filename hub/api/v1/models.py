@@ -296,6 +296,15 @@ class Run(SQLModel, table=True):
         )
 
 
+class Delegation(SQLModel, table=True):
+    __tablename__ = "delegation"
+
+    id: int = Field(default=None, primary_key=True)
+    original_account_id: str = Field(nullable=False)
+    delegation_account_id: str = Field(nullable=False)
+    expires_at: Optional[datetime] = Field(default=None)
+
+
 db_url = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
 engine = create_engine(db_url, pool_size=DB_POOL_SIZE)
 

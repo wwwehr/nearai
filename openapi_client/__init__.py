@@ -23,6 +23,7 @@ from openapi_client.api.hub_secrets_api import HubSecretsApi
 from openapi_client.api.agents_assistants_api import AgentsAssistantsApi
 from openapi_client.api.benchmark_api import BenchmarkApi
 from openapi_client.api.default_api import DefaultApi
+from openapi_client.api.delegation_api import DelegationApi
 from openapi_client.api.evaluation_api import EvaluationApi
 from openapi_client.api.jobs_api import JobsApi
 from openapi_client.api.permissions_api import PermissionsApi
@@ -52,6 +53,7 @@ from openapi_client.models.chat_completions_request import ChatCompletionsReques
 from openapi_client.models.completions_request import CompletionsRequest
 from openapi_client.models.create_hub_secret_request import CreateHubSecretRequest
 from openapi_client.models.create_thread_and_run_request import CreateThreadAndRunRequest
+from openapi_client.models.delegation import Delegation
 from openapi_client.models.embeddings_request import EmbeddingsRequest
 from openapi_client.models.entry_information import EntryInformation
 from openapi_client.models.entry_location import EntryLocation

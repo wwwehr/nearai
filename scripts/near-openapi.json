@@ -1761,6 +1761,136 @@
         }
       }
     },
+    "/v1/delegation/delegate": {
+      "post": {
+        "tags": [
+          "delegation"
+        ],
+        "summary": "Delegate",
+        "operationId": "delegate_v1_delegation_delegate_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "delegate_account_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Delegate Account Id"
+            }
+          },
+          {
+            "name": "expires_at",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Expires At"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/delegation/list_delegations": {
+      "post": {
+        "tags": [
+          "delegation"
+        ],
+        "summary": "List Delegation",
+        "operationId": "list_delegation_v1_delegation_list_delegations_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Delegation"
+                  },
+                  "type": "array",
+                  "title": "Response List Delegation V1 Delegation List Delegations Post"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/delegation/revoke_delegation": {
+      "post": {
+        "tags": [
+          "delegation"
+        ],
+        "summary": "Revoke Delegation",
+        "operationId": "revoke_delegation_v1_delegation_revoke_delegation_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "delegate_account_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Delegate Account Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -2439,6 +2569,40 @@
         },
         "type": "object",
         "title": "CreateThreadAndRunRequest"
+      },
+      "Delegation": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "original_account_id": {
+            "type": "string",
+            "title": "Original Account Id"
+          },
+          "delegation_account_id": {
+            "type": "string",
+            "title": "Delegation Account Id"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "original_account_id",
+          "delegation_account_id"
+        ],
+        "title": "Delegation"
       },
       "EmbeddingsRequest": {
         "properties": {

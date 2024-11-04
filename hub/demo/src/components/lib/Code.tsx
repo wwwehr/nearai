@@ -15,6 +15,7 @@ import { copyTextToClipboard } from '~/utils/clipboard';
 
 import { Button } from './Button';
 import s from './Code.module.scss';
+import { Tooltip } from './Tooltip';
 
 export type CodeLanguage =
   | 'css'
@@ -71,16 +72,18 @@ export const Code = ({ bleed, showLineNumbers = true, ...props }: Props) => {
 
   return (
     <div className={s.code} data-bleed={bleed} data-language={language}>
-      <Button
-        label="Copy code to clipboard"
-        icon={<Copy />}
-        variant="secondary"
-        size="small"
-        fill="ghost"
-        onClick={() => source && copyTextToClipboard(source)}
-        className={s.copyButton}
-        tabIndex={-1}
-      />
+      <Tooltip asChild content="Copy to clipboard">
+        <Button
+          label="Copy code to clipboard"
+          icon={<Copy />}
+          variant="secondary"
+          size="small"
+          fill="ghost"
+          onClick={() => source && copyTextToClipboard(source)}
+          className={s.copyButton}
+          tabIndex={-1}
+        />
+      </Tooltip>
 
       {source && (
         <SyntaxHighlighter

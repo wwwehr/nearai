@@ -9,14 +9,14 @@
 
   a {
     color: var(--violet-10);
-    font-weight: 600;
+    font-weight: 500;
     text-underline-offset: 0.2em;
     text-decoration: underline;
+    transition: var(--transitions);
 
-    a:hover,
-    a:focus-visible {
-      color: var(--violet-11);
-      text-decoration: underline;
+    &:hover,
+    &:focus-visible {
+      color: var(--violet-11) !important;
     }
   }
 
@@ -26,7 +26,12 @@
 
   blockquote {
     font-style: italic;
-    border-left: 2px solid var(--sand-10);
+    border-left: 3px solid var(--sand-8);
     padding-left: var(--gap-m);
+    white-space: normal;
+
+    p {
+      white-space: pre-line;
+    }
   }
 }

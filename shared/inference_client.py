@@ -37,6 +37,7 @@ class InferenceClient(object):
     # This makes sense in the CLI where we don't mind doing this request and caching it.
     # In the aws_runner this is an extra request every time we run.
     # TODO(#233): add a choice of a provider model in aws_runner, and then this step can be skipped.
+    @property
     def provider_models(self) -> ProviderModels:  # noqa: D102
         return ProviderModels(self._config)
 

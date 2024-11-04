@@ -57,6 +57,7 @@ class ProviderModels:
         assert config.auth is not None
         self._auth = config.auth
 
+    @property
     def provider_models(self) -> Dict[NamespacedName, Dict[str, str]]:
         """Returns a mapping canonical->provider->model_full_name."""
         client = self._config.get_hub_client()

@@ -109,7 +109,7 @@ def list_jobs(
         else:
             query = query.where(Jobs.status == status.value)
 
-        return session.exec(query).all()
+        return list(session.exec(query).all())
 
 
 @v1_router.post("/update_job")

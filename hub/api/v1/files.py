@@ -4,7 +4,7 @@ import mimetypes
 import os
 import uuid
 from os import getenv
-from typing import Literal, Optional, Tuple
+from typing import Literal, Tuple
 
 import boto3
 import chardet
@@ -261,7 +261,7 @@ def determine_content_type(file: UploadFile) -> str:
 
 
 def check_text_encoding(content: bytes) -> Tuple[str, bytes]:
-    """Check or convert the encoding of text content to UTF-8 or UTF-16 only.
+    """Check or convert the encoding of text content to  ASCII, UTF-8 or UTF-16 only.
 
     Args:
     ----
@@ -269,7 +269,7 @@ def check_text_encoding(content: bytes) -> Tuple[str, bytes]:
 
     Returns:
     -------
-        Tuple[str, bytes]: The enforced encoding (either 'utf-8' or 'utf-16') and the converted content.
+        Tuple[str, bytes]: The enforced encoding (either  'ascii', 'utf-8', 'utf-16') and the converted content.
 
     Raises:
     ------
@@ -289,8 +289,8 @@ def check_text_encoding(content: bytes) -> Tuple[str, bytes]:
         except (UnicodeDecodeError, TypeError):
             raise HTTPException(
                 status_code=400,
-                detail="Failed to convert encoding to UTF-8 or UTF-16. Please use UTF-8 or UTF-16 encoded files."
-            )
+                detail="Failed to convert encoding to UTF-8 or UTF-16. Please use UTF-8 or UTF-16 encoded files.",
+            ) from None
 
 
 @files_router.get("/files/{file_id}")

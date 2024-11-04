@@ -431,7 +431,7 @@ async def modify_message(
 class RunCreateParamsBase(BaseModel):
     assistant_id: str = Field(..., description="The ID of the assistant to use to execute this run.")
     # Overrides model in agent metadata.
-    model: Optional[str] = Field(None, description="The ID of the Model to be used to execute this run.")
+    model: Optional[str] = Field("", description="The ID of the Model to be used to execute this run.")
     instructions: Optional[str] = Field(
         None,
         description=(

@@ -221,7 +221,9 @@ def start_with_environment(
     if "provider" in params:
         agent.model_provider = params["provider"]
     if "model" in params:
-        agent.model = params["model"]
+        model = params["model"]
+        if model:
+            agent.model = model
         if "provider" not in params and PROVIDER_MODEL_SEP in agent.model:
             agent.model_provider = ""
     if "temperature" in params:

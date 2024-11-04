@@ -1,9 +1,11 @@
 import asyncio
 import io
 import subprocess
+import tarfile
 from os import getenv
 from pathlib import Path
 from textwrap import dedent
+from typing import Optional
 
 import httpx
 import typer
@@ -11,7 +13,11 @@ import uvicorn
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from nearai.delegation import OnBehalfOf
 from nearai.jobs import JobsApi
-from pydantic import BaseModel, field_serializer
+from nearai.lib import parse_location
+from nearai.registry import registry
+from openapi_client.models.entry_location import EntryLocation
+from pydantic import BaseModel
+from shared.auth_data import AuthData
 
 app = typer.Typer()
 loop = asyncio.get_event_loop()
@@ -20,27 +26,23 @@ WORKER_PORT = int(getenv("WORKER_PORT"))
 WORKER_SLEEP_TIME = int(getenv("WORKER_SLEEP_TIME", 1))
 WORKER_URL = getenv("WORKER_URL", f"http://worker:{WORKER_PORT}")
 WORKER_JOB_TIMEOUT = int(getenv("WORKER_JOB_TIMEOUT", 60 * 60 * 6))  # 6 hours
+WORKER_ACCOUNT_ID = getenv("WORKER_ACCOUNT_ID", "nearaiworker.near")
+WORKER_SIGNATURE = getenv("WORKER_SIGNATURE")
 JOB_DIR = Path("~/job/")
 
 JOBS_API = JobsApi()
 
 
 class SetupParams(BaseModel):
-    pass
+    auth_data: AuthData
+    on_behalf_of: str
 
 
-class A(BaseModel):
-    a: int
-    b: str
-    c: str
-
-    @field_serializer("c")
-    def format_c(self, value: str) -> str:
-        return "test"
-
-
-my_thing = A(a=1, b="2", c="three")
-print(my_thing.model_dump())
+def try_parse_location(location: str) -> Optional[EntryLocation]:
+    try:
+        return parse_location(location)
+    except Exception:
+        return None
 
 
 async def run_scheduler():
@@ -59,9 +61,37 @@ async def run_scheduler():
                 )
                 if not job.selected:
                     continue
+                if not job.registry_path:
+                    # TODO: fail the job with null path err
+                    continue
+                location = try_parse_location(job.registry_path)
+                if not location:
+                    # TODO: fail the job with parse err
+                    continue
 
-                with OnBehalfOf(client, job.selected.delegation_id):
-                    pass
+                ## 3. Download the job
+                with OnBehalfOf(client, job.selected.account_id):
+                    downloaded = registry.download(job.registry_path)
+
+                    ## tar directory in mem and send over
+                    tar_file = io.BytesIO()
+                    with tarfile.open(fileobj=tar_file, mode="w") as tar:
+                        tar.add(downloaded)
+                    tar_file.seek(0)
+
+                ## 4. Setup the worker
+                setup_params = SetupParams(
+                    auth_data=AuthData(
+                        account_id=WORKER_ACCOUNT_ID,
+                        public_key=WORKER_PUBKEY,
+                        signature=WORKER_SIGNATURE,
+                    ),
+                    on_behalf_of=job.selected.account_id,
+                )
+                await client.post(WORKER_URL + "/setup", data=setup_params.model_dump_json())
+
+                ## 5. Execute the job
+                response = await client.post(WORKER_URL + "/execute", files={"file": ("main.tar", tar_file)})
 
                 python_code = dedent("""
                 import os
@@ -93,7 +123,7 @@ def run_worker():
         return "OK"
 
     @app.post("/setup")
-    def setup(file: UploadFile = File(...)):
+    def setup(setup_params: SetupParams):
         pass
 
     @app.post("/execute")

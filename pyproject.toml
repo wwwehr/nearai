@@ -108,6 +108,7 @@ pytest-xdist = "^3.6.1"
 
 [tool.pytest.ini_options]
 addopts = "--random-order -n auto"
+timeout = 300
 norecursedirs = ["hub", "dist", "docs"]
 markers = [
   "integration: mark test as integration test",

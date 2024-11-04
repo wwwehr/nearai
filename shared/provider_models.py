@@ -1,5 +1,4 @@
 import re
-from functools import cached_property
 from typing import Dict, List, Optional, Tuple, cast
 
 import requests
@@ -58,7 +57,7 @@ class ProviderModels:
         assert config.auth is not None
         self._auth = config.auth
 
-    @cached_property
+    @property
     def provider_models(self) -> Dict[NamespacedName, Dict[str, str]]:
         """Returns a mapping canonical->provider->model_full_name."""
         client = self._config.get_hub_client()

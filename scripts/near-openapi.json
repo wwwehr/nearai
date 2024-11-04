@@ -1503,7 +1503,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/Jobs"
+                }
               }
             }
           },
@@ -1572,6 +1574,80 @@
         }
       }
     },
+    "/v1/jobs/list_jobs": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "List Jobs",
+        "operationId": "list_jobs_v1_jobs_list_jobs_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Account Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/JobStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Jobs"
+                  },
+                  "title": "Response List Jobs V1 Jobs List Jobs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/jobs/update_job": {
       "post": {
         "tags": [
@@ -1588,11 +1664,18 @@
           {
             "name": "job_id",
             "in": "query",
-            "required": false,
+            "required": true,
             "schema": {
               "type": "integer",
-              "default": -1,
               "title": "Job Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/JobStatus"
             }
           },
           {
@@ -1754,6 +1837,136 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/EvaluationTable"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/delegation/delegate": {
+      "post": {
+        "tags": [
+          "delegation"
+        ],
+        "summary": "Delegate",
+        "operationId": "delegate_v1_delegation_delegate_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "delegate_account_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Delegate Account Id"
+            }
+          },
+          {
+            "name": "expires_at",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Expires At"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/delegation/list_delegations": {
+      "post": {
+        "tags": [
+          "delegation"
+        ],
+        "summary": "List Delegation",
+        "operationId": "list_delegation_v1_delegation_list_delegations_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Delegation"
+                  },
+                  "type": "array",
+                  "title": "Response List Delegation V1 Delegation List Delegations Post"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/delegation/revoke_delegation": {
+      "post": {
+        "tags": [
+          "delegation"
+        ],
+        "summary": "Revoke Delegation",
+        "operationId": "revoke_delegation_v1_delegation_revoke_delegation_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "delegate_account_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Delegate Account Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -2440,6 +2653,40 @@
         "type": "object",
         "title": "CreateThreadAndRunRequest"
       },
+      "Delegation": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "original_account_id": {
+            "type": "string",
+            "title": "Original Account Id"
+          },
+          "delegation_account_id": {
+            "type": "string",
+            "title": "Delegation Account Id"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "original_account_id",
+          "delegation_account_id"
+        ],
+        "title": "Delegation"
+      },
       "EmbeddingsRequest": {
         "properties": {
           "input": {
@@ -2757,6 +3004,61 @@
         ],
         "title": "ImageGenerationRequest",
         "description": "Request for image generation."
+      },
+      "JobStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "processing",
+          "completed"
+        ],
+        "title": "JobStatus"
+      },
+      "Jobs": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "registry_path": {
+            "type": "string",
+            "title": "Registry Path"
+          },
+          "account_id": {
+            "type": "string",
+            "title": "Account Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "worker_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Worker Id"
+          },
+          "info": {
+            "type": "object",
+            "title": "Info"
+          },
+          "result": {
+            "type": "object",
+            "title": "Result"
+          }
+        },
+        "type": "object",
+        "required": [
+          "registry_path",
+          "account_id",
+          "status"
+        ],
+        "title": "Jobs"
       },
       "Message": {
         "properties": {

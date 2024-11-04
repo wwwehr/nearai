@@ -101,13 +101,19 @@ def invoke_agent_via_url(custom_runner_url, agents, thread_id, run_id, auth: Aut
 
 def invoke_agent_via_lambda(function_name, agents, thread_id, run_id, auth: AuthToken, new_message, params):
     wrapper = LambdaWrapper(boto3.client("lambda", region_name="us-east-2"))
+    auth_data = auth.model_dump()
+
+    if auth_data["nonce"]:
+        if isinstance(auth_data["nonce"], bytes):
+            auth_data["nonce"] = auth_data["nonce"].decode("utf-8")
+
     result = wrapper.invoke_function(
         function_name,
         {
             "agents": agents,
             "thread_id": thread_id,
             "run_id": run_id,
-            "auth": auth.model_dump(),
+            "auth": auth_data,
             "new_message": new_message,
             "params": params,
         },

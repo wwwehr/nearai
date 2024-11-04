@@ -6,11 +6,11 @@ from openapi_client.api_client import ApiClient
 from shared.auth_data import AuthData
 
 
-class DelegateTo:
+class OnBehalfOf:
     """Create a context manager that allows you to delegate actions to another account.
 
     ```python
-    with DelegateTo("scheduler.ai"):
+    with OnBehalfOf("scheduler.ai"):
         # Upload is done on behalf of scheduler.ai
         # If delegation permission is not granted, this will raise an exception
         registry.upload()

@@ -116,6 +116,7 @@ class RegistryCli:
     ) -> None:
         """List available items."""
         # Make sure tags is a comma-separated list of tags
+        # smth
         tags_l = parse_tags(tags)
         tags = ",".join(tags_l)
 

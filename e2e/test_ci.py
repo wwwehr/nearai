@@ -168,28 +168,24 @@ def test_example_agent():
                 "welcome": {"title": "Your Travel Agent", "description": "Where would you like to go?"},
                 "defaults": {
                     "max_iterations": 1,
-                    "models": [
-                        {
-                            "model": f"local::{MODEL_NAME}",
-                            "model_provider": "local",
-                            "model_temperature": 1.0,
-                            "model_max_tokens": 64,
-                        }
-                    ],
+                    "model": f"local::{MODEL_NAME}",
+                    "model_provider": "local",
+                    "model_temperature": 0.0,
+                    "model_max_tokens": 32,
                 },
             },
         },
         "show_entry": True,
     }
-    python_code = dedent("""
+    python_code = dedent(f"""
     # In local interactive mode, the first user input is collected before the agent runs.
-    prompt = {"role": "system", "content": "You are a travel agent that helps users plan trips."}
+    prompt = {{"role": "system", "content": "You are a travel agent that helps users plan trips."}}
     try:
         env.add_message("assistant", "File content: " + env.read_file('test.txt'))
     except Exception as e:
         print("Error reading file:", e)
 
-    result = env.completion([prompt] + env.list_messages())
+    result = env.completion([prompt] + env.list_messages(), model="local::{MODEL_NAME}")
     env.add_message("assistant", result)
     env.mark_done()
     """)

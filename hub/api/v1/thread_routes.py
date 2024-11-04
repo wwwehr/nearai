@@ -430,9 +430,7 @@ def modify_message(
 
 class RunCreateParamsBase(BaseModel):
     assistant_id: str = Field(..., description="The ID of the assistant to use to execute this run.")
-    model: Optional[str] = Field(
-        default=DEFAULT_PROVIDER_MODEL, description="The ID of the Model to be used to execute this run."
-    )
+    model: Optional[str] = Field(default="", description="The ID of the Model to be used to execute this run.")
     instructions: Optional[str] = Field(
         None,
         description=(

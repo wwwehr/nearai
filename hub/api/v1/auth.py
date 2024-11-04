@@ -109,8 +109,7 @@ async def validate_signature(auth: RawAuthToken = Depends(get_auth)):
                 err_msg = f"{auth.account_id} permission to operate on behalf of {auth.on_behalf_of} expired."
                 raise HTTPException(status_code=401, detail=err_msg)
 
-        # TODO(517): Instead of altering the account_id we should keep the object as is, and instead have a method that returns
-        #            the account_id that the request is being made on behalf of.
+        # TODO(517): Instead of altering the account_id we should keep the object as is.
         auth.account_id = auth.on_behalf_of
 
     return auth.unwrap()

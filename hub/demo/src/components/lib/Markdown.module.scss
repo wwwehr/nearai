@@ -1,0 +1,32 @@
+.markdown {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-m);
+  width: 100%;
+  color: var(--sand-12);
+  font: var(--text-base);
+  text-align: left;
+
+  a {
+    color: var(--violet-10);
+    font-weight: 600;
+    text-underline-offset: 0.2em;
+    text-decoration: underline;
+
+    a:hover,
+    a:focus-visible {
+      color: var(--violet-11);
+      text-decoration: underline;
+    }
+  }
+
+  ul {
+    margin-left: 0.8rem;
+  }
+
+  blockquote {
+    font-style: italic;
+    border-left: 2px solid var(--sand-10);
+    padding-left: var(--gap-m);
+  }
+}

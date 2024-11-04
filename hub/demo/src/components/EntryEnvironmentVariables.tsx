@@ -145,7 +145,7 @@ export const EntryEnvironmentVariables = ({
                       />
                     </Tooltip>
 
-                    <Tooltip content="Copy value to clipboard">
+                    <Tooltip content="Copy to clipboard">
                       <Text
                         size="text-xs"
                         family="monospace"
@@ -181,7 +181,7 @@ export const EntryEnvironmentVariables = ({
                       />
                     </Tooltip>
 
-                    <Tooltip content="Copy value to clipboard">
+                    <Tooltip content="Copy to clipboard">
                       <Text
                         size="text-xs"
                         family="monospace"
@@ -216,7 +216,7 @@ export const EntryEnvironmentVariables = ({
                       />
                     </Tooltip>
 
-                    <Tooltip content="Copy value to clipboard">
+                    <Tooltip content="Copy to clipboard">
                       <Text
                         size="text-xs"
                         family="monospace"

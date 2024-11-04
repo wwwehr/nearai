@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  ArrowRight,
-  Chats,
-  Copy,
-  Eye,
-  Gear,
-  List,
-} from '@phosphor-icons/react';
+import { ArrowRight, Chats, Eye, Gear, List } from '@phosphor-icons/react';
 import { useMutation } from '@tanstack/react-query';
 import {
   type KeyboardEventHandler,
@@ -49,7 +42,6 @@ import { type chatWithAgentModel, type threadMessageModel } from '~/lib/models';
 import { returnOptimisticThreadMessage } from '~/lib/thread';
 import { useAuthStore } from '~/stores/auth';
 import { api } from '~/trpc/react';
-import { copyTextToClipboard } from '~/utils/clipboard';
 import { handleClientError } from '~/utils/error';
 import { formatBytes } from '~/utils/number';
 
@@ -532,22 +524,7 @@ export const AgentRunner = ({
         open={openedFileId !== null}
         onOpenChange={() => setOpenedFileId(null)}
       >
-        <Dialog.Content
-          title={openedFileId}
-          size="l"
-          header={
-            <Button
-              label="Copy file to clipboard"
-              icon={<Copy />}
-              size="small"
-              fill="outline"
-              onClick={() =>
-                openedFile && copyTextToClipboard(openedFile?.content)
-              }
-              style={{ marginLeft: 'auto' }}
-            />
-          }
-        >
+        <Dialog.Content title={openedFileId} size="l">
           <Code
             bleed
             source={openedFile?.content}

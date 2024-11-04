@@ -2,6 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
+import { Copy } from '@phosphor-icons/react';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import SyntaxHighlighter from 'react-syntax-highlighter';
@@ -10,12 +11,17 @@ import {
   atomOneLight,
 } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
-import s from './Code.module.scss';
+import { copyTextToClipboard } from '~/utils/clipboard';
 
-type CodeLanguage =
+import { Button } from './Button';
+import s from './Code.module.scss';
+import { Tooltip } from './Tooltip';
+
+export type CodeLanguage =
   | 'css'
   | 'html'
   | 'javascript'
+  | 'typescript'
   | 'markdown'
   | 'python'
   | 'json'
@@ -31,14 +37,29 @@ type Props = {
   source: string | undefined | null;
 };
 
-export const Code = ({
-  bleed,
-  language,
-  showLineNumbers = true,
-  source,
-}: Props) => {
+function normalizeLanguage(input: string | null | undefined) {
+  if (!input) return '';
+
+  let value: CodeLanguage = input;
+
+  if (['js', 'jsx'].includes(value)) {
+    value = 'javascript';
+  } else if (['ts', 'tsx'].includes(value)) {
+    value = 'typescript';
+  } else if (value === 'py') {
+    value = 'python';
+  } else if (value === 'md') {
+    value = 'markdown';
+  }
+
+  return value;
+}
+
+export const Code = ({ bleed, showLineNumbers = true, ...props }: Props) => {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const language = normalizeLanguage(props.language);
+  const source = props.source?.replace(/[\n]+$/, '').replace(/^[\n]+/, '');
 
   const style =
     mounted && resolvedTheme === 'dark' ? atomOneDark : atomOneLight;
@@ -50,9 +71,23 @@ export const Code = ({
   if (!mounted) return null;
 
   return (
-    <div className={s.code} data-bleed={bleed}>
+    <div className={s.code} data-bleed={bleed} data-language={language}>
+      <Tooltip asChild content="Copy to clipboard">
+        <Button
+          label="Copy code to clipboard"
+          icon={<Copy />}
+          variant="secondary"
+          size="small"
+          fill="ghost"
+          onClick={() => source && copyTextToClipboard(source)}
+          className={s.copyButton}
+          tabIndex={-1}
+        />
+      </Tooltip>
+
       {source && (
         <SyntaxHighlighter
+          PreTag="div"
           language={language ?? ''}
           style={style}
           showLineNumbers={language === 'markdown' ? false : showLineNumbers}

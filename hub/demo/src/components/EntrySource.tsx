@@ -1,6 +1,6 @@
 'use client';
 
-import { Copy, Folder, LockKey } from '@phosphor-icons/react';
+import { Folder, LockKey } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { type z } from 'zod';
 
@@ -20,7 +20,6 @@ import { useQueryParams } from '~/hooks/url';
 import { type entryModel } from '~/lib/models';
 import { useAuthStore } from '~/stores/auth';
 import { api } from '~/trpc/react';
-import { copyTextToClipboard } from '~/utils/clipboard';
 
 import { Container } from './lib/Container';
 import { Section } from './lib/Section';
@@ -152,17 +151,6 @@ export const EntrySource = ({ entry }: Props) => {
                 onClick={() => setSidebarOpenForSmallScreens(true)}
               />
             </BreakpointDisplay>
-
-            <Button
-              label="Copy file to clipboard"
-              icon={<Copy />}
-              size="small"
-              fill="outline"
-              onClick={() =>
-                openedFile && copyTextToClipboard(openedFile.content)
-              }
-              disabled={activeFileIsCompressed}
-            />
           </Flex>
           {activeFileIsCompressed ? (
             <Text>This file type {`doesn't`} have a source preview.</Text>

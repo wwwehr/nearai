@@ -1,8 +1,8 @@
 'use client';
 
-import { Copy } from '@phosphor-icons/react';
+import { Article, Copy, DotsThree, MarkdownLogo } from '@phosphor-icons/react';
 import { usePrevious } from '@uidotdev/usehooks';
-import { Fragment, type ReactNode, useEffect, useRef } from 'react';
+import { Fragment, type ReactNode, useEffect, useRef, useState } from 'react';
 import { type z } from 'zod';
 
 import { type messageModel, type threadMessageModel } from '~/lib/models';
@@ -11,9 +11,11 @@ import { copyTextToClipboard } from '~/utils/clipboard';
 
 import { Button } from './lib/Button';
 import { Card } from './lib/Card';
+import { Dropdown } from './lib/Dropdown';
 import { Flex } from './lib/Flex';
+import { Markdown } from './lib/Markdown';
+import { SvgIcon } from './lib/SvgIcon';
 import { Text } from './lib/Text';
-import { Tooltip } from './lib/Tooltip';
 import s from './Messages.module.scss';
 
 type Props = {
@@ -35,6 +37,7 @@ export const Messages = ({
   const previousMessages = usePrevious(messages);
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const scrolledToThreadId = useRef('');
+  const [renderAsMarkdown, setRenderAsMarkdown] = useState(true);
 
   useEffect(() => {
     if (!messagesRef.current) return;
@@ -95,11 +98,19 @@ export const Messages = ({
           <Fragment key={index + message.content}>
             {message.role === 'user' ? (
               <Card animateIn background="sand-2" style={{ alignSelf: 'end' }}>
-                <Text color="sand-11">{message.content}</Text>
+                {renderAsMarkdown ? (
+                  <Markdown content={message.content} />
+                ) : (
+                  <Text>{message.content}</Text>
+                )}
               </Card>
             ) : (
               <Card animateIn>
-                <Text color="sand-12">{message.content}</Text>
+                {renderAsMarkdown ? (
+                  <Markdown content={message.content} />
+                ) : (
+                  <Text>{message.content}</Text>
+                )}
 
                 <Flex align="center" gap="m">
                   <Text
@@ -112,15 +123,43 @@ export const Messages = ({
                     - {message.role}
                   </Text>
 
-                  <Tooltip asChild content="Copy message content to clipboard">
-                    <Button
-                      label="Copy message to clipboard"
-                      icon={<Copy />}
-                      size="small"
-                      fill="ghost"
-                      onClick={() => copyTextToClipboard(message.content)}
-                    />
-                  </Tooltip>
+                  <Dropdown.Root>
+                    <Dropdown.Trigger asChild>
+                      <Button
+                        label="Message Actions"
+                        icon={<DotsThree weight="bold" />}
+                        size="x-small"
+                        fill="ghost"
+                      />
+                    </Dropdown.Trigger>
+
+                    <Dropdown.Content sideOffset={0}>
+                      <Dropdown.Section>
+                        <Dropdown.Item
+                          onSelect={() => copyTextToClipboard(message.content)}
+                        >
+                          <SvgIcon icon={<Copy />} />
+                          Copy To Clipboard
+                        </Dropdown.Item>
+
+                        {renderAsMarkdown ? (
+                          <Dropdown.Item
+                            onSelect={() => setRenderAsMarkdown(false)}
+                          >
+                            <SvgIcon icon={<Article />} />
+                            Render Raw Message
+                          </Dropdown.Item>
+                        ) : (
+                          <Dropdown.Item
+                            onSelect={() => setRenderAsMarkdown(true)}
+                          >
+                            <SvgIcon icon={<MarkdownLogo />} />
+                            Render Markdown
+                          </Dropdown.Item>
+                        )}
+                      </Dropdown.Section>
+                    </Dropdown.Content>
+                  </Dropdown.Root>
                 </Flex>
               </Card>
             )}

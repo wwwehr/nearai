@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security import HTTPBearer
 from pydantic import BaseModel, field_validator
+from shared.cache import mem_cache_with_timeout
 from shared.provider_models import PROVIDER_MODEL_SEP, get_provider_model
 
 from hub.api.v1.auth import AuthToken, revokable_auth, validate_signature
@@ -201,6 +202,7 @@ async def chat_completions(
         return JSONResponse(content=json.loads(c))
 
 
+@mem_cache_with_timeout(300)
 @v1_router.get("/models")
 async def get_models() -> JSONResponse:
     all_models: List[Dict[str, Any]] = []

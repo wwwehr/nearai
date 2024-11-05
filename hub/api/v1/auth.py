@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 db = SqlClient()
 
 
+# TODO: This code is duplicated from shared/auth_data.py (remove duplication)
 class AuthToken(BaseModel):
     """Model for auth callback."""
 

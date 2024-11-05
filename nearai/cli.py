@@ -175,7 +175,7 @@ class RegistryCli:
         with open(metadata_path) as f:
             metadata: Dict[str, Any] = json.load(f)
 
-        namespace = CONFIG.auth.account_id
+        namespace = CONFIG.auth.namespace
 
         entry_location = EntryLocation.model_validate(
             dict(
@@ -272,7 +272,7 @@ class BenchmarkCli:
         if CONFIG.auth is None:
             print("Please login with `nearai login`")
             exit(1)
-        namespace = CONFIG.auth.account_id
+        namespace = CONFIG.auth.namespace
 
         # Sort the args to have a consistent representation.
         solver_args = json.dumps(OrderedDict(sorted(args.items())))
@@ -600,11 +600,11 @@ class AgentCli:
 
         """
         # Check if the user is authenticated
-        if CONFIG.auth is None or CONFIG.auth.account_id is None:
+        if CONFIG.auth is None or CONFIG.auth.namespace is None:
             print("Please login with `nearai login` before creating an agent.")
             return
 
-        namespace = CONFIG.auth.account_id
+        namespace = CONFIG.auth.namespace
 
         if fork:
             # Fork an existing agent

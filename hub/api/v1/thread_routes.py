@@ -32,6 +32,7 @@ from hub.api.v1.models import Message as MessageModel
 from hub.api.v1.models import Run as RunModel
 from hub.api.v1.models import Thread as ThreadModel
 from hub.api.v1.models import get_session
+from hub.api.v1.routes import get_models_inner
 from hub.api.v1.scheduler import get_scheduler
 from hub.api.v1.sql import SqlClient
 
@@ -60,7 +61,7 @@ SUMMARY_PROMPT = """You are an expert at summarizing conversations in a maximum 
 
 
 @threads_router.post("/threads")
-async def create_thread(
+def create_thread(
     thread: ThreadCreateParams = Body(...),
     auth: AuthToken = Depends(revokable_auth),
 ) -> Thread:
@@ -77,7 +78,7 @@ async def create_thread(
 
 
 @threads_router.get("/threads")
-async def list_threads(
+def list_threads(
     auth: AuthToken = Depends(revokable_auth),
 ) -> List[Thread]:
     with get_session() as session:
@@ -86,7 +87,7 @@ async def list_threads(
 
 
 @threads_router.get("/threads/{thread_id}")
-async def get_thread(
+def get_thread(
     thread_id: str,
     auth: AuthToken = Depends(revokable_auth),
 ) -> Thread:
@@ -109,7 +110,7 @@ class ThreadUpdateParams(BaseModel):
 
 
 @threads_router.post("/threads/{thread_id}")
-async def update_thread(
+def update_thread(
     thread_id: str,
     thread: ThreadUpdateParams = Body(...),
     auth: AuthToken = Depends(revokable_auth),
@@ -140,7 +141,7 @@ class ThreadDeletionStatus(BaseModel):
 
 
 @threads_router.delete("/threads/{thread_id}")
-async def delete_thread(
+def delete_thread(
     thread_id: str,
     auth: AuthToken = Depends(revokable_auth),
 ) -> ThreadDeletionStatus:
@@ -198,7 +199,7 @@ class ThreadForkResponse(BaseModel):
 
 
 @threads_router.post("/threads/{thread_id}/fork")
-async def fork_thread(
+def fork_thread(
     thread_id: str,
     auth: AuthToken = Depends(revokable_auth),
 ) -> ThreadForkResponse:
@@ -248,7 +249,7 @@ async def fork_thread(
 
 
 @threads_router.post("/threads/{thread_id}/messages")
-async def create_message(
+def create_message(
     thread_id: str,
     background_tasks: BackgroundTasks,
     message: MessageCreateParams = Body(...),
@@ -296,17 +297,22 @@ def update_thread_topic(thread_id: str, auth: AuthData):
 
         client = ClientConfig(base_url=CONFIG.nearai_hub.base_url, auth=auth).get_hub_client()
 
-        # TODO(#436): Once thread forking is implemented.
-        # Fork the thread and use agent: agentic.near/summary/0.0.3/source. (Same prompt as SUMMARY_PROMPT)
+        # Determine default model
+        models = [m["id"] for m in get_models_inner()]
+        model = DEFAULT_PROVIDER_MODEL
+        if DEFAULT_PROVIDER_MODEL not in models:
+            model = models[0]
+
+        messages = [
+            {
+                "role": "system",
+                "content": SUMMARY_PROMPT,
+            }
+        ] + [message.to_completions_model() for message in messages]
+
         completion = client.chat.completions.create(
-            messages=[
-                {
-                    "role": "system",
-                    "content": SUMMARY_PROMPT,
-                }
-            ]
-            + [message.to_completions_model() for message in messages],
-            model=DEFAULT_PROVIDER_MODEL,
+            messages=messages,
+            model=model,
         )
 
     with get_session() as session:
@@ -332,7 +338,7 @@ class ListMessagesResponse(BaseModel):
 
 
 @threads_router.get("/threads/{thread_id}/messages")
-async def list_messages(
+def list_messages(
     thread_id: str,
     after: str = Query(
         None, description="A cursor for use in pagination. `after` is an object ID that defines your place in the list."
@@ -407,7 +413,7 @@ async def list_messages(
 
 
 @threads_router.patch("/threads/{thread_id}/messages/{message_id}")
-async def modify_message(
+def modify_message(
     thread_id: str,
     message_id: str,
     message: MessageUpdateParams = Body(...),
@@ -424,9 +430,8 @@ async def modify_message(
 
 class RunCreateParamsBase(BaseModel):
     assistant_id: str = Field(..., description="The ID of the assistant to use to execute this run.")
-    model: Optional[str] = Field(
-        default=DEFAULT_PROVIDER_MODEL, description="The ID of the Model to be used to execute this run."
-    )
+    # Overrides model in agent metadata.
+    model: str = Field(default="", description="The ID of the Model to be used to execute this run.")
     instructions: Optional[str] = Field(
         None,
         description=(
@@ -444,9 +449,11 @@ class RunCreateParamsBase(BaseModel):
     additional_messages: Optional[List[AdditionalMessage]] = Field(
         None, description="Adds additional messages to the thread before creating the run."
     )
+    # Ignored
     max_completion_tokens: Optional[int] = Field(
         None, description="The maximum number of completion tokens that may be used over the course of the run."
     )
+    # Ignored
     max_prompt_tokens: Optional[int] = Field(
         None, description="The maximum number of prompt tokens that may be used over the course of the run."
     )
@@ -457,9 +464,11 @@ class RunCreateParamsBase(BaseModel):
         None, description="Specifies the format that the model must output."
     )
     temperature: Optional[float] = Field(None, description="What sampling temperature to use, between 0 and 2.")
+    # Ignored
     tool_choice: Optional[Union[str, dict]] = Field(
         None, description="Controls which (if any) tool is called by the model."
     )
+    # Ignored
     top_p: Optional[float] = Field(
         None, description="An alternative to sampling with temperature, called nucleus sampling."
     )
@@ -475,7 +484,7 @@ class RunCreateParamsBase(BaseModel):
 
 
 @threads_router.post("/threads/{thread_id}/runs")
-async def create_run(
+def create_run(
     thread_id: str,
     background_tasks: BackgroundTasks,
     run: RunCreateParamsBase = Body(...),
@@ -593,12 +602,12 @@ def run_agent(thread_id: str, run_id: str, auth: AuthToken = Depends(revokable_a
             user_env_vars = {**user_secrets, **user_env_vars}
 
         params = {
-            "max_iterations": 1,
             "record_run": True,
             "api_url": agent_api_url,
             "tool_resources": run_model.tools,
             "data_source": data_source,
             "model": run_model.model,
+            "temperature": run_model.temperature,
             "user_env_vars": user_env_vars,
             "agent_env_vars": agent_env_vars,
         }
@@ -673,7 +682,7 @@ class RunUpdateParams(BaseModel):
 
 
 @threads_router.post("/threads/{thread_id}/runs/{run_id}")
-async def update_run(
+def update_run(
     thread_id: str,
     run_id: str,
     run: RunUpdateParams = Body(...),

@@ -1,8 +1,8 @@
 'use client';
 
-import { Copy } from '@phosphor-icons/react';
+import { Article, Copy, DotsThree, MarkdownLogo } from '@phosphor-icons/react';
 import { usePrevious } from '@uidotdev/usehooks';
-import { Fragment, type ReactNode, useEffect, useRef } from 'react';
+import { Fragment, type ReactNode, useEffect, useRef, useState } from 'react';
 import { type z } from 'zod';
 
 import { type messageModel, type threadMessageModel } from '~/lib/models';
@@ -11,14 +11,15 @@ import { copyTextToClipboard } from '~/utils/clipboard';
 
 import { Button } from './lib/Button';
 import { Card } from './lib/Card';
+import { Dropdown } from './lib/Dropdown';
 import { Flex } from './lib/Flex';
-import { PlaceholderCard } from './lib/Placeholder';
+import { Markdown } from './lib/Markdown';
+import { SvgIcon } from './lib/SvgIcon';
 import { Text } from './lib/Text';
-import { Tooltip } from './lib/Tooltip';
 import s from './Messages.module.scss';
 
 type Props = {
-  loading?: boolean;
+  grow?: boolean;
   messages:
     | z.infer<typeof messageModel>[]
     | z.infer<typeof threadMessageModel>[];
@@ -27,7 +28,7 @@ type Props = {
 };
 
 export const Messages = ({
-  loading,
+  grow = true,
   messages,
   threadId,
   welcomeMessage,
@@ -36,6 +37,7 @@ export const Messages = ({
   const previousMessages = usePrevious(messages);
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const scrolledToThreadId = useRef('');
+  const [renderAsMarkdown, setRenderAsMarkdown] = useState(true);
 
   useEffect(() => {
     if (!messagesRef.current) return;
@@ -79,59 +81,91 @@ export const Messages = ({
     },
   );
 
-  if (isAuthenticated && loading) {
-    return <PlaceholderCard style={{ marginBottom: 'auto' }} />;
+  if (!isAuthenticated) {
+    return (
+      <div className={s.wrapper} data-grow={grow}>
+        {welcomeMessage}
+      </div>
+    );
   }
 
   return (
-    <div className={s.wrapper}>
+    <div className={s.wrapper} data-grow={grow}>
       {welcomeMessage}
-      {isAuthenticated && (
-        <div className={s.messages} ref={messagesRef}>
-          {normalizedMessages.map((message, index) => (
-            <Fragment key={index}>
-              {message.role === 'user' ? (
-                <Card
-                  animateIn
-                  background="sand-2"
-                  style={{ alignSelf: 'end' }}
-                >
-                  <Text color="sand-11">{message.content}</Text>
-                </Card>
-              ) : (
-                <Card animateIn>
-                  <Text color="sand-12">{message.content}</Text>
 
-                  <Flex align="center" gap="m">
-                    <Text
-                      size="text-xs"
-                      style={{
-                        textTransform: 'capitalize',
-                        marginRight: 'auto',
-                      }}
-                    >
-                      - {message.role}
-                    </Text>
+      <div className={s.messages} ref={messagesRef}>
+        {normalizedMessages.map((message, index) => (
+          <Fragment key={index + message.content}>
+            {message.role === 'user' ? (
+              <Card animateIn background="sand-2" style={{ alignSelf: 'end' }}>
+                {renderAsMarkdown ? (
+                  <Markdown content={message.content} />
+                ) : (
+                  <Text>{message.content}</Text>
+                )}
+              </Card>
+            ) : (
+              <Card animateIn>
+                {renderAsMarkdown ? (
+                  <Markdown content={message.content} />
+                ) : (
+                  <Text>{message.content}</Text>
+                )}
 
-                    <Tooltip
-                      asChild
-                      content="Copy message content to clipboard"
-                    >
+                <Flex align="center" gap="m">
+                  <Text
+                    size="text-xs"
+                    style={{
+                      textTransform: 'capitalize',
+                      marginRight: 'auto',
+                    }}
+                  >
+                    - {message.role}
+                  </Text>
+
+                  <Dropdown.Root>
+                    <Dropdown.Trigger asChild>
                       <Button
-                        label="Copy message to clipboard"
-                        icon={<Copy />}
-                        size="small"
+                        label="Message Actions"
+                        icon={<DotsThree weight="bold" />}
+                        size="x-small"
                         fill="ghost"
-                        onClick={() => copyTextToClipboard(message.content)}
                       />
-                    </Tooltip>
-                  </Flex>
-                </Card>
-              )}
-            </Fragment>
-          ))}
-        </div>
-      )}
+                    </Dropdown.Trigger>
+
+                    <Dropdown.Content sideOffset={0}>
+                      <Dropdown.Section>
+                        <Dropdown.Item
+                          onSelect={() => copyTextToClipboard(message.content)}
+                        >
+                          <SvgIcon icon={<Copy />} />
+                          Copy To Clipboard
+                        </Dropdown.Item>
+
+                        {renderAsMarkdown ? (
+                          <Dropdown.Item
+                            onSelect={() => setRenderAsMarkdown(false)}
+                          >
+                            <SvgIcon icon={<Article />} />
+                            Render Raw Message
+                          </Dropdown.Item>
+                        ) : (
+                          <Dropdown.Item
+                            onSelect={() => setRenderAsMarkdown(true)}
+                          >
+                            <SvgIcon icon={<MarkdownLogo />} />
+                            Render Markdown
+                          </Dropdown.Item>
+                        )}
+                      </Dropdown.Section>
+                    </Dropdown.Content>
+                  </Dropdown.Root>
+                </Flex>
+              </Card>
+            )}
+          </Fragment>
+        ))}
+      </div>
     </div>
   );
 };

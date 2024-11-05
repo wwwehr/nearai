@@ -24,6 +24,7 @@ DB_USER = getenv("DATABASE_USER")
 DB_PASSWORD = getenv("DATABASE_PASSWORD")
 DB_NAME = getenv("DATABASE_NAME")
 STORAGE_TYPE = getenv("STORAGE_TYPE", "file")
+DB_POOL_SIZE = int(getenv("DATABASE_POOL_SIZE", 10))
 
 
 class RegistryEntry(SQLModel, table=True):
@@ -56,6 +57,10 @@ class RegistryEntry(SQLModel, table=True):
         if object is not None:
             key = f"{key}/{object}"
         return key
+
+    def is_private(self) -> bool:
+        """Check if the entry is private."""
+        return self.details.get("private_source", False)
 
 
 class HubSecrets(SQLModel, table=True):
@@ -99,6 +104,22 @@ class Stars(SQLModel, table=True):
     account_id: str = Field(primary_key=True)
     namespace: str = Field(primary_key=True)
     name: str = Field(primary_key=True)
+
+
+class Jobs(SQLModel, table=True):
+    id: int = Field(default=None, primary_key=True)
+    registry_path: str = Field(nullable=False)
+    account_id: str = Field(nullable=False)
+    status: str = Field(nullable=False)
+    worker_id: Optional[str] = Field(default=None)
+    info: Dict = Field(default_factory=dict, sa_column=Column(JSON))
+    result: Dict = Field(default_factory=dict, sa_column=Column(JSON))
+
+
+class Permissions(SQLModel, table=True):
+    id: int = Field(default=None, primary_key=True)
+    account_id: str = Field(nullable=False)
+    permission: str = Field(nullable=False)
 
 
 class Benchmark(SQLModel, table=True):
@@ -182,7 +203,6 @@ class Message(SQLModel, table=True):
         """Transform to a model compatible with OpenAI completions API."""
         print("self.content", self.content)
         return {
-            "id": self.id,
             "content": "\n".join([c["text"]["value"] for c in self.content]),
             "role": self.role,
         }
@@ -275,8 +295,17 @@ class Run(SQLModel, table=True):
         )
 
 
+class Delegation(SQLModel, table=True):
+    __tablename__ = "delegation"
+
+    id: int = Field(default=None, primary_key=True)
+    original_account_id: str = Field(nullable=False)
+    delegation_account_id: str = Field(nullable=False)
+    expires_at: Optional[datetime] = Field(default=None)
+
+
 db_url = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
-engine = create_engine(db_url)
+engine = create_engine(db_url, pool_size=DB_POOL_SIZE)
 
 
 @contextmanager

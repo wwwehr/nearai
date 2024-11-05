@@ -75,17 +75,10 @@ def get_pending_job(
 
             # Check if we manage to grab this job
             final_job = session.exec(
-<<<<<<< HEAD
                 select(Job)
                 .where(Job.id == job.id)
-                .where(Job.status == JobStatus.PROCESSING)
+                .where(Job.status == JobStatus.PROCESSING.value)
                 .where(Job.worker_id == worker_id)
-=======
-                select(Jobs)
-                .where(Jobs.id == job.id)
-                .where(Jobs.status == JobStatus.PROCESSING.value)
-                .where(Jobs.worker_id == worker_id)
->>>>>>> d8f11c6a47f14e6f1230c4cd0dff80787afdf993
             ).first()
 
             if final_job is not None:

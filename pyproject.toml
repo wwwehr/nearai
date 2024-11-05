@@ -6,7 +6,7 @@ authors = ["Support <support@near.ai>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<4.0"
+python = ">=3.9,<3.12"
 alembic = "^1.13.2"
 apscheduler = { version = "^3.10.4", optional = true }
 backoff = { version = "^2.2.1" }

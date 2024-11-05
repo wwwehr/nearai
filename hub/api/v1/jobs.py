@@ -36,10 +36,11 @@ async def add_job(
         job = Job(
             account_id=auth.account_id,
             registry_path=f"s3://{S3_BUCKET}/{key}",
-            status=JobStatus.PENDING,
+            status=JobStatus.PENDING.value,
         )
         session.add(job)
         session.commit()
+        session.refresh(job)
         return job
 
 

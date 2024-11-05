@@ -1,14 +1,14 @@
 import json
 from typing import Any, List, Optional
 
-from openapi_client.api.jobs_api import Jobs, JobsApi, JobStatus, SelectedJob
+from openapi_client.api.jobs_api import Job, JobsApi, JobStatus, SelectedJob
 
 
 def get_pending_job(worker_id: str) -> SelectedJob:
     return JobsApi().get_pending_job_v1_jobs_get_pending_job_post(worker_id)
 
 
-def list_jobs(account_id: Optional[str], status: Optional[JobStatus]) -> List[Jobs]:
+def list_jobs(account_id: Optional[str], status: Optional[JobStatus]) -> List[Job]:
     return JobsApi().list_jobs_v1_jobs_list_jobs_get(account_id=account_id, status=status)
 
 

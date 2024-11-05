@@ -17,8 +17,9 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, StrictBool, StrictInt, StrictStr
+from pydantic import BaseModel, ConfigDict, StrictBool, StrictStr
 from typing import Any, ClassVar, Dict, List, Optional
+from openapi_client.models.jobs import Jobs
 from typing import Optional, Set
 from typing_extensions import Self
 
@@ -27,7 +28,7 @@ class SelectedJob(BaseModel):
     SelectedJob
     """ # noqa: E501
     selected: StrictBool
-    job_id: Optional[StrictInt]
+    job_id: Optional[Jobs]
     registry_path: Optional[StrictStr]
     info: StrictStr
     __properties: ClassVar[List[str]] = ["selected", "job_id", "registry_path", "info"]
@@ -71,6 +72,9 @@ class SelectedJob(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
+        # override the default output from pydantic by calling `to_dict()` of job_id
+        if self.job_id:
+            _dict['job_id'] = self.job_id.to_dict()
         # set to None if job_id (nullable) is None
         # and model_fields_set contains the field
         if self.job_id is None and "job_id" in self.model_fields_set:
@@ -94,7 +98,7 @@ class SelectedJob(BaseModel):
 
         _obj = cls.model_validate({
             "selected": obj.get("selected"),
-            "job_id": obj.get("job_id"),
+            "job_id": Jobs.from_dict(obj["job_id"]) if obj.get("job_id") is not None else None,
             "registry_path": obj.get("registry_path"),
             "info": obj.get("info")
         })

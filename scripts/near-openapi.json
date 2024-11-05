@@ -3173,13 +3173,12 @@
           "job_id": {
             "anyOf": [
               {
-                "type": "integer"
+                "$ref": "#/components/schemas/Jobs"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Job Id"
+            ]
           },
           "registry_path": {
             "anyOf": [

@@ -45,7 +45,7 @@ async def add_job(
 
 class SelectedJob(BaseModel):
     selected: bool
-    job_id: Optional[int]
+    job_id: Optional[Jobs]
     registry_path: Optional[str]
     info: str
 
@@ -84,7 +84,7 @@ def get_pending_job(
             if final_job is not None:
                 return SelectedJob(
                     selected=True,
-                    job_id=final_job.id,
+                    job_id=final_job,
                     registry_path=final_job.registry_path,
                     info="Job selected.",
                 )

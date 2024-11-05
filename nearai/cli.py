@@ -1,14 +1,12 @@
-from datetime import datetime, timedelta
 import importlib.metadata
-import io
 import json
 import os
 import re
 import runpy
 import sys
-import tarfile
 from collections import OrderedDict
 from dataclasses import asdict
+from datetime import datetime, timedelta
 from pathlib import Path
 from textwrap import fill
 from typing import Any, Dict, List, Optional, Union

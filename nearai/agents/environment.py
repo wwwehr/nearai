@@ -121,7 +121,7 @@ class Environment(object):
         reg.register_tool(self.list_files)
         reg.register_tool(self.query_vector_store)
 
-    def get_last_message(self, role: str = "user") -> Message:
+    def get_last_message(self, role: str = "user"):
         """Reads last message from the given role and returns it."""
         for message in reversed(self.list_messages()):
             if message.get("role") == role:

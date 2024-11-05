@@ -88,6 +88,7 @@ class Environment(object):
         self._path = path
         self._agents = agents
         self._done = False
+        self._pending_ext_agent = False
         self.client = client
         self._tools = ToolRegistry()
         self.register_standard_tools()
@@ -261,27 +262,30 @@ class Environment(object):
         self,
         limit: Union[int, NotGiven] = NOT_GIVEN,
         order: Literal["asc", "desc"] = "asc",
+        thread_id: Optional[str] = None,
     ) -> List[Message]:
         """Returns messages from the environment."""
-        messages = self._hub_client.beta.threads.messages.list(self._thread_id, limit=limit, order=order)
+        messages = self._hub_client.beta.threads.messages.list(
+            thread_id=thread_id or self._thread_id, limit=limit, order=order
+        )
         self.add_system_log(f"Retrieved {len(messages.data)} messages from NearAI Hub")
         return messages.data
 
-    def list_messages(self):
+    def list_messages(self, thread_id: Optional[str] = None):
         """Backwards compatibility for chat_completions messages."""
-        messages = self._list_messages()
+        messages = self._list_messages(thread_id=thread_id)
 
         # Filter out system and agent log messages when running in debug mode. Agent behavior shouldn't change based on logs.  # noqa: E501
         if self._debug_mode:
             messages = [
                 m
                 for m in messages
-                if not (m.metadata and m.metadata.get("message_type") in ["system:log", "agent:log"])
+                if not (m.metadata and m.metadata["message_type"] in ["system:log", "agent:log"])  # type: ignore
             ]
         legacy_messages = [
             {
                 "id": m.id,
-                "content": "\n".join([c.text.value for c in m.content]),
+                "content": "\n".join([c.text.value for c in m.content]),  # type: ignore
                 "role": m.role,
             }
             for m in messages
@@ -312,7 +316,9 @@ class Environment(object):
         """Lists files in the environment."""
         return os.listdir(os.path.join(self.get_primary_agent_temp_dir(), path))
 
-    def list_files_from_thread(self, order: Literal["asc", "desc"] = "asc") -> List[FileObject]:
+    def list_files_from_thread(
+        self, order: Literal["asc", "desc"] = "asc", thread_id: Optional[str] = None
+    ) -> List[FileObject]:
         """Lists files in the thread."""
         messages = self._list_messages(order=order)
         # Extract attachments from messages
@@ -352,7 +358,7 @@ class Environment(object):
             with open(local_path, "w") as local_file:
                 local_file.write(file_content)
         else:
-            self.add_system_log(f"Error: File {filename} not found during read_file operation")
+            self.add_system_log(f"Warn: File {filename} not found during read_file operation")
 
         return file_content
 
@@ -877,9 +883,6 @@ class Environment(object):
     def __str__(self) -> str:  # noqa: D105
         return f"Environment({self._path})"
 
-    def run_agent(self, task: Optional[str]) -> None:  # noqa: D102
-        self._agents[0].run(self, task=task)
-
     def request_user_input(self) -> Run:
         """Must be called to request input from the user."""
         return self._hub_client.beta.threads.runs.update(
@@ -938,7 +941,10 @@ class Environment(object):
                 self.mark_failed()
                 raise e
 
-        self.mark_done()
+        if not self._pending_ext_agent:
+            # If no external agent was called, mark the whole run as done.
+            # Else this environment will stop for now but this run will be continued later.
+            self.mark_done()
 
     def generate_folder_hash_id(self, path: str) -> str:
         """Returns hash based on files and their contents in path, including subfolders."""  # noqa: E501
@@ -952,3 +958,33 @@ class Environment(object):
                         hash_obj.update(chunk)
 
         return hash_obj.hexdigest()
+
+    def run_agent(
+        self,
+        owner: str,
+        agent_name: str,
+        version: str,
+        model: Optional[str] = None,
+        query: Optional[str] = None,
+        fork_thread: bool = True,
+    ):
+        """Runs a child agent on the thread."""
+        child_thread_id = self._thread_id
+        if fork_thread:
+            child_thread_id = self.client.threads_fork(self._thread_id).id
+            self.add_system_log(f"Forked thread {child_thread_id}", logging.INFO)
+
+        if query:
+            self.client.threads_messages_create(thread_id=child_thread_id, content=query, role="user")
+
+        assistant_id = f"{owner}/{agent_name}/{version}"
+        model = model or DEFAULT_PROVIDER_MODEL
+        self.add_system_log(f"Running agent {assistant_id}", logging.INFO)
+        self.client.run_agent(
+            current_run_id=self._run_id,
+            child_thread_id=child_thread_id,
+            assistant_id=assistant_id,
+        )
+        self._pending_ext_agent = True
+
+        return child_thread_id

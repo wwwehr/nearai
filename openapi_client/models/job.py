@@ -17,21 +17,23 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, StrictBool, StrictStr
+from pydantic import BaseModel, ConfigDict, StrictInt, StrictStr
 from typing import Any, ClassVar, Dict, List, Optional
-from openapi_client.models.job import Job
 from typing import Optional, Set
 from typing_extensions import Self
 
-class SelectedJob(BaseModel):
+class Job(BaseModel):
     """
-    SelectedJob
+    Job
     """ # noqa: E501
-    selected: StrictBool
-    job: Optional[Job]
-    registry_path: Optional[StrictStr]
-    info: StrictStr
-    __properties: ClassVar[List[str]] = ["selected", "job", "registry_path", "info"]
+    id: Optional[StrictInt] = None
+    registry_path: StrictStr
+    account_id: StrictStr
+    status: StrictStr
+    worker_id: Optional[StrictStr] = None
+    info: Optional[Dict[str, Any]] = None
+    result: Optional[Dict[str, Any]] = None
+    __properties: ClassVar[List[str]] = ["id", "registry_path", "account_id", "status", "worker_id", "info", "result"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -51,7 +53,7 @@ class SelectedJob(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of SelectedJob from a JSON string"""
+        """Create an instance of Job from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -72,24 +74,16 @@ class SelectedJob(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
-        # override the default output from pydantic by calling `to_dict()` of job
-        if self.job:
-            _dict['job'] = self.job.to_dict()
-        # set to None if job (nullable) is None
+        # set to None if worker_id (nullable) is None
         # and model_fields_set contains the field
-        if self.job is None and "job" in self.model_fields_set:
-            _dict['job'] = None
-
-        # set to None if registry_path (nullable) is None
-        # and model_fields_set contains the field
-        if self.registry_path is None and "registry_path" in self.model_fields_set:
-            _dict['registry_path'] = None
+        if self.worker_id is None and "worker_id" in self.model_fields_set:
+            _dict['worker_id'] = None
 
         return _dict
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of SelectedJob from a dict"""
+        """Create an instance of Job from a dict"""
         if obj is None:
             return None
 
@@ -97,10 +91,13 @@ class SelectedJob(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "selected": obj.get("selected"),
-            "job": Job.from_dict(obj["job"]) if obj.get("job") is not None else None,
+            "id": obj.get("id"),
             "registry_path": obj.get("registry_path"),
-            "info": obj.get("info")
+            "account_id": obj.get("account_id"),
+            "status": obj.get("status"),
+            "worker_id": obj.get("worker_id"),
+            "info": obj.get("info"),
+            "result": obj.get("result")
         })
         return _obj
 

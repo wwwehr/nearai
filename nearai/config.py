@@ -77,6 +77,7 @@ class Config(BaseModel):
     api_url: Optional[str] = "https://api.near.ai"
     inference_url: str = "http://localhost:5000/v1/"
     inference_api_key: str = "n/a"
+    scheduler_account_id: str = "nearaischeduler.near"
     nearai_hub: NearAiHubConfig = NearAiHubConfig()
     confirm_commands: bool = True
     auth: Optional[AuthData] = None

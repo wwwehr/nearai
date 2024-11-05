@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import importlib.metadata
 import io
 import json
@@ -18,6 +19,7 @@ from openai.types.beta.threads.message import Attachment
 from openapi_client import EntryLocation, EntryMetadataInput
 from openapi_client.api.benchmark_api import BenchmarkApi
 from openapi_client.api.default_api import DefaultApi
+from openapi_client.api.delegation_api import DelegationApi
 from openapi_client.api.evaluation_api import EvaluationApi
 from openapi_client.api.jobs_api import JobsApi
 from openapi_client.api.permissions_api import PermissionsApi
@@ -885,8 +887,20 @@ class CLI:
             tar.add(path, arcname=os.path.basename(path))
         tar_stream.seek(0)
 
-        client = JobsApi()
-        client.add_job_v1_jobs_add_job_post(tar_stream.read())
+        delegation_api = DelegationApi()
+        delegation_api.delegate_v1_delegation_delegate_post(
+            delegate_account_id=CONFIG.scheduler_account_id,
+            expires_at=datetime.now() + timedelta(days=1),
+        )
+
+        try:
+            client = JobsApi()
+            client.add_job_v1_jobs_add_job_post(tar_stream.read())
+        except Exception as e:
+            print("Error: ", e)
+            delegation_api.revoke_v1_delegation_revoke_post(
+                delegate_account_id=CONFIG.scheduler_account_id,
+            )
 
     def location(self) -> None:  # noqa: D102
         """Show location where nearai is installed."""

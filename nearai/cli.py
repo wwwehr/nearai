@@ -898,7 +898,7 @@ class CLI:
             client.add_job_v1_jobs_add_job_post(tar_stream.read())
         except Exception as e:
             print("Error: ", e)
-            delegation_api.revoke_v1_delegation_revoke_post(
+            delegation_api.revoke_delegation_v1_delegation_revoke_delegation_post(
                 delegate_account_id=CONFIG.scheduler_account_id,
             )
 

@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import io
 import os
 import signal
 import subprocess
@@ -65,18 +66,18 @@ def try_parse_location(location: str) -> Optional[EntryLocation]:
 
 
 async def run_scheduler():
-    DELEGATION_API.delegate_v1_delegation_delegate_post(
-        delegate_account_id=WORKER_ACCOUNT_ID,
-        expires_at=datetime.datetime.now() + timedelta(days=1),
-    )
     while True:
         try:
             await asyncio.sleep(WORKER_SLEEP_TIME)
             async with httpx.AsyncClient() as client:
                 ## Poll worker health
-                response = await client.get(WORKER_URL + "/health")
-                if response.status_code != 200:
-                    print(f"Worker is not healthy ... retrying")
+                try:
+                    response = await client.get(WORKER_URL + "/health")
+                    if response.status_code != 200:
+                        print(f"Worker is not healthy ... retrying")
+                        continue
+                except Exception as e:
+                    print(f"Couldn't reach worker: {e}\nRetrying...")
                     continue
 
                 ## Get pending jobs
@@ -90,6 +91,7 @@ async def run_scheduler():
                 ## Get the first job
                 ## ensure it's not already running
                 if not selected_job.selected:
+                    print(selected_job)
                     print(f"Job is not selected ... retrying")
                     continue
                 if not selected_job.registry_path:
@@ -115,19 +117,26 @@ async def run_scheduler():
                 ## 3. Download the job
                 try:
                     ## Delegate to the worker as the user
-                    with OnBehalfOf(client, selected_job.job.account_id):
+                    with OnBehalfOf(selected_job.job.account_id):
                         DELEGATION_API.delegate_v1_delegation_delegate_post(
                             delegate_account_id=WORKER_ACCOUNT_ID,
                             expires_at=datetime.datetime.now() + timedelta(days=1),
                         )
                         downloaded = registry.download(location)
+
+                        ## tar the directory
+                        tar_bytes = io.BytesIO()
+                        tar = tarfile.open(fileobj=tar_bytes, mode="w")
+                        tar.add(downloaded, arcname=selected_job.job.id)
+                        tar.close()
+                        tar_bytes.seek(0)
                 except Exception as e:
                     JOBS_API.update_job_v1_jobs_update_job_post(
                         job_id=selected_job.job.id,
                         status=JobStatus.COMPLETED,
                         reason=str(e),
                     )
-                    with OnBehalfOf(client, selected_job.job.account_id):
+                    with OnBehalfOf(selected_job.job.account_id):
                         DELEGATION_API.revoke_delegation_v1_delegation_revoke_delegation_post(
                             delegate_account_id=WORKER_ACCOUNT_ID
                         )
@@ -140,7 +149,7 @@ async def run_scheduler():
                     response = await client.post(
                         WORKER_URL + "/execute",
                         files={
-                            "file": ("main.tar", downloaded),
+                            "file": ("main.tar", ),
                             "job": selected_job.model_dump_json(),
                         },
                         timeout=WORKER_JOB_TIMEOUT,
@@ -169,7 +178,7 @@ async def run_scheduler():
             
                 ## Revoke access of the worker from the scheduler
                 try:
-                    with OnBehalfOf(client, selected_job.job.account_id):
+                    with OnBehalfOf(selected_job.job.account_id):
                         DELEGATION_API.revoke_delegation_v1_delegation_revoke_delegation_post(
                             delegate_account_id=WORKER_ACCOUNT_ID
                         )
@@ -207,6 +216,7 @@ def run_worker():
 
     @app.post("/execute")
     def execute(job: Jobs, file: UploadFile = File(...)) -> JobResult:
+        print(f"Received job: {job}")
         if not file.filename.endswith(".tar"):
             raise HTTPException(status_code=500, detail="The uploaded file is not a tar file.")
 
@@ -222,7 +232,8 @@ def run_worker():
 
         JOB_DIR.mkdir(parents=True, exist_ok=True)
         file_location = JOB_DIR / file.filename
-        file_location.write_bytes(file.read())
+        with open(file_location, 'wb') as f:
+            f.write(file.file.read())
 
         try:
             # untar the file into the job directory
@@ -232,7 +243,8 @@ def run_worker():
 
             # Execute the run.sh script in a subprocess
             result = subprocess.run(
-                ["bash", str(JOB_DIR / "run.sh")],
+                ["bash", "run.sh"],
+                cwd=JOB_DIR,
                 capture_output=True,
                 text=True,
                 timeout=WORKER_JOB_TIMEOUT,

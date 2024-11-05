@@ -145,7 +145,7 @@ class LeanSolverStrategy(SolverStrategy):
             commit=lean_task.commit,
             filepath=lean_task.filename,
             theorem_name=lean_task.theorem,
-            theorem=lean_task.theorem_raw,
+            theorem_raw=lean_task.theorem_raw,
             begin_marker=BEGIN_MARKER,
             end_marker=END_MARKER,
         )

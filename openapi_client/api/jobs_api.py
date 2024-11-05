@@ -18,8 +18,8 @@ from typing_extensions import Annotated
 
 from pydantic import StrictBytes, StrictInt, StrictStr
 from typing import Any, List, Optional, Union
+from openapi_client.models.job import Job
 from openapi_client.models.job_status import JobStatus
-from openapi_client.models.jobs import Jobs
 from openapi_client.models.selected_job import SelectedJob
 
 from openapi_client.api_client import ApiClient, RequestSerialized
@@ -56,7 +56,7 @@ class JobsApi:
         _content_type: Optional[StrictStr] = None,
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
-    ) -> Jobs:
+    ) -> Job:
         """Add Job
 
 
@@ -93,7 +93,7 @@ class JobsApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '200': "Jobs",
+            '200': "Job",
             '422': "HTTPValidationError",
         }
         response_data = self.api_client.call_api(
@@ -123,7 +123,7 @@ class JobsApi:
         _content_type: Optional[StrictStr] = None,
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
-    ) -> ApiResponse[Jobs]:
+    ) -> ApiResponse[Job]:
         """Add Job
 
 
@@ -160,7 +160,7 @@ class JobsApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '200': "Jobs",
+            '200': "Job",
             '422': "HTTPValidationError",
         }
         response_data = self.api_client.call_api(
@@ -227,7 +227,7 @@ class JobsApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '200': "Jobs",
+            '200': "Job",
             '422': "HTTPValidationError",
         }
         response_data = self.api_client.call_api(
@@ -590,7 +590,7 @@ class JobsApi:
         _content_type: Optional[StrictStr] = None,
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
-    ) -> List[Jobs]:
+    ) -> List[Job]:
         """List Jobs
 
 
@@ -630,7 +630,7 @@ class JobsApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '200': "List[Jobs]",
+            '200': "List[Job]",
             '422': "HTTPValidationError",
         }
         response_data = self.api_client.call_api(
@@ -661,7 +661,7 @@ class JobsApi:
         _content_type: Optional[StrictStr] = None,
         _headers: Optional[Dict[StrictStr, Any]] = None,
         _host_index: Annotated[StrictInt, Field(ge=0, le=0)] = 0,
-    ) -> ApiResponse[List[Jobs]]:
+    ) -> ApiResponse[List[Job]]:
         """List Jobs
 
 
@@ -701,7 +701,7 @@ class JobsApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '200': "List[Jobs]",
+            '200': "List[Job]",
             '422': "HTTPValidationError",
         }
         response_data = self.api_client.call_api(
@@ -772,7 +772,7 @@ class JobsApi:
         )
 
         _response_types_map: Dict[str, Optional[str]] = {
-            '200': "List[Jobs]",
+            '200': "List[Job]",
             '422': "HTTPValidationError",
         }
         response_data = self.api_client.call_api(

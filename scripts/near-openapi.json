@@ -1504,7 +1504,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Jobs"
+                  "$ref": "#/components/schemas/Job"
                 }
               }
             }
@@ -1628,7 +1628,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Jobs"
+                    "$ref": "#/components/schemas/Job"
                   },
                   "title": "Response List Jobs V1 Jobs List Jobs Get"
                 }
@@ -3005,16 +3005,7 @@
         "title": "ImageGenerationRequest",
         "description": "Request for image generation."
       },
-      "JobStatus": {
-        "type": "string",
-        "enum": [
-          "pending",
-          "processing",
-          "completed"
-        ],
-        "title": "JobStatus"
-      },
-      "Jobs": {
+      "Job": {
         "properties": {
           "id": {
             "type": "integer",
@@ -3058,7 +3049,16 @@
           "account_id",
           "status"
         ],
-        "title": "Jobs"
+        "title": "Job"
+      },
+      "JobStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "processing",
+          "completed"
+        ],
+        "title": "JobStatus"
       },
       "Message": {
         "properties": {
@@ -3170,16 +3170,15 @@
             "type": "boolean",
             "title": "Selected"
           },
-          "job_id": {
+          "job": {
             "anyOf": [
               {
-                "type": "integer"
+                "$ref": "#/components/schemas/Job"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Job Id"
+            ]
           },
           "registry_path": {
             "anyOf": [
@@ -3200,7 +3199,7 @@
         "type": "object",
         "required": [
           "selected",
-          "job_id",
+          "job",
           "registry_path",
           "info"
         ],

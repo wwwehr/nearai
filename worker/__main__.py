@@ -122,19 +122,19 @@ async def run_scheduler():
                             delegate_account_id=WORKER_ACCOUNT_ID,
                             expires_at=datetime.datetime.now() + timedelta(days=1),
                         )
-                        downloaded = registry.download(location)
+                        # downloaded = registry.download(location)
 
-                        ## tar the directory
-                        tar_bytes = io.BytesIO()
-                        tar = tarfile.open(fileobj=tar_bytes, mode="w")
-                        tar.add(downloaded, arcname=selected_job.job.id)
-                        tar.close()
-                        tar_bytes.seek(0)
+                        # ## tar the directory
+                        # tar_bytes = io.BytesIO()
+                        # tar = tarfile.open(fileobj=tar_bytes, mode="w")
+                        # tar.add(downloaded, arcname=str(selected_job.job.id))
+                        # tar.close()
+                        # tar_bytes.seek(0)
                 except Exception as e:
                     JOBS_API.update_job_v1_jobs_update_job_post(
                         job_id=selected_job.job.id,
                         status=JobStatus.COMPLETED,
-                        reason=str(e),
+                        result_json=ResultJson(output=f"Failed to download/delegate job: {e}").model_dump_json(),
                     )
                     with OnBehalfOf(selected_job.job.account_id):
                         DELEGATION_API.revoke_delegation_v1_delegation_revoke_delegation_post(
@@ -149,7 +149,6 @@ async def run_scheduler():
                     response = await client.post(
                         WORKER_URL + "/execute",
                         files={
-                            "file": ("main.tar", ),
                             "job": selected_job.model_dump_json(),
                         },
                         timeout=WORKER_JOB_TIMEOUT,
@@ -159,7 +158,8 @@ async def run_scheduler():
 
                     success = True
                     response_json = response.json()
-                    job_result = JobResult(**response_json)
+                    print(response_json)
+                    job_result = JobResult.model_validate(response_json)
                 except Exception as e:
                     JOBS_API.update_job_v1_jobs_update_job_post(
                         job_id=selected_job.job.id,
@@ -215,36 +215,24 @@ def run_worker():
         return current_job
 
     @app.post("/execute")
-    def execute(job: Jobs, file: UploadFile = File(...)) -> JobResult:
+    def execute(job: Jobs) -> JobResult:
+        nonlocal current_job
         print(f"Received job: {job}")
-        if not file.filename.endswith(".tar"):
-            raise HTTPException(status_code=500, detail="The uploaded file is not a tar file.")
-
-        if len(file.filename) > 256:
-            raise HTTPException(status_code=500, detail="The filename is too long. It must be 256 characters or less.")
     
         ## Update auth
         CONFIG.auth.on_behalf_of = job.account_id
         save_config_file(CONFIG.model_dump())
 
         ## save current job
-        current_job = job  # noqa: F841
-
-        JOB_DIR.mkdir(parents=True, exist_ok=True)
-        file_location = JOB_DIR / file.filename
-        with open(file_location, 'wb') as f:
-            f.write(file.file.read())
+        current_job = job
+        downloaded = registry.download(job.registry_path)
 
         try:
-            # untar the file into the job directory
-            with tarfile.open(file_location, "r") as tar:
-                tar.extractall(JOB_DIR)
-            file_location.unlink()
 
             # Execute the run.sh script in a subprocess
             result = subprocess.run(
                 ["bash", "run.sh"],
-                cwd=JOB_DIR,
+                cwd=downloaded.as_posix(),
                 capture_output=True,
                 text=True,
                 timeout=WORKER_JOB_TIMEOUT,

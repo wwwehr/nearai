@@ -23,6 +23,7 @@ from openapi_client.api.delegation_api import DelegationApi
 from openapi_client.api.evaluation_api import EvaluationApi
 from openapi_client.api.jobs_api import JobsApi
 from openapi_client.api.permissions_api import PermissionsApi
+from openapi_client.models.body_add_job_v1_jobs_add_job_post import BodyAddJobV1JobsAddJobPost
 from shared.client_config import (
     DEFAULT_MODEL,
     DEFAULT_MODEL_MAX_TOKENS,
@@ -241,9 +242,9 @@ class RegistryCli:
             for path in paths:
                 self.upload(str(path))
 
-    def upload(self, local_path: str = ".") -> None:
+    def upload(self, local_path: str = ".") -> EntryLocation:
         """Upload item to the registry."""
-        registry.upload(Path(local_path), show_progress=True)
+        return registry.upload(Path(local_path), show_progress=True)
 
     def download(self, entry_location: str, force: bool = False) -> None:
         """Download item."""
@@ -882,10 +883,7 @@ class CLI:
         if path is None:
             path = os.getcwd()
 
-        tar_stream = io.BytesIO()
-        with tarfile.open(fileobj=tar_stream, mode="w:gz") as tar:
-            tar.add(path, arcname=os.path.basename(path))
-        tar_stream.seek(0)
+        location = self.registry.upload(path)
 
         delegation_api = DelegationApi()
         delegation_api.delegate_v1_delegation_delegate_post(
@@ -895,7 +893,7 @@ class CLI:
 
         try:
             client = JobsApi()
-            client.add_job_v1_jobs_add_job_post(tar_stream.read())
+            client.add_job_v1_jobs_add_job_post(BodyAddJobV1JobsAddJobPost(entry_location=location))
         except Exception as e:
             print("Error: ", e)
             delegation_api.revoke_delegation_v1_delegation_revoke_delegation_post(

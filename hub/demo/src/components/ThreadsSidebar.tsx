@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  DotsThreeVertical,
+  DotsThree,
   Lightbulb,
   Link as LinkIcon,
   Pencil,
@@ -166,7 +166,7 @@ export const ThreadsSidebar = ({
                     <Dropdown.Trigger asChild>
                       <Button
                         label="Manage Thread"
-                        icon={<DotsThreeVertical weight="bold" />}
+                        icon={<DotsThree weight="bold" />}
                         size="x-small"
                         fill="ghost"
                       />

@@ -16,8 +16,10 @@ export const SubTrigger = Primitive.SubTrigger;
 
 export const Content = forwardRef<
   HTMLDivElement,
-  ComponentProps<typeof Primitive.Content>
->(({ children, ...props }, ref) => {
+  ComponentProps<typeof Primitive.Content> & {
+    maxHeight?: string;
+  }
+>(({ children, maxHeight, ...props }, ref) => {
   return (
     <Primitive.Portal>
       <Primitive.Content
@@ -26,7 +28,11 @@ export const Content = forwardRef<
         ref={ref}
         {...props}
       >
-        <div className={s.scroll} onClick={(event) => event.stopPropagation()}>
+        <div
+          className={s.scroll}
+          style={{ maxHeight }}
+          onClick={(event) => event.stopPropagation()}
+        >
           {children}
         </div>
 

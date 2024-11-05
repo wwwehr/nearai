@@ -15,30 +15,30 @@ export const Placeholder = (props: Props) => {
 
 export const PlaceholderStack = (props: Props) => {
   return (
-    <Flex direction="column" gap="m" {...props}>
+    <Flex direction="column" gap="s" {...props}>
       <Placeholder />
-      <Placeholder style={{ width: '80%' }} />
-      <Placeholder style={{ width: '50%' }} />
+      <Placeholder />
+      <Placeholder style={{ width: '75%' }} />
     </Flex>
   );
 };
 
 export const PlaceholderCard = (props: Props) => {
   return (
-    <Card {...props}>
+    <Card gap="s" {...props}>
       <Placeholder />
-      <Placeholder style={{ width: '80%' }} />
-      <Placeholder style={{ width: '50%' }} />
+      <Placeholder />
+      <Placeholder style={{ width: '75%' }} />
     </Card>
   );
 };
 
 export const PlaceholderSection = (props: SectionProps) => {
   return (
-    <Section {...props} gap="m" bleed>
+    <Section {...props} gap="s" bleed>
       <Placeholder />
-      <Placeholder style={{ width: '80%' }} />
-      <Placeholder style={{ width: '50%' }} />
+      <Placeholder />
+      <Placeholder style={{ width: '75%' }} />
     </Section>
   );
 };

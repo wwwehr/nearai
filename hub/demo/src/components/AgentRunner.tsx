@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  ArrowRight,
-  Chats,
-  Copy,
-  Eye,
-  Gear,
-  List,
-} from '@phosphor-icons/react';
+import { ArrowRight, Chats, Eye, Gear, List } from '@phosphor-icons/react';
 import { useMutation } from '@tanstack/react-query';
 import {
   type KeyboardEventHandler,
@@ -49,7 +42,6 @@ import { type chatWithAgentModel, type threadMessageModel } from '~/lib/models';
 import { returnOptimisticThreadMessage } from '~/lib/thread';
 import { useAuthStore } from '~/stores/auth';
 import { api } from '~/trpc/react';
-import { copyTextToClipboard } from '~/utils/clipboard';
 import { handleClientError } from '~/utils/error';
 import { formatBytes } from '~/utils/number';
 
@@ -139,6 +131,7 @@ export const AgentRunner = ({
     }
   }
 
+  const chatMutationThreadId = useRef('');
   const _chatMutation = api.hub.chatWithAgent.useMutation();
   const chatMutation = useMutation({
     mutationFn: async (data: AgentChatMutationInput) => {
@@ -151,9 +144,11 @@ export const AgentRunner = ({
           ...data,
         });
 
+        chatMutationThreadId.current = updatedThread.id;
+
         utils.hub.thread.setData(
           {
-            threadId,
+            threadId: updatedThread.id,
           },
           updatedThread,
         );
@@ -234,10 +229,15 @@ export const AgentRunner = ({
   };
 
   useEffect(() => {
-    if (threadId && thread?.id !== threadId) {
+    if (
+      isAuthenticated &&
+      threadId &&
+      threadId !== thread?.id &&
+      threadId !== chatMutationThreadId.current
+    ) {
       void threadQuery.refetch({ cancelRefetch: true });
     }
-  }, [thread, threadId, threadQuery]);
+  }, [isAuthenticated, thread, threadId, threadQuery]);
 
   useEffect(() => {
     const files = threadQuery?.data?.files;
@@ -524,22 +524,7 @@ export const AgentRunner = ({
         open={openedFileId !== null}
         onOpenChange={() => setOpenedFileId(null)}
       >
-        <Dialog.Content
-          title={openedFileId}
-          size="l"
-          header={
-            <Button
-              label="Copy file to clipboard"
-              icon={<Copy />}
-              size="small"
-              fill="outline"
-              onClick={() =>
-                openedFile && copyTextToClipboard(openedFile?.content)
-              }
-              style={{ marginLeft: 'auto' }}
-            />
-          }
-        >
+        <Dialog.Content title={openedFileId} size="l">
           <Code
             bleed
             source={openedFile?.content}

@@ -68,7 +68,7 @@ def get_pending_job(
                 update(Job)
                 .where(Job.id == job.id)  # type: ignore
                 .where(Job.status == JobStatus.PENDING)  # type: ignore
-                .values(status=JobStatus.PROCESSING)
+                .values(status=JobStatus.PROCESSING.value)
                 .values(worker_id=worker_id)
             )
             session.commit()

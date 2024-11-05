@@ -18,4 +18,4 @@ RUN mkdir -p ~/.nearai && \
       }
 }
 EOF
-CMD ["poetry", "run", "python", "-m", "worker", "scheduler"]
+CMD ["poetry", "run", "python", "-m", "worker", "worker"]

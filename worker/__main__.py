@@ -29,7 +29,6 @@ WORKER_JOB_TIMEOUT = int(getenv("WORKER_JOB_TIMEOUT", 60 * 60 * 6))  # 6 hours
 WORKER_ACCOUNT_ID = getenv("WORKER_ACCOUNT_ID", "nearaiworker.near")
 WORKER_SIGNATURE = getenv("WORKER_SIGNATURE")
 JOB_DIR = Path("~/job/")
-
 JOBS_API = JobsApi()
 
 
@@ -88,10 +87,12 @@ async def run_scheduler():
                     ),
                     on_behalf_of=job.selected.account_id,
                 )
-                await client.post(WORKER_URL + "/setup", data=setup_params.model_dump_json())
 
                 ## 5. Execute the job
-                response = await client.post(WORKER_URL + "/execute", files={"file": ("main.tar", tar_file)})
+                response = await client.post(
+                    WORKER_URL + "/execute",
+                    files={"file": ("main.tar", tar_file), "setup_params": setup_params.model_dump_json()},
+                )
 
                 python_code = dedent("""
                 import os
@@ -119,24 +120,22 @@ def run_worker():
     app = FastAPI()
 
     @app.get("/health")
-    def health():
+    async def health():
         return "OK"
 
-    @app.post("/setup")
-    def setup(setup_params: SetupParams):
-        pass
-
     @app.post("/execute")
-    async def execute(file: UploadFile = File(...)):
+    def execute(setup_params: SetupParams, file: UploadFile = File(...)):
         if not file.filename.endswith(".py"):
             raise HTTPException(status_code=500, detail="The uploaded file is not a Python file.")
 
         if len(file.filename) > 256:
             raise HTTPException(status_code=500, detail="The filename is too long. It must be 256 characters or less.")
 
+        ## save setup_params
+
         JOB_DIR.mkdir(parents=True, exist_ok=True)
         file_location = JOB_DIR / file.filename
-        file_location.write_bytes(await file.read())
+        file_location.write_bytes(file.read())
 
         try:
             # Execute the file in a subprocess

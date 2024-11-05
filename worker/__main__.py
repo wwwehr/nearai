@@ -149,7 +149,7 @@ async def run_scheduler():
                     response = await client.post(
                         WORKER_URL + "/execute",
                         files={
-                            "job": selected_job.model_dump_json(),
+                            "job": selected_job.model_dump(),
                         },
                         timeout=WORKER_JOB_TIMEOUT,
                     )
@@ -158,8 +158,7 @@ async def run_scheduler():
 
                     success = True
                     response_json = response.json()
-                    print(response_json)
-                    job_result = JobResult.model_validate(response_json)
+                    job_result = JobResult(**response_json)
                 except Exception as e:
                     JOBS_API.update_job_v1_jobs_update_job_post(
                         job_id=selected_job.job.id,

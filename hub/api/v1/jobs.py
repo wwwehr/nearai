@@ -55,7 +55,7 @@ def get_pending_job(
     with get_session() as session:
         for _ in range(5):
             job = session.exec(
-                select(Job).where(Job.status == JobStatus.PENDING).order_by(asc(Job.id)).limit(1)
+                select(Job).where(Job.status == JobStatus.PENDING.value).order_by(asc(Job.id)).limit(1)
             ).first()
 
             if job is None:
@@ -64,8 +64,8 @@ def get_pending_job(
             session.exec(
                 update(Job)
                 .where(Job.id == job.id)  # type: ignore
-                .where(Job.status == JobStatus.PENDING)  # type: ignore
-                .values(status=JobStatus.PROCESSING)
+                .where(Job.status == JobStatus.PENDING.value)  # type: ignore
+                .values(status=JobStatus.PROCESSING.value)
                 .values(worker_id=worker_id)
             )
             session.commit()

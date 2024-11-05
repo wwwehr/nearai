@@ -77,7 +77,7 @@ def get_pending_job(
             final_job = session.exec(
                 select(Jobs)
                 .where(Jobs.id == job.id)
-                .where(Jobs.status == JobStatus.PROCESSING)
+                .where(Jobs.status == JobStatus.PROCESSING.value)
                 .where(Jobs.worker_id == worker_id)
             ).first()
 

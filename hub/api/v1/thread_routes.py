@@ -260,8 +260,9 @@ def create_message(
         if thread is None:
             raise HTTPException(status_code=404, detail="Thread not found")
 
-        if not thread.meta_data or not thread.meta_data.get("topic"):
-            background_tasks.add_task(update_thread_topic, thread_id, AuthData(**auth.model_dump()))
+        # TODO(#529): Fix topic generation
+        # if not thread.meta_data or not thread.meta_data.get("topic"):
+        #     background_tasks.add_task(update_thread_topic, thread_id, AuthData(**auth.model_dump()))
 
         if not message.content:
             message.content = " "  # OpenAI format requires content to be non-empty

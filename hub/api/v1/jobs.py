@@ -1,16 +1,15 @@
 import json
-import uuid
 from enum import Enum
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import asc, select, update
 
 from hub.api.v1.auth import AuthToken
-from hub.api.v1.models import Job, get_session
+from hub.api.v1.models import Job, RegistryEntry, get_session
 from hub.api.v1.permissions import PermissionVariant, requires_permission
-from hub.api.v1.registry import S3_BUCKET, s3
+from hub.api.v1.registry import get_read_access
 
 v1_router = APIRouter(
     prefix="/jobs",
@@ -26,16 +25,13 @@ class JobStatus(Enum):
 
 @v1_router.post("/add_job")
 async def add_job(
-    file: UploadFile = File(...),
+    entry: RegistryEntry = Depends(get_read_access),
     auth: AuthToken = Depends(requires_permission(PermissionVariant.SUBMIT_JOB)),
 ) -> Job:
     with get_session() as session:
-        key = f"jobs/{auth.account_id}/{uuid.uuid4().hex[:16]}"
-        assert S3_BUCKET is not None
-        s3.upload_fileobj(file.file, S3_BUCKET, key)
         job = Job(
             account_id=auth.account_id,
-            registry_path=f"s3://{S3_BUCKET}/{key}",
+            registry_path=entry.to_location().to_str(),
             status=JobStatus.PENDING.value,
         )
         session.add(job)

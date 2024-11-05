@@ -82,7 +82,7 @@ class SolverInferenceSession:
         if self.agent:
             assert self.env_run
             self.env_run.run(task)
-            return self.env_run.env.get_last_message(role="assistant")
+            return self.env_run.env.get_last_message(role="assistant").get("content")
         else:
             self.messages.append({"role": "user", "content": task})
             completion_response = cast(

@@ -3,7 +3,12 @@ from pathlib import Path
 from shutil import copyfileobj
 from typing import Any, Dict, List, Optional, Union
 
-from openapi_client import EntryInformation, EntryLocation, EntryMetadata, EntryMetadataInput
+from openapi_client import (
+    EntryInformation,
+    EntryLocation,
+    EntryMetadata,
+    EntryMetadataInput,
+)
 from openapi_client.api.registry_api import (
     BodyDownloadFileV1RegistryDownloadFilePost,
     BodyDownloadMetadataV1RegistryDownloadMetadataPost,
@@ -49,7 +54,7 @@ def get_namespace(local_path: Path) -> str:
     # If we couldn't extract a namespace from the path, return the default
     if CONFIG.auth is None:
         raise ValueError("AuthData is None")
-    return CONFIG.auth.account_id
+    return CONFIG.auth.namespace()
 
 
 class Registry:
@@ -61,10 +66,14 @@ class Registry:
         if not self.download_folder.exists():
             self.download_folder.mkdir(parents=True, exist_ok=True)
 
-    def update(self, entry_location: EntryLocation, metadata: EntryMetadataInput) -> Dict[str, Any]:
+    def update(
+        self, entry_location: EntryLocation, metadata: EntryMetadataInput
+    ) -> Dict[str, Any]:
         """Update metadata of a entry in the registry."""
         result = self.api.upload_metadata_v1_registry_upload_metadata_post(
-            BodyUploadMetadataV1RegistryUploadMetadataPost(metadata=metadata, entry_location=entry_location)
+            BodyUploadMetadataV1RegistryUploadMetadataPost(
+                metadata=metadata, entry_location=entry_location
+            )
         )
         return result
 
@@ -72,12 +81,16 @@ class Registry:
         """Get metadata of a entry in the registry."""
         try:
             return self.api.download_metadata_v1_registry_download_metadata_post(
-                BodyDownloadMetadataV1RegistryDownloadMetadataPost.from_dict(dict(entry_location=entry_location))
+                BodyDownloadMetadataV1RegistryDownloadMetadataPost.from_dict(
+                    dict(entry_location=entry_location)
+                )
             )
         except NotFoundException:
             return None
 
-    def upload_file(self, entry_location: EntryLocation, local_path: Path, path: Path) -> bool:
+    def upload_file(
+        self, entry_location: EntryLocation, local_path: Path, path: Path
+    ) -> bool:
         """Upload a file to the registry."""
         with open(local_path, "rb") as file:
             data = file.read()
@@ -97,7 +110,9 @@ class Registry:
 
                 raise e
 
-    def download_file(self, entry_location: EntryLocation, path: Path, local_path: Path):
+    def download_file(
+        self, entry_location: EntryLocation, path: Path, local_path: Path
+    ):
         """Download a file from the registry."""
         result = self.api.download_file_v1_registry_download_file_post_without_preload_content(
             BodyDownloadFileV1RegistryDownloadFilePost.from_dict(
@@ -124,7 +139,12 @@ class Registry:
         if isinstance(entry_location, str):
             entry_location = parse_location(entry_location)
 
-        download_path = get_registry_folder() / entry_location.namespace / entry_location.name / entry_location.version
+        download_path = (
+            get_registry_folder()
+            / entry_location.namespace
+            / entry_location.name
+            / entry_location.version
+        )
 
         if download_path.exists():
             if not force:
@@ -200,7 +220,9 @@ class Registry:
         source = entry_metadata.details.get("_source", None)
 
         if source is not None:
-            print(f"Only default source is allowed, found: {source}. Remove details._source from metadata.")
+            print(
+                f"Only default source is allowed, found: {source}. Remove details._source from metadata."
+            )
             exit(1)
 
         if self.info(entry_location) is None:
@@ -216,7 +238,9 @@ class Registry:
                     get_canonical_name(entry.name) == canonical_name
                     and get_canonical_name(entry.namespace) == canonical_namespace
                 ):
-                    print(f"A registry item with a similar name already exists: {entry.namespace}/{entry.name}")
+                    print(
+                        f"A registry item with a similar name already exists: {entry.namespace}/{entry.name}"
+                    )
                     exit(1)
 
         registry.update(entry_location, entry_metadata)
@@ -248,7 +272,9 @@ class Registry:
 
             all_files.append((file, relative, size))
 
-        pbar = tqdm(total=total_size, unit="B", unit_scale=True, disable=not show_progress)
+        pbar = tqdm(
+            total=total_size, unit="B", unit_scale=True, disable=not show_progress
+        )
         for file, relative, size in all_files:
             registry.upload_file(entry_location, file, relative)
             pbar.update(size)
@@ -261,7 +287,9 @@ class Registry:
         Return the relative paths to all files with respect to the root of the entry.
         """
         result = self.api.list_files_v1_registry_list_files_post(
-            BodyListFilesV1RegistryListFilesPost.from_dict(dict(entry_location=entry_location))
+            BodyListFilesV1RegistryListFilesPost.from_dict(
+                dict(entry_location=entry_location)
+            )
         )
         return [file.filename for file in result]
 
@@ -292,7 +320,13 @@ class Registry:
         """List all visible entries."""
         total = 10000
         entries = self.list(
-            namespace="", category=category, tags="", total=total, offset=0, show_all=False, show_latest_version=True
+            namespace="",
+            category=category,
+            tags="",
+            total=total,
+            offset=0,
+            show_all=False,
+            show_latest_version=True,
         )
         assert len(entries) < total
         return entries

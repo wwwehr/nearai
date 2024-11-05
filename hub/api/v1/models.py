@@ -106,7 +106,9 @@ class Stars(SQLModel, table=True):
     name: str = Field(primary_key=True)
 
 
-class Jobs(SQLModel, table=True):
+class Job(SQLModel, table=True):
+    __tablename__ = "jobs"
+
     id: int = Field(default=None, primary_key=True)
     registry_path: str = Field(nullable=False)
     account_id: str = Field(nullable=False)

@@ -11,7 +11,7 @@ from pydantic import BaseModel, field_validator
 from shared.cache import mem_cache_with_timeout
 from shared.provider_models import PROVIDER_MODEL_SEP, get_provider_model
 
-from hub.api.v1.auth import AuthToken, revokable_auth, validate_signature
+from hub.api.v1.auth import AuthToken, get_auth, validate_signature
 from hub.api.v1.completions import Message, Provider, get_llm_ai, handle_stream
 from hub.api.v1.images import get_images_ai
 from hub.api.v1.sql import SqlClient
@@ -118,7 +118,7 @@ def convert_request(request: ChatCompletionsRequest | CompletionsRequest | Embed
 
 
 @v1_router.post("/completions")
-def completions(request: CompletionsRequest = Depends(convert_request), auth: AuthToken = Depends(revokable_auth)):
+def completions(request: CompletionsRequest = Depends(convert_request), auth: AuthToken = Depends(get_auth)):
     logger.info(f"Received completions request: {request.model_dump()}")
 
     try:
@@ -151,9 +151,7 @@ def completions(request: CompletionsRequest = Depends(convert_request), auth: Au
 
 
 @v1_router.post("/chat/completions")
-def chat_completions(
-    request: ChatCompletionsRequest = Depends(convert_request), auth: AuthToken = Depends(revokable_auth)
-):
+def chat_completions(request: ChatCompletionsRequest = Depends(convert_request), auth: AuthToken = Depends(get_auth)):
     logger.info(f"Received chat completions request: {request.model_dump()}")
 
     try:
@@ -237,7 +235,7 @@ def get_models() -> JSONResponse:
 
 
 @v1_router.post("/embeddings")
-def embeddings(request: EmbeddingsRequest = Depends(convert_request), auth: AuthToken = Depends(revokable_auth)):
+def embeddings(request: EmbeddingsRequest = Depends(convert_request), auth: AuthToken = Depends(get_auth)):
     logger.info(f"Received embeddings request: {request.model_dump()}")
 
     try:
@@ -293,7 +291,7 @@ def revoke_all_nonces(auth: AuthToken = Depends(validate_signature)):
 
 
 @v1_router.get("/nonce/list")
-def list_nonces(auth: AuthToken = Depends(revokable_auth)):
+def list_nonces(auth: AuthToken = Depends(get_auth)):
     """List all nonces for the account."""
     nonces = db.get_account_nonces(auth.account_id)
     res = nonces.model_dump_json()
@@ -315,9 +313,7 @@ def version() -> str:
 
 
 @v1_router.post("/images/generations")
-def generate_images(
-    request: ImageGenerationRequest = Depends(convert_request), auth: AuthToken = Depends(revokable_auth)
-):
+def generate_images(request: ImageGenerationRequest = Depends(convert_request), auth: AuthToken = Depends(get_auth)):
     logger.info(f"Received image generation request: {request.model_dump()}")
 
     try:

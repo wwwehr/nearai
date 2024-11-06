@@ -10,7 +10,7 @@ from nearai.clients.lambda_client import LambdaWrapper
 from pydantic import BaseModel, Field
 from shared.auth_data import AuthData
 
-from hub.api.v1.auth import AuthToken, revokable_auth
+from hub.api.v1.auth import AuthToken, get_auth
 from hub.api.v1.entry_location import EntryLocation
 from hub.api.v1.models import Message as MessageModel
 from hub.api.v1.models import RegistryEntry, get_session
@@ -124,7 +124,7 @@ def invoke_agent_via_lambda(function_name, agents, thread_id, run_id, auth: Auth
 
 @run_agent_router.post("/threads/runs", tags=["Agents", "Assistants"])  # OpenAI compatibility
 @run_agent_router.post("/agent/runs", tags=["Agents", "Assistants"])
-def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokable_auth)) -> str:
+def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(get_auth)) -> str:
     """Run an agent against an existing or a new environment.
 
     Returns the ID of the new environment resulting from the run.

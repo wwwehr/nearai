@@ -19,6 +19,7 @@ import {
   Moon,
   Star,
   Sun,
+  Trophy,
   User,
   X,
 } from '@phosphor-icons/react';
@@ -33,45 +34,62 @@ import { useAuthStore } from '~/stores/auth';
 import { useWalletStore } from '~/stores/wallet';
 
 import s from './Navigation.module.scss';
+import * as NavigationMenu from '@radix-ui/react-navigation-menu';
 
-const navItems = [
-  {
-    label: 'Agents',
-    path: '/agents',
-    icon: ENTRY_CATEGORY_LABELS.agent.icon,
-    consumer: true,
-  },
-  {
-    label: 'Models',
-    path: '/models',
-    icon: ENTRY_CATEGORY_LABELS.model.icon,
-    consumer: false,
-  },
+const agentsNav = {
+  label: 'Agents',
+  path: '/agents',
+  icon: ENTRY_CATEGORY_LABELS.agent.icon,
+};
+
+// @ts-ignore
+const resourcesNav = [
   {
     label: 'Datasets',
     path: '/datasets',
     icon: ENTRY_CATEGORY_LABELS.dataset.icon,
-    consumer: false,
   },
   {
     label: 'Benchmarks',
     path: '/benchmarks',
     icon: ENTRY_CATEGORY_LABELS.benchmark.icon,
-    consumer: false,
   },
   {
     label: 'Evaluations',
     path: '/evaluations',
     icon: ENTRY_CATEGORY_LABELS.evaluation.icon,
-    consumer: false,
   },
+];
+
+const hubNavItems = [
+  {
+    label: 'Competitions',
+    path: '/competitions',
+    icon: <Trophy />,
+  },
+  agentsNav,
+  {
+    label: 'Models',
+    path: '/models',
+    icon: ENTRY_CATEGORY_LABELS.model.icon,
+  },
+  {
+    label: 'Threads',
+    path: '/chat',
+    icon: <ChatCircleDots />,
+  },
+];
+
+const chatNavItems = [
   {
     label: 'Chat',
     path: '/chat',
     icon: <ChatCircleDots />,
-    consumer: true,
   },
-].filter((item) => !env.NEXT_PUBLIC_CONSUMER_MODE || item.consumer);
+  agentsNav,
+];
+
+const navItems = env.NEXT_PUBLIC_CONSUMER_MODE ? chatNavItems : hubNavItems;
 
 export const Navigation = () => {
   const auth = useAuthStore((store) => store.auth);
@@ -82,7 +100,7 @@ export const Navigation = () => {
   const [mounted, setMounted] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
 
-  const title = env.NEXT_PUBLIC_CONSUMER_MODE ? 'AI Chat' : 'AI Hub';
+  const title = env.NEXT_PUBLIC_CONSUMER_MODE ? 'AI Chat' : 'AI Research Hub';
 
   useEffect(() => {
     setMounted(true);
@@ -103,18 +121,60 @@ export const Navigation = () => {
       </Link>
 
       <BreakpointDisplay show="larger-than-tablet" className={s.breakpoint}>
-        <Flex align="center" gap="m">
-          {navItems.map((item) => (
-            <Link
-              className={s.item}
-              href={item.path}
-              key={item.path}
-              data-active={path.startsWith(item.path)}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </Flex>
+        <NavigationMenu.Root className={s.NavigationMenuRoot}>
+          <NavigationMenu.List asChild>
+            <Flex align="center" gap="m">
+              {navItems.map((item) => (
+                <NavigationMenu.Item asChild>
+                  <NavigationMenu.Link
+                    className={s.item}
+                    asChild
+                    active={path.startsWith(item.path)}
+                  >
+                    <Link
+                      href={item.path}
+                      key={item.path}
+                      data-active={path.startsWith(item.path)}
+                    >
+                      {item.label}
+                    </Link>
+                  </NavigationMenu.Link>
+                </NavigationMenu.Item>
+              ))}
+              <NavigationMenu.Item className={s.item}>
+                <NavigationMenu.Trigger asChild>
+                  <span className={s.dropdownTriggerItem}>
+                    Resources
+                    <div className={s.ViewportPosition}>
+                      <NavigationMenu.Viewport
+                        className={s.NavigationMenuViewport}
+                      />
+                    </div>
+                  </span>
+                </NavigationMenu.Trigger>
+                <NavigationMenu.Content className={s.NavigationMenuContent}>
+                  {resourcesNav.map((item) => (
+                    <NavigationMenu.Link
+                      key={item.path}
+                      className={s.dropdownItem}
+                      asChild
+                      active={path.startsWith(item.path)}
+                    >
+                      <Link
+                        href={item.path}
+                        key={item.path}
+                        data-active={path.startsWith(item.path)}
+                      >
+                        <SvgIcon icon={item.icon} />
+                        {item.label}
+                      </Link>
+                    </NavigationMenu.Link>
+                  ))}
+                </NavigationMenu.Content>
+              </NavigationMenu.Item>
+            </Flex>
+          </NavigationMenu.List>
+        </NavigationMenu.Root>
       </BreakpointDisplay>
 
       <Flex align="center" gap="m" style={{ marginLeft: 'auto' }}>
@@ -168,6 +228,14 @@ export const Navigation = () => {
             <Dropdown.Content>
               <Dropdown.Section>
                 {navItems.map((item) => (
+                  <Dropdown.Item href={item.path} key={item.path}>
+                    <SvgIcon icon={item.icon} />
+                    {item.label}
+                  </Dropdown.Item>
+                ))}
+              </Dropdown.Section>
+              <Dropdown.Section>
+                {resourcesNav.map((item) => (
                   <Dropdown.Item href={item.path} key={item.path}>
                     <SvgIcon icon={item.icon} />
                     {item.label}

@@ -27,6 +27,7 @@
     "@near-wallet-selector/my-near-wallet": "8.9.14",
     "@near-wallet-selector/sender": "8.9.14",
     "@phosphor-icons/react": "^2.1.5",
+    "@radix-ui/react-navigation-menu": "^1.2.1",
     "@t3-oss/env-nextjs": "^0.10.1",
     "@tanstack/react-query": "^5.39.0",
     "@trpc/client": "next",

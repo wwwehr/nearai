@@ -3,7 +3,7 @@ from enum import Enum
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import select
 
-from hub.api.v1.auth import AuthToken, revokable_auth
+from hub.api.v1.auth import AuthToken, get_auth
 from hub.api.v1.models import Permissions, get_session
 
 v1_router = APIRouter(
@@ -19,7 +19,7 @@ class PermissionVariant(str, Enum):
 
 
 def requires_permission(permission: PermissionVariant):
-    def has_permission_inner(auth: AuthToken = Depends(revokable_auth)) -> AuthToken:
+    def has_permission_inner(auth: AuthToken = Depends(get_auth)) -> AuthToken:
         with get_session() as session:
             result = session.exec(
                 select(Permissions)

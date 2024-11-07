@@ -27,7 +27,7 @@ from hub.api.v1.agent_routes import (
     invoke_agent_via_lambda,
     invoke_agent_via_url,
 )
-from hub.api.v1.auth import AuthToken, revokable_auth
+from hub.api.v1.auth import AuthToken, get_auth
 from hub.api.v1.models import Message as MessageModel
 from hub.api.v1.models import Run as RunModel
 from hub.api.v1.models import Thread as ThreadModel
@@ -63,7 +63,7 @@ SUMMARY_PROMPT = """You are an expert at summarizing conversations in a maximum 
 @threads_router.post("/threads")
 def create_thread(
     thread: ThreadCreateParams = Body(...),
-    auth: AuthToken = Depends(revokable_auth),
+    auth: AuthToken = Depends(get_auth),
 ) -> Thread:
     with get_session() as session:
         thread_model = ThreadModel(
@@ -79,7 +79,7 @@ def create_thread(
 
 @threads_router.get("/threads")
 def list_threads(
-    auth: AuthToken = Depends(revokable_auth),
+    auth: AuthToken = Depends(get_auth),
 ) -> List[Thread]:
     with get_session() as session:
         threads = session.exec(select(ThreadModel).where(ThreadModel.owner_id == auth.account_id)).all()
@@ -89,7 +89,7 @@ def list_threads(
 @threads_router.get("/threads/{thread_id}")
 def get_thread(
     thread_id: str,
-    auth: AuthToken = Depends(revokable_auth),
+    auth: AuthToken = Depends(get_auth),
 ) -> Thread:
     with get_session() as session:
         thread_model = session.get(ThreadModel, thread_id)
@@ -113,7 +113,7 @@ class ThreadUpdateParams(BaseModel):
 def update_thread(
     thread_id: str,
     thread: ThreadUpdateParams = Body(...),
-    auth: AuthToken = Depends(revokable_auth),
+    auth: AuthToken = Depends(get_auth),
 ) -> Thread:
     with get_session() as session:
         thread_model = session.get(ThreadModel, thread_id)
@@ -143,7 +143,7 @@ class ThreadDeletionStatus(BaseModel):
 @threads_router.delete("/threads/{thread_id}")
 def delete_thread(
     thread_id: str,
-    auth: AuthToken = Depends(revokable_auth),
+    auth: AuthToken = Depends(get_auth),
 ) -> ThreadDeletionStatus:
     with get_session() as session:
         thread_model = session.get(ThreadModel, thread_id)
@@ -201,7 +201,7 @@ class ThreadForkResponse(BaseModel):
 @threads_router.post("/threads/{thread_id}/fork")
 def fork_thread(
     thread_id: str,
-    auth: AuthToken = Depends(revokable_auth),
+    auth: AuthToken = Depends(get_auth),
 ) -> ThreadForkResponse:
     with get_session() as session:
         # Get the original thread
@@ -253,7 +253,7 @@ def create_message(
     thread_id: str,
     background_tasks: BackgroundTasks,
     message: MessageCreateParams = Body(...),
-    auth: AuthToken = Depends(revokable_auth),
+    auth: AuthToken = Depends(get_auth),
 ) -> Message:
     with get_session() as session:
         thread = session.get(ThreadModel, thread_id)
@@ -355,7 +355,7 @@ def list_messages(
         "desc", description="Sort order by the `created_at` timestamp of the objects."
     ),
     run_id: str = Query(None, description="Filter messages by the run ID that generated them."),
-    auth: AuthToken = Depends(revokable_auth),
+    auth: AuthToken = Depends(get_auth),
 ) -> ListMessagesResponse:
     logger.info(f"Listing messages for thread: {thread_id}")
     with get_session() as session:
@@ -418,7 +418,7 @@ def modify_message(
     thread_id: str,
     message_id: str,
     message: MessageUpdateParams = Body(...),
-    auth: AuthToken = Depends(revokable_auth),
+    auth: AuthToken = Depends(get_auth),
 ) -> Message:
     with get_session() as session:
         message_model = session.get(MessageModel, message_id)
@@ -489,7 +489,7 @@ def create_run(
     thread_id: str,
     background_tasks: BackgroundTasks,
     run: RunCreateParamsBase = Body(...),
-    auth: AuthToken = Depends(revokable_auth),
+    auth: AuthToken = Depends(get_auth),
     scheduler=Depends(get_scheduler),
 ) -> OpenAIRun:
     logger.info(f"Creating run for thread: {thread_id}")
@@ -571,7 +571,7 @@ def create_run(
 
 
 def run_agent(
-    thread_id: str, run_id: str, background_tasks: BackgroundTasks, auth: AuthToken = Depends(revokable_auth)
+    thread_id: str, run_id: str, background_tasks: BackgroundTasks, auth: AuthToken = Depends(get_auth)
 ) -> OpenAIRun:
     """Task to run an agent in the background."""
     logger.info(f"Running agent for run: {run_id} on thread: {thread_id}")
@@ -673,7 +673,7 @@ def run_agent(
 def get_run(
     thread_id: str = Path(..., description="The ID of the thread"),
     run_id: str = Path(..., description="The ID of the run"),
-    auth: AuthToken = Depends(revokable_auth),
+    auth: AuthToken = Depends(get_auth),
 ) -> OpenAIRun:
     """Get details of a specific run for a thread."""
     with get_session() as session:
@@ -699,7 +699,7 @@ def update_run(
     thread_id: str,
     run_id: str,
     run: RunUpdateParams = Body(...),
-    auth: AuthToken = Depends(revokable_auth),
+    auth: AuthToken = Depends(get_auth),
 ) -> OpenAIRun:
     with get_session() as session:
         run_model = session.get(RunModel, run_id)

@@ -6,6 +6,7 @@ import {
   type KeyboardEventHandler,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -18,8 +19,6 @@ import { EntryEnvironmentVariables } from '~/components/EntryEnvironmentVariable
 import { BreakpointDisplay } from '~/components/lib/BreakpointDisplay';
 import { Button } from '~/components/lib/Button';
 import { Card, CardList } from '~/components/lib/Card';
-import { Code, filePathToCodeLanguage } from '~/components/lib/Code';
-import { Dialog } from '~/components/lib/Dialog';
 import { Flex } from '~/components/lib/Flex';
 import { Form } from '~/components/lib/Form';
 import { IframeWithBlob } from '~/components/lib/IframeWithBlob';
@@ -39,13 +38,18 @@ import {
 } from '~/hooks/entries';
 import { useQueryParams } from '~/hooks/url';
 import { type chatWithAgentModel, type threadMessageModel } from '~/lib/models';
-import { returnOptimisticThreadMessage } from '~/lib/thread';
 import { useAuthStore } from '~/stores/auth';
+import { useThreadsStore } from '~/stores/threads';
 import { api } from '~/trpc/react';
 import { handleClientError } from '~/utils/error';
 import { formatBytes } from '~/utils/number';
 
-import { PlaceholderCard, PlaceholderSection } from './lib/Placeholder';
+import {
+  PlaceholderCard,
+  PlaceholderSection,
+  PlaceholderStack,
+} from './lib/Placeholder';
+import { ThreadFileModal } from './ThreadFileModal';
 
 type RunView = 'conversation' | 'output' | undefined;
 
@@ -87,8 +91,8 @@ export const AgentRunner = ({
     'agent',
     Object.keys(queryParams),
   );
-  const threadId = queryParams.threadId ?? '';
   const utils = api.useUtils();
+  const threadId = queryParams.threadId ?? '';
 
   const form = useForm<FormSchema>({
     defaultValues: {
@@ -104,63 +108,85 @@ export const AgentRunner = ({
     useState(false);
   const formRef = useRef<HTMLFormElement | null>(null);
 
+  const addOptimisticMessages = useThreadsStore(
+    (store) => store.addOptimisticMessages,
+  );
+  const optimisticMessages = useThreadsStore(
+    (store) => store.optimisticMessages,
+  );
+  const chatMutationThreadId = useRef('');
+  const chatMutationStartedAt = useRef<Date | null>(null);
+  const resetThreadsStore = useThreadsStore((store) => store.reset);
+  const setThread = useThreadsStore((store) => store.setThread);
+  const threadsById = useThreadsStore((store) => store.threadsById);
+  const thread = threadsById[chatMutationThreadId.current || threadId];
+
   const threadQuery = api.hub.thread.useQuery(
     {
+      afterMessageId: thread?.latestMessageId,
+      runId: thread?.run?.id,
       threadId,
     },
     {
-      enabled: false,
+      enabled: isAuthenticated && !!threadId,
     },
   );
-  const thread = threadQuery.data;
 
-  const openedFile = openedFileId
-    ? thread?.files?.find((file) => file.id === openedFileId)
-    : undefined;
-
-  const latestAssistantMessages: z.infer<typeof threadMessageModel>[] = [];
-  if (thread) {
-    for (let i = thread.messages.length - 1; i >= 0; i--) {
-      const message = thread.messages[i]!;
-      const messageType = message.metadata?.message_type ?? '';
-      if (message.role === 'assistant' && !messageType.startsWith('system:')) {
-        latestAssistantMessages.push(message);
-      } else {
-        break;
-      }
-    }
-  }
-
-  const chatMutationThreadId = useRef('');
   const _chatMutation = api.hub.chatWithAgent.useMutation();
   const chatMutation = useMutation({
     mutationFn: async (data: AgentChatMutationInput) => {
       try {
-        const updatedThread = await _chatMutation.mutateAsync({
+        chatMutationStartedAt.current = new Date();
+
+        const input = {
           thread_id: threadId || undefined,
           agent_id: agentId,
           agent_env_vars: entryEnvironmentVariables.metadataVariablesByKey,
           user_env_vars: entryEnvironmentVariables.urlVariablesByKey,
           ...data,
+        };
+
+        addOptimisticMessages(threadId, [input]);
+        const response = await _chatMutation.mutateAsync(input);
+
+        setThread({
+          ...response.thread,
+          files: [],
+          messages: [response.message],
+          run: response.run,
         });
 
-        chatMutationThreadId.current = updatedThread.id;
+        chatMutationThreadId.current = response.thread.id;
+        updateQueryPath({ threadId: response.thread.id }, 'replace', false);
 
-        utils.hub.thread.setData(
-          {
-            threadId: updatedThread.id,
-          },
-          updatedThread,
-        );
-
-        updateQueryPath({ threadId: updatedThread.id }, 'replace', false);
-
-        void utils.hub.threads.invalidate();
+        void utils.hub.threads.refetch();
       } catch (error) {
         handleClientError({ error, title: 'Failed to run agent' });
       }
     },
   });
+
+  const messages = useMemo(() => {
+    return [
+      ...(thread ? Object.values(thread.messagesById) : []),
+      ...optimisticMessages.map((message) => message.data),
+    ];
+  }, [thread, optimisticMessages]);
+
+  const files = useMemo(() => {
+    return thread ? Object.values(thread.filesById) : [];
+  }, [thread]);
+
+  const latestAssistantMessages: z.infer<typeof threadMessageModel>[] = [];
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i]!;
+    const messageType = message.metadata?.message_type ?? '';
+    if (message.role === 'assistant' && !messageType.startsWith('system:')) {
+      latestAssistantMessages.push(message);
+    } else {
+      break;
+    }
+  }
 
   const {
     agentRequestsNeedingPermissions,
@@ -170,7 +196,12 @@ export const AgentRunner = ({
     onIframePostMessage,
   } = useAgentRequestsWithIframe(currentEntry, chatMutation, threadId);
 
-  const isLoading = threadQuery.isLoading && !chatMutation.isPending;
+  const isRunning =
+    chatMutation.isPending ||
+    thread?.run?.status === 'queued' ||
+    thread?.run?.status === 'in_progress';
+
+  const isLoading = !!threadId && !thread && !isRunning;
 
   const [__view, __setView] = useState<RunView>();
   const view = (queryParams.view as RunView) ?? __view;
@@ -192,24 +223,7 @@ export const AgentRunner = ({
   );
 
   const onSubmit: SubmitHandler<FormSchema> = async (data) => {
-    if (!data.new_message.trim()) return;
-
-    utils.hub.thread.setData(
-      {
-        threadId,
-      },
-      {
-        id: threadId,
-        files: thread?.files ?? [],
-        messages: [
-          ...(thread?.messages ?? []),
-          returnOptimisticThreadMessage(threadId, data.new_message),
-        ],
-      },
-    );
-
     form.setValue('new_message', '');
-
     await chatMutation.mutateAsync(data);
   };
 
@@ -229,19 +243,47 @@ export const AgentRunner = ({
   };
 
   useEffect(() => {
-    if (
-      isAuthenticated &&
-      threadId &&
-      threadId !== thread?.id &&
-      threadId !== chatMutationThreadId.current
-    ) {
-      void threadQuery.refetch({ cancelRefetch: true });
-    }
-  }, [isAuthenticated, thread, threadId, threadQuery]);
+    const timeout = setTimeout(() => {
+      /*
+        This logic will poll every 750ms after the last refetch has finished.
+        If an average refetch takes 250ms to finish, the real time that elapses
+        between the start of each refetch will be roughly 1 second total.
+      */
+
+      const run = thread?.run ?? threadQuery.data?.run;
+      if (
+        (run?.status === 'queued' || run?.status === 'in_progress') &&
+        !threadQuery.isFetching
+      ) {
+        void threadQuery.refetch({ cancelRefetch: false });
+      }
+    }, 750);
+
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [thread?.run, threadQuery, threadQuery.data]);
 
   useEffect(() => {
-    const files = threadQuery?.data?.files;
-    const htmlFile = files?.find((file) => file.filename === 'index.html');
+    if (threadQuery.data) {
+      setThread(threadQuery.data);
+
+      const now = new Date();
+      const elapsedSecondsSinceRunStart = chatMutationStartedAt.current
+        ? (now.getTime() - chatMutationStartedAt.current.getTime()) / 1000
+        : null;
+
+      console.log(`Thread fetch responded at: ${now.toLocaleTimeString()}`, {
+        data: threadQuery.data,
+        error: threadQuery.error,
+        elapsedSecondsSinceRunStart,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setThread, threadQuery.data]);
+
+  useEffect(() => {
+    const htmlFile = files.find((file) => file.filename === 'index.html');
 
     if (htmlFile) {
       const htmlContent = htmlFile.content.replaceAll(
@@ -254,28 +296,21 @@ export const AgentRunner = ({
       setHtmlOutput('');
       setView('conversation');
     }
-  }, [threadQuery, htmlOutput, agentId, setView]);
-
-  useEffect(() => {
-    if (!threadId) {
-      utils.hub.thread.setData(
-        {
-          threadId: '',
-        },
-        {
-          files: [],
-          messages: [],
-          id: '',
-        },
-      );
-    }
-  }, [threadId, utils]);
+  }, [files, htmlOutput, agentId, setView]);
 
   useEffect(() => {
     if (currentEntry && isAuthenticated) {
       form.setFocus('new_message');
     }
   }, [threadId, currentEntry, isAuthenticated, form]);
+
+  useEffect(() => {
+    if (threadId !== chatMutationThreadId.current) {
+      chatMutationThreadId.current = '';
+      chatMutationStartedAt.current = null;
+      resetThreadsStore();
+    }
+  }, [threadId, resetThreadsStore]);
 
   useEffect(() => {
     form.reset();
@@ -344,7 +379,7 @@ export const AgentRunner = ({
                 </>
               ) : (
                 <Messages
-                  messages={thread?.messages ?? []}
+                  messages={messages}
                   threadId={threadId}
                   welcomeMessage={
                     <AgentWelcome details={currentEntry.details} />
@@ -422,7 +457,7 @@ export const AgentRunner = ({
                     type="submit"
                     icon={<ArrowRight weight="bold" />}
                     size="small"
-                    loading={chatMutation.isPending}
+                    loading={isRunning}
                   />
                 </Flex>
               ) : (
@@ -442,39 +477,47 @@ export const AgentRunner = ({
                 Output
               </Text>
 
-              {thread?.files && Object.keys(thread.files).length ? (
-                <CardList>
-                  {Object.values(thread.files).map((file) => (
-                    <Card
-                      padding="s"
-                      gap="s"
-                      key={file.id}
-                      background="sand-2"
-                      onClick={() => {
-                        setOpenedFileId(file.id);
-                      }}
-                    >
-                      <Flex align="center" gap="s">
-                        <Text
-                          size="text-s"
-                          color="violet-11"
-                          clickableHighlight
-                          weight={500}
-                          clampLines={1}
-                          style={{ marginRight: 'auto' }}
-                        >
-                          {file.filename}
-                        </Text>
-
-                        <Text size="text-xs">{formatBytes(file.bytes)}</Text>
-                      </Flex>
-                    </Card>
-                  ))}
-                </CardList>
+              {isLoading ? (
+                <PlaceholderStack />
               ) : (
-                <Text size="text-s" color="sand-10">
-                  No files generated yet.
-                </Text>
+                <>
+                  {files.length ? (
+                    <CardList>
+                      {files.map((file) => (
+                        <Card
+                          padding="s"
+                          gap="s"
+                          key={file.id}
+                          background="sand-2"
+                          onClick={() => {
+                            setOpenedFileId(file.id);
+                          }}
+                        >
+                          <Flex align="center" gap="s">
+                            <Text
+                              size="text-s"
+                              color="violet-11"
+                              clickableHighlight
+                              weight={500}
+                              clampLines={1}
+                              style={{ marginRight: 'auto' }}
+                            >
+                              {file.filename}
+                            </Text>
+
+                            <Text size="text-xs">
+                              {formatBytes(file.bytes)}
+                            </Text>
+                          </Flex>
+                        </Card>
+                      ))}
+                    </CardList>
+                  ) : (
+                    <Text size="text-s" color="sand-10">
+                      No files generated yet.
+                    </Text>
+                  )}
+                </>
               )}
             </Flex>
 
@@ -520,18 +563,11 @@ export const AgentRunner = ({
         clearRequests={() => setAgentRequestsNeedingPermissions(null)}
       />
 
-      <Dialog.Root
-        open={openedFileId !== null}
-        onOpenChange={() => setOpenedFileId(null)}
-      >
-        <Dialog.Content title={openedFileId} size="l">
-          <Code
-            bleed
-            source={openedFile?.content}
-            language={filePathToCodeLanguage(openedFile?.filename)}
-          />
-        </Dialog.Content>
-      </Dialog.Root>
+      <ThreadFileModal
+        filesById={thread?.filesById}
+        openedFileId={openedFileId}
+        setOpenedFileId={setOpenedFileId}
+      />
     </Form>
   );
 };

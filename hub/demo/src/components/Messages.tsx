@@ -1,6 +1,6 @@
 'use client';
 
-import { Article, Copy, DotsThree, MarkdownLogo } from '@phosphor-icons/react';
+import { Copy, DotsThree, Eye, MarkdownLogo } from '@phosphor-icons/react';
 import { usePrevious } from '@uidotdev/usehooks';
 import { Fragment, type ReactNode, useEffect, useRef, useState } from 'react';
 import { type z } from 'zod';
@@ -95,7 +95,7 @@ export const Messages = ({
 
       <div className={s.messages} ref={messagesRef}>
         {normalizedMessages.map((message, index) => (
-          <Fragment key={index + message.content}>
+          <Fragment key={index + message.role}>
             {message.role === 'user' ? (
               <Card animateIn background="sand-2" style={{ alignSelf: 'end' }}>
                 {renderAsMarkdown ? (
@@ -146,14 +146,14 @@ export const Messages = ({
                           <Dropdown.Item
                             onSelect={() => setRenderAsMarkdown(false)}
                           >
-                            <SvgIcon icon={<Article />} />
-                            Render Raw Message
+                            <SvgIcon icon={<MarkdownLogo />} />
+                            View Markdown Source
                           </Dropdown.Item>
                         ) : (
                           <Dropdown.Item
                             onSelect={() => setRenderAsMarkdown(true)}
                           >
-                            <SvgIcon icon={<MarkdownLogo />} />
+                            <SvgIcon icon={<Eye />} />
                             Render Markdown
                           </Dropdown.Item>
                         )}

@@ -1,26 +1,22 @@
 import asyncio
 import datetime
-import io
 import os
 import signal
 import subprocess
-import tarfile
 from datetime import timedelta
 from os import getenv
 from pathlib import Path
 from typing import Optional
 
 import httpx
-import os
-from urllib import request
 import typer
 import uvicorn
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, HTTPException
+from nearai.config import CONFIG, save_config_file
 from nearai.delegation import OnBehalfOf
 from nearai.jobs import JobsApi
 from nearai.lib import parse_location
 from nearai.registry import registry
-from nearai.config import CONFIG, Config, save_config_file
 from openapi_client.api.delegation_api import DelegationApi
 from openapi_client.models.entry_location import EntryLocation
 from openapi_client.models.job import Job
@@ -77,7 +73,7 @@ async def run_scheduler():
                 try:
                     response = await client.get(WORKER_URL + "/health")
                     if response.status_code != 200:
-                        print(f"Worker is not healthy ... retrying")
+                        print("Worker is not healthy ... retrying")
                         continue
                 except Exception as e:
                     print(f"Couldn't reach worker: {e}\nRetrying...")
@@ -88,20 +84,19 @@ async def run_scheduler():
                     worker_id=SCHEDULER_ACCOUNT_ID,
                 )
                 if not selected_job:
-                    print(f"No pending jobs ... retrying")
+                    print("No pending jobs ... retrying")
                     continue
 
                 if not selected_job.selected:
                     print(selected_job)
-                    print(f"Job is not selected ... retrying")
+                    print(f"Job is not selected: {selected_job.job.id}")
                     continue
                 if not selected_job.job:
                     print(selected_job)
-                    print(f"No job included in the response ... retrying")
+                    print(f"No job included in the response: {selected_job.job.id}")
                     continue
                 if not selected_job.registry_path:
-                    # TODO: fail the job with null path err
-                    print(f"Job has no registry path ... retrying")
+                    print(f"Job has no registry path: {selected_job.job.id}")
                     JOBS_API.update_job_v1_jobs_update_job_post(
                         job_id=selected_job.job.id,
                         status=JobStatus.COMPLETED,
@@ -110,7 +105,6 @@ async def run_scheduler():
                     continue
                 location = try_parse_location(selected_job.registry_path)
                 if not location:
-                    # TODO: fail the job with parse err
                     print(f"Failed to parse registry path: {selected_job.registry_path} ... retrying")
                     JOBS_API.update_job_v1_jobs_update_job_post(
                         job_id=selected_job.job.id,
@@ -119,9 +113,8 @@ async def run_scheduler():
                     )
                     continue
 
-                ## 3. Download the job
+                ## Delegate to the worker as the user
                 try:
-                    ## Delegate to the worker as the user
                     with OnBehalfOf(selected_job.job.account_id):
                         DELEGATION_API.delegate_v1_delegation_delegate_post(
                             delegate_account_id=WORKER_ACCOUNT_ID,
@@ -137,10 +130,10 @@ async def run_scheduler():
                         DELEGATION_API.revoke_delegation_v1_delegation_revoke_delegation_post(
                             delegate_account_id=WORKER_ACCOUNT_ID
                         )
-                    print(f"Failed to download job ... retrying")
+                    print(f"Failed to download job: {e}")
                     continue
 
-                ## 5. Execute the job
+                ## Execute the job
                 success = False
                 job = selected_job.job
                 try:
@@ -161,16 +154,16 @@ async def run_scheduler():
                         status=JobStatus.COMPLETED,
                         result_json=ResultJson(output=f"Failed to execute job: {e}").model_dump_json(),
                     )
-                    print(f"Failed to execute job ... retrying")
+                    print(f"Failed to execute job: {e}")
 
-                ## 6. cleanup
+                ## cleanup
                 if success:
                     JOBS_API.update_job_v1_jobs_update_job_post(
                         job_id=selected_job.job.id,
                         status=JobStatus.COMPLETED,
                         result_json=ResultJson(output=job_result.model_dump_json()).model_dump_json(),
                     )
-            
+
                 ## Revoke access of the worker from the scheduler
                 try:
                     with OnBehalfOf(selected_job.job.account_id):
@@ -181,12 +174,12 @@ async def run_scheduler():
                             delegate_account_id=SCHEDULER_ACCOUNT_ID
                         )
                 except Exception as e:
+                    print(f"Failed to revoke delegation: {e}")
                     continue
 
                 ## kill the worker
                 try:
-                    result = await client.post(WORKER_URL + "/reset")
-                    # --- unreachable ---
+                    await client.post(WORKER_URL + "/reset")
                 except Exception as e:
                     print(f"Error: {e}")
         except Exception as e:
@@ -214,10 +207,12 @@ def run_worker():
         nonlocal current_job
         print(f"Received job: {job}")
 
+        # Let the worker download the job on behalf of the user
         with OnBehalfOf(job.account_id):
             downloaded = registry.download(job.registry_path)
 
-        ## Update auth
+        ## Update auth so all actions are executed by the worker
+        ## on behalf of the user
         CONFIG.auth.on_behalf_of = job.account_id
         save_config_file(CONFIG.model_dump())
 
@@ -225,7 +220,6 @@ def run_worker():
         current_job = job
 
         try:
-
             # Execute the run.sh script in a subprocess
             env = {
                 "http_proxy": "http://proxy:8888",
@@ -247,7 +241,6 @@ def run_worker():
             return JobResult(stdout=result.stdout, stderr=result.stderr, return_code=result.returncode)
         except subprocess.TimeoutExpired:
             raise HTTPException(status_code=500, detail="Execution timed out.")  # noqa: B904
-
 
     uvicorn.run(app, host="0.0.0.0", port=WORKER_PORT)
 

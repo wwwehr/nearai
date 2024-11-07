@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
 import openai
+import urllib3
 from openapi_client import ApiClient, Configuration
 from pydantic import BaseModel
 from shared.auth_data import AuthData
@@ -127,6 +128,8 @@ def setup_api_client():
         kwargs["access_token"] = f"Bearer {CONFIG.auth.model_dump_json()}"
     configuration = Configuration(**kwargs)
     client = ApiClient(configuration)
+    if "http_proxy" in os.environ:
+        client.rest_client.pool_manager = urllib3.ProxyManager(proxy_url=os.environ["http_proxy"])
     ApiClient.set_default(client)
 
 

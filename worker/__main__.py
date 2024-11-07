@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Optional
 
 import httpx
+import os
+from urllib import request
 import typer
 import uvicorn
 from fastapi import FastAPI, File, HTTPException, UploadFile
@@ -21,6 +23,7 @@ from nearai.registry import registry
 from nearai.config import CONFIG, Config, save_config_file
 from openapi_client.api.delegation_api import DelegationApi
 from openapi_client.models.entry_location import EntryLocation
+from openapi_client.models.job import Job
 from openapi_client.models.job_status import JobStatus
 from openapi_client.models.jobs import Jobs
 from pydantic import BaseModel
@@ -88,11 +91,13 @@ async def run_scheduler():
                     print(f"No pending jobs ... retrying")
                     continue
 
-                ## Get the first job
-                ## ensure it's not already running
                 if not selected_job.selected:
                     print(selected_job)
                     print(f"Job is not selected ... retrying")
+                    continue
+                if not selected_job.job:
+                    print(selected_job)
+                    print(f"No job included in the response ... retrying")
                     continue
                 if not selected_job.registry_path:
                     # TODO: fail the job with null path err
@@ -122,14 +127,6 @@ async def run_scheduler():
                             delegate_account_id=WORKER_ACCOUNT_ID,
                             expires_at=datetime.datetime.now() + timedelta(days=1),
                         )
-                        # downloaded = registry.download(location)
-
-                        # ## tar the directory
-                        # tar_bytes = io.BytesIO()
-                        # tar = tarfile.open(fileobj=tar_bytes, mode="w")
-                        # tar.add(downloaded, arcname=str(selected_job.job.id))
-                        # tar.close()
-                        # tar_bytes.seek(0)
                 except Exception as e:
                     JOBS_API.update_job_v1_jobs_update_job_post(
                         job_id=selected_job.job.id,
@@ -145,12 +142,11 @@ async def run_scheduler():
 
                 ## 5. Execute the job
                 success = False
+                job = selected_job.job
                 try:
                     response = await client.post(
                         WORKER_URL + "/execute",
-                        files={
-                            "job": selected_job.model_dump(),
-                        },
+                        json=job.model_dump(),
                         timeout=WORKER_JOB_TIMEOUT,
                     )
                     if response.status_code != 200:
@@ -214,27 +210,36 @@ def run_worker():
         return current_job
 
     @app.post("/execute")
-    def execute(job: Jobs) -> JobResult:
+    def execute(job: Job) -> JobResult:
         nonlocal current_job
         print(f"Received job: {job}")
-    
+
+        with OnBehalfOf(job.account_id):
+            downloaded = registry.download(job.registry_path)
+
         ## Update auth
         CONFIG.auth.on_behalf_of = job.account_id
         save_config_file(CONFIG.model_dump())
 
         ## save current job
         current_job = job
-        downloaded = registry.download(job.registry_path)
 
         try:
 
             # Execute the run.sh script in a subprocess
+            env = {
+                "http_proxy": "http://proxy:8888",
+                "https_proxy": "http://proxy:8888",
+                "HTTP_PROXY": "http://proxy:8888",
+                "HTTPS_PROXY": "http://proxy:8888",
+                **os.environ,
+            }
             result = subprocess.run(
                 ["bash", "run.sh"],
                 cwd=downloaded.as_posix(),
                 capture_output=True,
-                text=True,
                 timeout=WORKER_JOB_TIMEOUT,
+                env=env,
             )
 
             ## cleanup

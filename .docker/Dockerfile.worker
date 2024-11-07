@@ -7,6 +7,7 @@ ARG NEARAIWORKER_NONCE
 RUN mkdir -p ~/.nearai && \
     cat <<EOF > ~/.nearai/config.json
 {
+    "api_url": "http://staging.api.near.ai",
     "auth": {
         "account_id": "${NEARAIWORKER_ACCOUNT_ID}",
         "signature": "${NEARAIWORKER_SIGNATURE}",

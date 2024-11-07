@@ -6,20 +6,41 @@ services:
       dockerfile: .docker/Dockerfile.nearai_base
 
   scheduler:
+    restart: always
+    depends_on:
+      - worker
+      - proxy
+      - nearai_base
     build:
       context: ..
       dockerfile: .docker/Dockerfile.scheduler
+      args:
+        NEARAISCHEDULER_ACCOUNT_ID: ${NEARAISCHEDULER_ACCOUNT_ID}
+        NEARAISCHEDULER_SIGNATURE: ${NEARAISCHEDULER_SIGNATURE}
+        NEARAISCHEDULER_PUBLIC_KEY: ${NEARAISCHEDULER_PUBLIC_KEY}
+        NEARAISCHEDULER_NONCE: ${NEARAISCHEDULER_NONCE}
     container_name: scheduler
     networks:
       - internal_network
       - default
     environment:
       - WORKER_PORT=8000
+      - NEARAIWORKER_ACCOUNT_ID=${NEARAIWORKER_ACCOUNT_ID}
+      - NEARAIWORKER_SIGNATURE=${NEARAIWORKER_SIGNATURE}
 
   worker:
+    restart: always
+    depends_on:
+      - proxy
+      - nearai_base
     build:
       context: ..
       dockerfile: .docker/Dockerfile.worker
+      args:
+        NEARAIWORKER_ACCOUNT_ID: ${NEARAIWORKER_ACCOUNT_ID}
+        NEARAIWORKER_SIGNATURE: ${NEARAIWORKER_SIGNATURE}
+        NEARAIWORKER_PUBLIC_KEY: ${NEARAIWORKER_PUBLIC_KEY}
+        NEARAIWORKER_NONCE: ${NEARAIWORKER_NONCE}
     container_name: worker
     networks:
       - internal_network
@@ -28,15 +49,17 @@ services:
       - "8000:8000"
     environment:
       - WORKER_PORT=8000
+      - http_proxy=http://proxy:8888
+      - https_proxy=http://proxy:8888
+      - HTTP_PROXY=http://proxy:8888
+      - HTTPS_PROXY=http://proxy:8888
     volumes:
       - restricted-volume:/mnt/
-    # read_only: true
     security_opt:
       - no-new-privileges:true
       - seccomp:unconfined
     cap_drop:
       - ALL
-    restart: "no"
     privileged: false
     tty: false
     platform: linux/amd64
@@ -52,16 +75,26 @@ services:
               count: 1
               capabilities: [ gpu ]
 
+  proxy:
+    restart: always
+    build:
+      context: ..
+      dockerfile: .docker/Dockerfile.tinyproxy
+    container_name: proxy
+    networks:
+      - internal_network
+      - default
+    ports:
+      - "8888"
+
 volumes:
   restricted-volume:
     driver: local
     driver_opts:
-      type: tmpfs # Use tmpfs to create an in-memory volume
+      type: tmpfs
       device: tmpfs
-      o: "size=100m" # Limit volume size to 100MB
+      o: "size=100m"
 
 networks:
   internal_network:
     internal: true
-  default:
-    external: false

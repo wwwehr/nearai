@@ -43,7 +43,7 @@ class JobsApi:
     @validate_call
     def add_job_v1_jobs_add_job_post(
         self,
-        file: Union[StrictBytes, StrictStr],
+        body_add_job_v1_jobs_add_job_post: BodyAddJobV1JobsAddJobPost,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -60,8 +60,8 @@ class JobsApi:
         """Add Job
 
 
-        :param file: (required)
-        :type file: bytearray
+        :param body_add_job_v1_jobs_add_job_post: (required)
+        :type body_add_job_v1_jobs_add_job_post: BodyAddJobV1JobsAddJobPost
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -85,7 +85,7 @@ class JobsApi:
         """ # noqa: E501
 
         _param = self._add_job_v1_jobs_add_job_post_serialize(
-            file=file,
+            body_add_job_v1_jobs_add_job_post=body_add_job_v1_jobs_add_job_post,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -110,7 +110,7 @@ class JobsApi:
     @validate_call
     def add_job_v1_jobs_add_job_post_with_http_info(
         self,
-        file: Union[StrictBytes, StrictStr],
+        body_add_job_v1_jobs_add_job_post: BodyAddJobV1JobsAddJobPost,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -127,8 +127,8 @@ class JobsApi:
         """Add Job
 
 
-        :param file: (required)
-        :type file: bytearray
+        :param body_add_job_v1_jobs_add_job_post: (required)
+        :type body_add_job_v1_jobs_add_job_post: BodyAddJobV1JobsAddJobPost
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -152,7 +152,7 @@ class JobsApi:
         """ # noqa: E501
 
         _param = self._add_job_v1_jobs_add_job_post_serialize(
-            file=file,
+            body_add_job_v1_jobs_add_job_post=body_add_job_v1_jobs_add_job_post,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -177,7 +177,7 @@ class JobsApi:
     @validate_call
     def add_job_v1_jobs_add_job_post_without_preload_content(
         self,
-        file: Union[StrictBytes, StrictStr],
+        body_add_job_v1_jobs_add_job_post: BodyAddJobV1JobsAddJobPost,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -194,8 +194,8 @@ class JobsApi:
         """Add Job
 
 
-        :param file: (required)
-        :type file: bytearray
+        :param body_add_job_v1_jobs_add_job_post: (required)
+        :type body_add_job_v1_jobs_add_job_post: BodyAddJobV1JobsAddJobPost
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -219,7 +219,7 @@ class JobsApi:
         """ # noqa: E501
 
         _param = self._add_job_v1_jobs_add_job_post_serialize(
-            file=file,
+            body_add_job_v1_jobs_add_job_post=body_add_job_v1_jobs_add_job_post,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -239,7 +239,7 @@ class JobsApi:
 
     def _add_job_v1_jobs_add_job_post_serialize(
         self,
-        file,
+        body_add_job_v1_jobs_add_job_post,
         _request_auth,
         _content_type,
         _headers,
@@ -262,9 +262,9 @@ class JobsApi:
         # process the query parameters
         # process the header parameters
         # process the form parameters
-        if file is not None:
-            _files['file'] = file
         # process the body parameter
+        if body_add_job_v1_jobs_add_job_post is not None:
+            _body_params = body_add_job_v1_jobs_add_job_post
 
 
         # set the HTTP header `Accept`
@@ -282,7 +282,7 @@ class JobsApi:
             _default_content_type = (
                 self.api_client.select_header_content_type(
                     [
-                        'multipart/form-data'
+                        'application/json'
                     ]
                 )
             )

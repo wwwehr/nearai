@@ -49,7 +49,7 @@ def get_namespace(local_path: Path) -> str:
     # If we couldn't extract a namespace from the path, return the default
     if CONFIG.auth is None:
         raise ValueError("AuthData is None")
-    return CONFIG.auth.account_id
+    return CONFIG.auth.namespace
 
 
 class Registry:
@@ -292,7 +292,13 @@ class Registry:
         """List all visible entries."""
         total = 10000
         entries = self.list(
-            namespace="", category=category, tags="", total=total, offset=0, show_all=False, show_latest_version=True
+            namespace="",
+            category=category,
+            tags="",
+            total=total,
+            offset=0,
+            show_all=False,
+            show_latest_version=True,
         )
         assert len(entries) < total
         return entries

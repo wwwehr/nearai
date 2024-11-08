@@ -28,6 +28,7 @@ export const env = createEnv({
       .string()
       .regex(/.+\/.+\/.+/)
       .optional(),
+    NEXT_PUBLIC_AUTH_URL: z.string().url().optional(),
   },
 
   /**
@@ -45,6 +46,8 @@ export const env = createEnv({
     NEXT_PUBLIC_CONSUMER_MODE: process.env.NEXT_PUBLIC_CONSUMER_MODE,
     NEXT_PUBLIC_CONSUMER_CHAT_AGENT_ID:
       process.env.NEXT_PUBLIC_CONSUMER_CHAT_AGENT_ID,
+    NEXT_PUBLIC_AUTH_URL:
+      process.env.NEXT_PUBLIC_AUTH_URL ?? 'https://auth.near.ai',
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

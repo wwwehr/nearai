@@ -12,7 +12,11 @@ from nearai.shared.auth_data import AuthData
 from nearai.shared.client_config import DEFAULT_PROVIDER, DEFAULT_PROVIDER_MODEL, ClientConfig
 
 DATA_FOLDER = Path.home() / ".nearai"
-DATA_FOLDER.mkdir(parents=True, exist_ok=True)
+try:
+    DATA_FOLDER.mkdir(parents=True, exist_ok=True)
+except Exception as e:
+    DATA_FOLDER = Path.cwd() / ".nearai"
+    DATA_FOLDER.mkdir(parents=True, exist_ok=True)
 CONFIG_FILE = DATA_FOLDER / "config.json"
 LOCAL_CONFIG_FILE = Path(".nearai") / "config.json"
 REPO_FOLDER = Path(__file__).parent.parent

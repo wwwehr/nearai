@@ -1,6 +1,6 @@
 import logging
 
-from aws_runner.service import run_with_environment
+from nearai.aws_runner.service import run_with_environment
 
 from nearai.shared.auth_data import AuthData
 

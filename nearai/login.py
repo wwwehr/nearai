@@ -10,7 +10,7 @@ from pathlib import Path
 
 import nearai.shared.near.sign as near
 from nearai.shared.config import load_config_file, save_config_file
-from shared.auth_data import AuthData
+from nearai.shared.auth_data import AuthData
 
 RECIPIENT = "ai.near"
 MESSAGE = "Welcome to NEAR AI"

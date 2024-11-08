@@ -7,8 +7,8 @@ import openai
 from pydantic import BaseModel
 
 from nearai.openapi_client import ApiClient, Configuration
-from nearai.shared.shared.auth_data import AuthData
-from shared.client_config import DEFAULT_PROVIDER, DEFAULT_PROVIDER_MODEL, ClientConfig
+from nearai.shared.auth_data import AuthData
+from nearai.shared.client_config import DEFAULT_PROVIDER, DEFAULT_PROVIDER_MODEL, ClientConfig
 
 DATA_FOLDER = Path.home() / ".nearai"
 DATA_FOLDER.mkdir(parents=True, exist_ok=True)

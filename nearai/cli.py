@@ -40,8 +40,8 @@ from nearai.shared.client_config import (
     DEFAULT_PROVIDER,
 )
 from nearai.tensorboard_feed import TensorboardCli
-from shared.naming import NamespacedName, create_registry_name
-from shared.provider_models import ProviderModels, get_provider_namespaced_model
+from nearai.shared.naming import NamespacedName, create_registry_name
+from nearai.shared.provider_models import ProviderModels, get_provider_namespaced_model
 
 
 class RegistryCli:

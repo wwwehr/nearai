@@ -7,7 +7,7 @@ from subprocess import call
 from typing import Optional
 
 import boto3
-from aws_runner.partial_near_client import PartialNearClient
+from nearai.aws_runner.partial_near_client import PartialNearClient
 from nearai.agents.agent import Agent
 from nearai.agents.environment import Environment
 from nearai.shared.auth_data import AuthData

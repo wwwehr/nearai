@@ -3,7 +3,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
-from aws_runner.service import EnvironmentRun, start_with_environment
+from nearai.aws_runner.service import EnvironmentRun, start_with_environment
 from litellm import Choices, ModelResponse
 from litellm.types.completion import ChatCompletionMessageParam
 

@@ -12,6 +12,7 @@ import {
 } from '@near-pagoda/ui';
 import {
   BookOpenText,
+  CaretDown,
   ChatCircleDots,
   Cube,
   Gear,
@@ -23,6 +24,7 @@ import {
   User,
   X,
 } from '@phosphor-icons/react';
+import * as NavigationMenu from '@radix-ui/react-navigation-menu';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -34,7 +36,6 @@ import { useAuthStore } from '~/stores/auth';
 import { useWalletStore } from '~/stores/wallet';
 
 import s from './Navigation.module.scss';
-import * as NavigationMenu from '@radix-ui/react-navigation-menu';
 
 const agentsNav = {
   label: 'Agents',
@@ -42,7 +43,6 @@ const agentsNav = {
   icon: ENTRY_CATEGORY_LABELS.agent.icon,
 };
 
-// @ts-ignore
 const resourcesNav = [
   {
     label: 'Datasets',
@@ -121,58 +121,42 @@ export const Navigation = () => {
       </Link>
 
       <BreakpointDisplay show="larger-than-tablet" className={s.breakpoint}>
-        <NavigationMenu.Root className={s.NavigationMenuRoot}>
-          <NavigationMenu.List asChild>
-            <Flex align="center" gap="m">
-              {navItems.map((item) => (
-                <NavigationMenu.Item asChild>
+        <NavigationMenu.Root className={s.menu} delayDuration={0}>
+          <NavigationMenu.List>
+            {navItems.map((item) => (
+              <NavigationMenu.Item key={item.path}>
+                <NavigationMenu.Link
+                  asChild
+                  active={path.startsWith(item.path)}
+                >
+                  <Link href={item.path} key={item.path}>
+                    {item.label}
+                  </Link>
+                </NavigationMenu.Link>
+              </NavigationMenu.Item>
+            ))}
+
+            <NavigationMenu.Item>
+              <NavigationMenu.Trigger>
+                Resources
+                <SvgIcon size="xs" icon={<CaretDown />} />
+              </NavigationMenu.Trigger>
+
+              <NavigationMenu.Content className={s.menuDropdown}>
+                {resourcesNav.map((item) => (
                   <NavigationMenu.Link
-                    className={s.item}
+                    key={item.path}
                     asChild
                     active={path.startsWith(item.path)}
                   >
-                    <Link
-                      href={item.path}
-                      key={item.path}
-                      data-active={path.startsWith(item.path)}
-                    >
+                    <Link href={item.path} key={item.path}>
+                      <SvgIcon icon={item.icon} />
                       {item.label}
                     </Link>
                   </NavigationMenu.Link>
-                </NavigationMenu.Item>
-              ))}
-              <NavigationMenu.Item className={s.item}>
-                <NavigationMenu.Trigger asChild>
-                  <span className={s.dropdownTriggerItem}>
-                    Resources
-                    <div className={s.ViewportPosition}>
-                      <NavigationMenu.Viewport
-                        className={s.NavigationMenuViewport}
-                      />
-                    </div>
-                  </span>
-                </NavigationMenu.Trigger>
-                <NavigationMenu.Content className={s.NavigationMenuContent}>
-                  {resourcesNav.map((item) => (
-                    <NavigationMenu.Link
-                      key={item.path}
-                      className={s.dropdownItem}
-                      asChild
-                      active={path.startsWith(item.path)}
-                    >
-                      <Link
-                        href={item.path}
-                        key={item.path}
-                        data-active={path.startsWith(item.path)}
-                      >
-                        <SvgIcon icon={item.icon} />
-                        {item.label}
-                      </Link>
-                    </NavigationMenu.Link>
-                  ))}
-                </NavigationMenu.Content>
-              </NavigationMenu.Item>
-            </Flex>
+                ))}
+              </NavigationMenu.Content>
+            </NavigationMenu.Item>
           </NavigationMenu.List>
         </NavigationMenu.Root>
       </BreakpointDisplay>

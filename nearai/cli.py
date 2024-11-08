@@ -529,6 +529,8 @@ class AgentCli:
         message_list = list(messages)
         if message_list:
             for msg in message_list:
+                if msg.metadata and msg.metadata.get("message_type"):
+                    continue
                 if msg.role == "assistant":
                     print(f"Assistant: {msg.content[0].text.value}")
             last_message_id = message_list[-1].id

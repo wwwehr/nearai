@@ -20,7 +20,6 @@ from nearai.openapi_client.api.delegation_api import DelegationApi
 from nearai.openapi_client.models.entry_location import EntryLocation
 from nearai.openapi_client.models.job import Job
 from nearai.openapi_client.models.job_status import JobStatus
-from nearai.openapi_client.models.jobs import Jobs
 from nearai.registry import registry
 from nearai.shared.auth_data import AuthData
 from pydantic import BaseModel
@@ -199,7 +198,7 @@ def run_worker():
         return "OK"
 
     @app.get("/current_job")
-    async def get_current_job() -> Optional[Jobs]:
+    async def get_current_job() -> Optional[Job]:
         return current_job
 
     @app.post("/execute")

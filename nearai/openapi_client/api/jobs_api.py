@@ -18,6 +18,7 @@ from typing_extensions import Annotated
 
 from pydantic import StrictBytes, StrictInt, StrictStr
 from typing import Any, List, Optional, Union
+from nearai.openapi_client.models.body_add_job_v1_jobs_add_job_post import BodyAddJobV1JobsAddJobPost
 from nearai.openapi_client.models.job import Job
 from nearai.openapi_client.models.job_status import JobStatus
 from nearai.openapi_client.models.selected_job import SelectedJob

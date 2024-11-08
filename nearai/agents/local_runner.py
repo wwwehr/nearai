@@ -1,7 +1,6 @@
 import logging
 
 from nearai.aws_runner.service import run_with_environment
-
 from nearai.shared.auth_data import AuthData
 
 DEFAULT_OUTPUT_PATH = "/tmp/nearai/conversations/"

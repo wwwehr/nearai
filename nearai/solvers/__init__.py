@@ -3,10 +3,10 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
-from nearai.aws_runner.service import EnvironmentRun, start_with_environment
 from litellm import Choices, ModelResponse
 from litellm.types.completion import ChatCompletionMessageParam
 
+from nearai.aws_runner.service import EnvironmentRun, start_with_environment
 from nearai.config import CONFIG, get_hub_client
 from nearai.shared.agents.agent import Agent
 from nearai.shared.inference_client import InferenceClient

@@ -16,14 +16,14 @@ from nearai.config import CONFIG, save_config_file
 from nearai.delegation import OnBehalfOf
 from nearai.jobs import JobsApi
 from nearai.lib import parse_location
+from nearai.openapi_client.api.delegation_api import DelegationApi
+from nearai.openapi_client.models.entry_location import EntryLocation
+from nearai.openapi_client.models.job import Job
+from nearai.openapi_client.models.job_status import JobStatus
+from nearai.openapi_client.models.jobs import Jobs
 from nearai.registry import registry
-from openapi_client.api.delegation_api import DelegationApi
-from openapi_client.models.entry_location import EntryLocation
-from openapi_client.models.job import Job
-from openapi_client.models.job_status import JobStatus
-from openapi_client.models.jobs import Jobs
+from nearai.shared.auth_data import AuthData
 from pydantic import BaseModel
-from shared.auth_data import AuthData
 
 app = typer.Typer()
 loop = asyncio.get_event_loop()

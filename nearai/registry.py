@@ -12,7 +12,6 @@ from openapi_client.api.registry_api import (
     RegistryApi,
 )
 from openapi_client.exceptions import BadRequestException, NotFoundException
-from shared.naming import NamespacedName, get_canonical_name
 from tqdm import tqdm
 
 # Note: We should import nearai.config on this file to make sure the method setup_api_client is called at least once
@@ -20,6 +19,7 @@ from tqdm import tqdm
 #       API client that is used by Registry API.
 from nearai.config import CONFIG, DATA_FOLDER
 from nearai.lib import check_metadata, parse_location
+from nearai.shared.naming import NamespacedName, get_canonical_name
 
 REGISTRY_FOLDER = "registry"
 

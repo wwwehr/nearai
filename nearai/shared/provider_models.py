@@ -3,8 +3,8 @@ from typing import Dict, List, Optional, Tuple, cast
 
 import requests
 
-from shared.client_config import DEFAULT_PROVIDER, ClientConfig
-from shared.naming import NamespacedName
+from nearai.shared.client_config import DEFAULT_PROVIDER, ClientConfig
+from nearai.shared.naming import NamespacedName
 
 PROVIDER_MODEL_SEP = "::"
 

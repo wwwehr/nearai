@@ -9,8 +9,8 @@ import base58
 import nacl.signing
 import requests
 
-from shared.cache import mem_cache_with_timeout
-from shared.near.serializer import BinarySerializer
+from nearai.shared.cache import mem_cache_with_timeout
+from nearai.shared.near.serializer import BinarySerializer
 
 ED_PREFIX = "ed25519:"  # noqa: N806
 logger = logging.getLogger(__name__)

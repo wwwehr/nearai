@@ -1,7 +1,7 @@
 import unittest
 
-from shared.naming import NamespacedName
-from shared.provider_models import get_provider_namespaced_model
+from nearai.shared.naming import NamespacedName
+from nearai.shared.provider_models import get_provider_namespaced_model
 
 
 class TestGetProviderNamespacedModel(unittest.TestCase):

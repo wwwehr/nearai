@@ -4,7 +4,7 @@ from typing import Optional
 import openai
 from pydantic import BaseModel
 
-from shared.auth_data import AuthData
+from nearai.shared.auth_data import AuthData
 
 DEFAULT_TIMEOUT = 60 * 5
 DEFAULT_MAX_RETRIES = 3

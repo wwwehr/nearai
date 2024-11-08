@@ -13,8 +13,8 @@ from openai.types.beta.vector_store import VectorStore
 from openai.types.beta.vector_stores import VectorStoreFile
 from openai.types.file_object import FileObject
 
-from shared.client_config import DEFAULT_MODEL_MAX_TOKENS, DEFAULT_MODEL_TEMPERATURE, ClientConfig
-from shared.models import (
+from nearai.shared.client_config import DEFAULT_MODEL_MAX_TOKENS, DEFAULT_MODEL_TEMPERATURE, ClientConfig
+from nearai.shared.models import (
     AutoFileChunkingStrategyParam,
     ChunkingStrategy,
     ExpiresAfter,
@@ -23,7 +23,7 @@ from shared.models import (
     SimilaritySearch,
     StaticFileChunkingStrategyParam,
 )
-from shared.provider_models import ProviderModels
+from nearai.shared.provider_models import ProviderModels
 
 
 class InferenceClient(object):

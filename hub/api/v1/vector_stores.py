@@ -3,16 +3,16 @@ import logging
 import boto3
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import JSONResponse
-from openai import BaseModel
-from openai.types.beta.vector_store import ExpiresAfter as OpenAIExpiresAfter
-from openai.types.beta.vector_store import FileCounts, VectorStore
-from shared.models import (
+from nearai.shared.models import (
     CreateVectorStoreFromSourceRequest,
     CreateVectorStoreRequest,
     GitHubSource,
     GitLabSource,
     VectorStoreFileCreate,
 )
+from openai import BaseModel
+from openai.types.beta.vector_store import ExpiresAfter as OpenAIExpiresAfter
+from openai.types.beta.vector_store import FileCounts, VectorStore
 
 from hub.api.v1.auth import AuthToken, get_auth
 from hub.api.v1.sql import SqlClient

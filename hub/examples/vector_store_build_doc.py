@@ -6,8 +6,8 @@ import tempfile
 import time
 from typing import Any, Dict, List
 
-from shared.client_config import ClientConfig
-from shared.inference_client import InferenceClient
+from nearai.shared.client_config import ClientConfig
+from nearai.shared.inference_client import InferenceClient
 from nearai.config import Config, load_config_file
 
 # BUILD VECTOR STORE FROM FILES + USE IT FOR LLM RESPONSE

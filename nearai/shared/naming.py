@@ -1,6 +1,6 @@
 import re
 
-from shared.client_config import DEFAULT_NAMESPACE
+from nearai.shared.client_config import DEFAULT_NAMESPACE
 
 
 def get_canonical_name(name: str) -> str:

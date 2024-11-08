@@ -4,9 +4,9 @@ from os import getenv
 from typing import Callable
 
 from dotenv import load_dotenv
+from nearai.shared.client_config import DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT
 from openai import OpenAI
 from pydantic import BaseModel
-from shared.client_config import DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT
 
 load_dotenv()
 

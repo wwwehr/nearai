@@ -1,6 +1,6 @@
 import unittest
 
-from shared.naming import get_canonical_name
+from nearai.shared.naming import get_canonical_name
 
 
 class TestGetCanonicalName(unittest.TestCase):

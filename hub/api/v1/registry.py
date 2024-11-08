@@ -12,8 +12,8 @@ import botocore.exceptions
 from dotenv import load_dotenv
 from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
+from nearai.shared.client_config import DEFAULT_NAMESPACE
 from pydantic import BaseModel
-from shared.client_config import DEFAULT_NAMESPACE
 from sqlmodel import delete, select, text
 
 from hub.api.v1.auth import AuthToken, get_auth, get_optional_auth

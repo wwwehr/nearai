@@ -1488,15 +1488,30 @@
         ],
         "summary": "Add Job",
         "operationId": "add_job_v1_jobs_add_job_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "worker_kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/WorkerKind"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/Body_add_job_v1_jobs_add_job_post"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -1519,12 +1534,7 @@
               }
             }
           }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
+        }
       }
     },
     "/v1/jobs/get_pending_job": {
@@ -1547,6 +1557,14 @@
             "schema": {
               "type": "string",
               "title": "Worker Id"
+            }
+          },
+          {
+            "name": "worker_kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/WorkerKind"
             }
           }
         ],
@@ -3032,6 +3050,10 @@
             ],
             "title": "Worker Id"
           },
+          "worker_kind": {
+            "type": "string",
+            "title": "Worker Kind"
+          },
           "info": {
             "type": "object",
             "title": "Info"
@@ -3045,7 +3067,8 @@
         "required": [
           "registry_path",
           "account_id",
-          "status"
+          "status",
+          "worker_kind"
         ],
         "title": "Job"
       },
@@ -3235,6 +3258,14 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WorkerKind": {
+        "type": "string",
+        "enum": [
+          "GPU",
+          "CPU"
+        ],
+        "title": "WorkerKind"
       }
     },
     "securitySchemes": {

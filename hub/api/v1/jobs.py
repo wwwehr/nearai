@@ -23,8 +23,14 @@ class JobStatus(Enum):
     COMPLETED = "completed"
 
 
+class WorkerKind(Enum):
+    GPU = "GPU"
+    CPU = "CPU"
+
+
 @v1_router.post("/add_job")
 async def add_job(
+    worker_kind: WorkerKind,
     entry: RegistryEntry = Depends(get_read_access),
     auth: AuthToken = Depends(requires_permission(PermissionVariant.SUBMIT_JOB)),
 ) -> Job:
@@ -32,6 +38,7 @@ async def add_job(
         job = Job(
             account_id=auth.account_id,
             registry_path=entry.to_location().to_str(),
+            worker_kind=worker_kind.value,
             status=JobStatus.PENDING.value,
         )
         session.add(job)
@@ -50,12 +57,17 @@ class SelectedJob(BaseModel):
 @v1_router.post("/get_pending_job")
 def get_pending_job(
     worker_id: str,
+    worker_kind: WorkerKind,
     auth: AuthToken = Depends(requires_permission(PermissionVariant.WORKER)),
 ) -> SelectedJob:
     with get_session() as session:
         for _ in range(5):
             job = session.exec(
-                select(Job).where(Job.status == JobStatus.PENDING.value).order_by(asc(Job.id)).limit(1)
+                select(Job)
+                .where(Job.status == JobStatus.PENDING.value)
+                .where(Job.worker_kind == worker_kind.value)
+                .order_by(asc(Job.id))
+                .limit(1)
             ).first()
 
             if job is None:

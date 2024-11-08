@@ -76,3 +76,4 @@ from openapi_client.models.selected_job import SelectedJob
 from openapi_client.models.stop import Stop
 from openapi_client.models.validation_error import ValidationError
 from openapi_client.models.validation_error_loc_inner import ValidationErrorLocInner
+from openapi_client.models.worker_kind import WorkerKind

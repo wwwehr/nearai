@@ -120,6 +120,7 @@ class Job(SQLModel, table=True):
     account_id: str = Field(nullable=False)
     status: str = Field(nullable=False)
     worker_id: Optional[str] = Field(default=None)
+    worker_kind: str = Field(nullable=False)
     info: Dict = Field(default_factory=dict, sa_column=Column(JSON))
     result: Dict = Field(default_factory=dict, sa_column=Column(JSON))
 

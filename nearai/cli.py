@@ -19,7 +19,7 @@ from openapi_client.api.benchmark_api import BenchmarkApi
 from openapi_client.api.default_api import DefaultApi
 from openapi_client.api.delegation_api import DelegationApi
 from openapi_client.api.evaluation_api import EvaluationApi
-from openapi_client.api.jobs_api import JobsApi
+from openapi_client.api.jobs_api import JobsApi, WorkerKind
 from openapi_client.api.permissions_api import PermissionsApi
 from openapi_client.models.body_add_job_v1_jobs_add_job_post import BodyAddJobV1JobsAddJobPost
 from shared.client_config import (
@@ -878,10 +878,12 @@ class CLI:
         self.vllm = VllmCli()
         self.permission = PermissionCli()
 
-    def submit(self, path: Optional[str] = None):
+    def submit(self, path: Optional[str] = None, worker_kind: str = "gpu"):
         """Submit a task to be executed by a worker."""
         if path is None:
             path = os.getcwd()
+
+        worker_kind_t = WorkerKind(worker_kind)
 
         location = self.registry.upload(path)
 
@@ -893,7 +895,10 @@ class CLI:
 
         try:
             client = JobsApi()
-            client.add_job_v1_jobs_add_job_post(BodyAddJobV1JobsAddJobPost(entry_location=location))
+            client.add_job_v1_jobs_add_job_post(
+                worker_kind_t,
+                BodyAddJobV1JobsAddJobPost(entry_location=location),
+            )
         except Exception as e:
             print("Error: ", e)
             delegation_api.revoke_delegation_v1_delegation_revoke_delegation_post(

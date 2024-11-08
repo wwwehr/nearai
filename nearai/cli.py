@@ -15,12 +15,6 @@ from typing import Any, Dict, List, Optional, Union
 import boto3
 import fire
 from openai.types.beta.threads.message import Attachment
-from openapi_client import EntryLocation, EntryMetadataInput
-from openapi_client.api.benchmark_api import BenchmarkApi
-from openapi_client.api.default_api import DefaultApi
-from openapi_client.api.evaluation_api import EvaluationApi
-from openapi_client.api.jobs_api import JobsApi
-from openapi_client.api.permissions_api import PermissionsApi
 from tabulate import tabulate
 
 from nearai.agents.local_runner import LocalRunner
@@ -31,6 +25,12 @@ from nearai.config import (
 )
 from nearai.finetune import FinetuneCli
 from nearai.lib import check_metadata, parse_location, parse_tags
+from nearai.openapi_client import EntryLocation, EntryMetadataInput
+from nearai.openapi_client.api.benchmark_api import BenchmarkApi
+from nearai.openapi_client.api.default_api import DefaultApi
+from nearai.openapi_client.api.evaluation_api import EvaluationApi
+from nearai.openapi_client.api.jobs_api import JobsApi
+from nearai.openapi_client.api.permissions_api import PermissionsApi
 from nearai.registry import get_registry_folder, registry
 from nearai.shared.client_config import (
     DEFAULT_MODEL,

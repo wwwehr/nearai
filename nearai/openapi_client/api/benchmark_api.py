@@ -18,12 +18,12 @@ from typing_extensions import Annotated
 
 from pydantic import StrictBool, StrictInt, StrictStr
 from typing import Any, List, Optional
-from openapi_client.models.benchmark_output import BenchmarkOutput
-from openapi_client.models.benchmark_result_output import BenchmarkResultOutput
+from nearai.openapi_client.models.benchmark_output import BenchmarkOutput
+from nearai.openapi_client.models.benchmark_result_output import BenchmarkResultOutput
 
-from openapi_client.api_client import ApiClient, RequestSerialized
-from openapi_client.api_response import ApiResponse
-from openapi_client.rest import RESTResponseType
+from nearai.openapi_client.api_client import ApiClient, RequestSerialized
+from nearai.openapi_client.api_response import ApiResponse
+from nearai.openapi_client.rest import RESTResponseType
 
 
 class BenchmarkApi:

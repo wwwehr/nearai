@@ -1,7 +1,7 @@
 import json
 from typing import Any, List, Optional
 
-from openapi_client.api.jobs_api import Job, JobsApi, JobStatus, SelectedJob
+from nearai.openapi_client.api.jobs_api import Job, JobsApi, JobStatus, SelectedJob
 
 
 def get_pending_job(worker_id: str) -> SelectedJob:

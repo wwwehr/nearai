@@ -19,8 +19,8 @@ import json
 
 from pydantic import BaseModel, ConfigDict, StrictBool, StrictFloat, StrictInt, StrictStr
 from typing import Any, ClassVar, Dict, List, Optional, Union
-from openapi_client.models.response_format import ResponseFormat
-from openapi_client.models.stop import Stop
+from nearai.openapi_client.models.response_format import ResponseFormat
+from nearai.openapi_client.models.stop import Stop
 from typing import Optional, Set
 from typing_extensions import Self
 

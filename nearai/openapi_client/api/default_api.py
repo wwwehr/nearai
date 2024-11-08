@@ -18,12 +18,12 @@ from typing_extensions import Annotated
 
 from pydantic import StrictStr
 from typing import Any
-from openapi_client.models.request import Request
-from openapi_client.models.revoke_nonce import RevokeNonce
+from nearai.openapi_client.models.request import Request
+from nearai.openapi_client.models.revoke_nonce import RevokeNonce
 
-from openapi_client.api_client import ApiClient, RequestSerialized
-from openapi_client.api_response import ApiResponse
-from openapi_client.rest import RESTResponseType
+from nearai.openapi_client.api_client import ApiClient, RequestSerialized
+from nearai.openapi_client.api_response import ApiResponse
+from nearai.openapi_client.rest import RESTResponseType
 
 
 class DefaultApi:

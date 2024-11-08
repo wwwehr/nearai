@@ -19,11 +19,11 @@ from typing_extensions import Annotated
 from datetime import datetime
 from pydantic import StrictStr
 from typing import Any, List
-from openapi_client.models.delegation import Delegation
+from nearai.openapi_client.models.delegation import Delegation
 
-from openapi_client.api_client import ApiClient, RequestSerialized
-from openapi_client.api_response import ApiResponse
-from openapi_client.rest import RESTResponseType
+from nearai.openapi_client.api_client import ApiClient, RequestSerialized
+from nearai.openapi_client.api_response import ApiResponse
+from nearai.openapi_client.rest import RESTResponseType
 
 
 class DelegationApi:

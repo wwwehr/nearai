@@ -1,18 +1,18 @@
 import re
 from typing import List
 
-from nearai.shared.auth_data import AuthData
-from openapi_client import (
+from nearai.openapi_client import (
     BodyDownloadEnvironmentV1DownloadEnvironmentPost,
     BodyDownloadFileV1RegistryDownloadFilePost,
     BodyDownloadMetadataV1RegistryDownloadMetadataPost,
     BodyListFilesV1RegistryListFilesPost,
     BodyUploadMetadataV1RegistryUploadMetadataPost,
 )
-from openapi_client.api.agents_assistants_api import AgentsAssistantsApi
-from openapi_client.api.registry_api import RegistryApi
-from openapi_client.api_client import ApiClient
-from openapi_client.configuration import Configuration
+from nearai.openapi_client.api.agents_assistants_api import AgentsAssistantsApi
+from nearai.openapi_client.api.registry_api import RegistryApi
+from nearai.openapi_client.api_client import ApiClient
+from nearai.openapi_client.configuration import Configuration
+from nearai.shared.auth_data import AuthData
 
 ENVIRONMENT_FILENAME = "environment.tar.gz"
 

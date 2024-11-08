@@ -4,9 +4,9 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
 import openai
-from openapi_client import ApiClient, Configuration
 from pydantic import BaseModel
 
+from nearai.openapi_client import ApiClient, Configuration
 from nearai.shared.shared.auth_data import AuthData
 from shared.client_config import DEFAULT_PROVIDER, DEFAULT_PROVIDER_MODEL, ClientConfig
 

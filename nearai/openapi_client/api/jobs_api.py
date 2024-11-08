@@ -18,13 +18,13 @@ from typing_extensions import Annotated
 
 from pydantic import StrictBytes, StrictInt, StrictStr
 from typing import Any, List, Optional, Union
-from openapi_client.models.job import Job
-from openapi_client.models.job_status import JobStatus
-from openapi_client.models.selected_job import SelectedJob
+from nearai.openapi_client.models.job import Job
+from nearai.openapi_client.models.job_status import JobStatus
+from nearai.openapi_client.models.selected_job import SelectedJob
 
-from openapi_client.api_client import ApiClient, RequestSerialized
-from openapi_client.api_response import ApiResponse
-from openapi_client.rest import RESTResponseType
+from nearai.openapi_client.api_client import ApiClient, RequestSerialized
+from nearai.openapi_client.api_response import ApiResponse
+from nearai.openapi_client.rest import RESTResponseType
 
 
 class JobsApi:

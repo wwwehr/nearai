@@ -19,12 +19,12 @@ from typing_extensions import Annotated
 from pydantic import Field, StrictInt
 from typing import Any, Optional
 from typing_extensions import Annotated
-from openapi_client.models.create_hub_secret_request import CreateHubSecretRequest
-from openapi_client.models.remove_hub_secret_request import RemoveHubSecretRequest
+from nearai.openapi_client.models.create_hub_secret_request import CreateHubSecretRequest
+from nearai.openapi_client.models.remove_hub_secret_request import RemoveHubSecretRequest
 
-from openapi_client.api_client import ApiClient, RequestSerialized
-from openapi_client.api_response import ApiResponse
-from openapi_client.rest import RESTResponseType
+from nearai.openapi_client.api_client import ApiClient, RequestSerialized
+from nearai.openapi_client.api_response import ApiResponse
+from nearai.openapi_client.rest import RESTResponseType
 
 
 class HubSecretsApi:

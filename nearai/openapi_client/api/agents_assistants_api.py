@@ -18,12 +18,12 @@ from typing_extensions import Annotated
 
 from pydantic import StrictStr
 from typing import Any
-from openapi_client.models.body_download_environment_v1_download_environment_post import BodyDownloadEnvironmentV1DownloadEnvironmentPost
-from openapi_client.models.create_thread_and_run_request import CreateThreadAndRunRequest
+from nearai.openapi_client.models.body_download_environment_v1_download_environment_post import BodyDownloadEnvironmentV1DownloadEnvironmentPost
+from nearai.openapi_client.models.create_thread_and_run_request import CreateThreadAndRunRequest
 
-from openapi_client.api_client import ApiClient, RequestSerialized
-from openapi_client.api_response import ApiResponse
-from openapi_client.rest import RESTResponseType
+from nearai.openapi_client.api_client import ApiClient, RequestSerialized
+from nearai.openapi_client.api_response import ApiResponse
+from nearai.openapi_client.rest import RESTResponseType
 
 
 class AgentsAssistantsApi:

@@ -19,7 +19,7 @@ import json
 
 from pydantic import BaseModel, ConfigDict, StrictStr
 from typing import Any, ClassVar, Dict, List, Optional
-from openapi_client.models.input import Input
+from nearai.openapi_client.models.input import Input
 from typing import Optional, Set
 from typing_extensions import Self
 

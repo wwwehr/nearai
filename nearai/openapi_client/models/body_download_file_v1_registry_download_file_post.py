@@ -19,7 +19,7 @@ import json
 
 from pydantic import BaseModel, ConfigDict, StrictStr
 from typing import Any, ClassVar, Dict, List
-from openapi_client.models.entry_location import EntryLocation
+from nearai.openapi_client.models.entry_location import EntryLocation
 from typing import Optional, Set
 from typing_extensions import Self
 

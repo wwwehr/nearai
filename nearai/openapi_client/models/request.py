@@ -19,10 +19,10 @@ import pprint
 import re  # noqa: F401
 from pydantic import BaseModel, ConfigDict, Field, StrictStr, ValidationError, field_validator
 from typing import Optional
-from openapi_client.models.chat_completions_request import ChatCompletionsRequest
-from openapi_client.models.completions_request import CompletionsRequest
-from openapi_client.models.embeddings_request import EmbeddingsRequest
-from openapi_client.models.image_generation_request import ImageGenerationRequest
+from nearai.openapi_client.models.chat_completions_request import ChatCompletionsRequest
+from nearai.openapi_client.models.completions_request import CompletionsRequest
+from nearai.openapi_client.models.embeddings_request import EmbeddingsRequest
+from nearai.openapi_client.models.image_generation_request import ImageGenerationRequest
 from typing import Union, Any, List, Set, TYPE_CHECKING, Optional, Dict
 from typing_extensions import Literal, Self
 from pydantic import Field

@@ -6,10 +6,10 @@ from itertools import islice
 from typing import Any, Callable, Dict, Optional, Tuple, Union
 
 from datasets import Dataset, DatasetDict  # type: ignore[attr-defined]
-from openapi_client.api.benchmark_api import BenchmarkApi
 from tqdm import tqdm
 
 from nearai.evaluation import record_evaluation_metrics, record_single_score_evaluation
+from nearai.openapi_client.api.benchmark_api import BenchmarkApi
 from nearai.solvers import SolverScoringMethod, SolverStrategy
 
 

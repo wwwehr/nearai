@@ -17,11 +17,11 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from typing_extensions import Annotated
 
 from pydantic import StrictStr
-from openapi_client.models.create_thread_and_run_request import CreateThreadAndRunRequest
+from nearai.openapi_client.models.create_thread_and_run_request import CreateThreadAndRunRequest
 
-from openapi_client.api_client import ApiClient, RequestSerialized
-from openapi_client.api_response import ApiResponse
-from openapi_client.rest import RESTResponseType
+from nearai.openapi_client.api_client import ApiClient, RequestSerialized
+from nearai.openapi_client.api_response import ApiResponse
+from nearai.openapi_client.rest import RESTResponseType
 
 
 class AssistantsApi:

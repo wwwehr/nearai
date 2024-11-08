@@ -38,7 +38,7 @@ class AssistantsApi:
 
 
     @validate_call
-    def run_agent_v1_agent_runs_post(
+    def run_agent_v1_agent_runs_post_1(
         self,
         create_thread_and_run_request: CreateThreadAndRunRequest,
         _request_timeout: Union[
@@ -82,7 +82,7 @@ class AssistantsApi:
         :return: Returns the result object.
         """ # noqa: E501
 
-        _param = self._run_agent_v1_agent_runs_post_serialize(
+        _param = self._run_agent_v1_agent_runs_post_1_serialize(
             create_thread_and_run_request=create_thread_and_run_request,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -106,7 +106,7 @@ class AssistantsApi:
 
 
     @validate_call
-    def run_agent_v1_agent_runs_post_with_http_info(
+    def run_agent_v1_agent_runs_post_1_with_http_info(
         self,
         create_thread_and_run_request: CreateThreadAndRunRequest,
         _request_timeout: Union[
@@ -150,7 +150,7 @@ class AssistantsApi:
         :return: Returns the result object.
         """ # noqa: E501
 
-        _param = self._run_agent_v1_agent_runs_post_serialize(
+        _param = self._run_agent_v1_agent_runs_post_1_serialize(
             create_thread_and_run_request=create_thread_and_run_request,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -174,7 +174,7 @@ class AssistantsApi:
 
 
     @validate_call
-    def run_agent_v1_agent_runs_post_without_preload_content(
+    def run_agent_v1_agent_runs_post_1_without_preload_content(
         self,
         create_thread_and_run_request: CreateThreadAndRunRequest,
         _request_timeout: Union[
@@ -218,7 +218,7 @@ class AssistantsApi:
         :return: Returns the result object.
         """ # noqa: E501
 
-        _param = self._run_agent_v1_agent_runs_post_serialize(
+        _param = self._run_agent_v1_agent_runs_post_1_serialize(
             create_thread_and_run_request=create_thread_and_run_request,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -237,7 +237,7 @@ class AssistantsApi:
         return response_data.response
 
 
-    def _run_agent_v1_agent_runs_post_serialize(
+    def _run_agent_v1_agent_runs_post_1_serialize(
         self,
         create_thread_and_run_request,
         _request_auth,
@@ -255,7 +255,9 @@ class AssistantsApi:
         _query_params: List[Tuple[str, str]] = []
         _header_params: Dict[str, Optional[str]] = _headers or {}
         _form_params: List[Tuple[str, str]] = []
-        _files: Dict[str, Union[str, bytes]] = {}
+        _files: Dict[
+            str, Union[str, bytes, List[str], List[bytes], List[Tuple[str, bytes]]]
+        ] = {}
         _body_params: Optional[bytes] = None
 
         # process the path parameters
@@ -313,7 +315,7 @@ class AssistantsApi:
 
 
     @validate_call
-    def run_agent_v1_threads_runs_post(
+    def run_agent_v1_threads_runs_post_1(
         self,
         create_thread_and_run_request: CreateThreadAndRunRequest,
         _request_timeout: Union[
@@ -357,7 +359,7 @@ class AssistantsApi:
         :return: Returns the result object.
         """ # noqa: E501
 
-        _param = self._run_agent_v1_threads_runs_post_serialize(
+        _param = self._run_agent_v1_threads_runs_post_1_serialize(
             create_thread_and_run_request=create_thread_and_run_request,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -381,7 +383,7 @@ class AssistantsApi:
 
 
     @validate_call
-    def run_agent_v1_threads_runs_post_with_http_info(
+    def run_agent_v1_threads_runs_post_1_with_http_info(
         self,
         create_thread_and_run_request: CreateThreadAndRunRequest,
         _request_timeout: Union[
@@ -425,7 +427,7 @@ class AssistantsApi:
         :return: Returns the result object.
         """ # noqa: E501
 
-        _param = self._run_agent_v1_threads_runs_post_serialize(
+        _param = self._run_agent_v1_threads_runs_post_1_serialize(
             create_thread_and_run_request=create_thread_and_run_request,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -449,7 +451,7 @@ class AssistantsApi:
 
 
     @validate_call
-    def run_agent_v1_threads_runs_post_without_preload_content(
+    def run_agent_v1_threads_runs_post_1_without_preload_content(
         self,
         create_thread_and_run_request: CreateThreadAndRunRequest,
         _request_timeout: Union[
@@ -493,7 +495,7 @@ class AssistantsApi:
         :return: Returns the result object.
         """ # noqa: E501
 
-        _param = self._run_agent_v1_threads_runs_post_serialize(
+        _param = self._run_agent_v1_threads_runs_post_1_serialize(
             create_thread_and_run_request=create_thread_and_run_request,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -512,7 +514,7 @@ class AssistantsApi:
         return response_data.response
 
 
-    def _run_agent_v1_threads_runs_post_serialize(
+    def _run_agent_v1_threads_runs_post_1_serialize(
         self,
         create_thread_and_run_request,
         _request_auth,
@@ -530,7 +532,9 @@ class AssistantsApi:
         _query_params: List[Tuple[str, str]] = []
         _header_params: Dict[str, Optional[str]] = _headers or {}
         _form_params: List[Tuple[str, str]] = []
-        _files: Dict[str, Union[str, bytes]] = {}
+        _files: Dict[
+            str, Union[str, bytes, List[str], List[bytes], List[Tuple[str, bytes]]]
+        ] = {}
         _body_params: Optional[bytes] = None
 
         # process the path parameters

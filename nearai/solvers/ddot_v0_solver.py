@@ -8,10 +8,10 @@ from typing import List, Tuple
 import httpx as hx
 import tenacity
 
+from nearai.agents.agent import Agent
 from nearai.agents.environment import Environment
 from nearai.config import CONFIG, DATA_FOLDER, get_hub_client
 from nearai.dataset import Dataset
-from nearai.shared.agents.agent import Agent
 from nearai.shared.client_config import ClientConfig
 from nearai.shared.inference_client import InferenceClient
 

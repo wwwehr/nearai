@@ -7,7 +7,7 @@ from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Pa
 from nearai.agents.local_runner import LocalRunner
 from nearai.config import load_config_file
 from nearai.shared.auth_data import AuthData
-from nearai.shared.emy.orm.attributes import flag_modified
+from nearai.shared.client_config import DEFAULT_PROVIDER_MODEL
 from openai import BaseModel
 from openai.types.beta.assistant_response_format_option_param import AssistantResponseFormatOptionParam
 from openai.types.beta.thread import Thread
@@ -18,6 +18,7 @@ from openai.types.beta.threads.message_update_params import MessageUpdateParams
 from openai.types.beta.threads.run import Run as OpenAIRun
 from openai.types.beta.threads.run_create_params import AdditionalMessage, TruncationStrategy
 from pydantic import Field
+from sqlalchemy.orm.attributes import flag_modified
 from sqlmodel import asc, desc, select
 
 from hub.api.v1.agent_routes import (
@@ -34,7 +35,6 @@ from hub.api.v1.models import get_session
 from hub.api.v1.routes import ChatCompletionsRequest, chat_completions, get_models_inner
 from hub.api.v1.scheduler import get_scheduler
 from hub.api.v1.sql import SqlClient
-from shared.client_config import DEFAULT_PROVIDER_MODEL
 
 threads_router = APIRouter(
     tags=["Threads"],

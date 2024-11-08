@@ -6,9 +6,9 @@ from typing import Any, Dict, List, Optional, Tuple, Union, cast
 from litellm import Choices, ModelResponse
 from litellm.types.completion import ChatCompletionMessageParam
 
+from nearai.agents.agent import Agent
 from nearai.aws_runner.service import EnvironmentRun, start_with_environment
 from nearai.config import CONFIG, get_hub_client
-from nearai.shared.agents.agent import Agent
 from nearai.shared.inference_client import InferenceClient
 from nearai.shared.provider_models import get_provider_namespaced_model
 

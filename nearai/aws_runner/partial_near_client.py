@@ -12,6 +12,8 @@ from nearai.openapi_client.api.agents_assistants_api import AgentsAssistantsApi
 from nearai.openapi_client.api.registry_api import RegistryApi
 from nearai.openapi_client.api_client import ApiClient
 from nearai.openapi_client.configuration import Configuration
+from nearai.openapi_client.models.entry_location import EntryLocation
+from nearai.openapi_client.models.entry_metadata_input import EntryMetadataInput
 from nearai.shared.auth_data import AuthData
 
 ENVIRONMENT_FILENAME = "environment.tar.gz"
@@ -46,14 +48,16 @@ class PartialNearClient:
     def get_file_from_registry(self, entry_location: dict, path: str):
         """Fetches a file from NearAI registry."""
         api_instance = RegistryApi(self._client)
-        result = api_instance.download_file_v1_registry_download_file_post(
-            BodyDownloadFileV1RegistryDownloadFilePost.from_dict(
-                dict(
-                    entry_location=entry_location,
-                    path=path,
-                )
+        body = BodyDownloadFileV1RegistryDownloadFilePost.from_dict(
+            dict(
+                entry_location=entry_location,
+                path=path,
             )
         )
+        assert (
+            body is not None
+        ), f"Unable to create request body for file download. Entry location: {entry_location}, Path: {path}"
+        result = api_instance.download_file_v1_registry_download_file_post(body)
         return result
 
     def list_files(self, entry_location: dict) -> List[str]:
@@ -62,9 +66,9 @@ class PartialNearClient:
         Return the relative paths to all files with respect to the root of the entry.
         """
         api_instance = RegistryApi(self._client)
-        result = api_instance.list_files_v1_registry_list_files_post(
-            BodyListFilesV1RegistryListFilesPost.from_dict(dict(entry_location=entry_location))
-        )
+        body = BodyListFilesV1RegistryListFilesPost.from_dict(dict(entry_location=entry_location))
+        assert body is not None, f"Unable to create request body for file listing. Entry location: {entry_location}"
+        result = api_instance.list_files_v1_registry_list_files_post(body)
         return [file.filename for file in result]
 
     def get_files_from_registry(self, entry_location: dict):
@@ -75,14 +79,16 @@ class PartialNearClient:
         results = []
 
         for path in files:
-            result = api_instance.download_file_v1_registry_download_file_post(
-                BodyDownloadFileV1RegistryDownloadFilePost.from_dict(
-                    dict(
-                        entry_location=entry_location,
-                        path=path,
-                    )
+            body = BodyDownloadFileV1RegistryDownloadFilePost.from_dict(
+                dict(
+                    entry_location=entry_location,
+                    path=path,
                 )
             )
+            assert (
+                body is not None
+            ), f"Unable to create request body for file download. Entry location: {entry_location}, Path: {path}"
+            result = api_instance.download_file_v1_registry_download_file_post(body)
             results.append({"filename": path, "content": result})
         return results
 
@@ -90,9 +96,9 @@ class PartialNearClient:
         """Fetches metadata for an agent from NearAI registry."""
         api_instance = RegistryApi(self._client)
         entry_location = self.parse_location(identifier)
-        result = api_instance.download_metadata_v1_registry_download_metadata_post(
-            BodyDownloadMetadataV1RegistryDownloadMetadataPost.from_dict(dict(entry_location=entry_location))
-        )
+        body = BodyDownloadMetadataV1RegistryDownloadMetadataPost.from_dict(dict(entry_location=entry_location))
+        assert body is not None, f"Unable to create request body for agent metadata. Entry location: {entry_location}"
+        result = api_instance.download_metadata_v1_registry_download_metadata_post(body)
         return result.to_dict()
 
     def get_agent(self, identifier):
@@ -121,10 +127,12 @@ class PartialNearClient:
         api_instance = RegistryApi(self._client)
 
         author = self.auth.account_id
-        name = metadata.get("name")
-        entry_location = {"namespace": author, "name": name, "version": "0"}
+        name = str(metadata.get("name"))
+        entry_location: dict[str, str] = {"namespace": author, "name": name, "version": "0"}
         api_instance.upload_metadata_v1_registry_upload_metadata_post(
-            BodyUploadMetadataV1RegistryUploadMetadataPost(metadata=metadata, entry_location=entry_location)
+            BodyUploadMetadataV1RegistryUploadMetadataPost(
+                metadata=EntryMetadataInput(**metadata), entry_location=EntryLocation(**entry_location)
+            )
         )
 
         api_instance.upload_file_v1_registry_upload_file_post(

@@ -194,13 +194,13 @@ def start_with_environment(
     print_system_log: bool = False,
 ) -> EnvironmentRun:
     """Initializes environment for agent runs."""
+    params = params or {}
     verbose: bool = params.get("verbose", True)
     if verbose:
         print(
             f"Running with:\nagents: {agents}\nparams: {params}"
             f"\nthread_id: {thread_id}\nrun_id: {run_id}\nauth: {auth}"
         )
-    params = params or {}
     api_url = str(params.get("api_url", DEFAULT_API_URL))
     user_env_vars: dict = params.get("user_env_vars", {})
     agent_env_vars: dict = params.get("agent_env_vars", {})

@@ -27,9 +27,11 @@ from nearai.lib import check_metadata, parse_location, parse_tags
 from nearai.openapi_client import EntryLocation, EntryMetadataInput
 from nearai.openapi_client.api.benchmark_api import BenchmarkApi
 from nearai.openapi_client.api.default_api import DefaultApi
+from nearai.openapi_client.api.delegation_api import DelegationApi
 from nearai.openapi_client.api.evaluation_api import EvaluationApi
 from nearai.openapi_client.api.jobs_api import JobsApi
 from nearai.openapi_client.api.permissions_api import PermissionsApi
+from nearai.openapi_client.models.body_add_job_v1_jobs_add_job_post import BodyAddJobV1JobsAddJobPost
 from nearai.registry import get_registry_folder, registry
 from nearai.shared.client_config import (
     DEFAULT_MODEL,
@@ -41,8 +43,6 @@ from nearai.shared.client_config import (
 from nearai.shared.naming import NamespacedName, create_registry_name
 from nearai.shared.provider_models import ProviderModels, get_provider_namespaced_model
 from nearai.tensorboard_feed import TensorboardCli
-from openapi_client.api.delegation_api import DelegationApi
-from openapi_client.models.body_add_job_v1_jobs_add_job_post import BodyAddJobV1JobsAddJobPost
 
 
 class RegistryCli:

@@ -22,7 +22,7 @@ from nearai.openapi_client.models.body_add_job_v1_jobs_add_job_post import BodyA
 from nearai.openapi_client.models.job import Job
 from nearai.openapi_client.models.job_status import JobStatus
 from nearai.openapi_client.models.selected_job import SelectedJob
-from openapi_client.models.worker_kind import WorkerKind
+from nearai.openapi_client.models.worker_kind import WorkerKind
 
 from nearai.openapi_client.api_client import ApiClient, RequestSerialized
 from nearai.openapi_client.api_response import ApiResponse

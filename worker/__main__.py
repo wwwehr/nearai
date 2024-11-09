@@ -16,21 +16,20 @@ from nearai.config import CONFIG, save_config_file
 from nearai.delegation import OnBehalfOf
 from nearai.jobs import JobsApi
 from nearai.lib import parse_location
+from nearai.openapi_client.api.delegation_api import DelegationApi
+from nearai.openapi_client.api.jobs_api import WorkerKind
+from nearai.openapi_client.models.entry_location import EntryLocation
+from nearai.openapi_client.models.job import Job
+from nearai.openapi_client.models.job_status import JobStatus
 from nearai.registry import registry
-from openapi_client.api.delegation_api import DelegationApi
-from openapi_client.api.jobs_api import WorkerKind
-from openapi_client.models.entry_location import EntryLocation
-from openapi_client.models.job import Job
-from openapi_client.models.job_status import JobStatus
-from openapi_client.models.jobs import Jobs
+from nearai.shared.auth_data import AuthData
 from pydantic import BaseModel
-from shared.auth_data import AuthData
 
 app = typer.Typer()
 loop = asyncio.get_event_loop()
 
 WORKER_KIND = WorkerKind(getenv("WORKER_KIND"))
-WORKER_PORT = int(getenv("WORKER_PORT"))
+WORKER_PORT = int(getenv("WORKER_PORT", 8000))
 WORKER_SLEEP_TIME = int(getenv("WORKER_SLEEP_TIME", 1))
 WORKER_URL = getenv("WORKER_URL", f"http://worker:{WORKER_PORT}")
 WORKER_JOB_TIMEOUT = int(getenv("WORKER_JOB_TIMEOUT", 60 * 60 * 6))  # 6 hours
@@ -92,14 +91,14 @@ async def run_scheduler():
 
                 if not selected_job.selected:
                     print(selected_job)
-                    print(f"Job is not selected: {selected_job.job.id}")
+                    print(f"Job is not selected: {selected_job.job}")
                     continue
                 if not selected_job.job:
                     print(selected_job)
-                    print(f"No job included in the response: {selected_job.job.id}")
+                    print(f"No job included in the response: {selected_job.job}")
                     continue
                 if not selected_job.registry_path:
-                    print(f"Job has no registry path: {selected_job.job.id}")
+                    print(f"Job has no registry path: {selected_job.job}")
                     JOBS_API.update_job_v1_jobs_update_job_post(
                         job_id=selected_job.job.id,
                         status=JobStatus.COMPLETED,
@@ -202,7 +201,7 @@ def run_worker():
         return "OK"
 
     @app.get("/current_job")
-    async def get_current_job() -> Optional[Jobs]:
+    async def get_current_job() -> Optional[Job]:
         return current_job
 
     @app.post("/execute")
@@ -216,6 +215,7 @@ def run_worker():
 
         ## Update auth so all actions are executed by the worker
         ## on behalf of the user
+        assert CONFIG.auth, "Auth data is not set"
         CONFIG.auth.on_behalf_of = job.account_id
         save_config_file(CONFIG.model_dump())
 
@@ -241,7 +241,12 @@ def run_worker():
 
             ## cleanup
             current_job = None  # noqa: F841
-            return JobResult(stdout=result.stdout, stderr=result.stderr, return_code=result.returncode)
+            try:
+                return JobResult(
+                    stdout=result.stdout.decode(), stderr=result.stderr.decode(), return_code=result.returncode
+                )
+            except Exception as e:
+                return JobResult(stdout="", stderr=str(e), return_code=1)
         except subprocess.TimeoutExpired:
             raise HTTPException(status_code=500, detail="Execution timed out.")  # noqa: B904
 

@@ -7,7 +7,7 @@ ARG NEARAISCHEDULER_NONCE
 RUN mkdir -p ~/.nearai && \
     cat <<EOF > ~/.nearai/config.json
 {
-    "api_url": "http://staging.api.near.ai",
+    "api_url": "https://redacted.api.near.ai",
     "auth": {
         "account_id": "${NEARAISCHEDULER_ACCOUNT_ID}",
         "signature": "${NEARAISCHEDULER_SIGNATURE}",
@@ -15,7 +15,8 @@ RUN mkdir -p ~/.nearai && \
         "callback_url": "http://localhost:47083/capture",
         "nonce": "${NEARAISCHEDULER_NONCE}",
         "recipient": "ai.near",
-        "message": "Welcome to NEAR AI"
+        "message": "Welcome to NEAR AI",
+        "on_behalf_of": null
     }
 }
 EOF

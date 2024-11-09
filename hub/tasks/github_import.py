@@ -8,7 +8,7 @@ from typing import Dict, Optional
 import chardet
 import requests
 from dotenv import load_dotenv
-from shared.models import GitHubSource
+from nearai.shared.models import GitHubSource
 
 from hub.api.v1.files import upload_file_to_storage
 from hub.api.v1.sql import SqlClient

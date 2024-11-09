@@ -5,13 +5,18 @@ from typing import Any, Callable, Dict, Optional
 
 import openai
 import urllib3
-from openapi_client import ApiClient, Configuration
 from pydantic import BaseModel
-from shared.auth_data import AuthData
-from shared.client_config import DEFAULT_PROVIDER, DEFAULT_PROVIDER_MODEL, ClientConfig
+
+from nearai.openapi_client import ApiClient, Configuration
+from nearai.shared.auth_data import AuthData
+from nearai.shared.client_config import DEFAULT_PROVIDER, DEFAULT_PROVIDER_MODEL, ClientConfig
 
 DATA_FOLDER = Path.home() / ".nearai"
-DATA_FOLDER.mkdir(parents=True, exist_ok=True)
+try:
+    DATA_FOLDER.mkdir(parents=True, exist_ok=True)
+except Exception:
+    DATA_FOLDER = Path.cwd() / ".nearai"
+    DATA_FOLDER.mkdir(parents=True, exist_ok=True)
 CONFIG_FILE = DATA_FOLDER / "config.json"
 LOCAL_CONFIG_FILE = Path(".nearai") / "config.json"
 REPO_FOLDER = Path(__file__).parent.parent

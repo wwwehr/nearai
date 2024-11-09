@@ -4,8 +4,8 @@ from typing import Optional
 
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from nearai.shared.near.sign import validate_nonce, verify_signed_message
 from pydantic import BaseModel, field_validator
-from shared.near.sign import validate_nonce, verify_signed_message
 from sqlmodel import select
 
 from hub.api.v1.exceptions import TokenValidationError

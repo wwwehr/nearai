@@ -353,6 +353,9 @@ SUPPORTED_MIME_TYPES = {
     "application/pdf": [".pdf"],
     "application/typescript": [".ts", ".tsx"],
     "application/yaml": [".yaml"],
+    "image/png": [".png"],
+    "image/jpeg": [".jpg"],
+    "image/gif": [".gif"]
 }
 
 SUPPORTED_TEXT_ENCODINGS = ["utf-8", "utf-16", "ascii"]

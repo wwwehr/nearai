@@ -192,6 +192,7 @@ exclude = [
     ".mypy_cache",
     ".ruff_cache",
     "__pypackages__",
+    "nearai/openapi_client",
 ]
 
 [[tool.mypy.overrides]]

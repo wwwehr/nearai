@@ -15,7 +15,6 @@ import {
   ArrowRight,
   ArrowSquareOut,
   Book,
-  Calendar,
   ChartBar,
   ChatCircle,
   CirclesFour,
@@ -27,8 +26,9 @@ import {
 } from '@phosphor-icons/react';
 import React from 'react';
 
+import ModelTrainingSeries from '~/app/competitions/ModelTrainingSeries';
+
 const CompetitionsPage = () => {
-  // Vision section with clearer visual hierarchy
   const visionStuff = (
     <Section background="violet-2">
       <Pattern>
@@ -124,107 +124,14 @@ const CompetitionsPage = () => {
     </Section>
   );
 
-  const competitions = (
+  const otherCompetitions = (
     <Section>
-      {/* Model Training Series */}
       <Flex direction="column" gap="xl">
-        <Flex direction="column" gap="m">
-          <Text as="h2" size="text-2xl" weight="600">
-            Model Training Series
-          </Text>
-          {/*<Text color="sand-11" size="text-l">*/}
-          {/*  (subtitle)*/}
-          {/*</Text>*/}
-        </Flex>
-
-        <Grid columns="1fr 1fr 1fr" gap="m" phone={{ columns: '1fr' }}>
-          {/* Current Round */}
-          <Card padding="l">
-            <Flex direction="column" gap="m">
-              <Flex align="center" gap="s">
-                <Text size="text-l" weight="600">
-                  xB Model Training
-                </Text>
-                <Badge variant="success" label="Active" />
-              </Flex>
-
-              <Flex direction="column" gap="s">
-                <Flex align="center" gap="s">
-                  <SvgIcon
-                    icon={<Calendar weight="duotone" />}
-                    color="violet-9"
-                    size="s"
-                  />
-                  <Text>Monthly Rounds</Text>
-                </Flex>
-                <Text color="sand-11">
-                  Current round ends <b>Nov 30 @ 11:59 PM UTC</b>
-                </Text>
-              </Flex>
-
-              <Button
-                label="View Leaderboard"
-                href="/competitions/model"
-                variant="primary"
-                iconRight={<ArrowRight weight="bold" />}
-                style={{ marginTop: 'auto' }}
-              />
-            </Flex>
-          </Card>
-
-          {/* Coming Soon Cards */}
-          {[
-            {
-              title: 'yB Model Training',
-              timing: 'Starting Q4 2024',
-              schedule: 'Quarterly Rounds',
-            },
-            {
-              title: 'zB Parameter Model Training',
-              timing: 'Starting Q1 2025',
-              schedule: 'Twice-Yearly Rounds',
-            },
-          ].map((competition, index) => (
-            <Card key={index} padding="l">
-              <Flex direction="column" gap="m">
-                <Flex align="center" gap="s">
-                  <Text size="text-l" weight="600" color="sand-11">
-                    {competition.title}
-                  </Text>
-                  <Badge label="Coming Soon" variant="neutral" />
-                </Flex>
-
-                <Flex direction="column" gap="s">
-                  <Flex align="center" gap="s">
-                    <SvgIcon
-                      icon={<Calendar weight="duotone" />}
-                      color="sand-10"
-                      size="s"
-                    />
-                    <Text color="sand-11">{competition.schedule}</Text>
-                  </Flex>
-                  <Text color="sand-11">{competition.timing}</Text>
-                </Flex>
-
-                <Button
-                  label="Coming Soon"
-                  variant="secondary"
-                  disabled
-                  style={{ marginTop: 'auto' }}
-                />
-              </Flex>
-            </Card>
-          ))}
-        </Grid>
-
         {/* Other Competitions */}
         <Flex direction="column" gap="m">
           <Text as="h2" size="text-2xl" weight="600">
             Other Active Competitions
           </Text>
-          {/*<Text color="sand-11" size="text-l">*/}
-          {/*  (subtitle)*/}
-          {/*</Text>*/}
         </Flex>
 
         <Card padding="l">
@@ -289,8 +196,8 @@ const CompetitionsPage = () => {
               icon: <ChatCircle weight="duotone" />,
               title: 'Community',
               description: 'Connect with other researchers',
-              link: 'Join Discord', // Changed from "Join (NEED LINK)"
-              href: '#', // We'll need the actual Discord link
+              link: 'Join',
+              href: '#',
             },
           ].map((resource, index) => (
             <Card key={index} padding="l">
@@ -318,7 +225,8 @@ const CompetitionsPage = () => {
   return (
     <>
       {visionStuff}
-      {competitions}
+      <ModelTrainingSeries />
+      {otherCompetitions}
       {resources}
     </>
   );

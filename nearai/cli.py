@@ -880,7 +880,7 @@ class CLI:
         self.vllm = VllmCli()
         self.permission = PermissionCli()
 
-    def submit(self, path: Optional[str] = None, worker_kind: str = "gpu"):
+    def submit(self, path: Optional[str] = None, worker_kind: str = WorkerKind.GPU_8_A100.value):
         """Submit a task to be executed by a worker."""
         if path is None:
             path = os.getcwd()

@@ -43,23 +43,25 @@ const agentsNav = {
   icon: ENTRY_CATEGORY_LABELS.agent.icon,
 };
 
-const resourcesNav = [
-  {
-    label: 'Datasets',
-    path: '/datasets',
-    icon: ENTRY_CATEGORY_LABELS.dataset.icon,
-  },
-  {
-    label: 'Benchmarks',
-    path: '/benchmarks',
-    icon: ENTRY_CATEGORY_LABELS.benchmark.icon,
-  },
-  {
-    label: 'Evaluations',
-    path: '/evaluations',
-    icon: ENTRY_CATEGORY_LABELS.evaluation.icon,
-  },
-];
+const resourcesNav = env.NEXT_PUBLIC_CONSUMER_MODE
+  ? null
+  : [
+      {
+        label: 'Datasets',
+        path: '/datasets',
+        icon: ENTRY_CATEGORY_LABELS.dataset.icon,
+      },
+      {
+        label: 'Benchmarks',
+        path: '/benchmarks',
+        icon: ENTRY_CATEGORY_LABELS.benchmark.icon,
+      },
+      {
+        label: 'Evaluations',
+        path: '/evaluations',
+        icon: ENTRY_CATEGORY_LABELS.evaluation.icon,
+      },
+    ];
 
 const hubNavItems = [
   {
@@ -100,7 +102,9 @@ export const Navigation = () => {
   const [mounted, setMounted] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
 
-  const title = env.NEXT_PUBLIC_CONSUMER_MODE ? 'AI Chat' : 'AI Research Hub';
+  const title = env.NEXT_PUBLIC_CONSUMER_MODE
+    ? 'AI Assistant'
+    : 'AI Research Hub';
 
   useEffect(() => {
     setMounted(true);
@@ -135,28 +139,29 @@ export const Navigation = () => {
                 </NavigationMenu.Link>
               </NavigationMenu.Item>
             ))}
+            {resourcesNav ? (
+              <NavigationMenu.Item>
+                <NavigationMenu.Trigger>
+                  Resources
+                  <SvgIcon size="xs" icon={<CaretDown />} />
+                </NavigationMenu.Trigger>
 
-            <NavigationMenu.Item>
-              <NavigationMenu.Trigger>
-                Resources
-                <SvgIcon size="xs" icon={<CaretDown />} />
-              </NavigationMenu.Trigger>
-
-              <NavigationMenu.Content className={s.menuDropdown}>
-                {resourcesNav.map((item) => (
-                  <NavigationMenu.Link
-                    key={item.path}
-                    asChild
-                    active={path.startsWith(item.path)}
-                  >
-                    <Link href={item.path} key={item.path}>
-                      <SvgIcon icon={item.icon} />
-                      {item.label}
-                    </Link>
-                  </NavigationMenu.Link>
-                ))}
-              </NavigationMenu.Content>
-            </NavigationMenu.Item>
+                <NavigationMenu.Content className={s.menuDropdown}>
+                  {resourcesNav.map((item) => (
+                    <NavigationMenu.Link
+                      key={item.path}
+                      asChild
+                      active={path.startsWith(item.path)}
+                    >
+                      <Link href={item.path} key={item.path}>
+                        <SvgIcon icon={item.icon} />
+                        {item.label}
+                      </Link>
+                    </NavigationMenu.Link>
+                  ))}
+                </NavigationMenu.Content>
+              </NavigationMenu.Item>
+            ) : null}
           </NavigationMenu.List>
         </NavigationMenu.Root>
       </BreakpointDisplay>
@@ -218,14 +223,16 @@ export const Navigation = () => {
                   </Dropdown.Item>
                 ))}
               </Dropdown.Section>
-              <Dropdown.Section>
-                {resourcesNav.map((item) => (
-                  <Dropdown.Item href={item.path} key={item.path}>
-                    <SvgIcon icon={item.icon} />
-                    {item.label}
-                  </Dropdown.Item>
-                ))}
-              </Dropdown.Section>
+              {resourcesNav ? (
+                <Dropdown.Section>
+                  {resourcesNav.map((item) => (
+                    <Dropdown.Item href={item.path} key={item.path}>
+                      <SvgIcon icon={item.icon} />
+                      {item.label}
+                    </Dropdown.Item>
+                  ))}
+                </Dropdown.Section>
+              ) : null}
             </Dropdown.Content>
           </Dropdown.Root>
         </BreakpointDisplay>

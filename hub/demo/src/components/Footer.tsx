@@ -33,7 +33,7 @@ export const Footer = ({ conditional }: Props) => {
   }, []);
 
   const title = env.NEXT_PUBLIC_CONSUMER_MODE
-    ? 'NEAR AI Chat'
+    ? 'NEAR AI Assistant'
     : 'NEAR AI Research Hub';
 
   return (

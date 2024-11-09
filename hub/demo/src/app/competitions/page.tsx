@@ -54,9 +54,11 @@ const CompetitionsPage = () => {
                 },
                 {
                   icon: <Cloud weight="duotone" />,
-                  text: (
+                  content: (
                     <Flex align="center" gap="s">
-                      Connect and transact with external services and APIs
+                      <Text as="span" size="text-s">
+                        Connect and transact swith external services and APIs
+                      </Text>
                       <Badge label="Coming Soon" variant="neutral-alpha" />
                     </Flex>
                   ),
@@ -65,7 +67,11 @@ const CompetitionsPage = () => {
                 <Card key={index} background="violet-3">
                   <Flex align="center" gap="m">
                     <SvgIcon icon={item.icon} size="m" color="violet-9" />
-                    <Text size="text-s">{item.text}</Text>
+                    {item.content || (
+                      <Text as="span" size="text-s">
+                        {item.text}
+                      </Text>
+                    )}
                   </Flex>
                 </Card>
               ))}
@@ -84,19 +90,21 @@ const CompetitionsPage = () => {
               {[
                 {
                   icon: <Code weight="duotone" />,
-                  text: (
-                    <span>
+                  content: (
+                    <Text as="span" size="text-s">
                       Enter your solutions in targeted challenges or join the
                       ongoing Model Training Series
-                    </span>
+                    </Text>
                   ),
                 },
                 {
                   icon: <Lightbulb weight="duotone" />,
-                  text: (
+                  content: (
                     <Flex align="center" gap="s">
-                      Earn rewards and royalties from competitions and model
-                      usage
+                      <Text as="span" size="text-s">
+                        Earn rewards and royalties from competitions and model
+                        usage
+                      </Text>
                       <Badge label="Coming Soon" variant="neutral-alpha" />
                     </Flex>
                   ),
@@ -105,7 +113,7 @@ const CompetitionsPage = () => {
                 <Card key={index} background="violet-3">
                   <Flex align="center" gap="m">
                     <SvgIcon icon={item.icon} size="m" color="violet-9" />
-                    <Text size="text-s">{item.text}</Text>
+                    {item.content}
                   </Flex>
                 </Card>
               ))}

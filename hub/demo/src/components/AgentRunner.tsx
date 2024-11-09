@@ -170,10 +170,13 @@ export const AgentRunner = ({
   });
 
   const messages = useMemo(() => {
-    return [
+    const result = [
       ...(thread ? Object.values(thread.messagesById) : []),
       ...optimisticMessages.map((message) => message.data),
-    ];
+    ].filter(
+      (message) => message.metadata?.message_type !== 'system:file_write',
+    );
+    return result;
   }, [thread, optimisticMessages]);
 
   const files = useMemo(() => {
@@ -248,7 +251,7 @@ export const AgentRunner = ({
   useEffect(() => {
     // This logic simply provides helpful logs for debugging in production
 
-    if (!threadQuery.isFetching) {
+    if (!threadQuery.isFetching && (threadQuery.data || threadQuery.error)) {
       const now = new Date();
       const elapsedSecondsSinceRunStart = chatMutationStartedAt.current
         ? (now.getTime() - chatMutationStartedAt.current.getTime()) / 1000

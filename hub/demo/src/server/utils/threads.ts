@@ -7,6 +7,7 @@ import {
   threadModel,
   threadRunModel,
 } from '~/lib/models';
+import { filePathIsImage } from '~/utils/file';
 import { createZodFetcher } from '~/utils/zod-fetch';
 
 const fetchWithZod = createZodFetcher();
@@ -103,7 +104,18 @@ async function fetchFilesAttachedToMessages(
         },
       );
 
-      file.content = await (await contentResponse.blob()).text();
+      const isImage = filePathIsImage(file.filename);
+
+      if (isImage) {
+        const buffer = await contentResponse.arrayBuffer();
+        const stringifiedBuffer = Buffer.from(buffer).toString('base64');
+        const contentType = contentResponse.headers.get('content-type');
+        const imageBase64 = `data:${contentType};base64,${stringifiedBuffer}`;
+        file.content = imageBase64;
+      } else {
+        const blob = await contentResponse.blob();
+        file.content = await blob.text();
+      }
 
       const existingFile = filesByPath[file.filename];
       if (existingFile) {

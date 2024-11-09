@@ -1,6 +1,16 @@
 'use client';
 
-import React from 'react';
+import {
+  Badge,
+  Button,
+  Card,
+  Flex,
+  Grid,
+  Pattern,
+  Section,
+  SvgIcon,
+  Text,
+} from '@near-pagoda/ui';
 import {
   ArrowRight,
   ArrowSquareOut,
@@ -15,17 +25,7 @@ import {
   Lightbulb,
   Robot,
 } from '@phosphor-icons/react';
-import {
-  Badge,
-  Button,
-  Card,
-  Flex,
-  Grid,
-  Pattern,
-  Section,
-  SvgIcon,
-  Text,
-} from '@near-pagoda/ui';
+import React from 'react';
 
 const CompetitionsPage = () => {
   // Vision section with clearer visual hierarchy

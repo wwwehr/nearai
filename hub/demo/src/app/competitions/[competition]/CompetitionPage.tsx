@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
 import { Section, Text } from '@near-pagoda/ui';
-import { EvaluationsTable } from '~/components/EvaluationsTable';
+import React from 'react';
 import type { z } from 'zod';
+
+import { EvaluationsTable } from '~/components/EvaluationsTable';
 import type { entryModel } from '~/lib/models';
 
 const CompetitionPage = ({
@@ -14,7 +15,7 @@ const CompetitionPage = ({
   children: React.ReactNode;
 }) => {
   const benchmarkEntry: z.infer<typeof entryModel> | undefined = undefined; // TODO
-  const initialBenchmarkColumns: string[] | undefined = undefined; // TODO
+  const benchmarkColumns: string[] | undefined = undefined; // TODO
 
   return (
     <>
@@ -29,7 +30,7 @@ const CompetitionPage = ({
         <EvaluationsTable
           title="Leaderboard"
           entry={benchmarkEntry}
-          initialBenchmarkColumns={initialBenchmarkColumns}
+          benchmarkColumns={benchmarkColumns}
         />
       </Section>
     </>

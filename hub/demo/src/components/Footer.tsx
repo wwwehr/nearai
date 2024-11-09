@@ -4,8 +4,9 @@ import { Flex, Text } from '@near-pagoda/ui';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
+import { env } from '~/env';
+
 import s from './Footer.module.scss';
-import {env} from "~/env";
 
 type Props = {
   conditional?: boolean;
@@ -31,7 +32,9 @@ export const Footer = ({ conditional }: Props) => {
     setMounted(true);
   }, []);
 
-  const title = env.NEXT_PUBLIC_CONSUMER_MODE ? 'NEAR AI Chat' : 'NEAR AI Research Hub';
+  const title = env.NEXT_PUBLIC_CONSUMER_MODE
+    ? 'NEAR AI Chat'
+    : 'NEAR AI Research Hub';
 
   return (
     <footer

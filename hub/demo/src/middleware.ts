@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+
 import { env } from '~/env';
 
 const defaultRoute = env.NEXT_PUBLIC_CONSUMER_MODE ? '/chat' : '/competitions';

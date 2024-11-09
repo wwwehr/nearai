@@ -38,12 +38,12 @@ import { wordsMatchFuzzySearch } from '~/utils/search';
 type Props = {
   entry?: z.infer<typeof entryModel>;
   title?: string;
-  initialBenchmarkColumns?: string[];
+  benchmarkColumns?: string[];
 };
 
 export const EvaluationsTable = ({
   entry: entryToEvaluate,
-  initialBenchmarkColumns,
+  benchmarkColumns: controlledBenchmarkColumns,
   title = 'Evaluations',
 }: Props) => {
   const { updateQueryPath, queryParams } = useQueryParams([
@@ -64,11 +64,11 @@ export const EvaluationsTable = ({
 
   const defaultBenchmarkColumns = useMemo(() => {
     return (
-      initialBenchmarkColumns ??
+      controlledBenchmarkColumns ??
       evaluationsQuery.data?.defaultBenchmarkColumns ??
       DEFAULT_BENCHMARK_COLUMNS
     );
-  }, [evaluationsQuery.data]);
+  }, [controlledBenchmarkColumns, evaluationsQuery.data]);
 
   const selectedBenchmarkIds = useMemo(() => {
     const ids = queryParams.benchmarks ? queryParams.benchmarks.split(',') : [];

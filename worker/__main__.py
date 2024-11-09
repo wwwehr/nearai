@@ -91,14 +91,14 @@ async def run_scheduler():
 
                 if not selected_job.selected:
                     print(selected_job)
-                    print(f"Job is not selected: {selected_job.job.id}")
+                    print(f"Job is not selected: {selected_job.job}")
                     continue
                 if not selected_job.job:
                     print(selected_job)
-                    print(f"No job included in the response: {selected_job.job.id}")
+                    print(f"No job included in the response: {selected_job.job}")
                     continue
                 if not selected_job.registry_path:
-                    print(f"Job has no registry path: {selected_job.job.id}")
+                    print(f"Job has no registry path: {selected_job.job}")
                     JOBS_API.update_job_v1_jobs_update_job_post(
                         job_id=selected_job.job.id,
                         status=JobStatus.COMPLETED,

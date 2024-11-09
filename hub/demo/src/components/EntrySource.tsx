@@ -17,13 +17,14 @@ import { Folder, LockKey } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { type z } from 'zod';
 
-import { Code, filePathToCodeLanguage } from '~/components/lib/Code';
+import { Code } from '~/components/lib/Code';
 import { Sidebar } from '~/components/lib/Sidebar';
 import { useEntryParams } from '~/hooks/entries';
 import { useQueryParams } from '~/hooks/url';
 import { type entryModel } from '~/lib/models';
 import { useAuthStore } from '~/stores/auth';
 import { api } from '~/trpc/react';
+import { filePathToCodeLanguage } from '~/utils/file';
 
 const METADATA_FILE_PATH = 'metadata.json';
 

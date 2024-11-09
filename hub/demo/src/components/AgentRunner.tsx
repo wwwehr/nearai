@@ -248,7 +248,7 @@ export const AgentRunner = ({
   useEffect(() => {
     // This logic simply provides helpful logs for debugging in production
 
-    if (!threadQuery.isFetching) {
+    if (!threadQuery.isFetching && (threadQuery.data || threadQuery.error)) {
       const now = new Date();
       const elapsedSecondsSinceRunStart = chatMutationStartedAt.current
         ? (now.getTime() - chatMutationStartedAt.current.getTime()) / 1000

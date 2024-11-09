@@ -24,7 +24,7 @@ class JobStatus(Enum):
 
 
 class WorkerKind(Enum):
-    GPU_8_H100 = "GPU_8_H100"
+    GPU_8_A100 = "GPU_8_A100"
     CPU_MEDIUM = "CPU_MEDIUM"
 
 

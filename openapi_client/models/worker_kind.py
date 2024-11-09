@@ -26,7 +26,7 @@ class WorkerKind(str, Enum):
     """
     allowed enum values
     """
-    GPU_8_H100 = 'GPU_8_H100'
+    GPU_8_A100 = 'GPU_8_A100'
     CPU_MEDIUM = 'CPU_MEDIUM'
 
     @classmethod

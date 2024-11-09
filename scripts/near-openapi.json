@@ -3262,7 +3262,7 @@
       "WorkerKind": {
         "type": "string",
         "enum": [
-          "GPU_8_H100",
+          "GPU_8_A100",
           "CPU_MEDIUM"
         ],
         "title": "WorkerKind"

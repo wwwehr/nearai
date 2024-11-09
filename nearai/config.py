@@ -14,7 +14,7 @@ from nearai.shared.client_config import DEFAULT_PROVIDER, DEFAULT_PROVIDER_MODEL
 DATA_FOLDER = Path.home() / ".nearai"
 try:
     DATA_FOLDER.mkdir(parents=True, exist_ok=True)
-except Exception as e:
+except Exception:
     DATA_FOLDER = Path.cwd() / ".nearai"
     DATA_FOLDER.mkdir(parents=True, exist_ok=True)
 CONFIG_FILE = DATA_FOLDER / "config.json"

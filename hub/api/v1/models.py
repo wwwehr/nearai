@@ -151,6 +151,14 @@ class BenchmarkResult(SQLModel, table=True):
     info: Dict = Field(default_factory=dict, sa_column=Column(JSON))
 
 
+class Log(SQLModel, table=True):
+    __tablename__ = "logs"
+    id: int = Field(default=None, primary_key=True)
+    account_id: str = Field(nullable=False)
+    target: str = Field(nullable=False)
+    info: Dict = Field(default_factory=dict, sa_column=Column(JSON))
+
+
 class Message(SQLModel, table=True):
     __tablename__ = "messages"
 

@@ -10,6 +10,7 @@ from openapi_client.api.default_api import DefaultApi
 from openapi_client.api.delegation_api import DelegationApi
 from openapi_client.api.evaluation_api import EvaluationApi
 from openapi_client.api.jobs_api import JobsApi
+from openapi_client.api.logs_api import LogsApi
 from openapi_client.api.permissions_api import PermissionsApi
 from openapi_client.api.registry_api import RegistryApi
 from openapi_client.api.stars_api import StarsApi

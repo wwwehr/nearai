@@ -26,6 +26,7 @@ from openapi_client.api.default_api import DefaultApi
 from openapi_client.api.delegation_api import DelegationApi
 from openapi_client.api.evaluation_api import EvaluationApi
 from openapi_client.api.jobs_api import JobsApi
+from openapi_client.api.logs_api import LogsApi
 from openapi_client.api.permissions_api import PermissionsApi
 from openapi_client.api.registry_api import RegistryApi
 from openapi_client.api.stars_api import StarsApi
@@ -67,6 +68,7 @@ from openapi_client.models.image_generation_request import ImageGenerationReques
 from openapi_client.models.input import Input
 from openapi_client.models.job import Job
 from openapi_client.models.job_status import JobStatus
+from openapi_client.models.log import Log
 from openapi_client.models.message import Message
 from openapi_client.models.remove_hub_secret_request import RemoveHubSecretRequest
 from openapi_client.models.request import Request

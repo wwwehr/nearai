@@ -41,6 +41,7 @@ from nearai.config import (
 )
 from nearai.finetune import FinetuneCli
 from nearai.lib import check_metadata, parse_location, parse_tags
+from nearai.log import LogCLI
 from nearai.registry import get_registry_folder, registry
 from nearai.tensorboard_feed import TensorboardCli
 
@@ -868,6 +869,7 @@ class CLI:
         self.login = LoginCLI()
         self.logout = LogoutCLI()
         self.hub = HubCLI()
+        self.log = LogCLI()
 
         self.config = ConfigCli()
         self.benchmark = BenchmarkCli()

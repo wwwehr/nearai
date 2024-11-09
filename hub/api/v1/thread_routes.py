@@ -445,7 +445,7 @@ class RunCreateParamsBase(BaseModel):
     tools: Optional[List[dict]] = Field(None, description="Override the tools the assistant can use for this run.")
     metadata: Optional[dict] = Field(None, description="Set of 16 key-value pairs that can be attached to an object.")
 
-    include: List[dict] = Field(None, description="A list of additional fields to include in the response.")
+    include: List[dict] = Field([], description="A list of additional fields to include in the response.")
     additional_instructions: Optional[str] = Field(
         None, description="Appends additional instructions at the end of the instructions for the run."
     )
@@ -529,12 +529,9 @@ def create_run(
             thread_id=thread_id,
             assistant_id=run.assistant_id,
             model=run.model,
-            instructions=run.instructions,
+            instructions=(run.instructions or "") + (run.additional_instructions or ""),
             tools=run.tools,
             metadata=run.metadata,
-            include=run.include,
-            additional_instructions=run.additional_instructions,
-            additional_messages=run.additional_messages,
             max_completion_tokens=run.max_completion_tokens,
             max_prompt_tokens=run.max_prompt_tokens,
             parallel_tool_calls=run.parallel_tool_calls,

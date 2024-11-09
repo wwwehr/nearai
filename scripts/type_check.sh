@@ -7,3 +7,4 @@
 set -e
 poetry run mypy --config pyproject.toml nearai
 poetry run mypy --config pyproject.toml hub
+poetry run mypy --config pyproject.toml worker

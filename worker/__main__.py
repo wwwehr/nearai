@@ -29,7 +29,7 @@ app = typer.Typer()
 loop = asyncio.get_event_loop()
 
 WORKER_KIND = WorkerKind(getenv("WORKER_KIND"))
-WORKER_PORT = int(getenv("WORKER_PORT"))
+WORKER_PORT = int(getenv("WORKER_PORT", 8000))
 WORKER_SLEEP_TIME = int(getenv("WORKER_SLEEP_TIME", 1))
 WORKER_URL = getenv("WORKER_URL", f"http://worker:{WORKER_PORT}")
 WORKER_JOB_TIMEOUT = int(getenv("WORKER_JOB_TIMEOUT", 60 * 60 * 6))  # 6 hours
@@ -215,6 +215,7 @@ def run_worker():
 
         ## Update auth so all actions are executed by the worker
         ## on behalf of the user
+        assert CONFIG.auth, "Auth data is not set"
         CONFIG.auth.on_behalf_of = job.account_id
         save_config_file(CONFIG.model_dump())
 
@@ -240,7 +241,12 @@ def run_worker():
 
             ## cleanup
             current_job = None  # noqa: F841
-            return JobResult(stdout=result.stdout, stderr=result.stderr, return_code=result.returncode)
+            try:
+                return JobResult(
+                    stdout=result.stdout.decode(), stderr=result.stderr.decode(), return_code=result.returncode
+                )
+            except Exception as e:
+                return JobResult(stdout="", stderr=str(e), return_code=1)
         except subprocess.TimeoutExpired:
             raise HTTPException(status_code=500, detail="Execution timed out.")  # noqa: B904
 

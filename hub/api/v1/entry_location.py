@@ -2,8 +2,8 @@ import re
 from typing import Annotated
 
 from fastapi import Form, HTTPException
+from nearai.shared.client_config import IDENTIFIER_PATTERN
 from pydantic import AfterValidator, BaseModel
-from shared.client_config import IDENTIFIER_PATTERN
 
 
 def valid_identifier(identifier: str) -> str:

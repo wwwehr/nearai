@@ -25,6 +25,7 @@ services:
       - default
     environment:
       - WORKER_PORT=8000
+      - WORKER_KIND=GPU_8_A100
       - NEARAIWORKER_ACCOUNT_ID=${NEARAIWORKER_ACCOUNT_ID}
       - NEARAIWORKER_SIGNATURE=${NEARAIWORKER_SIGNATURE}
 
@@ -49,6 +50,7 @@ services:
       - "8000:8000"
     environment:
       - WORKER_PORT=8000
+      - WORKER_KIND=GPU_8_A100
       - http_proxy=http://proxy:8888
       - https_proxy=http://proxy:8888
       - HTTP_PROXY=http://proxy:8888

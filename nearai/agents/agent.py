@@ -8,7 +8,7 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from shared.client_config import ClientConfig
+from nearai.shared.client_config import ClientConfig
 
 AGENT_FILENAME = "agent.py"
 

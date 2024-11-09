@@ -2,10 +2,10 @@ import json
 import time
 from typing import Any
 
-from openapi_client.api.logs_api import LogsApi
 from pydantic import BaseModel
 
 from nearai.config import CONFIG, DATA_FOLDER
+from nearai.openapi_client.api.logs_api import LogsApi
 
 
 class LogMetadata(BaseModel):

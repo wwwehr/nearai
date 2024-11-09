@@ -39,6 +39,7 @@ from nearai.openapi_client.models.image_generation_request import ImageGeneratio
 from nearai.openapi_client.models.input import Input
 from nearai.openapi_client.models.job import Job
 from nearai.openapi_client.models.job_status import JobStatus
+from nearai.openapi_client.models.log import Log
 from nearai.openapi_client.models.message import Message
 from nearai.openapi_client.models.remove_hub_secret_request import RemoveHubSecretRequest
 from nearai.openapi_client.models.request import Request
@@ -48,3 +49,4 @@ from nearai.openapi_client.models.selected_job import SelectedJob
 from nearai.openapi_client.models.stop import Stop
 from nearai.openapi_client.models.validation_error import ValidationError
 from nearai.openapi_client.models.validation_error_loc_inner import ValidationErrorLocInner
+from nearai.openapi_client.models.worker_kind import WorkerKind

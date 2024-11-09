@@ -24,6 +24,7 @@ from nearai.config import (
 )
 from nearai.finetune import FinetuneCli
 from nearai.lib import check_metadata, parse_location, parse_tags
+from nearai.log import LogCLI
 from nearai.openapi_client import EntryLocation, EntryMetadataInput
 from nearai.openapi_client.api.benchmark_api import BenchmarkApi
 from nearai.openapi_client.api.default_api import DefaultApi
@@ -868,6 +869,7 @@ class CLI:
         self.login = LoginCLI()
         self.logout = LogoutCLI()
         self.hub = HubCLI()
+        self.log = LogCLI()
 
         self.config = ConfigCli()
         self.benchmark = BenchmarkCli()
@@ -878,7 +880,7 @@ class CLI:
         self.vllm = VllmCli()
         self.permission = PermissionCli()
 
-    def submit(self, path: Optional[str] = None, worker_kind: str = "gpu"):
+    def submit(self, path: Optional[str] = None, worker_kind: str = WorkerKind.GPU_8_A100.value):
         """Submit a task to be executed by a worker."""
         if path is None:
             path = os.getcwd()

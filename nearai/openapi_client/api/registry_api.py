@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from typing_extensions import Annotated
 
 from pydantic import StrictBool, StrictBytes, StrictInt, StrictStr
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Union
 from nearai.openapi_client.models.body_download_file_v1_registry_download_file_post import BodyDownloadFileV1RegistryDownloadFilePost
 from nearai.openapi_client.models.body_download_metadata_v1_registry_download_metadata_post import BodyDownloadMetadataV1RegistryDownloadMetadataPost
 from nearai.openapi_client.models.body_list_files_v1_registry_list_files_post import BodyListFilesV1RegistryListFilesPost
@@ -259,9 +259,7 @@ class RegistryApi:
         _query_params: List[Tuple[str, str]] = []
         _header_params: Dict[str, Optional[str]] = _headers or {}
         _form_params: List[Tuple[str, str]] = []
-        _files: Dict[
-            str, Union[str, bytes, List[str], List[bytes], List[Tuple[str, bytes]]]
-        ] = {}
+        _files: Dict[str, Union[str, bytes]] = {}
         _body_params: Optional[bytes] = None
 
         # process the path parameters
@@ -533,9 +531,7 @@ class RegistryApi:
         _query_params: List[Tuple[str, str]] = []
         _header_params: Dict[str, Optional[str]] = _headers or {}
         _form_params: List[Tuple[str, str]] = []
-        _files: Dict[
-            str, Union[str, bytes, List[str], List[bytes], List[Tuple[str, bytes]]]
-        ] = {}
+        _files: Dict[str, Union[str, bytes]] = {}
         _body_params: Optional[bytes] = None
 
         # process the path parameters
@@ -911,9 +907,7 @@ class RegistryApi:
         _query_params: List[Tuple[str, str]] = []
         _header_params: Dict[str, Optional[str]] = _headers or {}
         _form_params: List[Tuple[str, str]] = []
-        _files: Dict[
-            str, Union[str, bytes, List[str], List[bytes], List[Tuple[str, bytes]]]
-        ] = {}
+        _files: Dict[str, Union[str, bytes]] = {}
         _body_params: Optional[bytes] = None
 
         # process the path parameters
@@ -1208,9 +1202,7 @@ class RegistryApi:
         _query_params: List[Tuple[str, str]] = []
         _header_params: Dict[str, Optional[str]] = _headers or {}
         _form_params: List[Tuple[str, str]] = []
-        _files: Dict[
-            str, Union[str, bytes, List[str], List[bytes], List[Tuple[str, bytes]]]
-        ] = {}
+        _files: Dict[str, Union[str, bytes]] = {}
         _body_params: Optional[bytes] = None
 
         # process the path parameters
@@ -1271,7 +1263,7 @@ class RegistryApi:
     def upload_file_v1_registry_upload_file_post(
         self,
         path: StrictStr,
-        file: Union[StrictBytes, StrictStr, Tuple[StrictStr, StrictBytes]],
+        file: Union[StrictBytes, StrictStr],
         namespace: StrictStr,
         name: StrictStr,
         version: StrictStr,
@@ -1354,7 +1346,7 @@ class RegistryApi:
     def upload_file_v1_registry_upload_file_post_with_http_info(
         self,
         path: StrictStr,
-        file: Union[StrictBytes, StrictStr, Tuple[StrictStr, StrictBytes]],
+        file: Union[StrictBytes, StrictStr],
         namespace: StrictStr,
         name: StrictStr,
         version: StrictStr,
@@ -1437,7 +1429,7 @@ class RegistryApi:
     def upload_file_v1_registry_upload_file_post_without_preload_content(
         self,
         path: StrictStr,
-        file: Union[StrictBytes, StrictStr, Tuple[StrictStr, StrictBytes]],
+        file: Union[StrictBytes, StrictStr],
         namespace: StrictStr,
         name: StrictStr,
         version: StrictStr,
@@ -1534,9 +1526,7 @@ class RegistryApi:
         _query_params: List[Tuple[str, str]] = []
         _header_params: Dict[str, Optional[str]] = _headers or {}
         _form_params: List[Tuple[str, str]] = []
-        _files: Dict[
-            str, Union[str, bytes, List[str], List[bytes], List[Tuple[str, bytes]]]
-        ] = {}
+        _files: Dict[str, Union[str, bytes]] = {}
         _body_params: Optional[bytes] = None
 
         # process the path parameters
@@ -1816,9 +1806,7 @@ class RegistryApi:
         _query_params: List[Tuple[str, str]] = []
         _header_params: Dict[str, Optional[str]] = _headers or {}
         _form_params: List[Tuple[str, str]] = []
-        _files: Dict[
-            str, Union[str, bytes, List[str], List[bytes], List[Tuple[str, bytes]]]
-        ] = {}
+        _files: Dict[str, Union[str, bytes]] = {}
         _body_params: Optional[bytes] = None
 
         # process the path parameters

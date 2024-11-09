@@ -997,3 +997,7 @@ class Environment(object):
     def query_user_memory(self, query: str):
         """Query user memory."""
         return self.client.query_user_memory(query)
+
+    def generate_image(self, prompt: str):
+        """Generate an image."""
+        return self.client.generate_image(prompt)

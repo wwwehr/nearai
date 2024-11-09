@@ -374,7 +374,7 @@ class Environment(object):
         content: str | bytes,
         encoding: str = "utf-8",
         filetype: str = "text/plain",
-        write_to_disk: bool = True
+        write_to_disk: bool = True,
     ) -> FileObject:
         """Writes a file to the environment.
 
@@ -398,7 +398,7 @@ class Environment(object):
         if isinstance(content, bytes):
             file_data = content
         else:
-            file_data = io.BytesIO(content.encode(encoding)) #type:ignore
+            file_data = io.BytesIO(content.encode(encoding))  # type:ignore
 
         # Upload to Hub
         file = self._hub_client.files.create(file=(filename, file_data, filetype), purpose="assistants")

@@ -17,6 +17,7 @@ from nearai.delegation import OnBehalfOf
 from nearai.jobs import JobsApi
 from nearai.lib import parse_location
 from nearai.openapi_client.api.delegation_api import DelegationApi
+from nearai.openapi_client.api.jobs_api import WorkerKind
 from nearai.openapi_client.models.entry_location import EntryLocation
 from nearai.openapi_client.models.job import Job
 from nearai.openapi_client.models.job_status import JobStatus
@@ -27,6 +28,7 @@ from pydantic import BaseModel
 app = typer.Typer()
 loop = asyncio.get_event_loop()
 
+WORKER_KIND = WorkerKind(getenv("WORKER_KIND"))
 WORKER_PORT = int(getenv("WORKER_PORT"))
 WORKER_SLEEP_TIME = int(getenv("WORKER_SLEEP_TIME", 1))
 WORKER_URL = getenv("WORKER_URL", f"http://worker:{WORKER_PORT}")
@@ -81,6 +83,7 @@ async def run_scheduler():
                 ## Get pending jobs
                 selected_job = JOBS_API.get_pending_job_v1_jobs_get_pending_job_post(
                     worker_id=SCHEDULER_ACCOUNT_ID,
+                    worker_kind=WORKER_KIND,
                 )
                 if not selected_job:
                     print("No pending jobs ... retrying")

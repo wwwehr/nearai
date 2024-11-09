@@ -16,6 +16,7 @@ import fire
 from openai.types.beta.threads.message import Attachment
 from tabulate import tabulate
 
+from hub.api.v1.jobs import WorkerKind
 from nearai.agents.local_runner import LocalRunner
 from nearai.config import (
     CONFIG,
@@ -878,10 +879,12 @@ class CLI:
         self.vllm = VllmCli()
         self.permission = PermissionCli()
 
-    def submit(self, path: Optional[str] = None):
+    def submit(self, path: Optional[str] = None, worker_kind: str = "gpu"):
         """Submit a task to be executed by a worker."""
         if path is None:
             path = os.getcwd()
+
+        worker_kind_t = WorkerKind(worker_kind)
 
         location = self.registry.upload(path)
 
@@ -893,7 +896,10 @@ class CLI:
 
         try:
             client = JobsApi()
-            client.add_job_v1_jobs_add_job_post(BodyAddJobV1JobsAddJobPost(entry_location=location))
+            client.add_job_v1_jobs_add_job_post(
+                worker_kind_t,
+                BodyAddJobV1JobsAddJobPost(entry_location=location),
+            )
         except Exception as e:
             print("Error: ", e)
             delegation_api.revoke_delegation_v1_delegation_revoke_delegation_post(

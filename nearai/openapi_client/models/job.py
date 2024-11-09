@@ -31,9 +31,10 @@ class Job(BaseModel):
     account_id: StrictStr
     status: StrictStr
     worker_id: Optional[StrictStr] = None
+    worker_kind: StrictStr
     info: Optional[Dict[str, Any]] = None
     result: Optional[Dict[str, Any]] = None
-    __properties: ClassVar[List[str]] = ["id", "registry_path", "account_id", "status", "worker_id", "info", "result"]
+    __properties: ClassVar[List[str]] = ["id", "registry_path", "account_id", "status", "worker_id", "worker_kind", "info", "result"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -96,6 +97,7 @@ class Job(BaseModel):
             "account_id": obj.get("account_id"),
             "status": obj.get("status"),
             "worker_id": obj.get("worker_id"),
+            "worker_kind": obj.get("worker_kind"),
             "info": obj.get("info"),
             "result": obj.get("result")
         })

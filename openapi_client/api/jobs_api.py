@@ -22,6 +22,7 @@ from openapi_client.models.body_add_job_v1_jobs_add_job_post import BodyAddJobV1
 from openapi_client.models.job import Job
 from openapi_client.models.job_status import JobStatus
 from openapi_client.models.selected_job import SelectedJob
+from openapi_client.models.worker_kind import WorkerKind
 
 from openapi_client.api_client import ApiClient, RequestSerialized
 from openapi_client.api_response import ApiResponse
@@ -44,6 +45,7 @@ class JobsApi:
     @validate_call
     def add_job_v1_jobs_add_job_post(
         self,
+        worker_kind: WorkerKind,
         body_add_job_v1_jobs_add_job_post: BodyAddJobV1JobsAddJobPost,
         _request_timeout: Union[
             None,
@@ -61,6 +63,8 @@ class JobsApi:
         """Add Job
 
 
+        :param worker_kind: (required)
+        :type worker_kind: WorkerKind
         :param body_add_job_v1_jobs_add_job_post: (required)
         :type body_add_job_v1_jobs_add_job_post: BodyAddJobV1JobsAddJobPost
         :param _request_timeout: timeout setting for this request. If one
@@ -86,6 +90,7 @@ class JobsApi:
         """ # noqa: E501
 
         _param = self._add_job_v1_jobs_add_job_post_serialize(
+            worker_kind=worker_kind,
             body_add_job_v1_jobs_add_job_post=body_add_job_v1_jobs_add_job_post,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -111,6 +116,7 @@ class JobsApi:
     @validate_call
     def add_job_v1_jobs_add_job_post_with_http_info(
         self,
+        worker_kind: WorkerKind,
         body_add_job_v1_jobs_add_job_post: BodyAddJobV1JobsAddJobPost,
         _request_timeout: Union[
             None,
@@ -128,6 +134,8 @@ class JobsApi:
         """Add Job
 
 
+        :param worker_kind: (required)
+        :type worker_kind: WorkerKind
         :param body_add_job_v1_jobs_add_job_post: (required)
         :type body_add_job_v1_jobs_add_job_post: BodyAddJobV1JobsAddJobPost
         :param _request_timeout: timeout setting for this request. If one
@@ -153,6 +161,7 @@ class JobsApi:
         """ # noqa: E501
 
         _param = self._add_job_v1_jobs_add_job_post_serialize(
+            worker_kind=worker_kind,
             body_add_job_v1_jobs_add_job_post=body_add_job_v1_jobs_add_job_post,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -178,6 +187,7 @@ class JobsApi:
     @validate_call
     def add_job_v1_jobs_add_job_post_without_preload_content(
         self,
+        worker_kind: WorkerKind,
         body_add_job_v1_jobs_add_job_post: BodyAddJobV1JobsAddJobPost,
         _request_timeout: Union[
             None,
@@ -195,6 +205,8 @@ class JobsApi:
         """Add Job
 
 
+        :param worker_kind: (required)
+        :type worker_kind: WorkerKind
         :param body_add_job_v1_jobs_add_job_post: (required)
         :type body_add_job_v1_jobs_add_job_post: BodyAddJobV1JobsAddJobPost
         :param _request_timeout: timeout setting for this request. If one
@@ -220,6 +232,7 @@ class JobsApi:
         """ # noqa: E501
 
         _param = self._add_job_v1_jobs_add_job_post_serialize(
+            worker_kind=worker_kind,
             body_add_job_v1_jobs_add_job_post=body_add_job_v1_jobs_add_job_post,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -240,6 +253,7 @@ class JobsApi:
 
     def _add_job_v1_jobs_add_job_post_serialize(
         self,
+        worker_kind,
         body_add_job_v1_jobs_add_job_post,
         _request_auth,
         _content_type,
@@ -261,6 +275,10 @@ class JobsApi:
 
         # process the path parameters
         # process the query parameters
+        if worker_kind is not None:
+            
+            _query_params.append(('worker_kind', worker_kind.value))
+            
         # process the header parameters
         # process the form parameters
         # process the body parameter
@@ -317,6 +335,7 @@ class JobsApi:
     def get_pending_job_v1_jobs_get_pending_job_post(
         self,
         worker_id: StrictStr,
+        worker_kind: WorkerKind,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -335,6 +354,8 @@ class JobsApi:
 
         :param worker_id: (required)
         :type worker_id: str
+        :param worker_kind: (required)
+        :type worker_kind: WorkerKind
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -359,6 +380,7 @@ class JobsApi:
 
         _param = self._get_pending_job_v1_jobs_get_pending_job_post_serialize(
             worker_id=worker_id,
+            worker_kind=worker_kind,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -384,6 +406,7 @@ class JobsApi:
     def get_pending_job_v1_jobs_get_pending_job_post_with_http_info(
         self,
         worker_id: StrictStr,
+        worker_kind: WorkerKind,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -402,6 +425,8 @@ class JobsApi:
 
         :param worker_id: (required)
         :type worker_id: str
+        :param worker_kind: (required)
+        :type worker_kind: WorkerKind
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -426,6 +451,7 @@ class JobsApi:
 
         _param = self._get_pending_job_v1_jobs_get_pending_job_post_serialize(
             worker_id=worker_id,
+            worker_kind=worker_kind,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -451,6 +477,7 @@ class JobsApi:
     def get_pending_job_v1_jobs_get_pending_job_post_without_preload_content(
         self,
         worker_id: StrictStr,
+        worker_kind: WorkerKind,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -469,6 +496,8 @@ class JobsApi:
 
         :param worker_id: (required)
         :type worker_id: str
+        :param worker_kind: (required)
+        :type worker_kind: WorkerKind
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -493,6 +522,7 @@ class JobsApi:
 
         _param = self._get_pending_job_v1_jobs_get_pending_job_post_serialize(
             worker_id=worker_id,
+            worker_kind=worker_kind,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -513,6 +543,7 @@ class JobsApi:
     def _get_pending_job_v1_jobs_get_pending_job_post_serialize(
         self,
         worker_id,
+        worker_kind,
         _request_auth,
         _content_type,
         _headers,
@@ -536,6 +567,10 @@ class JobsApi:
         if worker_id is not None:
             
             _query_params.append(('worker_id', worker_id))
+            
+        if worker_kind is not None:
+            
+            _query_params.append(('worker_kind', worker_kind.value))
             
         # process the header parameters
         # process the form parameters

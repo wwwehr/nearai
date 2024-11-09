@@ -398,7 +398,7 @@ class Environment(object):
         if isinstance(content, bytes):
             file_data = content
         else:
-            file_data = content.encode(encoding)
+            file_data = io.BytesIO(content.encode(encoding)) #type:ignore
 
         # Upload to Hub
         file = self._hub_client.files.create(file=(filename, file_data, filetype), purpose="assistants")

@@ -37,9 +37,15 @@ import { wordsMatchFuzzySearch } from '~/utils/search';
 
 type Props = {
   entry?: z.infer<typeof entryModel>;
+  title?: string;
+  initialBenchmarkColumns?: string[];
 };
 
-export const EvaluationsTable = ({ entry: entryToEvaluate }: Props) => {
+export const EvaluationsTable = ({
+  entry: entryToEvaluate,
+  initialBenchmarkColumns,
+  title = 'Evaluations',
+}: Props) => {
   const { updateQueryPath, queryParams } = useQueryParams([
     'benchmarks',
     'columns',
@@ -58,6 +64,7 @@ export const EvaluationsTable = ({ entry: entryToEvaluate }: Props) => {
 
   const defaultBenchmarkColumns = useMemo(() => {
     return (
+      initialBenchmarkColumns ??
       evaluationsQuery.data?.defaultBenchmarkColumns ??
       DEFAULT_BENCHMARK_COLUMNS
     );
@@ -321,7 +328,7 @@ export const EvaluationsTable = ({ entry: entryToEvaluate }: Props) => {
           >
             <Flex align="center" gap="m">
               <Text as="h1" size="text-2xl">
-                Evaluations
+                {title}
               </Text>
 
               <BreakpointDisplay show="sidebar-small-screen">

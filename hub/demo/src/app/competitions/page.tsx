@@ -67,7 +67,7 @@ const CompetitionsPage = () => {
                 <Card key={index} background="violet-3">
                   <Flex align="center" gap="m">
                     <SvgIcon icon={item.icon} size="m" color="violet-9" />
-                    {item.content || (
+                    {item.content ?? (
                       <Text as="span" size="text-s">
                         {item.text}
                       </Text>

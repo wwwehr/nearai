@@ -268,3 +268,7 @@ class InferenceClient(object):
             body={"memory": memory},
             cast_to=str,
         )
+
+    def generate_image(self, prompt: str):
+        """Generate an image."""
+        return self.client.images.generate(prompt=prompt)

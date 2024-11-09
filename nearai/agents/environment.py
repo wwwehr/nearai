@@ -371,10 +371,10 @@ class Environment(object):
     def write_file(
         self,
         filename: str,
-        content: str,
+        content: str | bytes,
         encoding: str = "utf-8",
         filetype: str = "text/plain",
-        write_to_disk: bool = True,
+        write_to_disk: bool = True
     ) -> FileObject:
         """Writes a file to the environment.
 
@@ -386,14 +386,21 @@ class Environment(object):
         """
         if write_to_disk:
             # Write locally
-            path = Path(self._path) / filename
             path = Path(self.get_primary_agent_temp_dir()) / filename
             path.parent.mkdir(parents=True, exist_ok=True)
-            with open(path, "w", encoding=encoding) as f:
-                f.write(content)
+            if isinstance(content, bytes):
+                with open(path, "wb") as f:
+                    f.write(content)
+            else:
+                with open(path, "w", encoding=encoding) as f:
+                    f.write(content)
+
+        if isinstance(content, bytes):
+            file_data = content
+        else:
+            file_data = io.BytesIO(content.encode(encoding)) #type:ignore
 
         # Upload to Hub
-        file_data = io.BytesIO(content.encode(encoding))
         file = self._hub_client.files.create(file=(filename, file_data, filetype), purpose="assistants")
         res = self.add_reply(
             message=f"Successfully wrote {len(content) if content else 0} characters to {filename}",
@@ -997,3 +1004,7 @@ class Environment(object):
     def query_user_memory(self, query: str):
         """Query user memory."""
         return self.client.query_user_memory(query)
+
+    def generate_image(self, prompt: str):
+        """Generate an image."""
+        return self.client.generate_image(prompt)

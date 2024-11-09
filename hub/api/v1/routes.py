@@ -351,8 +351,10 @@ def generate_images(
 
     c = json.dumps(resp)
     logger.info(f"Image generation response: {c}")
+    # TODO save image to s3 and save url in the DB
+    image_url = "TODO"
     db.add_user_usage(
-        auth.account_id, request.prompt, c, request.model or "default", request.provider, "/images/generations"
+        auth.account_id, request.prompt, image_url, request.model or "default", request.provider, "/images/generations"
     )
 
     return JSONResponse(content=json.loads(c))

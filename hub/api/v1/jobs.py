@@ -24,8 +24,8 @@ class JobStatus(Enum):
 
 
 class WorkerKind(Enum):
-    GPU = "GPU"
-    CPU = "CPU"
+    GPU_8_H100 = "GPU_8_H100"
+    CPU_MEDIUM = "CPU_MEDIUM"
 
 
 @v1_router.post("/add_job")

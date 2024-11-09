@@ -3262,8 +3262,8 @@
       "WorkerKind": {
         "type": "string",
         "enum": [
-          "GPU",
-          "CPU"
+          "GPU_8_H100",
+          "CPU_MEDIUM"
         ],
         "title": "WorkerKind"
       }

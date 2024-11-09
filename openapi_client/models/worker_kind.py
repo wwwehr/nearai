@@ -26,8 +26,8 @@ class WorkerKind(str, Enum):
     """
     allowed enum values
     """
-    GPU = 'GPU'
-    CPU = 'CPU'
+    GPU_8_H100 = 'GPU_8_H100'
+    CPU_MEDIUM = 'CPU_MEDIUM'
 
     @classmethod
     def from_json(cls, json_str: str) -> Self:

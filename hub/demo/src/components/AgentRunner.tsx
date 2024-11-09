@@ -170,10 +170,13 @@ export const AgentRunner = ({
   });
 
   const messages = useMemo(() => {
-    return [
+    const result = [
       ...(thread ? Object.values(thread.messagesById) : []),
       ...optimisticMessages.map((message) => message.data),
-    ];
+    ].filter(
+      (message) => message.metadata?.message_type !== 'system:file_write',
+    );
+    return result;
   }, [thread, optimisticMessages]);
 
   const files = useMemo(() => {

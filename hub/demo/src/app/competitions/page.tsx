@@ -57,7 +57,7 @@ const CompetitionsPage = () => {
                   content: (
                     <Flex align="center" gap="s">
                       <Text as="span" size="text-s">
-                        Connect and transact swith external services and APIs
+                        Connect and transacts with external services and APIs
                       </Text>
                       <Badge label="Coming Soon" variant="neutral-alpha" />
                     </Flex>

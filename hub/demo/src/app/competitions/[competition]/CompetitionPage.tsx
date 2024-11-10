@@ -1,6 +1,6 @@
 'use client';
 
-import { Flex, HR, Section, SvgIcon, Text } from '@near-pagoda/ui';
+import { Flex, Section, SvgIcon, Text } from '@near-pagoda/ui';
 import { CalendarDots } from '@phosphor-icons/react';
 import React from 'react';
 
@@ -15,7 +15,7 @@ const CompetitionPage = ({
 }) => {
   return (
     <>
-      <Section>
+      <Section background="sand-0">
         <Text as="h1" size="text-2xl" weight="600" className="mb-12">
           {title}
         </Text>
@@ -29,11 +29,9 @@ const CompetitionPage = ({
             <Text color="sand-12">November 30, 2024 @ 11:59pm UTC</Text>
           </Flex>
         </Flex>
-
-        <HR />
-
-        {children}
       </Section>
+
+      <Section>{children}</Section>
 
       <Section>
         <EvaluationsTable

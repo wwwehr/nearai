@@ -25,7 +25,9 @@ import s from './layout.module.scss';
 */
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  const title = env.NEXT_PUBLIC_CONSUMER_MODE ? 'AI Chat' : 'AI Hub';
+  const title = env.NEXT_PUBLIC_CONSUMER_MODE
+    ? 'AI Assistant'
+    : 'AI Research Hub';
 
   return (
     <html lang="en" suppressHydrationWarning>

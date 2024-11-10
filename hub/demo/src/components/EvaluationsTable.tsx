@@ -19,7 +19,7 @@ import {
 } from '@near-pagoda/ui';
 import { Eye, Minus, Plus, Table as TableIcon } from '@phosphor-icons/react';
 import Link from 'next/link';
-import { type ChangeEventHandler, useEffect, useMemo, useState } from 'react';
+import { type ChangeEventHandler, useMemo, useState } from 'react';
 import { type z } from 'zod';
 
 import {
@@ -39,12 +39,14 @@ type Props = {
   entry?: z.infer<typeof entryModel>;
   title?: string;
   benchmarkColumns?: string[];
+  showSidebar?: boolean;
 };
 
 export const EvaluationsTable = ({
   entry: entryToEvaluate,
   benchmarkColumns: controlledBenchmarkColumns,
   title = 'Evaluations',
+  showSidebar = true,
 }: Props) => {
   const { updateQueryPath, queryParams } = useQueryParams([
     'benchmarks',
@@ -182,7 +184,7 @@ export const EvaluationsTable = ({
       columns = [...new Set([...columns, ...relatedColumns])];
     }
 
-    updateQueryPath({ columns: columns.join(',') }, 'replace');
+    updateQueryPath({ columns: columns.join(',') }, 'replace', false);
   };
 
   const onFilteredBenchmarkColumnChange: ChangeEventHandler<
@@ -196,7 +198,7 @@ export const EvaluationsTable = ({
       columns = columns.filter((benchmark) => benchmark !== event.target.value);
     }
 
-    updateQueryPath({ columns: columns.join(',') }, 'replace');
+    updateQueryPath({ columns: columns.join(',') }, 'replace', false);
   };
 
   const onSelectBenchmark: EntrySelectorOnSelectHandler = (entry, selected) => {
@@ -215,111 +217,109 @@ export const EvaluationsTable = ({
     updateQueryPath(
       { benchmarks: ids.join(','), columns: columns.join(',') },
       'replace',
+      false,
     );
     setBenchmarkSelectorIsOpen(false);
   };
 
-  useEffect(() => {
-    if (selectedBenchmarkColumns.length === 0 && selectedBenchmarks) {
-      selectedBenchmarks.forEach((benchmark) => {
-        toggleAllColumnsForBenchmark(benchmark);
-      });
-    }
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBenchmarks, selectedBenchmarkColumns]);
-
   return (
     <>
       <Sidebar.Root>
-        <Sidebar.Sidebar
-          openForSmallScreens={sidebarIsOpenForSmallerScreens}
-          setOpenForSmallScreens={setSidebarIsOpenForSmallerScreens}
-        >
-          <Flex align="center" gap="s">
-            <Text size="text-xs" weight={600} uppercase>
-              Benchmarks
+        {showSidebar && (
+          <Sidebar.Sidebar
+            openForSmallScreens={sidebarIsOpenForSmallerScreens}
+            setOpenForSmallScreens={setSidebarIsOpenForSmallerScreens}
+          >
+            <Flex align="center" gap="s">
+              <Text size="text-xs" weight={600} uppercase>
+                Benchmarks
+              </Text>
+
+              <Tooltip asChild content="Include a benchmark">
+                <Button
+                  label="Include Benchmark"
+                  icon={<Plus weight="bold" />}
+                  variant="affirmative"
+                  size="x-small"
+                  fill="ghost"
+                  onClick={() => setBenchmarkSelectorIsOpen(true)}
+                />
+              </Tooltip>
+            </Flex>
+
+            <Text size="text-s">
+              Include benchmarks to view specific evaluation metrics (columns).
             </Text>
 
-            <Tooltip asChild content="Include a benchmark">
-              <Button
-                label="Include Benchmark"
-                icon={<Plus weight="bold" />}
-                variant="affirmative"
-                size="x-small"
-                fill="ghost"
-                onClick={() => setBenchmarkSelectorIsOpen(true)}
-              />
-            </Tooltip>
-          </Flex>
+            {selectedBenchmarks ? (
+              <Sidebar.SidebarContentBleed>
+                <CardList>
+                  {selectedBenchmarks.map((benchmark) => (
+                    <Card padding="m" background="sand-2" key={benchmark.id}>
+                      <Flex gap="xs">
+                        <Flex
+                          direction="column"
+                          style={{ marginRight: 'auto' }}
+                        >
+                          <Text size="text-s" weight={500} color="sand-12">
+                            {benchmark.name} {benchmark.version}
+                          </Text>
+                          <Link href={`/profiles/${benchmark.namespace}`}>
+                            <Text size="text-xs">@{benchmark.namespace}</Text>
+                          </Link>
+                        </Flex>
 
-          <Text size="text-s">
-            Include benchmarks to view specific evaluation metrics (columns).
-          </Text>
+                        <Tooltip asChild content="Toggle all columns">
+                          <Button
+                            label="Toggle all columns"
+                            icon={<Eye weight="duotone" />}
+                            size="x-small"
+                            fill="ghost"
+                            onClick={() =>
+                              toggleAllColumnsForBenchmark(benchmark)
+                            }
+                          />
+                        </Tooltip>
 
-          {selectedBenchmarks ? (
-            <Sidebar.SidebarContentBleed>
-              <CardList>
-                {selectedBenchmarks.map((benchmark) => (
-                  <Card padding="m" background="sand-2" key={benchmark.id}>
-                    <Flex gap="xs">
-                      <Flex direction="column" style={{ marginRight: 'auto' }}>
-                        <Text size="text-s" weight={500} color="sand-12">
-                          {benchmark.name} {benchmark.version}
-                        </Text>
-                        <Link href={`/profiles/${benchmark.namespace}`}>
-                          <Text size="text-xs">@{benchmark.namespace}</Text>
-                        </Link>
+                        <Tooltip asChild content="Remove benchmark">
+                          <Button
+                            label="Remove benchmark"
+                            icon={<Minus />}
+                            size="x-small"
+                            fill="ghost"
+                            onClick={() => onSelectBenchmark(benchmark, false)}
+                          />
+                        </Tooltip>
                       </Flex>
 
-                      <Tooltip asChild content="Toggle all columns">
-                        <Button
-                          label="Toggle all columns"
-                          icon={<Eye weight="duotone" />}
-                          size="x-small"
-                          fill="ghost"
-                          onClick={() =>
-                            toggleAllColumnsForBenchmark(benchmark)
-                          }
-                        />
-                      </Tooltip>
+                      <CheckboxGroup name="columns">
+                        {columnsForBenchmark(benchmark).map((column) => (
+                          <Flex as="label" align="center" gap="s" key={column}>
+                            <Checkbox
+                              name={`columns-${column}`}
+                              value={column}
+                              checked={selectedBenchmarkColumns.includes(
+                                column,
+                              )}
+                              onChange={onFilteredBenchmarkColumnChange}
+                            />
+                            <Text as="span" size="text-s" color="sand-12">
+                              {column.replace(`${benchmark.name}/`, '')}
+                            </Text>
+                          </Flex>
+                        ))}
+                      </CheckboxGroup>
+                    </Card>
+                  ))}
+                </CardList>
+              </Sidebar.SidebarContentBleed>
+            ) : (
+              <PlaceholderStack />
+            )}
+          </Sidebar.Sidebar>
+        )}
 
-                      <Tooltip asChild content="Remove benchmark">
-                        <Button
-                          label="Remove benchmark"
-                          icon={<Minus />}
-                          size="x-small"
-                          fill="ghost"
-                          onClick={() => onSelectBenchmark(benchmark, false)}
-                        />
-                      </Tooltip>
-                    </Flex>
-
-                    <CheckboxGroup name="columns">
-                      {columnsForBenchmark(benchmark).map((column) => (
-                        <Flex as="label" align="center" gap="s" key={column}>
-                          <Checkbox
-                            name={`columns-${column}`}
-                            value={column}
-                            checked={selectedBenchmarkColumns.includes(column)}
-                            onChange={onFilteredBenchmarkColumnChange}
-                          />
-                          <Text as="span" size="text-s" color="sand-12">
-                            {column.replace(`${benchmark.name}/`, '')}
-                          </Text>
-                        </Flex>
-                      ))}
-                    </CheckboxGroup>
-                  </Card>
-                ))}
-              </CardList>
-            </Sidebar.SidebarContentBleed>
-          ) : (
-            <PlaceholderStack />
-          )}
-        </Sidebar.Sidebar>
-
-        <Sidebar.Main>
+        <Sidebar.Main style={{ padding: showSidebar ? undefined : 0 }}>
           <Grid
             columns="1fr 20rem"
             align="center"
@@ -331,15 +331,17 @@ export const EvaluationsTable = ({
                 {title}
               </Text>
 
-              <BreakpointDisplay show="sidebar-small-screen">
-                <Button
-                  label="Edit Benchmarks"
-                  icon={<TableIcon />}
-                  size="small"
-                  fill="outline"
-                  onClick={() => setSidebarIsOpenForSmallerScreens(true)}
-                />
-              </BreakpointDisplay>
+              {showSidebar && (
+                <BreakpointDisplay show="sidebar-small-screen">
+                  <Button
+                    label="Edit Benchmarks"
+                    icon={<TableIcon />}
+                    size="small"
+                    fill="outline"
+                    onClick={() => setSidebarIsOpenForSmallerScreens(true)}
+                  />
+                </BreakpointDisplay>
+              )}
             </Flex>
 
             <Input

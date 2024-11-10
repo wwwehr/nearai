@@ -1,11 +1,10 @@
 'use client';
 
-import { Section, Text } from '@near-pagoda/ui';
+import { Flex, HR, Section, SvgIcon, Text } from '@near-pagoda/ui';
+import { CalendarDots } from '@phosphor-icons/react';
 import React from 'react';
-import type { z } from 'zod';
 
 import { EvaluationsTable } from '~/components/EvaluationsTable';
-import type { entryModel } from '~/lib/models';
 
 const CompetitionPage = ({
   title,
@@ -14,30 +13,33 @@ const CompetitionPage = ({
   title: string;
   children: React.ReactNode;
 }) => {
-  const benchmarkEntry: z.infer<typeof entryModel> | undefined = undefined; // TODO
-  const benchmarkColumns: string[] | undefined = undefined; // TODO
-
   return (
     <>
       <Section>
-        <Text as="h1" size="text-3xl" weight="600" className="mb-12">
+        <Text as="h1" size="text-2xl" weight="600" className="mb-12">
           {title}
         </Text>
-        <Text as="h2" size="text-2xl">
-          Deadline
-        </Text>
-        <Text>November 30, 2024 @ 11:59pm UTC</Text>
-        <Text as="h2" size="text-2xl">
-          Description
-        </Text>
+
+        <Flex align="center" gap="s">
+          <SvgIcon icon={<CalendarDots />} color="sand-10" size="l" />
+          <Flex direction="column">
+            <Text size="text-xs" weight={600}>
+              Deadline
+            </Text>
+            <Text color="sand-12">November 30, 2024 @ 11:59pm UTC</Text>
+          </Flex>
+        </Flex>
+
+        <HR />
+
         {children}
       </Section>
 
       <Section>
         <EvaluationsTable
           title="Leaderboard"
-          entry={benchmarkEntry}
-          benchmarkColumns={benchmarkColumns}
+          benchmarkColumns={['live_bench/average']}
+          showSidebar={false}
         />
       </Section>
     </>

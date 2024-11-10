@@ -9,7 +9,7 @@ import {
   SvgIcon,
   Text,
 } from '@near-pagoda/ui';
-import { ArrowRight, Calendar } from '@phosphor-icons/react';
+import { ArrowRight, CalendarDots } from '@phosphor-icons/react';
 import React from 'react';
 
 const ModelTimeline = () => {
@@ -59,11 +59,9 @@ const ModelTimeline = () => {
   ];
 
   return (
-    // <Card padding="m">
-    <Flex direction="column" gap="s">
-      <Text weight="500" size="text-s">
-        Training Cadence
-      </Text>
+    <Flex direction="column" gap="l">
+      <Text size="text-xl">Training Cadence</Text>
+
       <div style={{ overflowX: 'auto' }}>
         <div style={{ minWidth: '600px' }}>
           {timelineData.map((model) => (
@@ -112,7 +110,6 @@ const ModelTimeline = () => {
         </div>
       </div>
     </Flex>
-    // </Card>
   );
 };
 
@@ -153,147 +150,128 @@ const ModelTrainingSeries = () => {
   const activeSeries = (
     <Card padding="l" className="mb-12">
       <Flex direction="column" gap="m">
-        <Flex align="center" gap="s">
-          <Text size="text-l" weight="600">
-            0.5B Parameter Model
-          </Text>
-          <Badge variant="success" label="Active" />
-        </Flex>
-
-        <Flex direction="column" gap="s">
-          <Flex align="center" gap="s">
-            <SvgIcon
-              icon={<Calendar weight="duotone" />}
-              color="violet-9"
-              size="s"
-            />
-            <Text>Monthly Rounds</Text>
+        <Flex gap="m" phone={{ direction: 'column' }}>
+          <Flex align="center" gap="s" style={{ marginRight: 'auto' }}>
+            <Text
+              href="/competitions/0.5b-november-2024"
+              size="text-l"
+              decoration="none"
+            >
+              0.5B Parameter Model
+            </Text>
+            <Badge variant="success" label="Active" size="small" />
           </Flex>
-          <Text color="sand-11">
-            Current round ends <b>Nov 30 @ 11:59 PM UTC</b>
-          </Text>
+          <Button
+            label="View Leaderboard"
+            variant="primary"
+            href="/competitions/0.5b-november-2024"
+            size="small"
+            iconRight={<ArrowRight weight="bold" />}
+          />
         </Flex>
 
-        <Button
-          label="View Leaderboard"
-          variant="primary"
-          href="/competitions/0.5b-november-2024"
-          iconRight={<ArrowRight weight="bold" />}
-        />
+        <Flex align="center" gap="s">
+          <SvgIcon
+            icon={<CalendarDots weight="duotone" />}
+            color="sand-10"
+            size="l"
+          />
+          <Flex direction="column">
+            <Text size="text-s" weight={600}>
+              Monthly Rounds
+            </Text>
+            <Text color="sand-11" size="text-s">
+              Current round ends: Nov 30 @ 11:59 PM UTC
+            </Text>
+          </Flex>
+        </Flex>
       </Flex>
     </Card>
   );
 
   return (
-    <Section>
+    <Section background="sand-2" padding="hero" gap="xl">
       <Flex direction="column" gap="l">
         <Flex direction="column" gap="m">
-          <Text as="h2" size="text-2xl" weight="600">
+          <Text as="h2" size="text-2xl">
             Model Training Series
           </Text>
-          <Text color="sand-11" size="text-l">
+          <Text color="sand-11" size="text-l" weight={400}>
             A progression of increasingly capable models, with parallel
             competitions
           </Text>
         </Flex>
 
         {activeSeries}
-        {/* Model progression */}
-        <Card>
-          <Flex direction="column" gap="m">
-            <Text weight="600" size="text-l">
-              Model Size Progression
-            </Text>
-
-            <div style={{ overflowX: 'auto', paddingBottom: '1rem' }}>
-              <div style={{ minWidth: '800px' }}>
-                <Flex gap="m" align="stretch">
-                  {models.map((model, index) => (
-                    <div
-                      key={model.size}
-                      style={{
-                        flex: 1,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'stretch',
-                        position: 'relative',
-                      }}
-                    >
-                      {/* Connector line */}
-                      {index < models.length - 1 && (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            top: '50%',
-                            right: '-1rem',
-                            width: '2rem',
-                            height: '2px',
-                            background: 'var(--sand-6)',
-                            zIndex: 0,
-                          }}
-                        />
-                      )}
-
-                      {/* Model card */}
-                      <Card
-                        padding="m"
-                        background={
-                          model.status === 'active' ? 'violet-3' : undefined
-                        }
-                        style={{
-                          flex: 1,
-                          position: 'relative',
-                          zIndex: 1,
-                          opacity: model.status === 'planned' ? 0.7 : 1,
-                        }}
-                      >
-                        <Flex direction="column" align="center" gap="s">
-                          <Text
-                            size="text-xl"
-                            weight="600"
-                            color={
-                              model.status === 'planned' ? 'sand-11' : undefined
-                            }
-                          >
-                            {model.size}
-                          </Text>
-
-                          {model.status === 'active' && (
-                            <Badge variant="success" label="Active" />
-                          )}
-                          {model.status === 'upcoming' && (
-                            <Badge variant="neutral" label={model.startDate} />
-                          )}
-                          {model.status === 'planned' && (
-                            <Badge variant="neutral-alpha" label="Planned" />
-                          )}
-
-                          {model.status === 'active' && (
-                            <Button
-                              size="small"
-                              variant={
-                                model.status === 'active'
-                                  ? 'primary'
-                                  : 'secondary'
-                              }
-                              label={
-                                model.status === 'active' ? 'View' : 'Notify Me'
-                              }
-                              href="/competitions/0.5b-november-2024"
-                              disabled={model.status !== 'active'}
-                            />
-                          )}
-                        </Flex>
-                      </Card>
-                    </div>
-                  ))}
-                </Flex>
-              </div>
-            </div>
-          </Flex>
-          <ModelTimeline />
-        </Card>
       </Flex>
+
+      <Flex direction="column" gap="l">
+        <Text size="text-xl">Model Size Progression</Text>
+
+        <div style={{ overflowX: 'auto', paddingBottom: '1rem' }}>
+          <div style={{ minWidth: '800px' }}>
+            <Flex gap="m" align="stretch">
+              {models.map((model, index) => (
+                <Card
+                  key={index}
+                  href={
+                    model.status === 'active'
+                      ? '/competitions/0.5b-november-2024'
+                      : undefined
+                  }
+                  padding="m"
+                  background={model.status === 'active' ? 'sand-0' : undefined}
+                  border={model.status === 'active' ? 'sand-12' : undefined}
+                  style={{
+                    flex: 1,
+                    aspectRatio: 1,
+                    opacity: model.status === 'planned' ? 0.7 : 1,
+                    position: 'relative',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    textAlign: 'center',
+                  }}
+                >
+                  {/* Connector line */}
+                  {index < models.length - 1 && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '50%',
+                        right: 'calc(-1rem - 1px)',
+                        width: '1rem',
+                        height: '2px',
+                        background: 'var(--sand-6)',
+                        zIndex: 0,
+                      }}
+                    />
+                  )}
+
+                  <Text
+                    size="text-xl"
+                    clickableHighlight
+                    color={model.status === 'planned' ? 'sand-11' : undefined}
+                  >
+                    {model.size}
+                  </Text>
+
+                  {model.status === 'active' && (
+                    <Badge variant="success" label="Active" />
+                  )}
+                  {model.status === 'upcoming' && (
+                    <Badge variant="neutral" label={model.startDate} />
+                  )}
+                  {model.status === 'planned' && (
+                    <Badge variant="neutral-alpha" label="Planned" />
+                  )}
+                </Card>
+              ))}
+            </Flex>
+          </div>
+        </div>
+      </Flex>
+
+      <ModelTimeline />
     </Section>
   );
 };

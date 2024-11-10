@@ -18,7 +18,7 @@ From your machine you will use \`nearai-cli submit\` to submit your runs. From w
 Whenever you run a LiveBench benchmark from a run initiated with \`nearai-cli submit\`, the result will appear on the leaderboard.
 `;
   return (
-    <CompetitionPage title="0.5 Model Training Competition - November 2024">
+    <CompetitionPage title="0.5B Model Training Competition - November 2024">
       <Markdown content={content} />
     </CompetitionPage>
   );

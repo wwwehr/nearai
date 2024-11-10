@@ -30,94 +30,100 @@ import ModelTrainingSeries from '~/app/competitions/ModelTrainingSeries';
 
 const CompetitionsPage = () => {
   const visionStuff = (
-    <Section background="violet-2">
-      <Pattern>
-        <Grid columns="1fr 1fr" gap="xl" phone={{ columns: '1fr', gap: 'l' }}>
-          {/* Left column */}
+    <Section background="sand-0">
+      <Pattern patternMaskedBackground="linear-gradient(to bottom right, var(--violet-brand), var(--green-brand))">
+        <Grid
+          columns="1fr 1px 1fr"
+          gap="l"
+          phone={{ columns: '1fr' }}
+          style={{ paddingBlock: '0.5rem' }}
+        >
           <Flex direction="column" gap="l">
-            <Text size="text-2xl" weight="600">
-              Build Agents & Models
-            </Text>
-            <Text size="text-l" color="sand-11">
-              NEAR AI Agents are the building block for the user-owned AI
-              ecosystem
-            </Text>
             <Flex direction="column" gap="m">
-              {[
-                {
-                  icon: <Robot weight="duotone" />,
-                  text: 'Train and evaluate models through our benchmarks and competitions',
-                },
-                {
-                  icon: <CirclesFour weight="duotone" />,
-                  text: 'Interact with models, users, and other AI agents across Web2 and Web3',
-                },
-                {
-                  icon: <Cloud weight="duotone" />,
-                  content: (
-                    <Flex align="center" gap="s">
-                      <Text as="span" size="text-s">
-                        Connect and transact with external services and APIs
-                      </Text>
-                      <Badge label="Coming Soon" variant="neutral-alpha" />
-                    </Flex>
-                  ),
-                },
-              ].map((item, index) => (
-                <Card key={index} background="violet-3">
-                  <Flex align="center" gap="m">
-                    <SvgIcon icon={item.icon} size="m" color="violet-9" />
-                    {item.content ?? (
-                      <Text as="span" size="text-s">
-                        {item.text}
-                      </Text>
-                    )}
-                  </Flex>
-                </Card>
-              ))}
+              <Text size="text-2xl" weight="600">
+                Build agents & models
+              </Text>
+              <Text size="text-l" color="sand-11" weight={450}>
+                NEAR AI Agents are the building block for the user-owned AI
+                ecosystem
+              </Text>
             </Flex>
+            {[
+              {
+                icon: <Robot weight="duotone" />,
+                text: 'Train and evaluate models through our benchmarks and competitions',
+              },
+              {
+                icon: <CirclesFour weight="duotone" />,
+                text: 'Interact with models, users, and other AI agents across Web2 and Web3',
+              },
+              {
+                icon: <Cloud weight="duotone" />,
+                content: (
+                  <Flex align="center" gap="s">
+                    <Text as="span" size="text-s">
+                      Connect and transact with external services and APIs
+                    </Text>
+                    <Badge label="Coming Soon" variant="neutral-alpha" />
+                  </Flex>
+                ),
+              },
+            ].map((item, index) => (
+              <Flex align="center" gap="m" key={index}>
+                <SvgIcon icon={item.icon} size="m" color="violet-9" />
+                {item.content ?? (
+                  <Text as="span" size="text-s">
+                    {item.text}
+                  </Text>
+                )}
+              </Flex>
+            ))}
           </Flex>
 
-          {/* Right column */}
+          <div
+            style={{
+              borderLeft: '1px solid var(--sand-4)',
+              borderTop: '1px solid var(--sand-4)',
+            }}
+          />
+
           <Flex direction="column" gap="l">
-            <Text size="text-2xl" weight="600">
-              A New Model for AI Development
-            </Text>
-            <Text size="text-l" color="sand-11">
-              Contribute to an open ecosystem with fair rewards
-            </Text>
             <Flex direction="column" gap="m">
-              {[
-                {
-                  icon: <Code weight="duotone" />,
-                  content: (
-                    <Text as="span" size="text-s">
-                      Enter your solutions in targeted challenges or join the
-                      ongoing Model Training Series
-                    </Text>
-                  ),
-                },
-                {
-                  icon: <Lightbulb weight="duotone" />,
-                  content: (
-                    <Flex align="center" gap="s">
-                      <Text as="span" size="text-s">
-                        Earn rewards and royalties from competitions and model
-                        usage
-                      </Text>
-                      <Badge label="Coming Soon" variant="neutral-alpha" />
-                    </Flex>
-                  ),
-                },
-              ].map((item, index) => (
-                <Card key={index} background="violet-3">
-                  <Flex align="center" gap="m">
-                    <SvgIcon icon={item.icon} size="m" color="violet-9" />
-                    {item.content}
-                  </Flex>
-                </Card>
-              ))}
+              <Text size="text-2xl" weight="600">
+                A new model for AI development
+              </Text>
+              <Text size="text-l" color="sand-11" weight={450}>
+                Contribute to an open ecosystem with fair rewards
+              </Text>
             </Flex>
+            {[
+              {
+                icon: <Code weight="duotone" />,
+                content: (
+                  <Text as="span" size="text-s">
+                    Enter your solutions in targeted challenges or join the
+                    ongoing Model Training Series
+                  </Text>
+                ),
+              },
+              {
+                icon: <Lightbulb weight="duotone" />,
+                content: (
+                  <Flex align="center" gap="s">
+                    <Text as="span" size="text-s">
+                      Earn rewards and royalties from competitions and model
+                      usage
+                    </Text>
+                    <Badge label="Coming Soon" variant="neutral-alpha" />
+                  </Flex>
+                ),
+              },
+            ].map((item, index) => (
+              <Flex align="center" gap="m" key={index}>
+                <SvgIcon icon={item.icon} size="m" color="violet-9" />
+                {item.content}
+              </Flex>
+            ))}
           </Flex>
         </Grid>
       </Pattern>
@@ -125,46 +131,49 @@ const CompetitionsPage = () => {
   );
 
   const otherCompetitions = (
-    <Section>
-      <Flex direction="column" gap="xl">
-        {/* Other Competitions */}
-        <Flex direction="column" gap="m">
-          <Text as="h2" size="text-2xl" weight="600">
-            Other Active Competitions
-          </Text>
-        </Flex>
-
-        <Card padding="l">
-          <Grid columns="1fr auto" gap="xl" phone={{ columns: '1fr' }}>
-            <Flex direction="column" gap="m">
-              <Text size="text-xl" weight="600">
-                LEAN Benchmark Challenge
-              </Text>
-              <Text color="sand-11">
-                Deadline: <b>Nov 30 @ 11:59 PM UTC</b>
-              </Text>
-            </Flex>
-
-            <Button
-              label="View Leaderboard"
-              variant="primary"
-              href="/competitions/lean"
-              iconRight={<ArrowRight weight="bold" />}
-            />
-          </Grid>
-        </Card>
+    <Section padding="hero" gap="l">
+      {/* Other Competitions */}
+      <Flex direction="column" gap="m">
+        <Text as="h2" size="text-2xl" weight="600">
+          Other Active Competitions
+        </Text>
       </Flex>
+
+      <Card padding="l">
+        <Grid columns="1fr auto" gap="xl" phone={{ columns: '1fr' }}>
+          <Flex direction="column" gap="m">
+            <Text
+              size="text-xl"
+              weight="600"
+              href="/competitions/lean"
+              decoration="none"
+            >
+              LEAN Benchmark Challenge
+            </Text>
+            <Text color="sand-11">
+              Deadline: <b>Nov 30 @ 11:59 PM UTC</b>
+            </Text>
+          </Flex>
+
+          <Button
+            label="View Leaderboard"
+            variant="primary"
+            href="/competitions/lean"
+            iconRight={<ArrowRight weight="bold" />}
+          />
+        </Grid>
+      </Card>
     </Section>
   );
 
   const resources = (
-    <Section background="sand-2">
+    <Section padding="hero">
       <Flex direction="column" gap="l">
         <Flex direction="column" gap="m">
           <Text as="h2" size="text-2xl" weight="600">
             Resources
           </Text>
-          <Text color="sand-11" size="text-l">
+          <Text color="sand-11" size="text-l" weight={400}>
             Everything you need to get started
           </Text>
         </Flex>
@@ -210,7 +219,7 @@ const CompetitionsPage = () => {
                 <Button
                   label={resource.link}
                   variant="secondary"
-                  fill="ghost"
+                  fill="outline"
                   iconRight={<ArrowSquareOut weight="bold" />}
                   href={resource.href}
                 />

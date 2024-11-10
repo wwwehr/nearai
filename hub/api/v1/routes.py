@@ -7,9 +7,9 @@ from typing import Annotated, Dict, Iterable, List, Optional, Union
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security import HTTPBearer
+from nearai.shared.cache import mem_cache_with_timeout
+from nearai.shared.provider_models import PROVIDER_MODEL_SEP, get_provider_model
 from pydantic import BaseModel, field_validator
-from shared.cache import mem_cache_with_timeout
-from shared.provider_models import PROVIDER_MODEL_SEP, get_provider_model
 
 from hub.api.v1.auth import AuthToken, get_auth, validate_signature
 from hub.api.v1.completions import Message, Provider, get_llm_ai, handle_stream
@@ -351,8 +351,10 @@ def generate_images(
 
     c = json.dumps(resp)
     logger.info(f"Image generation response: {c}")
+    # TODO save image to s3 and save url in the DB
+    image_url = "TODO"
     db.add_user_usage(
-        auth.account_id, request.prompt, c, request.model or "default", request.provider, "/images/generations"
+        auth.account_id, request.prompt, image_url, request.model or "default", request.provider, "/images/generations"
     )
 
     return JSONResponse(content=json.loads(c))

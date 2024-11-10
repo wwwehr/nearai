@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta
 from typing import List
 
-from openapi_client.api.delegation_api import Delegation, DelegationApi
-from openapi_client.api_client import ApiClient
-from shared.auth_data import AuthData
+from nearai.openapi_client.api.delegation_api import Delegation, DelegationApi
+from nearai.openapi_client.api_client import ApiClient
+from nearai.shared.auth_data import AuthData
 
 
 class OnBehalfOf:

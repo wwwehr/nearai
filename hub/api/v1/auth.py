@@ -4,8 +4,8 @@ from typing import Optional
 
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from nearai.shared.near.sign import validate_nonce, verify_signed_message
 from pydantic import BaseModel, field_validator
-from shared.near.sign import validate_nonce, verify_signed_message
 from sqlmodel import select
 
 from hub.api.v1.exceptions import TokenValidationError
@@ -16,6 +16,7 @@ bearer = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
 
 
+# TODO: This code is duplicated from shared/auth_data.py (remove duplication)
 class AuthToken(BaseModel):
     """Model for auth callback."""
 

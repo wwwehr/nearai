@@ -16,7 +16,6 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union, cast
 
 import psutil
-import shared.near.sign as near
 from litellm.types.completion import ChatCompletionMessageParam
 from litellm.types.utils import (
     ChatCompletionMessageToolCall,
@@ -31,9 +30,14 @@ from openai.types.beta.threads.message_create_params import Attachment
 from openai.types.beta.threads.run import Run
 from openai.types.beta.vector_store import VectorStore
 from openai.types.file_object import FileObject
-from shared.client_config import DEFAULT_PROVIDER_MODEL
-from shared.inference_client import InferenceClient
-from shared.models import (
+
+import nearai.shared.near.sign as near
+from nearai.agents import tool_json_helper
+from nearai.agents.agent import Agent
+from nearai.agents.tool_registry import ToolRegistry
+from nearai.shared.client_config import DEFAULT_PROVIDER_MODEL
+from nearai.shared.inference_client import InferenceClient
+from nearai.shared.models import (
     AutoFileChunkingStrategyParam,
     ChunkingStrategy,
     ExpiresAfter,
@@ -41,10 +45,6 @@ from shared.models import (
     GitLabSource,
     StaticFileChunkingStrategyParam,
 )
-
-from nearai.agents import tool_json_helper
-from nearai.agents.agent import Agent
-from nearai.agents.tool_registry import ToolRegistry
 
 DELIMITER = "\n"
 CHAT_FILENAME = "chat.txt"
@@ -371,7 +371,7 @@ class Environment(object):
     def write_file(
         self,
         filename: str,
-        content: str,
+        content: str | bytes,
         encoding: str = "utf-8",
         filetype: str = "text/plain",
         write_to_disk: bool = True,
@@ -386,14 +386,21 @@ class Environment(object):
         """
         if write_to_disk:
             # Write locally
-            path = Path(self._path) / filename
             path = Path(self.get_primary_agent_temp_dir()) / filename
             path.parent.mkdir(parents=True, exist_ok=True)
-            with open(path, "w", encoding=encoding) as f:
-                f.write(content)
+            if isinstance(content, bytes):
+                with open(path, "wb") as f:
+                    f.write(content)
+            else:
+                with open(path, "w", encoding=encoding) as f:
+                    f.write(content)
+
+        if isinstance(content, bytes):
+            file_data = content
+        else:
+            file_data = io.BytesIO(content.encode(encoding))  # type:ignore
 
         # Upload to Hub
-        file_data = io.BytesIO(content.encode(encoding))
         file = self._hub_client.files.create(file=(filename, file_data, filetype), purpose="assistants")
         res = self.add_reply(
             message=f"Successfully wrote {len(content) if content else 0} characters to {filename}",
@@ -997,3 +1004,7 @@ class Environment(object):
     def query_user_memory(self, query: str):
         """Query user memory."""
         return self.client.query_user_memory(query)
+
+    def generate_image(self, prompt: str):
+        """Generate an image."""
+        return self.client.generate_image(prompt)

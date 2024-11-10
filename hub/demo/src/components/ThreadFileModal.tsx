@@ -11,8 +11,9 @@ import { type z } from 'zod';
 
 import { type threadFileModel } from '~/lib/models';
 import { copyTextToClipboard } from '~/utils/clipboard';
+import { filePathIsImage, filePathToCodeLanguage } from '~/utils/file';
 
-import { Code, filePathToCodeLanguage } from './lib/Code';
+import { Code } from './lib/Code';
 import { Markdown } from './lib/Markdown';
 
 type Props = {
@@ -28,6 +29,7 @@ export const ThreadFileModal = ({
 }: Props) => {
   const file =
     filesByName && openedFileName ? filesByName[openedFileName] : undefined;
+  const isImage = filePathIsImage(file?.filename);
   const language = file && filePathToCodeLanguage(file.filename);
   const isMarkdown = language === 'markdown';
   const [renderAsMarkdown, setRenderAsMarkdown] = useState(isMarkdown);
@@ -71,34 +73,40 @@ export const ThreadFileModal = ({
               </>
             )}
 
-            <Tooltip asChild content="Copy file content to clipboard">
-              <Button
-                label="Copy to clipboard"
-                icon={<Copy />}
-                variant="secondary"
-                fill="ghost"
-                size="small"
-                onClick={() => file && copyTextToClipboard(file.content)}
-                tabIndex={-1}
-              />
-            </Tooltip>
+            {!isImage && (
+              <Tooltip asChild content="Copy file content to clipboard">
+                <Button
+                  label="Copy to clipboard"
+                  icon={<Copy />}
+                  variant="secondary"
+                  fill="ghost"
+                  size="small"
+                  onClick={() => file && copyTextToClipboard(file.content)}
+                  tabIndex={-1}
+                />
+              </Tooltip>
+            )}
           </Flex>
         }
         size="l"
       >
         {file ? (
-          <>
-            {renderAsMarkdown ? (
-              <Markdown content={file.content} />
-            ) : (
-              <Code
-                bleed
-                showCopyButton={false}
-                source={file.content}
-                language={filePathToCodeLanguage(file.filename)}
-              />
-            )}
-          </>
+          isImage ? (
+            <img src={file.content} alt={file.filename} />
+          ) : (
+            <>
+              {renderAsMarkdown ? (
+                <Markdown content={file.content} />
+              ) : (
+                <Code
+                  bleed
+                  showCopyButton={false}
+                  source={file.content}
+                  language={filePathToCodeLanguage(file.filename)}
+                />
+              )}
+            </>
+          )
         ) : (
           <PlaceholderStack />
         )}

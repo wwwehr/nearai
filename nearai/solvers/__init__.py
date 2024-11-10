@@ -3,14 +3,14 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
-from aws_runner.service import EnvironmentRun, start_with_environment
 from litellm import Choices, ModelResponse
 from litellm.types.completion import ChatCompletionMessageParam
-from shared.inference_client import InferenceClient
-from shared.provider_models import get_provider_namespaced_model
 
 from nearai.agents.agent import Agent
+from nearai.aws_runner.service import EnvironmentRun, start_with_environment
 from nearai.config import CONFIG, get_hub_client
+from nearai.shared.inference_client import InferenceClient
+from nearai.shared.provider_models import get_provider_namespaced_model
 
 
 class SolverScoringMethod(Enum):

@@ -1,7 +1,6 @@
 'use client';
 
 import { Flex, Text } from '@near-pagoda/ui';
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { env } from '~/env';
@@ -46,17 +45,23 @@ export const Footer = ({ conditional }: Props) => {
         <Text size="text-xs">{title}</Text>
 
         <Flex wrap="wrap" gap="m">
-          <Link href="https://near.ai" target="_blank">
-            <Text size="text-xs" decoration="underline">
-              near.ai
-            </Text>
-          </Link>
+          <Text
+            href="https://near.ai"
+            target="_blank"
+            size="text-xs"
+            color="sand-11"
+          >
+            near.ai
+          </Text>
 
-          <Link href="/terms-and-conditions.pdf" target="_blank">
-            <Text size="text-xs" decoration="underline">
-              Terms & Conditions
-            </Text>
-          </Link>
+          <Text
+            href="/terms-and-conditions.pdf"
+            target="_blank"
+            size="text-xs"
+            color="sand-11"
+          >
+            Terms & Conditions
+          </Text>
         </Flex>
       </Flex>
     </footer>

@@ -1,16 +1,15 @@
 import json
-import uuid
 from enum import Enum
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import asc, select, update
 
 from hub.api.v1.auth import AuthToken
-from hub.api.v1.models import Job, get_session
+from hub.api.v1.models import Job, RegistryEntry, get_session
 from hub.api.v1.permissions import PermissionVariant, requires_permission
-from hub.api.v1.registry import S3_BUCKET, s3
+from hub.api.v1.registry import get_read_access
 
 v1_router = APIRouter(
     prefix="/jobs",
@@ -24,22 +23,27 @@ class JobStatus(Enum):
     COMPLETED = "completed"
 
 
+class WorkerKind(Enum):
+    GPU_8_A100 = "GPU_8_A100"
+    CPU_MEDIUM = "CPU_MEDIUM"
+
+
 @v1_router.post("/add_job")
 async def add_job(
-    file: UploadFile = File(...),
+    worker_kind: WorkerKind,
+    entry: RegistryEntry = Depends(get_read_access),
     auth: AuthToken = Depends(requires_permission(PermissionVariant.SUBMIT_JOB)),
 ) -> Job:
     with get_session() as session:
-        key = f"jobs/{auth.account_id}/{uuid.uuid4().hex[:16]}"
-        assert S3_BUCKET is not None
-        s3.upload_fileobj(file.file, S3_BUCKET, key)
         job = Job(
             account_id=auth.account_id,
-            registry_path=f"s3://{S3_BUCKET}/{key}",
-            status=JobStatus.PENDING,
+            registry_path=entry.to_location().to_str(),
+            worker_kind=worker_kind.value,
+            status=JobStatus.PENDING.value,
         )
         session.add(job)
         session.commit()
+        session.refresh(job)
         return job
 
 
@@ -53,12 +57,17 @@ class SelectedJob(BaseModel):
 @v1_router.post("/get_pending_job")
 def get_pending_job(
     worker_id: str,
+    worker_kind: WorkerKind,
     auth: AuthToken = Depends(requires_permission(PermissionVariant.WORKER)),
 ) -> SelectedJob:
     with get_session() as session:
         for _ in range(5):
             job = session.exec(
-                select(Job).where(Job.status == JobStatus.PENDING).order_by(asc(Job.id)).limit(1)
+                select(Job)
+                .where(Job.status == JobStatus.PENDING.value)
+                .where(Job.worker_kind == worker_kind.value)
+                .order_by(asc(Job.id))
+                .limit(1)
             ).first()
 
             if job is None:
@@ -67,8 +76,8 @@ def get_pending_job(
             session.exec(
                 update(Job)
                 .where(Job.id == job.id)  # type: ignore
-                .where(Job.status == JobStatus.PENDING)  # type: ignore
-                .values(status=JobStatus.PROCESSING)
+                .where(Job.status == JobStatus.PENDING.value)  # type: ignore
+                .values(status=JobStatus.PROCESSING.value)
                 .values(worker_id=worker_id)
             )
             session.commit()
@@ -77,7 +86,7 @@ def get_pending_job(
             final_job = session.exec(
                 select(Job)
                 .where(Job.id == job.id)
-                .where(Job.status == JobStatus.PROCESSING)
+                .where(Job.status == JobStatus.PROCESSING.value)
                 .where(Job.worker_id == worker_id)
             ).first()
 

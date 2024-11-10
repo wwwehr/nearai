@@ -7,8 +7,8 @@ import requests
 from fastapi import APIRouter, Body, Depends, HTTPException, Response
 from nearai.agents.local_runner import LocalRunner
 from nearai.clients.lambda_client import LambdaWrapper
+from nearai.shared.auth_data import AuthData
 from pydantic import BaseModel, Field
-from shared.auth_data import AuthData
 
 from hub.api.v1.auth import AuthToken, get_auth
 from hub.api.v1.entry_location import EntryLocation

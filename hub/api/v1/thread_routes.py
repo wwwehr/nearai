@@ -6,6 +6,8 @@ from typing import Any, Dict, Iterable, List, Literal, Optional, Union
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Path, Query
 from nearai.agents.local_runner import LocalRunner
 from nearai.config import load_config_file
+from nearai.shared.auth_data import AuthData
+from nearai.shared.client_config import DEFAULT_PROVIDER_MODEL
 from openai import BaseModel
 from openai.types.beta.assistant_response_format_option_param import AssistantResponseFormatOptionParam
 from openai.types.beta.thread import Thread
@@ -16,8 +18,6 @@ from openai.types.beta.threads.message_update_params import MessageUpdateParams
 from openai.types.beta.threads.run import Run as OpenAIRun
 from openai.types.beta.threads.run_create_params import AdditionalMessage, TruncationStrategy
 from pydantic import Field
-from shared.auth_data import AuthData
-from shared.client_config import DEFAULT_PROVIDER_MODEL
 from sqlalchemy.orm.attributes import flag_modified
 from sqlmodel import asc, desc, select
 
@@ -445,7 +445,7 @@ class RunCreateParamsBase(BaseModel):
     tools: Optional[List[dict]] = Field(None, description="Override the tools the assistant can use for this run.")
     metadata: Optional[dict] = Field(None, description="Set of 16 key-value pairs that can be attached to an object.")
 
-    include: List[dict] = Field(None, description="A list of additional fields to include in the response.")
+    include: List[dict] = Field([], description="A list of additional fields to include in the response.")
     additional_instructions: Optional[str] = Field(
         None, description="Appends additional instructions at the end of the instructions for the run."
     )
@@ -529,12 +529,9 @@ def create_run(
             thread_id=thread_id,
             assistant_id=run.assistant_id,
             model=run.model,
-            instructions=run.instructions,
+            instructions=(run.instructions or "") + (run.additional_instructions or ""),
             tools=run.tools,
             metadata=run.metadata,
-            include=run.include,
-            additional_instructions=run.additional_instructions,
-            additional_messages=run.additional_messages,
             max_completion_tokens=run.max_completion_tokens,
             max_prompt_tokens=run.max_prompt_tokens,
             parallel_tool_calls=run.parallel_tool_calls,

@@ -16,8 +16,6 @@ To participate, you will need \`nearai-cli\` installed on your computer. For det
 From your machine you will use \`nearai-cli submit\` to submit your runs. From within the run, you will use \`near-cli\` to download raw data and to upload datasets and pre-trained models, as well as to run evaluations.
 
 To participate in the competition, apply [here](https://docs.google.com/forms/d/e/1FAIpQLScInS4mHyZb_kSkD0-CMPPagyhpBKdutbAyS6YNbHJc9ZgaUw/viewform).
-
-Whenever you run a LiveBench benchmark from a run initiated with \`nearai-cli submit\`, the result will appear on the leaderboard.
 `;
   return (
     <CompetitionPage title="0.5B Model Training Competition - November 2024">

@@ -36,17 +36,19 @@ import { api } from '~/trpc/react';
 import { wordsMatchFuzzySearch } from '~/utils/search';
 
 type Props = {
-  entry?: z.infer<typeof entryModel>;
-  title?: string;
   benchmarkColumns?: string[];
+  entry?: z.infer<typeof entryModel>;
+  onlyShowEvaluationsWithMatchingBenchmark?: boolean;
   showSidebar?: boolean;
+  title?: string;
 };
 
 export const EvaluationsTable = ({
-  entry: entryToEvaluate,
   benchmarkColumns: controlledBenchmarkColumns,
-  title = 'Evaluations',
+  entry: entryToEvaluate,
+  onlyShowEvaluationsWithMatchingBenchmark,
   showSidebar = true,
+  title = 'Evaluations',
 }: Props) => {
   const { updateQueryPath, queryParams } = useQueryParams([
     'benchmarks',
@@ -132,10 +134,22 @@ export const EvaluationsTable = ({
       }
     }
 
-    if (!evaluations || !searchQueryDebounced) return evaluations;
+    if (!evaluations) return evaluations;
 
-    return evaluations.filter((evaluation) =>
-      wordsMatchFuzzySearch(
+    return evaluations.filter((evaluation) => {
+      if (onlyShowEvaluationsWithMatchingBenchmark) {
+        const hasResult = selectedBenchmarkColumns.find((column) => {
+          return (
+            typeof evaluation[column] !== 'undefined' &&
+            evaluation[column] !== null
+          );
+        });
+        if (!hasResult) return false;
+      }
+
+      if (!searchQueryDebounced) return true;
+
+      return wordsMatchFuzzySearch(
         [
           evaluation.namespace,
           evaluation.agentId ?? evaluation.agent,
@@ -144,9 +158,15 @@ export const EvaluationsTable = ({
           evaluation.version,
         ],
         searchQueryDebounced,
-      ),
-    );
-  }, [evaluationsQuery.data, searchQueryDebounced, entryToEvaluate]);
+      );
+    });
+  }, [
+    evaluationsQuery.data,
+    searchQueryDebounced,
+    entryToEvaluate,
+    onlyShowEvaluationsWithMatchingBenchmark,
+    selectedBenchmarkColumns,
+  ]);
 
   const { sorted, ...tableProps } = useTable({
     data: searched,

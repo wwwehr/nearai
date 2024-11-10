@@ -40,6 +40,7 @@ const CompetitionPage = ({
           title="Leaderboard"
           benchmarkColumns={['live_bench/average']}
           showSidebar={false}
+          onlyShowEvaluationsWithMatchingBenchmark
         />
       </Section>
     </>

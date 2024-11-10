@@ -14,9 +14,11 @@ export const Root = (props: { children: ReactNode }) => {
 
 export const Main = ({
   children,
+  showFooter = true,
   style,
 }: {
   children: ReactNode;
+  showFooter?: boolean;
   style?: CSSProperties;
 }) => {
   return (
@@ -24,7 +26,7 @@ export const Main = ({
       <div className={s.mainContent} style={style}>
         {children}
       </div>
-      <Footer />
+      {showFooter && <Footer />}
     </div>
   );
 };

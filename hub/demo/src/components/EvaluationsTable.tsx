@@ -343,7 +343,10 @@ export const EvaluationsTable = ({
           </Sidebar.Sidebar>
         )}
 
-        <Sidebar.Main style={{ padding: showSidebar ? undefined : 0 }}>
+        <Sidebar.Main
+          style={{ padding: showSidebar ? undefined : 0 }}
+          showFooter={showSidebar}
+        >
           <Grid
             columns="1fr 20rem"
             align="center"

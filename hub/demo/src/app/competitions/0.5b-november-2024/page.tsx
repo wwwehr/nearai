@@ -9,7 +9,7 @@ Welcome to the first NEAR AI competition.
 
 In this competition, we want the participants to pre-train a 0.5B parameter model that performs as well as possible on a versatile benchmark called [LiveBench](https://livebench.ai/).
 
-0.5B parameter model is quite small in the model world, but it can be trained relatively quickly, and thus allows iterating over various ideas and techniques. We will host more competition for large models, and scaling laws, in the new future. Learn more about this strategy [on our blog](link to the blogpost).
+0.5B parameter model is quite small in the model world, but it can be trained relatively quickly, and thus allows iterating over various ideas and techniques. We will host more competition for large models, and scaling laws, in the new future. Learn more about this strategy [on the NEAR AI blog](https://near.ai).
 
 To participate, you will need \`nearai-cli\` installed on your computer. For details and documentation, visit the [nearai-cli GitHub page](https://github.com/nearai/nearai).
 

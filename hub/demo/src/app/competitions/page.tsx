@@ -12,7 +12,6 @@ import {
   Text,
 } from '@near-pagoda/ui';
 import {
-  ArrowRight,
   ArrowSquareOut,
   Book,
   ChartBar,
@@ -142,25 +141,15 @@ const CompetitionsPage = () => {
       <Card padding="l">
         <Grid columns="1fr auto" gap="xl" phone={{ columns: '1fr' }}>
           <Flex direction="column" gap="m">
-            <Text
-              size="text-xl"
-              weight="600"
-              href="/competitions/lean"
-              decoration="none"
-            >
-              LEAN Benchmark Challenge
+            <Text size="text-xl" weight="600" decoration="none">
+              Lean Benchmark Challenge
             </Text>
             <Text color="sand-11">
               Deadline: <b>Nov 30 @ 11:59 PM UTC</b>
             </Text>
           </Flex>
 
-          <Button
-            label="View Leaderboard"
-            variant="primary"
-            href="/competitions/lean"
-            iconRight={<ArrowRight weight="bold" />}
-          />
+          <Button label="Begins November 11" variant="primary" disabled />
         </Grid>
       </Card>
     </Section>
@@ -206,7 +195,7 @@ const CompetitionsPage = () => {
               title: 'Community',
               description: 'Connect with other researchers',
               link: 'Join',
-              href: '#',
+              href: 'https://t.me/+CcjoSO0ZnlM0ZmJh',
             },
           ].map((resource, index) => (
             <Card key={index} padding="l">

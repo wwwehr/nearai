@@ -264,6 +264,7 @@ def _runner_for_env():
 
 def get_agent_entry(agent, data_source: str, account_id: str) -> Optional[RegistryEntry]:
     if data_source == "registry":
+        entry_location = EntryLocation.from_str(agent)
         return get(EntryLocation.from_str(agent))
     elif data_source == "local_files":
         entry_location = EntryLocation.from_str(agent)

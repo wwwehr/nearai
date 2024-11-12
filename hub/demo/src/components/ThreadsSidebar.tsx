@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Badge,
   Button,
   Card,
   CardList,
@@ -20,6 +21,7 @@ import {
   Link as LinkIcon,
   Pencil,
   Plus,
+  Tag,
   Trash,
 } from '@phosphor-icons/react';
 import { usePrevious } from '@uidotdev/usehooks';
@@ -113,7 +115,6 @@ export const ThreadsSidebar = ({
                 href={thread.url}
                 padding="s"
                 paddingInline="m"
-                gap="xs"
                 background={
                   (currentThreadIdMatchesThread && threadId === thread.id) ||
                   (!currentThreadIdMatchesThread &&
@@ -123,20 +124,21 @@ export const ThreadsSidebar = ({
                 }
                 key={thread.id}
               >
-                <Flex align="center" gap="s">
-                  <Text
-                    as="span"
-                    size="text-s"
-                    weight={500}
-                    color="sand-12"
-                    clickableHighlight
-                    clampLines={1}
-                    style={{ marginRight: 'auto' }}
-                  >
-                    {thread.metadata.topic}
-                  </Text>
+                <Flex direction="column">
+                  <Flex align="center" gap="s">
+                    <Text
+                      as="span"
+                      size="text-s"
+                      weight={500}
+                      color="sand-12"
+                      clickableHighlight
+                      clampLines={1}
+                      style={{ marginRight: 'auto' }}
+                    >
+                      {thread.metadata.topic}
+                    </Text>
 
-                  {/* <Tooltip
+                    {/* <Tooltip
                     asChild
                     content={`${thread.messageCount} message${thread.messageCount === 1 ? '' : 's'} sent`}
                     key={thread.id}
@@ -147,77 +149,92 @@ export const ThreadsSidebar = ({
                       variant="neutral"
                     />
                   </Tooltip> */}
-                </Flex>
+                  </Flex>
 
-                <Flex align="center" gap="s">
-                  <Text
-                    size="text-xs"
-                    clampLines={1}
-                    style={{ marginRight: 'auto' }}
-                  >
-                    {thread.agent.namespace}/{thread.agent.name}/
-                    {thread.agent.version}
-                  </Text>
+                  <Flex align="center" gap="s">
+                    <Text
+                      size="text-2xs"
+                      clampLines={1}
+                      style={{ marginRight: 'auto' }}
+                    >
+                      {thread.agent.namespace}/{thread.agent.name}
+                    </Text>
 
-                  <Dropdown.Root>
-                    <Dropdown.Trigger asChild>
-                      <Button
-                        label="Manage Thread"
-                        icon={<DotsThree weight="bold" />}
-                        size="x-small"
-                        fill="ghost"
-                      />
-                    </Dropdown.Trigger>
+                    {thread.agent.version !== 'latest' && (
+                      <Tooltip
+                        content={`This thread is fixed to a specific agent version: ${thread.agent.version}`}
+                      >
+                        <Badge
+                          size="small"
+                          iconLeft={<Tag />}
+                          label={thread.agent.version}
+                          style={{
+                            maxWidth: '4.5rem',
+                          }}
+                          variant="warning"
+                        />
+                      </Tooltip>
+                    )}
 
-                    <Dropdown.Content sideOffset={0}>
-                      <Dropdown.Section>
-                        <Dropdown.SectionContent>
-                          <Text size="text-xs" weight={600} uppercase>
-                            Thread
-                          </Text>
-                        </Dropdown.SectionContent>
-                      </Dropdown.Section>
+                    <Dropdown.Root>
+                      <Dropdown.Trigger asChild>
+                        <Button
+                          label="Manage Thread"
+                          icon={<DotsThree weight="bold" />}
+                          size="x-small"
+                          fill="ghost"
+                        />
+                      </Dropdown.Trigger>
 
-                      <Dropdown.Section>
-                        <Dropdown.Item
-                          onSelect={() => setEditingThreadId(thread.id)}
-                        >
-                          <SvgIcon icon={<Pencil />} />
-                          Rename Thread
-                        </Dropdown.Item>
+                      <Dropdown.Content sideOffset={0}>
+                        <Dropdown.Section>
+                          <Dropdown.SectionContent>
+                            <Text size="text-xs" weight={600} uppercase>
+                              Thread
+                            </Text>
+                          </Dropdown.SectionContent>
+                        </Dropdown.Section>
 
-                        <Dropdown.Item
-                          onSelect={() =>
-                            copyTextToClipboard(
-                              `${window.location.origin}${thread.url}`,
-                            )
-                          }
-                        >
-                          <SvgIcon icon={<LinkIcon />} />
-                          Copy Thread Link
-                        </Dropdown.Item>
+                        <Dropdown.Section>
+                          <Dropdown.Item
+                            onSelect={() => setEditingThreadId(thread.id)}
+                          >
+                            <SvgIcon icon={<Pencil />} />
+                            Rename Thread
+                          </Dropdown.Item>
 
-                        <Dropdown.Item href={thread.agent.url}>
-                          {env.NEXT_PUBLIC_CONSUMER_MODE ? (
-                            <>
-                              <SvgIcon icon={<Plus />} />
-                              New Thread
-                            </>
-                          ) : (
-                            <>
-                              <SvgIcon icon={<Lightbulb />} />
-                              View Agent
-                            </>
-                          )}
-                        </Dropdown.Item>
+                          <Dropdown.Item
+                            onSelect={() =>
+                              copyTextToClipboard(
+                                `${window.location.origin}${thread.url}`,
+                              )
+                            }
+                          >
+                            <SvgIcon icon={<LinkIcon />} />
+                            Copy Thread Link
+                          </Dropdown.Item>
 
-                        <Dropdown.Item onSelect={() => removeThread(thread)}>
-                          <SvgIcon icon={<Trash />} color="red-10" />
-                          Delete Thread
-                        </Dropdown.Item>
-                      </Dropdown.Section>
+                          <Dropdown.Item href={thread.agent.url}>
+                            {env.NEXT_PUBLIC_CONSUMER_MODE ? (
+                              <>
+                                <SvgIcon icon={<Plus />} />
+                                New Thread
+                              </>
+                            ) : (
+                              <>
+                                <SvgIcon icon={<Lightbulb />} />
+                                View Agent
+                              </>
+                            )}
+                          </Dropdown.Item>
 
-                      {/* <Dropdown.Section>
+                          <Dropdown.Item onSelect={() => removeThread(thread)}>
+                            <SvgIcon icon={<Trash />} color="red-10" />
+                            Delete Thread
+                          </Dropdown.Item>
+                        </Dropdown.Section>
+
+                        {/* <Dropdown.Section>
                         <Dropdown.SectionContent>
                           <Text size="text-xs">
                             Last message sent at{' '}
@@ -227,8 +244,9 @@ export const ThreadsSidebar = ({
                           </Text>
                         </Dropdown.SectionContent>
                       </Dropdown.Section> */}
-                    </Dropdown.Content>
-                  </Dropdown.Root>
+                      </Dropdown.Content>
+                    </Dropdown.Root>
+                  </Flex>
                 </Flex>
               </Card>
             ))}

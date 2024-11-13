@@ -1,85 +1,9 @@
+import { Placeholder } from '@near-pagoda/ui';
 import { type ComponentProps, useEffect, useRef, useState } from 'react';
 
 import { useDebouncedFunction } from '~/hooks/debounce';
 
 import s from './IframeWithBlob.module.scss';
-
-function extendHtml(html: string) {
-  let wrappedHtml = html;
-
-  if (!html.includes('</body>')) {
-    wrappedHtml = `<html><body>${html}</body></html>`;
-  }
-
-  const script = `
-    <style>
-      html, body {
-        margin: 0 !important;
-        overflow: hidden !important;
-      }
-
-      body :first-child, #iframe-height-calculator :first-child {
-        margin-top: 0 !important;
-      }
-
-      #iframe-height-calculator {
-        overflow: hidden;
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: 0;
-        z-index: -1;
-        opacity: 0;
-        pointer-events: none;
-      }
-    </style>
-
-    <script>
-      let isCalculatingHeight = false;
-
-      function setHeight() {
-        isCalculatingHeight = true;
-
-        const calculator = document.createElement('div');
-        calculator.id = 'iframe-height-calculator';
-        calculator.innerHTML = document.body.innerHTML;
-        document.body.append(calculator);
-        const height = calculator.offsetHeight;
-        calculator.remove();
-
-        window.parent.postMessage({
-          type: "SET_HEIGHT",
-          height
-        }, '*');
-
-        setTimeout(() => {
-          isCalculatingHeight = false;
-        });
-      }
-
-      const mutationObserver = new MutationObserver((mutations) => {
-        if (!isCalculatingHeight) setHeight();
-      });
-      mutationObserver.observe(document.body, {
-        attributes: true,
-        childList: true,
-        subtree: true
-      });
-
-      const resizeObserver = new ResizeObserver(() => setHeight());
-      resizeObserver.observe(document.body);
-      
-      setHeight();
-
-      const paragraphs = document.querySelectorAll('p');
-      paragraphs.forEach((p) => p.addEventListener('click', () => p.remove()));
-    </script>
-  `;
-
-  const extended = wrappedHtml.replace('</body>', `${script}</body>`);
-
-  return extended;
-}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type IframePostMessageEventHandler<T = any> = (
@@ -90,6 +14,7 @@ export type IframePostMessageEventHandler<T = any> = (
 
 type Props = ComponentProps<'iframe'> & {
   html: string;
+  minHeight?: string;
   onPostMessage?: IframePostMessageEventHandler;
   postMessage?: unknown;
 };
@@ -97,6 +22,7 @@ type Props = ComponentProps<'iframe'> & {
 export const IframeWithBlob = ({
   className = '',
   html,
+  minHeight,
   onPostMessage,
   postMessage,
   ...props
@@ -104,6 +30,7 @@ export const IframeWithBlob = ({
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [dataUrl, setDataUrl] = useState('');
   const [height, setHeight] = useState(0);
+  const isLoading = !height;
 
   const executePostMessage = useDebouncedFunction((message: unknown) => {
     console.log('Sending postMessage to <IframeWithBlob />', message);
@@ -131,7 +58,6 @@ export const IframeWithBlob = ({
     function messageListener(event: MessageEvent) {
       if (event.source !== iframeRef.current?.contentWindow) return;
       const data: unknown = event.data;
-      console.log('Received postMessage from <IframeWithBlob />', data);
 
       if (data && typeof data === 'object') {
         if ('type' in data) {
@@ -147,6 +73,7 @@ export const IframeWithBlob = ({
         }
       }
 
+      console.log('Received postMessage from <IframeWithBlob />', data);
       onPostMessage?.(event);
     }
 
@@ -178,16 +105,92 @@ export const IframeWithBlob = ({
   */
 
   return (
-    <div className={s.iframeWrapper}>
+    <div
+      className={s.iframeWrapper}
+      style={{ minHeight }}
+      data-loading={isLoading}
+    >
+      <div className={s.placeholder}>
+        <Placeholder />
+      </div>
+
       <iframe
         height={height}
         ref={iframeRef}
         src={dataUrl}
         sandbox="allow-scripts allow-popups"
-        className={`${s.visibleIframe} ${className}`}
-        data-loading={height < 1}
+        className={`${s.iframe} ${className}`}
         {...props}
       />
     </div>
   );
 };
+
+function extendHtml(html: string) {
+  let wrappedHtml = html;
+  const bodyStyle = getComputedStyle(document.body, null);
+  const bodyBackgroundColor = bodyStyle.getPropertyValue('background-color');
+
+  if (!html.includes('</body>')) {
+    wrappedHtml = `<html><body>${html}</body></html>`;
+  }
+
+  const script = `
+    <script>
+      let hasLoaded = false;
+      document.documentElement.style.background = '${bodyBackgroundColor}';
+
+      function setHeight() {
+        if (!hasLoaded) return;
+
+        document.documentElement.style.height = '100%';
+        document.body.style.overflow = 'auto';
+
+        const bodyStyle = getComputedStyle(document.body, null);
+        const bodyPaddingBottom = parseInt(bodyStyle.getPropertyValue('padding-bottom').replace('px', ''));
+        const bodyMarginBottom = parseInt(bodyStyle.getPropertyValue('margin-bottom').replace('px', ''));
+
+        let height = 0;
+        const ignoreTags = ['SCRIPT', 'STYLE'];
+        const ignorePositions = ['fixed', 'absolute'];
+
+        for (let i = document.body.children.length; i >= 0; i--) {
+          const child = document.body.children[i];
+          if (child && !ignoreTags.includes(child.tagName)) {
+            const style = getComputedStyle(child, null);
+            const position = style.getPropertyValue('position');
+            const display = style.getPropertyValue('display');
+            if (display !== 'none' && ![ignorePositions].includes(position)) {
+              height = child.getBoundingClientRect().bottom + window.scrollY + bodyPaddingBottom + bodyMarginBottom;
+              break;
+            }
+          }
+        }
+
+        window.parent.postMessage({
+          type: "SET_HEIGHT",
+          height
+        }, '*');
+      }
+
+      const mutationObserver = new MutationObserver(setHeight);
+      mutationObserver.observe(document.body, {
+        attributes: true,
+        childList: true,
+        subtree: true
+      });
+
+      const resizeObserver = new ResizeObserver(setHeight);
+      resizeObserver.observe(document.body);
+
+      window.addEventListener('load', () => {
+        hasLoaded = true;
+        setHeight();
+      });
+    </script>
+  `;
+
+  const extendedHtml = wrappedHtml.replace('</body>', `${script}</body>`);
+
+  return extendedHtml;
+}

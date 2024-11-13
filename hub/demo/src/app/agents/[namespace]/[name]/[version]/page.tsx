@@ -1,9 +1,8 @@
 'use client';
 
-import { Badge } from '~/components/lib/Badge';
-import { Flex } from '~/components/lib/Flex';
-import { Section } from '~/components/lib/Section';
-import { Text } from '~/components/lib/Text';
+import { Badge, Flex, Section } from '@near-pagoda/ui';
+
+import { Markdown } from '~/components/lib/Markdown';
 import { useCurrentEntry } from '~/hooks/entries';
 
 export default function EntryDetailsPage() {
@@ -14,9 +13,9 @@ export default function EntryDetailsPage() {
   return (
     <>
       <Section>
-        <Text size="text-l">Description</Text>
-
-        <Text>{currentEntry.description || 'No description provided.'}</Text>
+        <Markdown
+          content={currentEntry.description || 'No description provided.'}
+        />
 
         {currentEntry.tags.length > 0 && (
           <Flex gap="s" wrap="wrap">

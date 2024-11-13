@@ -1,17 +1,20 @@
 'use client';
 
+import {
+  Badge,
+  Button,
+  Flex,
+  Grid,
+  Input,
+  Section,
+  Table,
+  Text,
+  Tooltip,
+  useTable,
+} from '@near-pagoda/ui';
 import { ChatCircleDots, CodeBlock, Play } from '@phosphor-icons/react';
+import { format, formatDistanceToNow } from 'date-fns';
 
-import { Badge } from '~/components/lib/Badge';
-import { Button } from '~/components/lib/Button';
-import { Flex } from '~/components/lib/Flex';
-import { Grid } from '~/components/lib/Grid';
-import { Input } from '~/components/lib/Input';
-import { Section } from '~/components/lib/Section';
-import { Table } from '~/components/lib/Table';
-import { useTable } from '~/components/lib/Table/hooks';
-import { Text } from '~/components/lib/Text';
-import { Tooltip } from '~/components/lib/Tooltip';
 import { env } from '~/env';
 import { useEntriesSearch } from '~/hooks/entries';
 import {
@@ -24,7 +27,6 @@ import { type EntryCategory } from '~/lib/models';
 import { api } from '~/trpc/react';
 
 import { StarButton } from './StarButton';
-import { format, formatDistanceToNow } from 'date-fns';
 
 type Props = {
   category: EntryCategory;
@@ -138,9 +140,11 @@ export const EntriesTable = ({ category, title }: Props) => {
               </Table.Cell>
 
               <Table.Cell>
-                <Text size="text-s">
+                <Text size="text-xs">
                   <Tooltip content={format(entry.updated, 'PPpp')}>
-                    <span>{formatDistanceToNow(entry.updated, { addSuffix: true })}</span>
+                    <span>
+                      {formatDistanceToNow(entry.updated, { addSuffix: true })}
+                    </span>
                   </Tooltip>
                 </Text>
               </Table.Cell>
@@ -207,7 +211,7 @@ export const EntriesTable = ({ category, title }: Props) => {
                         }
                         size="small"
                         fill="ghost"
-                        href={`/agents/${entry.namespace}/${entry.name}/${entry.version}/run`}
+                        href={`${primaryUrlForEntry(entry)}/run`}
                       />
                     </Tooltip>
                   )}

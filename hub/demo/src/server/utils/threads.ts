@@ -1,94 +1,134 @@
 import { type z } from 'zod';
-import { createZodFetcher } from 'zod-fetch';
 
 import { env } from '~/env';
-import { type chatWithAgentModel, runModel, threadModel } from '~/lib/models';
-import { poll } from '~/utils/poll';
+import {
+  threadFileModel,
+  threadMessagesModel,
+  threadModel,
+  threadRunModel,
+} from '~/lib/models';
+import { filePathIsImage } from '~/utils/file';
+import { createZodFetcher } from '~/utils/zod-fetch';
 
 const fetchWithZod = createZodFetcher();
 
-export async function runMessageOnAgentThread(
-  authorization: string,
-  input: z.infer<typeof chatWithAgentModel>,
-) {
-  const thread = input.thread_id
+export async function fetchThreadContents({
+  afterMessageId,
+  authorization,
+  runId,
+  threadId,
+}: {
+  afterMessageId?: string;
+  authorization: string;
+  runId?: string;
+  threadId: string;
+}) {
+  const thread = await fetchWithZod(
+    threadModel,
+    `${env.ROUTER_URL}/threads/${threadId}`,
+    {
+      headers: {
+        Authorization: authorization,
+      },
+    },
+  );
+
+  const run = runId
     ? await fetchWithZod(
-        threadModel,
-        `${env.ROUTER_URL}/threads/${input.thread_id}`,
+        threadRunModel,
+        `${env.ROUTER_URL}/threads/${threadId}/runs/${runId}`,
         {
           headers: {
             Authorization: authorization,
           },
         },
       )
-    : await fetchWithZod(threadModel, `${env.ROUTER_URL}/threads`, {
-        method: 'POST',
-        headers: {
-          Authorization: authorization,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({}),
-      });
+    : undefined;
 
-  await fetch(`${env.ROUTER_URL}/threads/${thread.id}/messages`, {
-    method: 'POST',
-    headers: {
-      Authorization: authorization,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      content: input.new_message,
-      role: 'user',
-    }),
-  });
-
-  const createdRun = await fetchWithZod(
-    runModel,
-    `${env.ROUTER_URL}/threads/${thread.id}/runs`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: authorization,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        thread_id: thread.id,
-        assistant_id: input.agent_id,
-        instructions: 'You are a helpful assistant. Complete the given task.',
-        model: 'fireworks::accounts/fireworks/models/llama-v3p1-405b-instruct',
-      }),
-    },
-  );
-
-  await poll(
-    `${env.ROUTER_URL}/threads/${thread.id}/runs/${createdRun.id}`,
+  const messagesUrl = new URL(`${env.ROUTER_URL}/threads/${threadId}/messages`);
+  messagesUrl.searchParams.append('limit', '1000');
+  messagesUrl.searchParams.append('order', 'asc');
+  if (afterMessageId) messagesUrl.searchParams.append('after', afterMessageId);
+  const messages = await fetchWithZod(
+    threadMessagesModel,
+    messagesUrl.toString(),
     {
       headers: {
         Authorization: authorization,
-        'Content-Type': 'application/json',
       },
     },
-    {
-      attemptDelayMs: 300,
-      maxAttempts: 400,
-      // 2 minutes of polling...
-    },
-    async (response, currentAttempt) => {
-      const data = (await response.json()) as unknown;
-
-      if (env.NODE_ENV === 'development') {
-        // When running locally, this log statement can be useful
-        console.log(`Polling thread run - attempt ${currentAttempt}`, data);
-      }
-
-      const run = runModel.parse(data);
-      if (run.status !== 'in_progress' && run.status !== 'queued') {
-        return run;
-      }
-    },
   );
+
+  const files = await fetchFilesAttachedToMessages(authorization, messages);
 
   return {
-    threadId: thread.id,
+    ...thread,
+    run,
+    messages: messages.data,
+    files,
   };
+}
+
+async function fetchFilesAttachedToMessages(
+  authorization: string,
+  messages: z.infer<typeof threadMessagesModel>,
+) {
+  const threadId = messages.data[0]?.thread_id;
+  const fileIds = messages.data
+    .flatMap((message) =>
+      message.attachments?.map((attachment) => attachment.file_id),
+    )
+    .filter((value) => typeof value !== 'undefined');
+
+  const filesByPath: Record<string, z.infer<typeof threadFileModel>> = {};
+
+  for (const fileId of fileIds) {
+    try {
+      const file = await fetchWithZod(
+        threadFileModel,
+        `${env.ROUTER_URL}/files/${fileId}`,
+        {
+          headers: {
+            Authorization: authorization,
+          },
+        },
+      );
+
+      const contentResponse = await fetch(
+        `${env.ROUTER_URL}/files/${fileId}/content`,
+        {
+          headers: {
+            Accept: 'binary/octet-stream',
+            Authorization: authorization,
+          },
+        },
+      );
+
+      const isImage = filePathIsImage(file.filename);
+
+      if (isImage) {
+        const buffer = await contentResponse.arrayBuffer();
+        const stringifiedBuffer = Buffer.from(buffer).toString('base64');
+        const contentType = contentResponse.headers.get('content-type');
+        const imageBase64 = `data:${contentType};base64,${stringifiedBuffer}`;
+        file.content = imageBase64;
+      } else {
+        const blob = await contentResponse.blob();
+        file.content = await blob.text();
+      }
+
+      const existingFile = filesByPath[file.filename];
+      if (existingFile) {
+        console.warn(
+          `Unique files with identical filenames detected for ${file.filename} in thread ${threadId}. File ids: ${existingFile.id}, ${file.id}. The most recent attachment will be displayed to the user.`,
+        );
+      }
+
+      filesByPath[file.filename] = file;
+    } catch (error) {
+      console.error(`Failed to fetch fileId ${fileId}`, error);
+    }
+  }
+
+  return Object.values(filesByPath);
 }

@@ -6,8 +6,8 @@ import tempfile
 import time
 from typing import Any, Dict, List
 
-from shared.client_config import ClientConfig
-from shared.inference_client import InferenceClient
+from nearai.shared.client_config import ClientConfig
+from nearai.shared.inference_client import InferenceClient
 from nearai.config import Config, load_config_file
 
 # BUILD VECTOR STORE FROM FILES + USE IT FOR LLM RESPONSE
@@ -124,7 +124,7 @@ def generate_llm_response(messages, processed_results):
     Use the provided vector store results to inform your response, but don't mention the vector store directly.
     """
 
-    model = "llama-v3p1-405b-instruct"
+    model = "qwen2p5-72b-instruct"
 
     vs_results = "\n=========\n".join(
         [f"{result.get('chunk_text', 'No text available')}" for result in processed_results]

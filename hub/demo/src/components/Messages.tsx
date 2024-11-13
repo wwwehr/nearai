@@ -1,33 +1,27 @@
 'use client';
 
-import { Copy } from '@phosphor-icons/react';
+import { Button, Card, Dropdown, Flex, SvgIcon, Text } from '@near-pagoda/ui';
+import { Copy, DotsThree, Eye, MarkdownLogo } from '@phosphor-icons/react';
 import { usePrevious } from '@uidotdev/usehooks';
-import { Fragment, type ReactNode, useEffect, useRef } from 'react';
+import { Fragment, type ReactNode, useEffect, useRef, useState } from 'react';
 import { type z } from 'zod';
 
-import { type messageModel, type threadMessageModel } from '~/lib/models';
+import { type threadMessageModel } from '~/lib/models';
 import { useAuthStore } from '~/stores/auth';
 import { copyTextToClipboard } from '~/utils/clipboard';
 
-import { Button } from './lib/Button';
-import { Card } from './lib/Card';
-import { Flex } from './lib/Flex';
-import { PlaceholderCard } from './lib/Placeholder';
-import { Text } from './lib/Text';
-import { Tooltip } from './lib/Tooltip';
+import { Markdown } from './lib/Markdown';
 import s from './Messages.module.scss';
 
 type Props = {
-  loading?: boolean;
-  messages:
-    | z.infer<typeof messageModel>[]
-    | z.infer<typeof threadMessageModel>[];
+  grow?: boolean;
+  messages: z.infer<typeof threadMessageModel>[];
   threadId: string;
   welcomeMessage?: ReactNode;
 };
 
 export const Messages = ({
-  loading,
+  grow = true,
   messages,
   threadId,
   welcomeMessage,
@@ -36,6 +30,7 @@ export const Messages = ({
   const previousMessages = usePrevious(messages);
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const scrolledToThreadId = useRef('');
+  const [renderAsMarkdown, setRenderAsMarkdown] = useState(true);
 
   useEffect(() => {
     if (!messagesRef.current) return;
@@ -66,72 +61,98 @@ export const Messages = ({
     scroll();
   }, [threadId, previousMessages, messages]);
 
-  const normalizedMessages: z.infer<typeof messageModel>[] = messages.map(
-    (message) => {
-      if ('thread_id' in message) {
-        return {
-          content: message.content[0]?.text.value ?? '',
-          role: message.role,
-        };
-      }
+  const normalizedMessages = messages.map((message) => {
+    return {
+      content: message.content[0]?.text.value ?? '',
+      role: message.role,
+    };
+  });
 
-      return message;
-    },
-  );
-
-  if (isAuthenticated && loading) {
-    return <PlaceholderCard style={{ marginBottom: 'auto' }} />;
+  if (!isAuthenticated) {
+    return (
+      <div className={s.wrapper} data-grow={grow}>
+        {welcomeMessage}
+      </div>
+    );
   }
 
   return (
-    <div className={s.wrapper}>
+    <div className={s.wrapper} data-grow={grow}>
       {welcomeMessage}
-      {isAuthenticated && (
-        <div className={s.messages} ref={messagesRef}>
-          {normalizedMessages.map((message, index) => (
-            <Fragment key={index}>
-              {message.role === 'user' ? (
-                <Card
-                  animateIn
-                  background="sand-2"
-                  style={{ alignSelf: 'end' }}
-                >
-                  <Text color="sand-11">{message.content}</Text>
-                </Card>
-              ) : (
-                <Card animateIn>
-                  <Text color="sand-12">{message.content}</Text>
 
-                  <Flex align="center" gap="m">
-                    <Text
-                      size="text-xs"
-                      style={{
-                        textTransform: 'capitalize',
-                        marginRight: 'auto',
-                      }}
-                    >
-                      - {message.role}
-                    </Text>
+      <div className={s.messages} ref={messagesRef}>
+        {normalizedMessages.map((message, index) => (
+          <Fragment key={index + message.role}>
+            {message.role === 'user' ? (
+              <Card animateIn background="sand-2" style={{ alignSelf: 'end' }}>
+                {renderAsMarkdown ? (
+                  <Markdown content={message.content} />
+                ) : (
+                  <Text>{message.content}</Text>
+                )}
+              </Card>
+            ) : (
+              <Card animateIn>
+                {renderAsMarkdown ? (
+                  <Markdown content={message.content} />
+                ) : (
+                  <Text>{message.content}</Text>
+                )}
 
-                    <Tooltip
-                      asChild
-                      content="Copy message content to clipboard"
-                    >
+                <Flex align="center" gap="m">
+                  <Text
+                    size="text-xs"
+                    style={{
+                      textTransform: 'capitalize',
+                      marginRight: 'auto',
+                    }}
+                  >
+                    - {message.role}
+                  </Text>
+
+                  <Dropdown.Root>
+                    <Dropdown.Trigger asChild>
                       <Button
-                        label="Copy message to clipboard"
-                        icon={<Copy />}
-                        size="small"
+                        label="Message Actions"
+                        icon={<DotsThree weight="bold" />}
+                        size="x-small"
                         fill="ghost"
-                        onClick={() => copyTextToClipboard(message.content)}
                       />
-                    </Tooltip>
-                  </Flex>
-                </Card>
-              )}
-            </Fragment>
-          ))}
-        </div>
-      )}
+                    </Dropdown.Trigger>
+
+                    <Dropdown.Content sideOffset={0}>
+                      <Dropdown.Section>
+                        <Dropdown.Item
+                          onSelect={() => copyTextToClipboard(message.content)}
+                        >
+                          <SvgIcon icon={<Copy />} />
+                          Copy To Clipboard
+                        </Dropdown.Item>
+
+                        {renderAsMarkdown ? (
+                          <Dropdown.Item
+                            onSelect={() => setRenderAsMarkdown(false)}
+                          >
+                            <SvgIcon icon={<MarkdownLogo />} />
+                            View Markdown Source
+                          </Dropdown.Item>
+                        ) : (
+                          <Dropdown.Item
+                            onSelect={() => setRenderAsMarkdown(true)}
+                          >
+                            <SvgIcon icon={<Eye />} />
+                            Render Markdown
+                          </Dropdown.Item>
+                        )}
+                      </Dropdown.Section>
+                    </Dropdown.Content>
+                  </Dropdown.Root>
+                </Flex>
+              </Card>
+            )}
+          </Fragment>
+        ))}
+      </div>
     </div>
   );
 };

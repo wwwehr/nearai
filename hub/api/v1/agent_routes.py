@@ -7,16 +7,16 @@ import requests
 from fastapi import APIRouter, Body, Depends, HTTPException, Response
 from nearai.agents.local_runner import LocalRunner
 from nearai.clients.lambda_client import LambdaWrapper
+from nearai.shared.auth_data import AuthData
 from pydantic import BaseModel, Field
-from shared.auth_data import AuthData
 
-from hub.api.v1.auth import AuthToken, revokable_auth
+from hub.api.v1.auth import AuthToken, get_auth
 from hub.api.v1.entry_location import EntryLocation
 from hub.api.v1.models import Message as MessageModel
 from hub.api.v1.models import RegistryEntry, get_session
 from hub.api.v1.models import Run as RunModel
 from hub.api.v1.models import Thread as ThreadModel
-from hub.api.v1.registry import S3_BUCKET, get
+from hub.api.v1.registry import S3_BUCKET, get, get_read_access
 from hub.api.v1.sql import SqlClient
 
 S3_ENDPOINT = getenv("S3_ENDPOINT")
@@ -101,13 +101,19 @@ def invoke_agent_via_url(custom_runner_url, agents, thread_id, run_id, auth: Aut
 
 def invoke_agent_via_lambda(function_name, agents, thread_id, run_id, auth: AuthToken, new_message, params):
     wrapper = LambdaWrapper(boto3.client("lambda", region_name="us-east-2"))
+    auth_data = auth.model_dump()
+
+    if auth_data["nonce"]:
+        if isinstance(auth_data["nonce"], bytes):
+            auth_data["nonce"] = auth_data["nonce"].decode("utf-8")
+
     result = wrapper.invoke_function(
         function_name,
         {
             "agents": agents,
             "thread_id": thread_id,
             "run_id": run_id,
-            "auth": auth.model_dump(),
+            "auth": auth_data,
             "new_message": new_message,
             "params": params,
         },
@@ -118,7 +124,7 @@ def invoke_agent_via_lambda(function_name, agents, thread_id, run_id, auth: Auth
 
 @run_agent_router.post("/threads/runs", tags=["Agents", "Assistants"])  # OpenAI compatibility
 @run_agent_router.post("/agent/runs", tags=["Agents", "Assistants"])
-def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokable_auth)) -> str:
+def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(get_auth)) -> str:
     """Run an agent against an existing or a new environment.
 
     Returns the ID of the new environment resulting from the run.
@@ -239,7 +245,7 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(revokab
     "/download_environment",
     responses={200: {"content": {"application/gzip": {"schema": {"type": "string", "format": "binary"}}}}},
 )
-def download_environment(entry: RegistryEntry = Depends(get), path: str = Body()):
+def download_environment(entry: RegistryEntry = Depends(get_read_access), path: str = Body()):
     assert isinstance(S3_BUCKET, str)
     file = s3.get_object(Bucket=S3_BUCKET, Key=entry.get_key(path))
     headers = {"Content-Disposition": "attachment; filename=environment.tar.gz"}
@@ -256,8 +262,9 @@ def _runner_for_env():
         return runner_env
 
 
-def get_agent_entry(agent, data_source: str, account_id: str) -> Union[RegistryEntry, None]:
+def get_agent_entry(agent, data_source: str, account_id: str) -> Optional[RegistryEntry]:
     if data_source == "registry":
+        entry_location = EntryLocation.from_str(agent)
         return get(EntryLocation.from_str(agent))
     elif data_source == "local_files":
         entry_location = EntryLocation.from_str(agent)

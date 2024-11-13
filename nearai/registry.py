@@ -3,16 +3,6 @@ from pathlib import Path
 from shutil import copyfileobj
 from typing import Any, Dict, List, Optional, Union
 
-from openapi_client import EntryInformation, EntryLocation, EntryMetadata, EntryMetadataInput
-from openapi_client.api.registry_api import (
-    BodyDownloadFileV1RegistryDownloadFilePost,
-    BodyDownloadMetadataV1RegistryDownloadMetadataPost,
-    BodyListFilesV1RegistryListFilesPost,
-    BodyUploadMetadataV1RegistryUploadMetadataPost,
-    RegistryApi,
-)
-from openapi_client.exceptions import BadRequestException, NotFoundException
-from shared.naming import NamespacedName, get_canonical_name
 from tqdm import tqdm
 
 # Note: We should import nearai.config on this file to make sure the method setup_api_client is called at least once
@@ -20,6 +10,16 @@ from tqdm import tqdm
 #       API client that is used by Registry API.
 from nearai.config import CONFIG, DATA_FOLDER
 from nearai.lib import check_metadata, parse_location
+from nearai.openapi_client import EntryInformation, EntryLocation, EntryMetadata, EntryMetadataInput
+from nearai.openapi_client.api.registry_api import (
+    BodyDownloadFileV1RegistryDownloadFilePost,
+    BodyDownloadMetadataV1RegistryDownloadMetadataPost,
+    BodyListFilesV1RegistryListFilesPost,
+    BodyUploadMetadataV1RegistryUploadMetadataPost,
+    RegistryApi,
+)
+from nearai.openapi_client.exceptions import BadRequestException, NotFoundException
+from nearai.shared.naming import NamespacedName, get_canonical_name
 
 REGISTRY_FOLDER = "registry"
 
@@ -49,7 +49,7 @@ def get_namespace(local_path: Path) -> str:
     # If we couldn't extract a namespace from the path, return the default
     if CONFIG.auth is None:
         raise ValueError("AuthData is None")
-    return CONFIG.auth.account_id
+    return CONFIG.auth.namespace
 
 
 class Registry:
@@ -292,7 +292,13 @@ class Registry:
         """List all visible entries."""
         total = 10000
         entries = self.list(
-            namespace="", category=category, tags="", total=total, offset=0, show_all=False, show_latest_version=True
+            namespace="",
+            category=category,
+            tags="",
+            total=total,
+            offset=0,
+            show_all=False,
+            show_latest_version=True,
         )
         assert len(entries) < total
         return entries

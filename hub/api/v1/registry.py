@@ -4,7 +4,7 @@ import logging
 import re
 from collections import defaultdict
 from os import getenv
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import boto3
 import botocore
@@ -12,11 +12,11 @@ import botocore.exceptions
 from dotenv import load_dotenv
 from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
+from nearai.shared.client_config import DEFAULT_NAMESPACE
 from pydantic import BaseModel
-from shared.client_config import DEFAULT_NAMESPACE
-from sqlmodel import delete, select, text
+from sqlmodel import col, delete, select, text
 
-from hub.api.v1.auth import AuthToken, revokable_auth
+from hub.api.v1.auth import AuthToken, get_auth, get_optional_auth
 from hub.api.v1.entry_location import EntryLocation, valid_identifier
 from hub.api.v1.models import RegistryEntry, Tags, get_session
 
@@ -65,7 +65,7 @@ def with_write_access(use_forms=False):
 
     def fn_with_write_access(
         entry_location: EntryLocation = default,
-        auth: AuthToken = Depends(revokable_auth),
+        auth: AuthToken = Depends(get_auth),
     ) -> EntryLocation:
         """Check the user has write access to the entry."""
         if auth.account_id == entry_location.namespace:
@@ -105,6 +105,10 @@ def get_or_create(entry_location: EntryLocation = Depends(with_write_access())) 
 
 def get(entry_location: EntryLocation = Body()) -> RegistryEntry:
     logger.debug(f"Getting entry: {entry_location}")
+
+    if entry_location.version == "latest":
+        return latest_version(entry_location)
+
     with get_session() as session:
         entry = session.exec(
             select(RegistryEntry).where(
@@ -116,6 +120,34 @@ def get(entry_location: EntryLocation = Body()) -> RegistryEntry:
 
         if entry is None:
             logger.debug(f"Entry not found: {entry_location}")
+            raise HTTPException(status_code=404, detail=f"Entry '{entry_location}' not found")
+
+        return entry
+
+
+def get_read_access(
+    entry: RegistryEntry = Depends(get),
+    auth: Optional[AuthToken] = Depends(get_optional_auth),
+) -> RegistryEntry:
+    current_account_id = auth.account_id if auth else None
+    if entry.is_private() and entry.namespace != current_account_id:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    return entry
+
+
+def latest_version(entry_location: EntryLocation = Body()) -> RegistryEntry:
+    with get_session() as session:
+        entry = session.exec(
+            select(RegistryEntry)
+            .where(
+                RegistryEntry.namespace == entry_location.namespace,
+                RegistryEntry.name == entry_location.name,
+            )
+            .order_by(col(RegistryEntry.id).desc())
+            .limit(1)
+        ).first()
+
+        if entry is None:
             raise HTTPException(status_code=404, detail=f"Entry '{entry_location}' not found")
 
         return entry
@@ -164,7 +196,7 @@ async def upload_file(
 
 @v1_router.post("/download_file")
 def download_file(
-    entry: RegistryEntry = Depends(get),
+    entry: RegistryEntry = Depends(get_read_access),
     path: str = Body(),
 ):
     return StreamingResponse(download_file_inner(entry, path).iter_chunks())
@@ -224,7 +256,7 @@ async def upload_metadata(registry_entry_id: int = Depends(get_or_create), metad
 
 
 @v1_router.post("/download_metadata")
-def download_metadata(entry: RegistryEntry = Depends(get)) -> EntryMetadata:
+def download_metadata(entry: RegistryEntry = Depends(get_read_access)) -> EntryMetadata:
     return download_metadata_inner(entry)
 
 
@@ -249,7 +281,7 @@ class Filename(BaseModel):
 
 
 @v1_router.post("/list_files")
-def list_files(entry: RegistryEntry = Depends(get)) -> List[Filename]:
+def list_files(entry: RegistryEntry = Depends(get_read_access)) -> List[Filename]:
     """Lists all files that belong to a entry."""
     logger.info(f"Listing files for entry: {entry}")
     return list_files_inner(entry)
@@ -434,7 +466,6 @@ def list_entries_inner(
         for id, namespace_, name, version, category_, description, details, timestamp, num_stars, pov in session.exec(
             text(query_text).bindparams(**bind_params)
         ).all():  # type: ignore
-            print(namespace_, name, version, num_stars)
             entries_info.append(
                 EntryInformation(
                     id=id,

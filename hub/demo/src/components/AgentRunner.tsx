@@ -1,17 +1,27 @@
 'use client';
 
 import {
-  ArrowRight,
-  Chats,
-  Copy,
-  Eye,
-  Gear,
-  List,
-} from '@phosphor-icons/react';
+  BreakpointDisplay,
+  Button,
+  Card,
+  CardList,
+  Flex,
+  Form,
+  InputTextarea,
+  PlaceholderCard,
+  PlaceholderSection,
+  PlaceholderStack,
+  Slider,
+  Text,
+  Tooltip,
+} from '@near-pagoda/ui';
+import { ArrowRight, Chats, Eye, Gear, List } from '@phosphor-icons/react';
+import { useMutation } from '@tanstack/react-query';
 import {
   type KeyboardEventHandler,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -21,39 +31,26 @@ import { type z } from 'zod';
 import { AgentPermissionsModal } from '~/components/AgentPermissionsModal';
 import { AgentWelcome } from '~/components/AgentWelcome';
 import { EntryEnvironmentVariables } from '~/components/EntryEnvironmentVariables';
-import { BreakpointDisplay } from '~/components/lib/BreakpointDisplay';
-import { Button } from '~/components/lib/Button';
-import { Card, CardList } from '~/components/lib/Card';
-import { Code, filePathToCodeLanguage } from '~/components/lib/Code';
-import { Dialog } from '~/components/lib/Dialog';
-import { Flex } from '~/components/lib/Flex';
-import { Form } from '~/components/lib/Form';
 import { IframeWithBlob } from '~/components/lib/IframeWithBlob';
-import { InputTextarea } from '~/components/lib/InputTextarea';
 import { Sidebar } from '~/components/lib/Sidebar';
-import { Slider } from '~/components/lib/Slider';
-import { Text } from '~/components/lib/Text';
-import { Tooltip } from '~/components/lib/Tooltip';
 import { Messages } from '~/components/Messages';
 import { SignInPrompt } from '~/components/SignInPrompt';
 import { ThreadsSidebar } from '~/components/ThreadsSidebar';
 import { env } from '~/env';
-import { useAgentRequestsWithIframe } from '~/hooks/agent';
+import { useAgentRequestsWithIframe } from '~/hooks/agent-iframe-requests';
 import {
   useCurrentEntry,
   useCurrentEntryEnvironmentVariables,
 } from '~/hooks/entries';
-import { useThreads } from '~/hooks/threads';
 import { useQueryParams } from '~/hooks/url';
 import { type chatWithAgentModel, type threadMessageModel } from '~/lib/models';
-import { returnOptimisticThreadMessage } from '~/lib/thread';
 import { useAuthStore } from '~/stores/auth';
+import { useThreadsStore } from '~/stores/threads';
 import { api } from '~/trpc/react';
-import { copyTextToClipboard } from '~/utils/clipboard';
 import { handleClientError } from '~/utils/error';
 import { formatBytes } from '~/utils/number';
 
-import { PlaceholderSection } from './lib/Placeholder';
+import { ThreadFileModal } from './ThreadFileModal';
 
 type RunView = 'conversation' | 'output' | undefined;
 
@@ -68,6 +65,9 @@ type FormSchema = Pick<
   z.infer<typeof chatWithAgentModel>,
   'max_iterations' | 'new_message'
 >;
+
+export type AgentChatMutationInput = FormSchema &
+  Partial<z.infer<typeof chatWithAgentModel>>;
 
 export const AgentRunner = ({
   namespace,
@@ -92,10 +92,107 @@ export const AgentRunner = ({
     'agent',
     Object.keys(queryParams),
   );
-  const threadId = queryParams.threadId ?? '';
-  const chatMutation = api.hub.chatWithAgent.useMutation();
-  const { threadsQuery } = useThreads();
   const utils = api.useUtils();
+  const threadId = queryParams.threadId ?? '';
+
+  const form = useForm<FormSchema>({
+    defaultValues: {
+      max_iterations: 1,
+    },
+  });
+
+  const [htmlOutput, setHtmlOutput] = useState('');
+  const [openedFileName, setOpenedFileName] = useState<string | null>(null);
+  const [parametersOpenForSmallScreens, setParametersOpenForSmallScreens] =
+    useState(false);
+  const [threadsOpenForSmallScreens, setThreadsOpenForSmallScreens] =
+    useState(false);
+  const formRef = useRef<HTMLFormElement | null>(null);
+
+  const addOptimisticMessages = useThreadsStore(
+    (store) => store.addOptimisticMessages,
+  );
+  const optimisticMessages = useThreadsStore(
+    (store) => store.optimisticMessages,
+  );
+  const chatMutationThreadId = useRef('');
+  const chatMutationStartedAt = useRef<Date | null>(null);
+  const resetThreadsStore = useThreadsStore((store) => store.reset);
+  const setThread = useThreadsStore((store) => store.setThread);
+  const threadsById = useThreadsStore((store) => store.threadsById);
+  const thread = threadsById[chatMutationThreadId.current || threadId];
+
+  const threadQuery = api.hub.thread.useQuery(
+    {
+      afterMessageId: thread?.latestMessageId,
+      runId: thread?.run?.id,
+      threadId,
+    },
+    {
+      enabled: isAuthenticated && !!threadId,
+      refetchInterval: 1500,
+      retry: false,
+    },
+  );
+
+  const _chatMutation = api.hub.chatWithAgent.useMutation();
+  const chatMutation = useMutation({
+    mutationFn: async (data: AgentChatMutationInput) => {
+      try {
+        chatMutationStartedAt.current = new Date();
+
+        const input = {
+          thread_id: threadId || undefined,
+          agent_id: agentId,
+          agent_env_vars: entryEnvironmentVariables.metadataVariablesByKey,
+          user_env_vars: entryEnvironmentVariables.urlVariablesByKey,
+          ...data,
+        };
+
+        addOptimisticMessages(threadId, [input]);
+        const response = await _chatMutation.mutateAsync(input);
+
+        setThread({
+          ...response.thread,
+          files: [],
+          messages: [response.message],
+          run: response.run,
+        });
+
+        chatMutationThreadId.current = response.thread.id;
+        updateQueryPath({ threadId: response.thread.id }, 'replace', false);
+
+        void utils.hub.threads.refetch();
+      } catch (error) {
+        handleClientError({ error, title: 'Failed to run agent' });
+      }
+    },
+  });
+
+  const messages = useMemo(() => {
+    const result = [
+      ...(thread ? Object.values(thread.messagesById) : []),
+      ...optimisticMessages.map((message) => message.data),
+    ].filter(
+      (message) => message.metadata?.message_type !== 'system:file_write',
+    );
+    return result;
+  }, [thread, optimisticMessages]);
+
+  const files = useMemo(() => {
+    return thread ? Object.values(thread.filesByName) : [];
+  }, [thread]);
+
+  const latestAssistantMessages: z.infer<typeof threadMessageModel>[] = [];
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i]!;
+    const messageType = message.metadata?.message_type ?? '';
+    if (message.role === 'assistant' && !messageType.startsWith('system:')) {
+      latestAssistantMessages.push(message);
+    } else {
+      break;
+    }
+  }
 
   const {
     agentRequestsNeedingPermissions,
@@ -105,45 +202,12 @@ export const AgentRunner = ({
     onIframePostMessage,
   } = useAgentRequestsWithIframe(currentEntry, chatMutation, threadId);
 
-  const form = useForm<FormSchema>({
-    defaultValues: {
-      max_iterations: 1,
-    },
-  });
+  const isRunning =
+    chatMutation.isPending ||
+    thread?.run?.status === 'queued' ||
+    thread?.run?.status === 'in_progress';
 
-  const [htmlOutput, setHtmlOutput] = useState('');
-  const [openedFileId, setOpenedFileId] = useState<string | null>(null);
-  const [parametersOpenForSmallScreens, setParametersOpenForSmallScreens] =
-    useState(false);
-  const [threadsOpenForSmallScreens, setThreadsOpenForSmallScreens] =
-    useState(false);
-  const formRef = useRef<HTMLFormElement | null>(null);
-
-  const threadQuery = api.hub.thread.useQuery(
-    {
-      threadId,
-    },
-    {
-      enabled: false,
-    },
-  );
-  const thread = threadQuery.data;
-
-  const openedFile = openedFileId
-    ? thread?.files?.find((file) => file.id === openedFileId)
-    : undefined;
-
-  const latestAssistantMessages: z.infer<typeof threadMessageModel>[] = [];
-  if (thread) {
-    for (let i = thread.messages.length - 1; i >= 0; i--) {
-      const message = thread.messages[i];
-      if (message?.role === 'assistant') {
-        latestAssistantMessages.push(message);
-      } else {
-        break;
-      }
-    }
-  }
+  const isLoading = !!threadId && !thread && !isRunning;
 
   const [__view, __setView] = useState<RunView>();
   const view = (queryParams.view as RunView) ?? __view;
@@ -164,48 +228,9 @@ export const AgentRunner = ({
     [updateQueryPath],
   );
 
-  const submitMessage = async (data: FormSchema) => {
-    const response = await chatMutation.mutateAsync({
-      ...data,
-      thread_id: threadId || undefined,
-      agent_id: agentId,
-      agent_env_vars: entryEnvironmentVariables.metadataVariablesByKey,
-      user_env_vars: entryEnvironmentVariables.urlVariablesByKey,
-    });
-
-    if (response.threadId === threadId) {
-      await threadQuery.refetch();
-    } else {
-      updateQueryPath({ threadId: response.threadId }, 'replace', false);
-    }
-
-    void threadsQuery.refetch();
-  };
-
   const onSubmit: SubmitHandler<FormSchema> = async (data) => {
-    try {
-      if (!data.new_message.trim()) return;
-
-      utils.hub.thread.setData(
-        {
-          threadId,
-        },
-        {
-          id: threadId,
-          files: thread?.files ?? [],
-          messages: [
-            ...(thread?.messages ?? []),
-            returnOptimisticThreadMessage(threadId, data.new_message),
-          ],
-        },
-      );
-
-      form.setValue('new_message', '');
-
-      await submitMessage(data);
-    } catch (error) {
-      handleClientError({ error, title: 'Failed to communicate with agent' });
-    }
+    form.setValue('new_message', '');
+    await chatMutation.mutateAsync(data);
   };
 
   const onKeyDownContent: KeyboardEventHandler<HTMLTextAreaElement> = (
@@ -224,8 +249,33 @@ export const AgentRunner = ({
   };
 
   useEffect(() => {
-    const files = threadQuery?.data?.files;
-    const htmlFile = files?.find((file) => file.filename === 'index.html');
+    // This logic simply provides helpful logs for debugging in production
+
+    if (!threadQuery.isFetching && (threadQuery.data || threadQuery.error)) {
+      const now = new Date();
+      const elapsedSecondsSinceRunStart = chatMutationStartedAt.current
+        ? (now.getTime() - chatMutationStartedAt.current.getTime()) / 1000
+        : null;
+
+      console.log(
+        `Thread polling fetch responded at: ${now.toLocaleTimeString()}`,
+        {
+          data: threadQuery.data,
+          error: threadQuery.error,
+          elapsedSecondsSinceRunStart,
+        },
+      );
+    }
+  }, [threadQuery.data, threadQuery.error, threadQuery.isFetching]);
+
+  useEffect(() => {
+    if (threadQuery.data) {
+      setThread(threadQuery.data);
+    }
+  }, [setThread, threadQuery.data]);
+
+  useEffect(() => {
+    const htmlFile = files.find((file) => file.filename === 'index.html');
 
     if (htmlFile) {
       const htmlContent = htmlFile.content.replaceAll(
@@ -238,34 +288,21 @@ export const AgentRunner = ({
       setHtmlOutput('');
       setView('conversation');
     }
-  }, [threadQuery, htmlOutput, agentId, setView]);
-
-  useEffect(() => {
-    if (threadId && threadId !== thread?.id) {
-      void threadQuery.refetch();
-    }
-  }, [thread, threadId, threadQuery]);
-
-  useEffect(() => {
-    if (!threadId) {
-      utils.hub.thread.setData(
-        {
-          threadId: '',
-        },
-        {
-          files: [],
-          messages: [],
-          id: '',
-        },
-      );
-    }
-  }, [threadId, utils]);
+  }, [files, htmlOutput, agentId, setView]);
 
   useEffect(() => {
     if (currentEntry && isAuthenticated) {
       form.setFocus('new_message');
     }
   }, [threadId, currentEntry, isAuthenticated, form]);
+
+  useEffect(() => {
+    if (threadId !== chatMutationThreadId.current) {
+      chatMutationThreadId.current = '';
+      chatMutationStartedAt.current = null;
+      resetThreadsStore();
+    }
+  }, [threadId, resetThreadsStore]);
 
   useEffect(() => {
     form.reset();
@@ -289,12 +326,11 @@ export const AgentRunner = ({
     const maxIterations = agentDetails?.defaults?.max_iterations ?? 1;
 
     if (initialUserMessage && !threadId && !chatMutation.isPending) {
-      void submitMessage({
+      void chatMutation.mutateAsync({
         max_iterations: maxIterations,
         new_message: initialUserMessage,
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentEntry, threadId, chatMutation]);
 
   if (!currentEntry) {
@@ -312,29 +348,37 @@ export const AgentRunner = ({
         />
 
         <Sidebar.Main>
-          {view === 'output' ? (
+          {isLoading ? (
+            <PlaceholderCard style={{ marginTop: 'auto' }} />
+          ) : (
             <>
-              <IframeWithBlob
-                html={htmlOutput}
-                onPostMessage={onIframePostMessage}
-                postMessage={iframePostMessage}
-              />
+              {view === 'output' ? (
+                <>
+                  <IframeWithBlob
+                    html={htmlOutput}
+                    minHeight={currentEntry.details.agent?.html_minimum_height}
+                    onPostMessage={onIframePostMessage}
+                    postMessage={iframePostMessage}
+                  />
 
-              {latestAssistantMessages.length > 0 && (
+                  {latestAssistantMessages.length > 0 && (
+                    <Messages
+                      grow={false}
+                      messages={latestAssistantMessages}
+                      threadId={threadId}
+                    />
+                  )}
+                </>
+              ) : (
                 <Messages
-                  loading={threadQuery.isLoading}
-                  messages={latestAssistantMessages}
+                  messages={messages}
                   threadId={threadId}
+                  welcomeMessage={
+                    <AgentWelcome details={currentEntry.details} />
+                  }
                 />
               )}
             </>
-          ) : (
-            <Messages
-              loading={threadQuery.isLoading}
-              messages={thread?.messages ?? []}
-              threadId={threadId}
-              welcomeMessage={<AgentWelcome details={currentEntry.details} />}
-            />
           )}
 
           <Sidebar.MainStickyFooter>
@@ -405,7 +449,7 @@ export const AgentRunner = ({
                     type="submit"
                     icon={<ArrowRight weight="bold" />}
                     size="small"
-                    loading={form.formState.isSubmitting}
+                    loading={isRunning}
                   />
                 </Flex>
               ) : (
@@ -425,39 +469,47 @@ export const AgentRunner = ({
                 Output
               </Text>
 
-              {thread?.files && Object.keys(thread.files).length ? (
-                <CardList>
-                  {Object.values(thread.files).map((file) => (
-                    <Card
-                      padding="s"
-                      gap="s"
-                      key={file.id}
-                      background="sand-2"
-                      onClick={() => {
-                        setOpenedFileId(file.id);
-                      }}
-                    >
-                      <Flex align="center" gap="s">
-                        <Text
-                          size="text-s"
-                          color="violet-11"
-                          clickableHighlight
-                          weight={500}
-                          clampLines={1}
-                          style={{ marginRight: 'auto' }}
-                        >
-                          {file.filename}
-                        </Text>
-
-                        <Text size="text-xs">{formatBytes(file.bytes)}</Text>
-                      </Flex>
-                    </Card>
-                  ))}
-                </CardList>
+              {isLoading ? (
+                <PlaceholderStack />
               ) : (
-                <Text size="text-s" color="sand-10">
-                  No files generated yet.
-                </Text>
+                <>
+                  {files.length ? (
+                    <CardList>
+                      {files.map((file) => (
+                        <Card
+                          padding="s"
+                          gap="s"
+                          key={file.id}
+                          background="sand-2"
+                          onClick={() => {
+                            setOpenedFileName(file.filename);
+                          }}
+                        >
+                          <Flex align="center" gap="s">
+                            <Text
+                              size="text-s"
+                              color="violet-11"
+                              clickableHighlight
+                              weight={500}
+                              clampLines={1}
+                              style={{ marginRight: 'auto' }}
+                            >
+                              {file.filename}
+                            </Text>
+
+                            <Text size="text-xs">
+                              {formatBytes(file.bytes)}
+                            </Text>
+                          </Flex>
+                        </Card>
+                      ))}
+                    </CardList>
+                  ) : (
+                    <Text size="text-s" color="sand-10">
+                      No files generated yet.
+                    </Text>
+                  )}
+                </>
               )}
             </Flex>
 
@@ -495,6 +547,7 @@ export const AgentRunner = ({
       </Sidebar.Root>
 
       <AgentPermissionsModal
+        agent={currentEntry}
         onAllow={(requests) =>
           conditionallyProcessAgentRequests(requests, true)
         }
@@ -502,33 +555,11 @@ export const AgentRunner = ({
         clearRequests={() => setAgentRequestsNeedingPermissions(null)}
       />
 
-      <Dialog.Root
-        open={openedFileId !== null}
-        onOpenChange={() => setOpenedFileId(null)}
-      >
-        <Dialog.Content
-          title={openedFileId}
-          size="l"
-          header={
-            <Button
-              label="Copy file to clipboard"
-              icon={<Copy />}
-              size="small"
-              fill="outline"
-              onClick={() =>
-                openedFile && copyTextToClipboard(openedFile?.content)
-              }
-              style={{ marginLeft: 'auto' }}
-            />
-          }
-        >
-          <Code
-            bleed
-            source={openedFile?.content}
-            language={filePathToCodeLanguage(openedFile?.filename)}
-          />
-        </Dialog.Content>
-      </Dialog.Root>
+      <ThreadFileModal
+        filesByName={thread?.filesByName}
+        openedFileName={openedFileName}
+        setOpenedFileName={setOpenedFileName}
+      />
     </Form>
   );
 };

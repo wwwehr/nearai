@@ -1,7 +1,18 @@
 'use client';
 
+import { useTheme } from '@near-pagoda/ui';
+import {
+  BreakpointDisplay,
+  Button,
+  Dropdown,
+  Flex,
+  SvgIcon,
+  Text,
+  Tooltip,
+} from '@near-pagoda/ui';
 import {
   BookOpenText,
+  CaretDown,
   ChatCircleDots,
   Cube,
   Gear,
@@ -9,12 +20,13 @@ import {
   Moon,
   Star,
   Sun,
+  Trophy,
   User,
   X,
 } from '@phosphor-icons/react';
+import * as NavigationMenu from '@radix-ui/react-navigation-menu';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 
 import { env } from '~/env';
@@ -23,53 +35,63 @@ import { ENTRY_CATEGORY_LABELS } from '~/lib/entries';
 import { useAuthStore } from '~/stores/auth';
 import { useWalletStore } from '~/stores/wallet';
 
-import { BreakpointDisplay } from './lib/BreakpointDisplay';
-import { Button } from './lib/Button';
-import { Dropdown } from './lib/Dropdown';
-import { Flex } from './lib/Flex';
-import { SvgIcon } from './lib/SvgIcon';
-import { Text } from './lib/Text';
-import { Tooltip } from './lib/Tooltip';
 import s from './Navigation.module.scss';
 
-const navItems = [
+const agentsNav = {
+  label: 'Agents',
+  path: '/agents',
+  icon: ENTRY_CATEGORY_LABELS.agent.icon,
+};
+
+const resourcesNav = env.NEXT_PUBLIC_CONSUMER_MODE
+  ? null
+  : [
+      {
+        label: 'Datasets',
+        path: '/datasets',
+        icon: ENTRY_CATEGORY_LABELS.dataset.icon,
+      },
+      {
+        label: 'Benchmarks',
+        path: '/benchmarks',
+        icon: ENTRY_CATEGORY_LABELS.benchmark.icon,
+      },
+      {
+        label: 'Evaluations',
+        path: '/evaluations',
+        icon: ENTRY_CATEGORY_LABELS.evaluation.icon,
+      },
+    ];
+
+const hubNavItems = [
   {
-    label: 'Agents',
-    path: '/agents',
-    icon: ENTRY_CATEGORY_LABELS.agent.icon,
-    consumer: true,
+    label: 'Competitions',
+    path: '/competitions',
+    icon: <Trophy />,
   },
+  agentsNav,
   {
     label: 'Models',
     path: '/models',
     icon: ENTRY_CATEGORY_LABELS.model.icon,
-    consumer: false,
   },
   {
-    label: 'Datasets',
-    path: '/datasets',
-    icon: ENTRY_CATEGORY_LABELS.dataset.icon,
-    consumer: false,
+    label: 'Threads',
+    path: '/chat',
+    icon: <ChatCircleDots />,
   },
-  {
-    label: 'Benchmarks',
-    path: '/benchmarks',
-    icon: ENTRY_CATEGORY_LABELS.benchmark.icon,
-    consumer: false,
-  },
-  {
-    label: 'Evaluations',
-    path: '/evaluations',
-    icon: ENTRY_CATEGORY_LABELS.evaluation.icon,
-    consumer: false,
-  },
+];
+
+const chatNavItems = [
   {
     label: 'Chat',
     path: '/chat',
     icon: <ChatCircleDots />,
-    consumer: true,
   },
-].filter((item) => !env.NEXT_PUBLIC_CONSUMER_MODE || item.consumer);
+  agentsNav,
+];
+
+const navItems = env.NEXT_PUBLIC_CONSUMER_MODE ? chatNavItems : hubNavItems;
 
 export const Navigation = () => {
   const auth = useAuthStore((store) => store.auth);
@@ -80,7 +102,9 @@ export const Navigation = () => {
   const [mounted, setMounted] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
 
-  const title = env.NEXT_PUBLIC_CONSUMER_MODE ? 'AI Chat' : 'AI Hub';
+  const title = env.NEXT_PUBLIC_CONSUMER_MODE
+    ? 'AI Assistant'
+    : 'AI Research Hub';
 
   useEffect(() => {
     setMounted(true);
@@ -101,18 +125,45 @@ export const Navigation = () => {
       </Link>
 
       <BreakpointDisplay show="larger-than-tablet" className={s.breakpoint}>
-        <Flex align="center" gap="m">
-          {navItems.map((item) => (
-            <Link
-              className={s.item}
-              href={item.path}
-              key={item.path}
-              data-active={path.startsWith(item.path)}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </Flex>
+        <NavigationMenu.Root className={s.menu} delayDuration={0}>
+          <NavigationMenu.List>
+            {navItems.map((item) => (
+              <NavigationMenu.Item key={item.path}>
+                <NavigationMenu.Link
+                  asChild
+                  active={path.startsWith(item.path)}
+                >
+                  <Link href={item.path} key={item.path}>
+                    {item.label}
+                  </Link>
+                </NavigationMenu.Link>
+              </NavigationMenu.Item>
+            ))}
+            {resourcesNav ? (
+              <NavigationMenu.Item>
+                <NavigationMenu.Trigger>
+                  Resources
+                  <SvgIcon size="xs" icon={<CaretDown />} />
+                </NavigationMenu.Trigger>
+
+                <NavigationMenu.Content className={s.menuDropdown}>
+                  {resourcesNav.map((item) => (
+                    <NavigationMenu.Link
+                      key={item.path}
+                      asChild
+                      active={path.startsWith(item.path)}
+                    >
+                      <Link href={item.path} key={item.path}>
+                        <SvgIcon icon={item.icon} />
+                        {item.label}
+                      </Link>
+                    </NavigationMenu.Link>
+                  ))}
+                </NavigationMenu.Content>
+              </NavigationMenu.Item>
+            ) : null}
+          </NavigationMenu.List>
+        </NavigationMenu.Root>
       </BreakpointDisplay>
 
       <Flex align="center" gap="m" style={{ marginLeft: 'auto' }}>
@@ -172,6 +223,16 @@ export const Navigation = () => {
                   </Dropdown.Item>
                 ))}
               </Dropdown.Section>
+              {resourcesNav ? (
+                <Dropdown.Section>
+                  {resourcesNav.map((item) => (
+                    <Dropdown.Item href={item.path} key={item.path}>
+                      <SvgIcon icon={item.icon} />
+                      {item.label}
+                    </Dropdown.Item>
+                  ))}
+                </Dropdown.Section>
+              ) : null}
             </Dropdown.Content>
           </Dropdown.Root>
         </BreakpointDisplay>

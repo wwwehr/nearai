@@ -1,25 +1,30 @@
 'use client';
 
-import { Copy, Folder } from '@phosphor-icons/react';
+import {
+  BreakpointDisplay,
+  Button,
+  Card,
+  CardList,
+  Container,
+  Flex,
+  PlaceholderCard,
+  PlaceholderStack,
+  Section,
+  SvgIcon,
+  Text,
+} from '@near-pagoda/ui';
+import { Folder, LockKey } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { type z } from 'zod';
 
-import { BreakpointDisplay } from '~/components/lib/BreakpointDisplay';
-import { Button } from '~/components/lib/Button';
-import { Card, CardList } from '~/components/lib/Card';
-import { Code, filePathToCodeLanguage } from '~/components/lib/Code';
-import { Flex } from '~/components/lib/Flex';
-import {
-  PlaceholderCard,
-  PlaceholderStack,
-} from '~/components/lib/Placeholder';
+import { Code } from '~/components/lib/Code';
 import { Sidebar } from '~/components/lib/Sidebar';
-import { Text } from '~/components/lib/Text';
 import { useEntryParams } from '~/hooks/entries';
 import { useQueryParams } from '~/hooks/url';
 import { type entryModel } from '~/lib/models';
+import { useAuthStore } from '~/stores/auth';
 import { api } from '~/trpc/react';
-import { copyTextToClipboard } from '~/utils/clipboard';
+import { filePathToCodeLanguage } from '~/utils/file';
 
 const METADATA_FILE_PATH = 'metadata.json';
 
@@ -28,19 +33,27 @@ type Props = {
 };
 
 export const EntrySource = ({ entry }: Props) => {
+  const accountId = useAuthStore((store) => store.auth?.account_id);
+  const isPermittedToViewSource =
+    !entry.details.private_source || accountId === entry.namespace;
   const { createQueryPath, queryParams } = useQueryParams(['file']);
   const params = useEntryParams();
-  const filePathsQuery = api.hub.filePaths.useQuery(params);
+
+  const filePathsQuery = api.hub.filePaths.useQuery(params, {
+    enabled: isPermittedToViewSource,
+  });
   const activeFilePath = queryParams.file ?? filePathsQuery.data?.[0] ?? '';
   const activeFileIsCompressed =
     activeFilePath.endsWith('.zip') || activeFilePath.endsWith('.tar');
+
   const fileQuery = api.hub.file.useQuery(
     { ...params, filePath: activeFilePath },
     {
       enabled:
         !!activeFilePath &&
         activeFilePath !== METADATA_FILE_PATH &&
-        !activeFileIsCompressed,
+        !activeFileIsCompressed &&
+        isPermittedToViewSource,
     },
   );
 
@@ -66,6 +79,23 @@ export const EntrySource = ({ entry }: Props) => {
   useEffect(() => {
     setSidebarOpenForSmallScreens(false);
   }, [queryParams.file]);
+
+  if (!isPermittedToViewSource) {
+    return (
+      <Section grow="available">
+        <Container size="s" style={{ margin: 'auto', textAlign: 'center' }}>
+          <Flex direction="column" gap="m" align="center">
+            <SvgIcon icon={<LockKey />} size="l" color="amber-11" />
+            <Text size="text-xl">Private Source Code</Text>
+            <Text>
+              You {`don't`} have permission to view the source code for this{' '}
+              {entry.category}.
+            </Text>
+          </Flex>
+        </Container>
+      </Section>
+    );
+  }
 
   return (
     <>
@@ -122,17 +152,6 @@ export const EntrySource = ({ entry }: Props) => {
                 onClick={() => setSidebarOpenForSmallScreens(true)}
               />
             </BreakpointDisplay>
-
-            <Button
-              label="Copy file to clipboard"
-              icon={<Copy />}
-              size="small"
-              fill="outline"
-              onClick={() =>
-                openedFile && copyTextToClipboard(openedFile.content)
-              }
-              disabled={activeFileIsCompressed}
-            />
           </Flex>
           {activeFileIsCompressed ? (
             <Text>This file type {`doesn't`} have a source preview.</Text>

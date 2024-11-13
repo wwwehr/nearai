@@ -371,7 +371,7 @@ class Environment(object):
     def write_file(
         self,
         filename: str,
-        content: str | bytes,
+        content: Union[str, bytes],
         encoding: str = "utf-8",
         filetype: str = "text/plain",
         write_to_disk: bool = True,
@@ -470,8 +470,8 @@ class Environment(object):
         self,
         name: str,
         file_ids: list,
-        expires_after: ExpiresAfter | NotGiven = NOT_GIVEN,
-        chunking_strategy: AutoFileChunkingStrategyParam | StaticFileChunkingStrategyParam | NotGiven = NOT_GIVEN,
+        expires_after: Union[ExpiresAfter, NotGiven] = NOT_GIVEN,
+        chunking_strategy: Union[AutoFileChunkingStrategyParam, StaticFileChunkingStrategyParam, NotGiven] = NOT_GIVEN,
         metadata: Optional[Dict[str, str]] = None,
     ) -> VectorStore:
         """Creates a vector store.
@@ -578,8 +578,8 @@ class Environment(object):
 
     def _run_inference_completions(
         self,
-        messages: Iterable[ChatCompletionMessageParam] | str,
-        model: Iterable[ChatCompletionMessageParam] | str,
+        messages: Union[Iterable[ChatCompletionMessageParam], str],
+        model: Union[Iterable[ChatCompletionMessageParam], str],
         stream: bool,
         **kwargs: Any,
     ) -> Union[ModelResponse, CustomStreamWrapper]:
@@ -612,8 +612,8 @@ class Environment(object):
     # TODO(286): `messages` may be model and `model` may be messages temporarily to support deprecated API.
     def completions(
         self,
-        messages: Iterable[ChatCompletionMessageParam] | str,
-        model: Iterable[ChatCompletionMessageParam] | str = "",
+        messages: Union[Iterable[ChatCompletionMessageParam], str],
+        model: Union[Iterable[ChatCompletionMessageParam], str] = "",
         stream: bool = False,
         **kwargs: Any,
     ) -> Union[ModelResponse, CustomStreamWrapper]:
@@ -757,8 +757,8 @@ class Environment(object):
     # TODO(286): `messages` may be model and `model` may be messages temporarily to support deprecated API.
     def completion(
         self,
-        messages: Iterable[ChatCompletionMessageParam] | str,
-        model: Iterable[ChatCompletionMessageParam] | str = "",
+        messages: Union[Iterable[ChatCompletionMessageParam], str],
+        model: Union[Iterable[ChatCompletionMessageParam], str] = "",
     ) -> str:
         """Returns a completion for the given messages using the given model."""
         raw_response = self.completions(messages, model)

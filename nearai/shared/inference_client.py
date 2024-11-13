@@ -186,8 +186,8 @@ class InferenceClient(object):
         self,
         name: str,
         file_ids: List[str],
-        expires_after: ExpiresAfter | NotGiven = NOT_GIVEN,
-        chunking_strategy: AutoFileChunkingStrategyParam | StaticFileChunkingStrategyParam | NotGiven = NOT_GIVEN,
+        expires_after: Union[ExpiresAfter, NotGiven] = NOT_GIVEN,
+        chunking_strategy: Union[AutoFileChunkingStrategyParam, StaticFileChunkingStrategyParam, NotGiven] = NOT_GIVEN,
         metadata: Optional[Dict[str, str]] = None,
     ) -> VectorStore:
         """Creates Vector Store.

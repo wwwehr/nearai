@@ -1,4 +1,5 @@
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List
 
 from nearai.openapi_client import (
@@ -78,19 +79,27 @@ class PartialNearClient:
         files = self.list_files(entry_location)
         results = []
 
-        for path in files:
-            body = BodyDownloadFileV1RegistryDownloadFilePost.from_dict(
-                dict(
-                    entry_location=entry_location,
-                    path=path,
+        with ThreadPoolExecutor() as executor:
+            tasks = {}
+            for path in files:
+                if path is None:
+                    continue
+                body = BodyDownloadFileV1RegistryDownloadFilePost.from_dict(
+                    dict(entry_location=entry_location, path=path)
                 )
-            )
-            assert (
-                body is not None
-            ), f"Unable to create request body for file download. Entry location: {entry_location}, Path: {path}"
-            result = api_instance.download_file_v1_registry_download_file_post(body)
-            results.append({"filename": path, "content": result})
-        return results
+                if body is None:
+                    continue
+                future = executor.submit(
+                    api_instance.download_file_v1_registry_download_file_post,
+                    body,
+                )
+                tasks[future] = path
+
+            for future in as_completed(tasks):
+                path = tasks[future]
+                result = future.result()
+                results.append({"filename": path, "content": result})
+            return results
 
     def get_agent_metadata(self, identifier: str) -> dict:
         """Fetches metadata for an agent from NearAI registry."""

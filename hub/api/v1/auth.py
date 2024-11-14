@@ -4,6 +4,7 @@ from typing import Optional
 
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from nearai.shared.cache import mem_cache_with_timeout
 from nearai.shared.near.sign import validate_nonce, verify_signed_message
 from pydantic import BaseModel, field_validator
 from sqlmodel import select
@@ -39,6 +40,10 @@ class AuthToken(BaseModel):
     @classmethod
     def validate_and_convert_nonce(cls, value: str):  # noqa: D102
         return validate_nonce(value)
+
+    def __hash__(self):
+        """Hash the object for caching purposes."""
+        return hash((type(self),) + tuple(self.__dict__.values()))
 
 
 class RawAuthToken(AuthToken):
@@ -121,6 +126,7 @@ def validate_signature(auth: Optional[RawAuthToken] = Depends(parse_auth)):
     return auth.unwrap()
 
 
+@mem_cache_with_timeout(timeout=60)
 def revokable_auth(auth: Optional[AuthToken] = Depends(validate_signature)):
     if auth is None:
         return None

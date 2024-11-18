@@ -1,3 +1,4 @@
+import { Placeholder } from '@near-pagoda/ui';
 import { type ComponentProps, useEffect, useRef, useState } from 'react';
 
 import { useDebouncedFunction } from '~/hooks/debounce';
@@ -21,7 +22,7 @@ type Props = ComponentProps<'iframe'> & {
 export const IframeWithBlob = ({
   className = '',
   html,
-  minHeight = '50vh',
+  minHeight,
   onPostMessage,
   postMessage,
   ...props
@@ -29,6 +30,7 @@ export const IframeWithBlob = ({
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [dataUrl, setDataUrl] = useState('');
   const [height, setHeight] = useState(0);
+  const isLoading = !height;
 
   const executePostMessage = useDebouncedFunction((message: unknown) => {
     console.log('Sending postMessage to <IframeWithBlob />', message);
@@ -103,14 +105,21 @@ export const IframeWithBlob = ({
   */
 
   return (
-    <div className={s.iframeWrapper} style={{ minHeight }}>
+    <div
+      className={s.iframeWrapper}
+      style={{ minHeight }}
+      data-loading={isLoading}
+    >
+      <div className={s.placeholder}>
+        <Placeholder />
+      </div>
+
       <iframe
         height={height}
         ref={iframeRef}
         src={dataUrl}
         sandbox="allow-scripts allow-popups"
         className={`${s.iframe} ${className}`}
-        data-loading={height < 1}
         {...props}
       />
     </div>
@@ -119,6 +128,8 @@ export const IframeWithBlob = ({
 
 function extendHtml(html: string) {
   let wrappedHtml = html;
+  const bodyStyle = getComputedStyle(document.body, null);
+  const bodyBackgroundColor = bodyStyle.getPropertyValue('background-color');
 
   if (!html.includes('</body>')) {
     wrappedHtml = `<html><body>${html}</body></html>`;
@@ -126,9 +137,13 @@ function extendHtml(html: string) {
 
   const script = `
     <script>
+      let hasLoaded = false;
+      document.documentElement.style.background = '${bodyBackgroundColor}';
+
       function setHeight() {
-        document.body.style.height = '1px';
-        document.body.style.display = 'block';
+        if (!hasLoaded) return;
+
+        document.documentElement.style.height = '100%';
         document.body.style.overflow = 'auto';
 
         const bodyStyle = getComputedStyle(document.body, null);
@@ -168,9 +183,10 @@ function extendHtml(html: string) {
       const resizeObserver = new ResizeObserver(setHeight);
       resizeObserver.observe(document.body);
 
-      setHeight();
-
-      window.addEventListener('load', setHeight);
+      window.addEventListener('load', () => {
+        hasLoaded = true;
+        setHeight();
+      });
     </script>
   `;
 

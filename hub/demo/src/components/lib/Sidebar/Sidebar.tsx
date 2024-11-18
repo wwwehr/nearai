@@ -1,22 +1,32 @@
 'use client';
 
+import { Button } from '@near-pagoda/ui';
 import { X } from '@phosphor-icons/react';
-import { type ReactNode } from 'react';
+import { type CSSProperties, type ReactNode } from 'react';
 
 import { Footer } from '~/components/Footer';
 
-import { Button } from '../Button';
 import s from './Sidebar.module.scss';
 
 export const Root = (props: { children: ReactNode }) => {
   return <div className={s.root} {...props} />;
 };
 
-export const Main = ({ children }: { children: ReactNode }) => {
+export const Main = ({
+  children,
+  showFooter = true,
+  style,
+}: {
+  children: ReactNode;
+  showFooter?: boolean;
+  style?: CSSProperties;
+}) => {
   return (
     <div className={s.main}>
-      <div className={s.mainContent}>{children}</div>
-      <Footer />
+      <div className={s.mainContent} style={style}>
+        {children}
+      </div>
+      {showFooter && <Footer />}
     </div>
   );
 };
@@ -47,6 +57,7 @@ export const Sidebar = ({
             icon={<X weight="bold" />}
             onClick={() => setOpenForSmallScreens(false)}
             className={s.sidebarCloseButton}
+            fill="ghost"
             size="x-small"
           />
 

@@ -14,6 +14,8 @@ from openai.types.beta.threads.text import Text
 from openai.types.beta.threads.text_content_block import TextContentBlock
 from sqlmodel import JSON, Column, Field, Session, SQLModel, create_engine
 
+from hub.api.v1.entry_location import EntryLocation
+
 load_dotenv()
 
 S3_ENDPOINT = getenv("S3_ENDPOINT")
@@ -57,6 +59,10 @@ class RegistryEntry(SQLModel, table=True):
         if object is not None:
             key = f"{key}/{object}"
         return key
+
+    def to_location(self) -> EntryLocation:
+        """Convert to EntryLocation."""
+        return EntryLocation(namespace=self.namespace, name=self.name, version=self.version)
 
     def is_private(self) -> bool:
         """Check if the entry is private."""
@@ -106,12 +112,15 @@ class Stars(SQLModel, table=True):
     name: str = Field(primary_key=True)
 
 
-class Jobs(SQLModel, table=True):
+class Job(SQLModel, table=True):
+    __tablename__ = "jobs"
+
     id: int = Field(default=None, primary_key=True)
     registry_path: str = Field(nullable=False)
     account_id: str = Field(nullable=False)
     status: str = Field(nullable=False)
     worker_id: Optional[str] = Field(default=None)
+    worker_kind: str = Field(nullable=False)
     info: Dict = Field(default_factory=dict, sa_column=Column(JSON))
     result: Dict = Field(default_factory=dict, sa_column=Column(JSON))
 
@@ -139,6 +148,14 @@ class BenchmarkResult(SQLModel, table=True):
     benchmark_id: int = Field(nullable=False)
     index: int = Field(nullable=False)
     solved: bool = Field(nullable=False)
+    info: Dict = Field(default_factory=dict, sa_column=Column(JSON))
+
+
+class Log(SQLModel, table=True):
+    __tablename__ = "logs"
+    id: int = Field(default=None, primary_key=True)
+    account_id: str = Field(nullable=False)
+    target: str = Field(nullable=False)
     info: Dict = Field(default_factory=dict, sa_column=Column(JSON))
 
 
@@ -258,6 +275,8 @@ class Run(SQLModel, table=True):
     response_format: Optional[str] = Field(default=None)
     tool_choice: Optional[str] = Field(default=None)
     parallel_tool_calls: bool = Field(default=False)
+    parent_run_id: Optional[str] = Field(default=None)
+    child_run_ids: List[str] = Field(default=[], sa_column=Column(JSON))
 
     def __init__(self, **data):  # noqa: D107
         super().__init__(**data)
@@ -326,7 +345,7 @@ SUPPORTED_MIME_TYPES = {
     "text/csv": [".csv"],
     "text/html": [".html"],
     "text/x-java": [".java"],
-    "text/javascript": [".js"],
+    "text/javascript": [".js", ".jsx"],
     "text/markdown": [".md"],
     "text/x-php": [".php"],
     "text/x-python": [".py"],
@@ -340,8 +359,11 @@ SUPPORTED_MIME_TYPES = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
     "application/json": [".json"],
     "application/pdf": [".pdf"],
-    "application/typescript": [".ts"],
+    "application/typescript": [".ts", ".tsx"],
     "application/yaml": [".yaml"],
+    "image/png": [".png"],
+    "image/jpeg": [".jpg"],
+    "image/gif": [".gif"],
 }
 
 SUPPORTED_TEXT_ENCODINGS = ["utf-8", "utf-16", "ascii"]

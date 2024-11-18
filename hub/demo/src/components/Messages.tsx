@@ -1,28 +1,21 @@
 'use client';
 
-import { Article, Copy, DotsThree, MarkdownLogo } from '@phosphor-icons/react';
+import { Button, Card, Dropdown, Flex, SvgIcon, Text } from '@near-pagoda/ui';
+import { Copy, DotsThree, Eye, MarkdownLogo } from '@phosphor-icons/react';
 import { usePrevious } from '@uidotdev/usehooks';
 import { Fragment, type ReactNode, useEffect, useRef, useState } from 'react';
 import { type z } from 'zod';
 
-import { type messageModel, type threadMessageModel } from '~/lib/models';
+import { type threadMessageModel } from '~/lib/models';
 import { useAuthStore } from '~/stores/auth';
 import { copyTextToClipboard } from '~/utils/clipboard';
 
-import { Button } from './lib/Button';
-import { Card } from './lib/Card';
-import { Dropdown } from './lib/Dropdown';
-import { Flex } from './lib/Flex';
 import { Markdown } from './lib/Markdown';
-import { SvgIcon } from './lib/SvgIcon';
-import { Text } from './lib/Text';
 import s from './Messages.module.scss';
 
 type Props = {
   grow?: boolean;
-  messages:
-    | z.infer<typeof messageModel>[]
-    | z.infer<typeof threadMessageModel>[];
+  messages: z.infer<typeof threadMessageModel>[];
   threadId: string;
   welcomeMessage?: ReactNode;
 };
@@ -68,18 +61,12 @@ export const Messages = ({
     scroll();
   }, [threadId, previousMessages, messages]);
 
-  const normalizedMessages: z.infer<typeof messageModel>[] = messages.map(
-    (message) => {
-      if ('thread_id' in message) {
-        return {
-          content: message.content[0]?.text.value ?? '',
-          role: message.role,
-        };
-      }
-
-      return message;
-    },
-  );
+  const normalizedMessages = messages.map((message) => {
+    return {
+      content: message.content[0]?.text.value ?? '',
+      role: message.role,
+    };
+  });
 
   if (!isAuthenticated) {
     return (
@@ -95,7 +82,7 @@ export const Messages = ({
 
       <div className={s.messages} ref={messagesRef}>
         {normalizedMessages.map((message, index) => (
-          <Fragment key={index + message.content}>
+          <Fragment key={index + message.role}>
             {message.role === 'user' ? (
               <Card animateIn background="sand-2" style={{ alignSelf: 'end' }}>
                 {renderAsMarkdown ? (
@@ -146,14 +133,14 @@ export const Messages = ({
                           <Dropdown.Item
                             onSelect={() => setRenderAsMarkdown(false)}
                           >
-                            <SvgIcon icon={<Article />} />
-                            Render Raw Message
+                            <SvgIcon icon={<MarkdownLogo />} />
+                            View Markdown Source
                           </Dropdown.Item>
                         ) : (
                           <Dropdown.Item
                             onSelect={() => setRenderAsMarkdown(true)}
                           >
-                            <SvgIcon icon={<MarkdownLogo />} />
+                            <SvgIcon icon={<Eye />} />
                             Render Markdown
                           </Dropdown.Item>
                         )}

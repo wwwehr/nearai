@@ -4,19 +4,20 @@ from typing import Optional
 
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from nearai.shared.cache import mem_cache_with_timeout
+from nearai.shared.near.sign import validate_nonce, verify_signed_message
 from pydantic import BaseModel, field_validator
-from shared.near.sign import validate_nonce, verify_signed_message
 from sqlmodel import select
 
 from hub.api.v1.exceptions import TokenValidationError
 from hub.api.v1.models import Delegation, get_session
 from hub.api.v1.sql import SqlClient
 
-bearer = HTTPBearer()
+bearer = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
-db = SqlClient()
 
 
+# TODO: This code is duplicated from shared/auth_data.py (remove duplication)
 class AuthToken(BaseModel):
     """Model for auth callback."""
 
@@ -40,6 +41,10 @@ class AuthToken(BaseModel):
     def validate_and_convert_nonce(cls, value: str):  # noqa: D102
         return validate_nonce(value)
 
+    def __hash__(self):
+        """Hash the object for caching purposes."""
+        return hash((type(self),) + tuple(self.__dict__.values()))
+
 
 class RawAuthToken(AuthToken):
     on_behalf_of: Optional[str] = None
@@ -58,7 +63,10 @@ class RawAuthToken(AuthToken):
         )
 
 
-async def get_auth(token: HTTPAuthorizationCredentials = Depends(bearer)):
+def parse_auth(token: Optional[HTTPAuthorizationCredentials] = Depends(bearer)):
+    if token is None:
+        return None
+
     if token.credentials == "":
         raise HTTPException(status_code=401, detail="Invalid token")
     if token.scheme.lower() != "bearer":
@@ -71,7 +79,10 @@ async def get_auth(token: HTTPAuthorizationCredentials = Depends(bearer)):
         raise TokenValidationError(detail=str(e)) from None
 
 
-async def validate_signature(auth: RawAuthToken = Depends(get_auth)):
+def validate_signature(auth: Optional[RawAuthToken] = Depends(parse_auth)):
+    if auth is None:
+        return None
+
     logging.debug(f"account_id {auth.account_id}: verifying signature")
     is_valid = verify_signed_message(
         auth.account_id,
@@ -115,9 +126,14 @@ async def validate_signature(auth: RawAuthToken = Depends(get_auth)):
     return auth.unwrap()
 
 
-async def revokable_auth(auth: AuthToken = Depends(validate_signature)):
+@mem_cache_with_timeout(timeout=60)
+def revokable_auth(auth: Optional[AuthToken] = Depends(validate_signature)):
+    if auth is None:
+        return None
+
     logger.debug(f"Validating auth token: {auth}")
 
+    db = SqlClient()  # TODO(https://github.com/nearai/nearai/issues/545): Use SQLAlchemy
     user_nonce = db.get_account_nonce(auth.account_id, auth.nonce)
 
     if user_nonce and user_nonce.is_revoked():
@@ -127,4 +143,20 @@ async def revokable_auth(auth: AuthToken = Depends(validate_signature)):
     if not user_nonce:
         db.store_nonce(auth.account_id, auth.nonce, auth.message, auth.recipient, auth.callback_url)
 
+    return auth
+
+
+def get_optional_auth(auth: Optional[AuthToken] = Depends(revokable_auth)):
+    """Returns the validated auth token in case it was provided, otherwise returns None."""
+    # This method is the last layer of the middleware the builds the auth token, it
+    # should be used instead of any previous method in the chain (e.g. `revokable_auth`).
+    # This way it is easier to add new layers of validation without changing the existing code.
+    #
+    # If the auth token is required, use `get_auth` instead.
+    return auth
+
+
+def get_auth(auth: Optional[AuthToken] = Depends(get_optional_auth)):
+    if auth is None:
+        raise HTTPException(status_code=403, detail="Authorization required")
     return auth

@@ -1,11 +1,11 @@
 'use client';
 
-import Link from 'next/link';
+import { Flex, Text } from '@near-pagoda/ui';
 import { useEffect, useState } from 'react';
 
+import { env } from '~/env';
+
 import s from './Footer.module.scss';
-import { Flex } from './lib/Flex';
-import { Text } from './lib/Text';
 
 type Props = {
   conditional?: boolean;
@@ -31,6 +31,10 @@ export const Footer = ({ conditional }: Props) => {
     setMounted(true);
   }, []);
 
+  const title = env.NEXT_PUBLIC_CONSUMER_MODE
+    ? 'NEAR AI Assistant'
+    : 'NEAR AI Research Hub';
+
   return (
     <footer
       className={s.footer}
@@ -38,20 +42,26 @@ export const Footer = ({ conditional }: Props) => {
       data-hide={conditional && !mounted}
     >
       <Flex justify="space-between" gap="m" align="center" wrap="wrap">
-        <Text size="text-xs">NEAR AI Hub</Text>
+        <Text size="text-xs">{title}</Text>
 
         <Flex wrap="wrap" gap="m">
-          <Link href="https://near.ai" target="_blank">
-            <Text size="text-xs" decoration="underline">
-              near.ai
-            </Text>
-          </Link>
+          <Text
+            href="https://near.ai"
+            target="_blank"
+            size="text-xs"
+            color="sand-11"
+          >
+            near.ai
+          </Text>
 
-          <Link href="/terms-and-conditions.pdf" target="_blank">
-            <Text size="text-xs" decoration="underline">
-              Terms & Conditions
-            </Text>
-          </Link>
+          <Text
+            href="/terms-and-conditions.pdf"
+            target="_blank"
+            size="text-xs"
+            color="sand-11"
+          >
+            Terms & Conditions
+          </Text>
         </Flex>
       </Flex>
     </footer>

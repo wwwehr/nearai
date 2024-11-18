@@ -9,8 +9,8 @@ from typing import Any, Dict, List, Literal, Optional
 import pymysql
 import pymysql.cursors
 from dotenv import load_dotenv
+from nearai.shared.models import SimilaritySearch
 from pydantic import BaseModel, RootModel
-from shared.models import SimilaritySearch
 
 load_dotenv()
 

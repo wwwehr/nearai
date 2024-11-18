@@ -118,6 +118,7 @@ markers = [
   "integration: mark test as integration test",
 ]
 
+
 [tool.poetry.scripts]
 nearai = "nearai.cli:main"
 

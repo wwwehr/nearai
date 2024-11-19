@@ -346,7 +346,14 @@ class BenchmarkCli:
                 map(lambda n: n in name, solver_strategy_obj.compatible_datasets())
             ), f"Solver strategy {solver_strategy} is not compatible with dataset {name}"
 
-        be = BenchmarkExecutor(DatasetInfo(name, subset, dataset), solver_strategy_obj, benchmark_id=benchmark_id)
+        dest_path = get_registry_folder() / name
+        metadata_path = dest_path / "metadata.json"
+        with open(metadata_path, "r") as file:
+            metadata = json.load(file)
+
+        be = BenchmarkExecutor(
+            DatasetInfo(name, subset, dataset, metadata), solver_strategy_obj, benchmark_id=benchmark_id
+        )
 
         cpu_count = os.cpu_count()
         max_concurrent = (cpu_count if cpu_count is not None else 1) if max_concurrent < 0 else max_concurrent

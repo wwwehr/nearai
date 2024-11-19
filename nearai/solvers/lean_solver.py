@@ -61,6 +61,9 @@ def parse_tactics(json_str: str) -> List[str]:
         # Extract tactic strings
         result = []
         for item in tactics_array:
+            if isinstance(item, str):
+                result.append(item)
+                continue
             if not isinstance(item, dict) or "tactic" not in item:
                 print(f"Each tactic item must be an object with 'tactic' key. json: {json_str}")
                 return []
@@ -123,7 +126,8 @@ class LeanSolverStrategy(SolverStrategy):
         super().__init__(model, agent)
 
     def evaluation_name(self) -> str:  # noqa: D102
-        return "nearai_lean"
+        assert self.dataset_evaluation_name
+        return self.dataset_evaluation_name
 
     def compatible_datasets(self) -> List[str]:  # noqa: D102
         return ["lean"]
@@ -159,4 +163,11 @@ class LeanSolverStrategy(SolverStrategy):
         if not tactics:
             return False
 
-        return check_solution(lean_datum, tactics)
+        # Sometimes, there are timeout errors.
+        for i in range(0, 3):
+            try:
+                return check_solution(lean_datum, tactics)
+            except Exception as e:
+                if i == 2:
+                    print(f"Exception while checking solution: {str(e)}.")
+                    return False

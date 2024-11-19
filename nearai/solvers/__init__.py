@@ -107,6 +107,7 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
         self.client_config = CONFIG.get_client_config()
         self.client = InferenceClient(self.client_config)
         assert model != "" or agent != ""
+        self.dataset_evaluation_name = ""
 
         self.provider = ""
         self.model_namespace = ""

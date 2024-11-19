@@ -20,7 +20,7 @@ else
   exit 1
 fi
 
-$OPENAPI_GENERATOR generate -i near-openapi.json -g python -o /tmp/nearai_api_client/
+$OPENAPI_GENERATOR generate -i near-openapi.json -g python -o /tmp/nearai_api_client/ --package-name nearai.openapi_client
 
-rm -rf ../openapi_client/
-cp -r /tmp/nearai_api_client/openapi_client/ ../openapi_client/
+rm -rf ../nearai/openapi_client/
+cp -r /tmp/nearai_api_client/nearai/openapi_client/ ../nearai/openapi_client/

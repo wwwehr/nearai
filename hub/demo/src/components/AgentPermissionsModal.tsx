@@ -1,10 +1,10 @@
+import { Button, Dialog, Flex, SvgIcon, Text } from '@near-pagoda/ui';
 import { Check, Prohibit } from '@phosphor-icons/react';
-import Link from 'next/link';
 import { useEffect } from 'react';
 import { type z } from 'zod';
 
 import { useEntryParams } from '~/hooks/entries';
-import { idForEntry } from '~/lib/entries';
+import { idMatchesEntry } from '~/lib/entries';
 import {
   type agentWalletTransactionsRequestModel,
   type chatWithAgentModel,
@@ -13,11 +13,6 @@ import {
 import { useAgentSettingsStore } from '~/stores/agent-settings';
 import { useAuthStore } from '~/stores/auth';
 
-import { Button } from './lib/Button';
-import { Dialog } from './lib/Dialog';
-import { Flex } from './lib/Flex';
-import { SvgIcon } from './lib/SvgIcon';
-import { Text } from './lib/Text';
 import { SignInPrompt } from './SignInPrompt';
 
 export type AgentRequest =
@@ -42,7 +37,7 @@ export function checkAgentPermissions(
   requests.forEach((request) => {
     if ('agent_id' in request) {
       allowRemoteRunCallsToOtherAgents =
-        request.agent_id === idForEntry(agent) ||
+        idMatchesEntry(request.agent_id, agent) ||
         !!settings.allowRemoteRunCallsToOtherAgents;
     } else {
       allowWalletTransactionRequests =
@@ -132,17 +127,13 @@ export const AgentPermissionsModal = ({
                 <>
                   <Text>
                     The current agent{' '}
-                    <Link href={`/agents/${agentId}`} target="_blank">
-                      <Text as="span" color="violet-11" weight={500}>
-                        {agentId}
-                      </Text>
-                    </Link>{' '}
+                    <Text href={`/agents/${agentId}`} target="_blank">
+                      {agentId}
+                    </Text>{' '}
                     wants to send an additional request to a different agent{' '}
-                    <Link href={`/agents/${otherAgentId}`} target="_blank">
-                      <Text as="span" color="violet-11" weight={500}>
-                        {otherAgentId}
-                      </Text>
-                    </Link>{' '}
+                    <Text href={`/agents/${otherAgentId}`} target="_blank">
+                      {otherAgentId}
+                    </Text>{' '}
                     using your {`account's`} signature{' '}
                     <Text as="span" color="sand-12" weight={500}>
                       {auth?.account_id}
@@ -181,11 +172,9 @@ export const AgentPermissionsModal = ({
                 <>
                   <Text>
                     The current agent{' '}
-                    <Link href={`/agents/${agentId}`} target="_blank">
-                      <Text as="span" color="violet-11" weight={500}>
-                        {agentId}
-                      </Text>
-                    </Link>{' '}
+                    <Text href={`/agents/${agentId}`} target="_blank">
+                      {agentId}
+                    </Text>{' '}
                     wants to request a wallet transaction. If allowed, you will
                     be prompted to review the transaction within your connected
                     wallet.

@@ -1,39 +1,41 @@
 'use client';
 
 import {
-  DotsThreeVertical,
+  Badge,
+  Button,
+  Card,
+  CardList,
+  Dialog,
+  Dropdown,
+  Flex,
+  Form,
+  Input,
+  PlaceholderStack,
+  SvgIcon,
+  Text,
+  Tooltip,
+} from '@near-pagoda/ui';
+import {
+  DotsThree,
   Lightbulb,
   Link as LinkIcon,
   Pencil,
   Plus,
+  Tag,
   Trash,
 } from '@phosphor-icons/react';
 import { usePrevious } from '@uidotdev/usehooks';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { type SubmitHandler, useForm } from 'react-hook-form';
 
-import { Button } from '~/components/lib/Button';
-import { Card, CardList } from '~/components/lib/Card';
-import { Dropdown } from '~/components/lib/Dropdown';
-import { Flex } from '~/components/lib/Flex';
-import { PlaceholderStack } from '~/components/lib/Placeholder';
 import { Sidebar } from '~/components/lib/Sidebar';
-import { SvgIcon } from '~/components/lib/SvgIcon';
-import { Text } from '~/components/lib/Text';
-import { Tooltip } from '~/components/lib/Tooltip';
 import { env } from '~/env';
-import { type Thread, useThreads } from '~/hooks/threads';
+import { type ThreadSummary, useThreads } from '~/hooks/threads';
 import { useQueryParams } from '~/hooks/url';
 import { useAuthStore } from '~/stores/auth';
 import { api } from '~/trpc/react';
 import { copyTextToClipboard } from '~/utils/clipboard';
 import { handleClientError } from '~/utils/error';
-
-import { Dialog } from './lib/Dialog';
-import { Form } from './lib/Form';
-import { Input } from './lib/Input';
 
 type Props = {
   onRequestNewThread: () => unknown;
@@ -46,7 +48,6 @@ export const ThreadsSidebar = ({
   openForSmallScreens,
   setOpenForSmallScreens,
 }: Props) => {
-  const pathname = usePathname();
   const isAuthenticated = useAuthStore((store) => store.isAuthenticated);
   const { updateQueryPath, queryParams } = useQueryParams(['threadId']);
   const threadId = queryParams.threadId ?? '';
@@ -57,14 +58,12 @@ export const ThreadsSidebar = ({
   const filteredThreads = threads?.filter(
     (thread) => !removedThreadIds.includes(thread.id),
   );
-  const isViewingAgent =
-    pathname.startsWith('/agents') || env.NEXT_PUBLIC_CONSUMER_MODE;
   const removeMutation = api.hub.removeThread.useMutation();
 
   const currentThreadIdMatchesThread =
     !threadId || !!filteredThreads?.find((thread) => thread.id === threadId);
 
-  const removeThread = async (thread: Thread) => {
+  const removeThread = async (thread: ThreadSummary) => {
     try {
       if (threadId === thread.id) {
         updateQueryPath({ threadId: undefined });
@@ -116,7 +115,6 @@ export const ThreadsSidebar = ({
                 href={thread.url}
                 padding="s"
                 paddingInline="m"
-                gap="xs"
                 background={
                   (currentThreadIdMatchesThread && threadId === thread.id) ||
                   (!currentThreadIdMatchesThread &&
@@ -126,20 +124,21 @@ export const ThreadsSidebar = ({
                 }
                 key={thread.id}
               >
-                <Flex align="center" gap="s">
-                  <Text
-                    as="span"
-                    size="text-s"
-                    weight={500}
-                    color="sand-12"
-                    clickableHighlight
-                    clampLines={1}
-                    style={{ marginRight: 'auto' }}
-                  >
-                    {thread.metadata.topic}
-                  </Text>
+                <Flex direction="column">
+                  <Flex align="center" gap="s">
+                    <Text
+                      as="span"
+                      size="text-s"
+                      weight={500}
+                      color="sand-12"
+                      clickableHighlight
+                      clampLines={1}
+                      style={{ marginRight: 'auto' }}
+                    >
+                      {thread.metadata.topic}
+                    </Text>
 
-                  {/* <Tooltip
+                    {/* <Tooltip
                     asChild
                     content={`${thread.messageCount} message${thread.messageCount === 1 ? '' : 's'} sent`}
                     key={thread.id}
@@ -150,77 +149,92 @@ export const ThreadsSidebar = ({
                       variant="neutral"
                     />
                   </Tooltip> */}
-                </Flex>
+                  </Flex>
 
-                <Flex align="center" gap="s">
-                  <Text
-                    size="text-xs"
-                    clampLines={1}
-                    style={{ marginRight: 'auto' }}
-                  >
-                    {thread.agent.namespace}/{thread.agent.name}/
-                    {thread.agent.version}
-                  </Text>
+                  <Flex align="center" gap="s">
+                    <Text
+                      size="text-2xs"
+                      clampLines={1}
+                      style={{ marginRight: 'auto' }}
+                    >
+                      {thread.agent.namespace}/{thread.agent.name}
+                    </Text>
 
-                  <Dropdown.Root>
-                    <Dropdown.Trigger asChild>
-                      <Button
-                        label="Manage Thread"
-                        icon={<DotsThreeVertical weight="bold" />}
-                        size="x-small"
-                        fill="ghost"
-                      />
-                    </Dropdown.Trigger>
+                    {thread.agent.version !== 'latest' && (
+                      <Tooltip
+                        content={`This thread is fixed to a specific agent version: ${thread.agent.version}`}
+                      >
+                        <Badge
+                          size="small"
+                          iconLeft={<Tag />}
+                          label={thread.agent.version}
+                          style={{
+                            maxWidth: '4.5rem',
+                          }}
+                          variant="warning"
+                        />
+                      </Tooltip>
+                    )}
 
-                    <Dropdown.Content sideOffset={0}>
-                      <Dropdown.Section>
-                        <Dropdown.SectionContent>
-                          <Text size="text-xs" weight={600} uppercase>
-                            Thread
-                          </Text>
-                        </Dropdown.SectionContent>
-                      </Dropdown.Section>
+                    <Dropdown.Root>
+                      <Dropdown.Trigger asChild>
+                        <Button
+                          label="Manage Thread"
+                          icon={<DotsThree weight="bold" />}
+                          size="x-small"
+                          fill="ghost"
+                        />
+                      </Dropdown.Trigger>
 
-                      <Dropdown.Section>
-                        <Dropdown.Item
-                          onSelect={() => setEditingThreadId(thread.id)}
-                        >
-                          <SvgIcon icon={<Pencil />} />
-                          Rename Thread
-                        </Dropdown.Item>
+                      <Dropdown.Content sideOffset={0}>
+                        <Dropdown.Section>
+                          <Dropdown.SectionContent>
+                            <Text size="text-xs" weight={600} uppercase>
+                              Thread
+                            </Text>
+                          </Dropdown.SectionContent>
+                        </Dropdown.Section>
 
-                        <Dropdown.Item
-                          onSelect={() =>
-                            copyTextToClipboard(
-                              `${window.location.origin}${thread.url}`,
-                            )
-                          }
-                        >
-                          <SvgIcon icon={<LinkIcon />} />
-                          Copy Thread Link
-                        </Dropdown.Item>
+                        <Dropdown.Section>
+                          <Dropdown.Item
+                            onSelect={() => setEditingThreadId(thread.id)}
+                          >
+                            <SvgIcon icon={<Pencil />} />
+                            Rename Thread
+                          </Dropdown.Item>
 
-                        <Dropdown.Item href={thread.agent.url}>
-                          {env.NEXT_PUBLIC_CONSUMER_MODE ? (
-                            <>
-                              <SvgIcon icon={<Plus />} />
-                              New Thread
-                            </>
-                          ) : (
-                            <>
-                              <SvgIcon icon={<Lightbulb />} />
-                              View Agent
-                            </>
-                          )}
-                        </Dropdown.Item>
+                          <Dropdown.Item
+                            onSelect={() =>
+                              copyTextToClipboard(
+                                `${window.location.origin}${thread.url}`,
+                              )
+                            }
+                          >
+                            <SvgIcon icon={<LinkIcon />} />
+                            Copy Thread Link
+                          </Dropdown.Item>
 
-                        <Dropdown.Item onSelect={() => removeThread(thread)}>
-                          <SvgIcon icon={<Trash />} color="red-10" />
-                          Delete Thread
-                        </Dropdown.Item>
-                      </Dropdown.Section>
+                          <Dropdown.Item href={thread.agent.url}>
+                            {env.NEXT_PUBLIC_CONSUMER_MODE ? (
+                              <>
+                                <SvgIcon icon={<Plus />} />
+                                New Thread
+                              </>
+                            ) : (
+                              <>
+                                <SvgIcon icon={<Lightbulb />} />
+                                View Agent
+                              </>
+                            )}
+                          </Dropdown.Item>
 
-                      {/* <Dropdown.Section>
+                          <Dropdown.Item onSelect={() => removeThread(thread)}>
+                            <SvgIcon icon={<Trash />} color="red-10" />
+                            Delete Thread
+                          </Dropdown.Item>
+                        </Dropdown.Section>
+
+                        {/* <Dropdown.Section>
                         <Dropdown.SectionContent>
                           <Text size="text-xs">
                             Last message sent at{' '}
@@ -230,8 +244,9 @@ export const ThreadsSidebar = ({
                           </Text>
                         </Dropdown.SectionContent>
                       </Dropdown.Section> */}
-                    </Dropdown.Content>
-                  </Dropdown.Root>
+                      </Dropdown.Content>
+                    </Dropdown.Root>
+                  </Flex>
                 </Flex>
               </Card>
             ))}
@@ -240,27 +255,18 @@ export const ThreadsSidebar = ({
       ) : (
         <>
           {filteredThreads ? (
-            <Text size="text-s">
-              You {`haven't`} started any threads yet.{' '}
-              {isViewingAgent ? (
-                <>Submit a message to start your first thread.</>
-              ) : (
-                <>
-                  <br />
-                  <Link href="/agents">
-                    <Text
-                      as="span"
-                      size="text-s"
-                      color="violet-11"
-                      weight={500}
-                    >
-                      Select an agent
-                    </Text>
-                  </Link>{' '}
-                  to start your first thread.
-                </>
-              )}
-            </Text>
+            <>
+              <Text size="text-s">
+                Submit a message to start your first thread.
+              </Text>
+
+              <Button
+                label="Browse Agents"
+                href="/agents"
+                size="small"
+                variant="secondary"
+              />
+            </>
           ) : (
             <PlaceholderStack />
           )}
@@ -308,7 +314,7 @@ const EditThreadForm = ({ threadThreadId, onFinish }: EditThreadFormProps) => {
   }, [form, thread]);
 
   const onSubmit: SubmitHandler<EditThreadFormSchema> = async (data) => {
-    // This submit handler optimistically updates environment data to make the update feel instant
+    // This submit handler optimistically updates thread data to make the update feel instant
 
     try {
       if (!thread) return;

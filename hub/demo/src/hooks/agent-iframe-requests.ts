@@ -28,7 +28,12 @@ const PENDING_TRANSACTION_KEY = 'agent-transaction-request-pending-connection';
 
 export function useAgentRequestsWithIframe(
   currentEntry: z.infer<typeof entryModel> | undefined,
-  chatMutation: UseMutationResult<void, Error, AgentChatMutationInput, unknown>,
+  chatMutation: UseMutationResult<
+    unknown,
+    Error,
+    AgentChatMutationInput,
+    unknown
+  >,
   threadId: string | null | undefined,
 ) {
   const { queryParams, updateQueryPath } = useQueryParams([
@@ -188,7 +193,7 @@ export function useAgentRequestsWithIframe(
       } else if (action === 'refresh_thread_id') {
         const chat = chatWithAgentModel.partial().parse(event.data.data);
         if (chat.thread_id) {
-          void utils.hub.thread.invalidate({ threadId: chat.thread_id });
+          void utils.hub.thread.invalidate();
           updateQueryPath({ threadId: chat.thread_id }, 'replace', false);
         }
       } else if (action === 'remote_agent_run') {

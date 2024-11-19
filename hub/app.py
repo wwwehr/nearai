@@ -8,11 +8,13 @@ from fastapi.responses import JSONResponse
 
 from hub.api.v1.agent_routes import run_agent_router
 from hub.api.v1.benchmark import v1_router as benchmark_router
+from hub.api.v1.delegation import v1_router as delegation_router
 from hub.api.v1.evaluation import v1_router as evaluation_router
 from hub.api.v1.exceptions import TokenValidationError
 from hub.api.v1.files import files_router
 from hub.api.v1.hub_secrets import hub_secrets_router
 from hub.api.v1.jobs import v1_router as job_router
+from hub.api.v1.logs import logs_router
 from hub.api.v1.permissions import v1_router as permission_router
 from hub.api.v1.registry import v1_router as registry_router
 from hub.api.v1.routes import v1_router
@@ -49,6 +51,8 @@ app.include_router(hub_secrets_router, prefix="/v1")
 app.include_router(job_router, prefix="/v1")
 app.include_router(permission_router, prefix="/v1")
 app.include_router(evaluation_router, prefix="/v1")
+app.include_router(delegation_router, prefix="/v1")
+app.include_router(logs_router, prefix="/v1")
 
 # TODO: OpenAPI can't be generated for the following routes.
 app.include_router(vector_stores_router, prefix="/v1")

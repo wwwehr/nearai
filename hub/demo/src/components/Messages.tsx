@@ -1,26 +1,22 @@
 'use client';
 
-import { Copy } from '@phosphor-icons/react';
+import { Button, Card, Dropdown, Flex, SvgIcon, Text } from '@near-pagoda/ui';
+import { Copy, DotsThree, Eye, MarkdownLogo } from '@phosphor-icons/react';
 import { usePrevious } from '@uidotdev/usehooks';
-import { Fragment, type ReactNode, useEffect, useRef } from 'react';
+import { Fragment, type ReactNode, useEffect, useRef, useState } from 'react';
 import { type z } from 'zod';
 
-import { type messageModel, type threadMessageModel } from '~/lib/models';
+import { type threadMessageModel } from '~/lib/models';
 import { useAuthStore } from '~/stores/auth';
 import { copyTextToClipboard } from '~/utils/clipboard';
 
-import { Button } from './lib/Button';
-import { Card } from './lib/Card';
-import { Flex } from './lib/Flex';
-import { Text } from './lib/Text';
-import { Tooltip } from './lib/Tooltip';
+import { Markdown } from './lib/Markdown';
 import s from './Messages.module.scss';
 
 type Props = {
   grow?: boolean;
-  messages:
-    | z.infer<typeof messageModel>[]
-    | z.infer<typeof threadMessageModel>[];
+  messages: z.infer<typeof threadMessageModel>[];
+  scrollTo?: boolean;
   threadId: string;
   welcomeMessage?: ReactNode;
 };
@@ -28,6 +24,7 @@ type Props = {
 export const Messages = ({
   grow = true,
   messages,
+  scrollTo = true,
   threadId,
   welcomeMessage,
 }: Props) => {
@@ -35,6 +32,7 @@ export const Messages = ({
   const previousMessages = usePrevious(messages);
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const scrolledToThreadId = useRef('');
+  const [renderAsMarkdown, setRenderAsMarkdown] = useState(true);
 
   useEffect(() => {
     if (!messagesRef.current) return;
@@ -56,27 +54,21 @@ export const Messages = ({
           });
         }
 
-        setTimeout(() => {
-          scrolledToThreadId.current = threadId;
-        }, 1000);
+        scrolledToThreadId.current = threadId;
       }, 10);
     }
 
-    scroll();
-  }, [threadId, previousMessages, messages]);
+    if (scrollTo) {
+      scroll();
+    }
+  }, [threadId, previousMessages, messages, scrollTo]);
 
-  const normalizedMessages: z.infer<typeof messageModel>[] = messages.map(
-    (message) => {
-      if ('thread_id' in message) {
-        return {
-          content: message.content[0]?.text.value ?? '',
-          role: message.role,
-        };
-      }
-
-      return message;
-    },
-  );
+  const normalizedMessages = messages.map((message) => {
+    return {
+      content: message.content[0]?.text.value ?? '',
+      role: message.role,
+    };
+  });
 
   if (!isAuthenticated) {
     return (
@@ -92,14 +84,22 @@ export const Messages = ({
 
       <div className={s.messages} ref={messagesRef}>
         {normalizedMessages.map((message, index) => (
-          <Fragment key={index + message.content}>
+          <Fragment key={index + message.role}>
             {message.role === 'user' ? (
               <Card animateIn background="sand-2" style={{ alignSelf: 'end' }}>
-                <Text color="sand-11">{message.content}</Text>
+                {renderAsMarkdown ? (
+                  <Markdown content={message.content} />
+                ) : (
+                  <Text>{message.content}</Text>
+                )}
               </Card>
             ) : (
               <Card animateIn>
-                <Text color="sand-12">{message.content}</Text>
+                {renderAsMarkdown ? (
+                  <Markdown content={message.content} />
+                ) : (
+                  <Text>{message.content}</Text>
+                )}
 
                 <Flex align="center" gap="m">
                   <Text
@@ -112,15 +112,43 @@ export const Messages = ({
                     - {message.role}
                   </Text>
 
-                  <Tooltip asChild content="Copy message content to clipboard">
-                    <Button
-                      label="Copy message to clipboard"
-                      icon={<Copy />}
-                      size="small"
-                      fill="ghost"
-                      onClick={() => copyTextToClipboard(message.content)}
-                    />
-                  </Tooltip>
+                  <Dropdown.Root>
+                    <Dropdown.Trigger asChild>
+                      <Button
+                        label="Message Actions"
+                        icon={<DotsThree weight="bold" />}
+                        size="x-small"
+                        fill="ghost"
+                      />
+                    </Dropdown.Trigger>
+
+                    <Dropdown.Content sideOffset={0}>
+                      <Dropdown.Section>
+                        <Dropdown.Item
+                          onSelect={() => copyTextToClipboard(message.content)}
+                        >
+                          <SvgIcon icon={<Copy />} />
+                          Copy To Clipboard
+                        </Dropdown.Item>
+
+                        {renderAsMarkdown ? (
+                          <Dropdown.Item
+                            onSelect={() => setRenderAsMarkdown(false)}
+                          >
+                            <SvgIcon icon={<MarkdownLogo />} />
+                            View Markdown Source
+                          </Dropdown.Item>
+                        ) : (
+                          <Dropdown.Item
+                            onSelect={() => setRenderAsMarkdown(true)}
+                          >
+                            <SvgIcon icon={<Eye />} />
+                            Render Markdown
+                          </Dropdown.Item>
+                        )}
+                      </Dropdown.Section>
+                    </Dropdown.Content>
+                  </Dropdown.Root>
                 </Flex>
               </Card>
             )}

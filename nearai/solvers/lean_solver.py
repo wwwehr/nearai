@@ -170,4 +170,4 @@ class LeanSolverStrategy(SolverStrategy):
             except Exception as e:
                 if i == 2:
                     print(f"Exception while checking solution: {str(e)}.")
-                    return False
+        return False

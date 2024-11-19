@@ -81,8 +81,8 @@ class RegistryCli:
         metadata_path = path / "metadata.json"
 
         version = path.name
-        pattern = r"^[0-9]+(?:\.[0-9]+)*$"
-        assert re.match(pattern, version), f"Invalid version format: {version}"
+        pattern = r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$"  # noqa: E501
+        assert re.match(pattern, version), f"Invalid semantic version format: {version}"
         name = path.parent.name
         assert not re.match(pattern, name), f"Invalid agent name: {name}"
 

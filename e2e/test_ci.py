@@ -24,7 +24,7 @@ def test_registry():
 
     tmp_dir = tempfile.TemporaryDirectory()
     name = "test_entry"
-    version = "0"
+    version = "0.0.1"
 
     # Create nested directory structure
     entry_dir = Path(tmp_dir.name) / name / version

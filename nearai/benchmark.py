@@ -18,6 +18,7 @@ class DatasetInfo:
     name: str
     subset: Optional[str]
     dataset: Union[Dataset, DatasetDict]
+    metadata: dict
 
     def get_dataset(self) -> Dataset:  # noqa: D102
         if isinstance(self.dataset, DatasetDict):
@@ -27,6 +28,19 @@ class DatasetInfo:
             return self.dataset
         else:
             raise ValueError(f"Expected a Dataset or DatasetDict, got {type(self.dataset)}")
+
+    def get_dataset_evaluation_name(self) -> str:  # noqa: D102
+        details = self.metadata["details"]
+        if benchmark_metadata := details.get("benchmark", None):
+            evaluation_name = benchmark_metadata.get("evaluation_name", "")
+            if not evaluation_name:
+                return ""
+            if not self.subset:
+                return evaluation_name
+            evaluation_separator = benchmark_metadata.get("evaluation_separator", "_")
+            return f"{evaluation_name}{evaluation_separator}{self.subset}"
+        else:
+            return ""
 
 
 class BenchmarkExecutor:
@@ -40,6 +54,7 @@ class BenchmarkExecutor:
         self.solver_strategy = solver_strategy
         self.benchmark_id = benchmark_id
         self.client = BenchmarkApi()
+        self.solver_strategy.dataset_evaluation_name = self.dataset_info.get_dataset_evaluation_name()
 
     def run(self, progress: bool = True, max_concurrent: int = 32, record: bool = False) -> None:  # noqa: D102
         data_tasks = (

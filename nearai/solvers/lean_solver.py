@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass
-from typing import List, Union
+from typing import List, Tuple, Union
 
 from datasets import Dataset, DatasetDict
 from jinja2 import Template  # type: ignore[attr-defined]
@@ -94,27 +94,30 @@ def load_repository(url: str) -> str:
     return url
 
 
-def check_solution(task: LeanDatum, solution: List[str]) -> bool:
+def check_solution(task: LeanDatum, solution: List[str]) -> Tuple[bool, str]:
     for tactic in solution:
         if "sorry" in tactic:
-            print("sorry in tactic is not allowed.")
-            return False
+            m = "sorry in tactic is not allowed."
+            print(m)
+            return False, m
 
     repo = LeanGitRepo(task.url, task.commit)
     theorem = Theorem(repo, task.filename, task.theorem)
 
+    m = "No tactics run."
     with Dojo(theorem) as (dojo, state):
         for tactic in solution:
             result = dojo.run_tac(state, tactic)
+            m = str(result)
 
             if isinstance(result, TacticState):
                 state = result
             elif isinstance(result, ProofFinished):
-                return True
+                return True, m
             else:
-                return False
+                return False, m
 
-    return False
+    return False, m
 
 
 class LeanSolverStrategy(SolverStrategy):
@@ -132,9 +135,12 @@ class LeanSolverStrategy(SolverStrategy):
     def compatible_datasets(self) -> List[str]:  # noqa: D102
         return ["lean"]
 
-    def solve(self, datum: dict) -> bool:  # noqa: D102
+    def solve(self, datum: dict) -> Tuple[bool, dict]:  # noqa: D102
         lean_datum = LeanDatum.model_validate(datum)
         lean_datum.url = load_repository(lean_datum.url)
+
+        info: dict = {}
+        info["verbose"] = {}
 
         lean_task = LeanTaskInfo(
             lean_datum.url,
@@ -143,6 +149,7 @@ class LeanSolverStrategy(SolverStrategy):
             lean_datum.theorem,
             load_theorem(lean_datum),
         )
+        info["verbose"]["theorem_raw"] = lean_task.theorem_raw
 
         base_prompt = Template(open(PROMPTS_FOLDER / "lean_answer.j2").read(), trim_blocks=True).render(
             url=lean_task.url,
@@ -157,17 +164,32 @@ class LeanSolverStrategy(SolverStrategy):
 
         response = extract_between_markers(response)
         if not response:
-            return False
+            info["error"] = "Failed to extract between markers."
+            info["verbose"]["response"] = response
+            return False, info
 
         tactics = parse_tactics(response)
         if not tactics:
-            return False
+            info["error"] = "Failed to parse tactics."
+            info["verbose"]["response"] = response
+            return False, info
 
         # Sometimes, there are timeout errors.
-        for i in range(0, 3):
+        num_attempts = 3
+        info["tactics"] = tactics
+        for i in range(0, num_attempts):
+            if i != 0:
+                info["check_solution_attempts"] = f"{i+1} (max: {num_attempts})"
             try:
-                return check_solution(lean_datum, tactics)
+                r, m = check_solution(lean_datum, tactics)
+                if r:
+                    info["verbose"]["check_solution_message"] = m
+                else:
+                    info["check_solution_message"] = m
+                return r, info
             except Exception as e:
-                if i == 2:
-                    print(f"Exception while checking solution: {str(e)}.")
-        return False
+                if i == num_attempts - 1:
+                    error_message = f"Exception while checking solution: {str(e)}."
+                    print(error_message)
+                    info["error"] = error_message
+        return False, info

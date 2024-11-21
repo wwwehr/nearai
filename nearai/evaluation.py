@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 
 from tabulate import tabulate
 
+from nearai.openapi_client.api.benchmark_api import BenchmarkApi
 from nearai.registry import get_registry_folder, registry
 from nearai.solvers import SolverStrategy
 
@@ -88,6 +89,27 @@ def upload_evaluation(
     metrics_file = entry_path / "metrics.json"
     with metrics_file.open("w") as f:
         json.dump(metrics, f, indent=2)
+
+    # Get solutions from cache in benchmark.py
+    cache = BenchmarkApi().get_benchmark_result_v1_benchmark_get_result_get(benchmark_id=metrics.get("benchmark_id", 0))
+    solutions = []
+    for result in cache:
+        try:
+            solution = {
+                "datum": result.datum if hasattr(result, "datum") else {},
+                "status": result.solved,
+                "info": json.loads(json.loads(result.info)) if result.info else {},
+            }
+            solutions.append(solution)
+        except (AttributeError, json.JSONDecodeError, TypeError) as e:
+            print(f"Exception while creating solutions data: {str(e)}.")
+            # Skip entries that can't be properly formatted
+            continue
+
+    # Write solutions file
+    solutions_file = entry_path / "solutions.json"
+    with solutions_file.open("w") as f:
+        json.dump(solutions, f, indent=2)
 
     metadata_path = entry_path / "metadata.json"
     # TODO(#273): Currently that will not update existing evaluation.

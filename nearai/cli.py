@@ -431,6 +431,47 @@ class EvaluationCli:
             metric_name_max_length,
         )
 
+    def read_solutions(self, entry: str, status: Optional[bool] = None, verbose: bool = False) -> None:
+        """Reads solutions.json from evaluation entry."""
+        entry_path = registry.download(entry)
+        solutions_file = entry_path / "solutions.json"
+
+        if not solutions_file.exists():
+            print(f"No solutions file found for entry: {entry}")
+            return
+
+        try:
+            with open(solutions_file) as f:
+                solutions = json.load(f)
+        except json.JSONDecodeError:
+            print(f"Error reading solutions file for entry: {entry}")
+            return
+
+        # Filter solutions if status is specified
+        if status is not None:
+            solutions = [s for s in solutions if s.get("status") == status]
+        if not solutions:
+            print("No solutions found matching criteria")
+            return
+        print(f"\nFound {len(solutions)} solutions{' with status=' + str(status) if status is not None else ''}")
+
+        for i, solution in enumerate(solutions, 1):
+            print("-" * 80)
+            print(f"\nSolution {i}/{len(solutions)}:")
+            datum = solution.get("datum")
+            print(f"datum: {json.dumps(datum, indent=2, ensure_ascii=False)}")
+            status = solution.get("status")
+            print(f"status: {status}")
+            info: dict = solution.get("info", {})
+            if not verbose:
+                info.pop("verbose")
+            print(f"info: {json.dumps(info, indent=2, ensure_ascii=False)}")
+            if i == 1:
+                print("Enter to continue, type 'exit' to quit.")
+            new_message = input("> ")
+            if new_message.lower() == "exit":
+                break
+
 
 class AgentCli:
     def inspect(self, path: str) -> None:

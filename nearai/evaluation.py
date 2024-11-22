@@ -3,18 +3,39 @@ from pathlib import Path
 from textwrap import fill
 from typing import Any, Dict, List
 
+from datasets import Dataset  # type: ignore[attr-defined]
 from tabulate import tabulate
 
+from nearai.openapi_client.api.benchmark_api import BenchmarkApi
 from nearai.registry import get_registry_folder, registry
 from nearai.solvers import SolverStrategy
 
 EVALUATED_ENTRY_METADATA = "evaluated_entry_metadata"
 
 
-def record_single_score_evaluation(solver_strategy: SolverStrategy, score: float) -> None:
+def load_benchmark_entry_info(info: str) -> Any:
+    """Deserializes benchmark info entry from db data."""
+    first_decode = json.loads(info)
+    try:
+        second_decode = json.loads(first_decode)
+        return second_decode
+    except json.JSONDecodeError as e:
+        if "Unterminated string" in str(e):
+            last_brace = first_decode.rfind("}")
+            if last_brace != -1:
+                try:
+                    return json.loads(first_decode[: last_brace + 1])
+                except json.JSONDecodeError as e:
+                    pass
+    return first_decode
+
+
+def record_single_score_evaluation(
+    solver_strategy: SolverStrategy, benchmark_id: int, data_tasks: Dataset | List[dict], score: float
+) -> None:
     """Uploads single score evaluation into registry."""
     evaluation_name = solver_strategy.evaluation_name()
-    record_evaluation_metrics(solver_strategy, {evaluation_name: score}, False)
+    record_evaluation_metrics(solver_strategy, benchmark_id, data_tasks, {evaluation_name: score}, False)
 
 
 def _prepend_name_to_metrics(evaluation_name: str, metrics: Dict[str, Any]) -> Dict[str, Any]:
@@ -22,7 +43,11 @@ def _prepend_name_to_metrics(evaluation_name: str, metrics: Dict[str, Any]) -> D
 
 
 def record_evaluation_metrics(
-    solver_strategy: SolverStrategy, metrics: Dict[str, Any], prepend_evaluation_name: bool = True
+    solver_strategy: SolverStrategy,
+    benchmark_id: int,
+    data_tasks: Dataset | List[dict],
+    metrics: Dict[str, Any],
+    prepend_evaluation_name: bool = True,
 ) -> None:
     """Uploads evaluation metrics into registry."""
     evaluation_name = solver_strategy.evaluation_name()
@@ -35,6 +60,8 @@ def record_evaluation_metrics(
 
     upload_evaluation(
         evaluation_name,
+        benchmark_id,
+        data_tasks,
         metrics if not prepend_evaluation_name else _prepend_name_to_metrics(evaluation_name, metrics),
         model,
         agent,
@@ -46,6 +73,8 @@ def record_evaluation_metrics(
 
 def upload_evaluation(
     evaluation_name: str,
+    benchmark_id: int,
+    data_tasks: Dataset | List[dict],
     metrics: Dict[str, Any],
     model: str = "",
     agent: str = "",
@@ -89,13 +118,34 @@ def upload_evaluation(
     with metrics_file.open("w") as f:
         json.dump(metrics, f, indent=2)
 
+    # Get solutions from cache in benchmark.py
+    cache = BenchmarkApi().get_benchmark_result_v1_benchmark_get_result_get(benchmark_id)
+    solutions = []
+    for result in cache:
+        try:
+            solution = {
+                "datum": data_tasks[result.index],
+                "status": result.solved,
+                "info": load_benchmark_entry_info(result.info) if result.info else {},
+            }
+            solutions.append(solution)
+        except (AttributeError, json.JSONDecodeError, TypeError) as e:
+            print(f"Exception while creating solutions data: {str(e)}.")
+            # Skip entries that can't be properly formatted
+            continue
+
+    # Write solutions file
+    solutions_file = entry_path / "solutions.json"
+    with solutions_file.open("w") as f:
+        json.dump(solutions, f, indent=2)
+
     metadata_path = entry_path / "metadata.json"
     # TODO(#273): Currently that will not update existing evaluation.
     with open(metadata_path, "w") as f:
         json.dump(
             {
                 "name": key,
-                "version": "0.0.1",
+                "version": "0.1.0",
                 "description": "",
                 "category": "evaluation",
                 "tags": [],

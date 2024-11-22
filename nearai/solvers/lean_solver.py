@@ -162,16 +162,16 @@ class LeanSolverStrategy(SolverStrategy):
         )
         response = self.start_inference_session("").run_task(base_prompt)
 
-        response = extract_between_markers(response)
-        if not response:
+        json_response = extract_between_markers(response)
+        if not json_response:
             info["error"] = "Failed to extract between markers."
             info["verbose"]["response"] = response
             return False, info
 
-        tactics = parse_tactics(response)
+        tactics = parse_tactics(json_response)
         if not tactics:
             info["error"] = "Failed to parse tactics."
-            info["verbose"]["response"] = response
+            info["verbose"]["response"] = json_response
             return False, info
 
         # Sometimes, there are timeout errors.

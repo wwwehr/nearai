@@ -3,6 +3,7 @@ from pathlib import Path
 from textwrap import fill
 from typing import Any, Dict, List
 
+from datasets import Dataset  # type: ignore[attr-defined]
 from tabulate import tabulate
 
 from nearai.openapi_client.api.benchmark_api import BenchmarkApi
@@ -12,10 +13,12 @@ from nearai.solvers import SolverStrategy
 EVALUATED_ENTRY_METADATA = "evaluated_entry_metadata"
 
 
-def record_single_score_evaluation(solver_strategy: SolverStrategy, score: float) -> None:
+def record_single_score_evaluation(
+    solver_strategy: SolverStrategy, benchmark_id: int, data_tasks: Dataset | List[dict], score: float
+) -> None:
     """Uploads single score evaluation into registry."""
     evaluation_name = solver_strategy.evaluation_name()
-    record_evaluation_metrics(solver_strategy, {evaluation_name: score}, False)
+    record_evaluation_metrics(solver_strategy, benchmark_id, data_tasks, {evaluation_name: score}, False)
 
 
 def _prepend_name_to_metrics(evaluation_name: str, metrics: Dict[str, Any]) -> Dict[str, Any]:
@@ -23,7 +26,11 @@ def _prepend_name_to_metrics(evaluation_name: str, metrics: Dict[str, Any]) -> D
 
 
 def record_evaluation_metrics(
-    solver_strategy: SolverStrategy, metrics: Dict[str, Any], prepend_evaluation_name: bool = True
+    solver_strategy: SolverStrategy,
+    benchmark_id: int,
+    data_tasks: Dataset | List[dict],
+    metrics: Dict[str, Any],
+    prepend_evaluation_name: bool = True,
 ) -> None:
     """Uploads evaluation metrics into registry."""
     evaluation_name = solver_strategy.evaluation_name()
@@ -36,6 +43,8 @@ def record_evaluation_metrics(
 
     upload_evaluation(
         evaluation_name,
+        benchmark_id,
+        data_tasks,
         metrics if not prepend_evaluation_name else _prepend_name_to_metrics(evaluation_name, metrics),
         model,
         agent,
@@ -47,6 +56,8 @@ def record_evaluation_metrics(
 
 def upload_evaluation(
     evaluation_name: str,
+    benchmark_id: int,
+    data_tasks: Dataset | List[dict],
     metrics: Dict[str, Any],
     model: str = "",
     agent: str = "",
@@ -91,12 +102,12 @@ def upload_evaluation(
         json.dump(metrics, f, indent=2)
 
     # Get solutions from cache in benchmark.py
-    cache = BenchmarkApi().get_benchmark_result_v1_benchmark_get_result_get(benchmark_id=metrics.get("benchmark_id", 0))
+    cache = BenchmarkApi().get_benchmark_result_v1_benchmark_get_result_get(benchmark_id)
     solutions = []
     for result in cache:
         try:
             solution = {
-                "datum": result.datum if hasattr(result, "datum") else {},
+                "datum": data_tasks[result.index],
                 "status": result.solved,
                 "info": json.loads(json.loads(result.info)) if result.info else {},
             }
@@ -117,7 +128,7 @@ def upload_evaluation(
         json.dump(
             {
                 "name": key,
-                "version": "0.0.1",
+                "version": "0.1.0",
                 "description": "",
                 "category": "evaluation",
                 "tags": [],

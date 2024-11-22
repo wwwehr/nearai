@@ -13,6 +13,23 @@ from nearai.solvers import SolverStrategy
 EVALUATED_ENTRY_METADATA = "evaluated_entry_metadata"
 
 
+def load_benchmark_entry_info(info: str) -> Any:
+    """Deserializes benchmark info entry from db data."""
+    first_decode = json.loads(info)
+    try:
+        second_decode = json.loads(first_decode)
+        return second_decode
+    except json.JSONDecodeError as e:
+        if "Unterminated string" in str(e):
+            last_brace = first_decode.rfind("}")
+            if last_brace != -1:
+                try:
+                    return json.loads(first_decode[: last_brace + 1])
+                except json.JSONDecodeError as e:
+                    pass
+    return first_decode
+
+
 def record_single_score_evaluation(
     solver_strategy: SolverStrategy, benchmark_id: int, data_tasks: Dataset | List[dict], score: float
 ) -> None:
@@ -109,7 +126,7 @@ def upload_evaluation(
             solution = {
                 "datum": data_tasks[result.index],
                 "status": result.solved,
-                "info": json.loads(json.loads(result.info)) if result.info else {},
+                "info": load_benchmark_entry_info(result.info) if result.info else {},
             }
             solutions.append(solution)
         except (AttributeError, json.JSONDecodeError, TypeError) as e:

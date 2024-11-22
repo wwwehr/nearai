@@ -8,7 +8,7 @@ from typing import Any, Callable, Dict, Optional, Tuple, Union
 from datasets import Dataset, DatasetDict  # type: ignore[attr-defined]
 from tqdm import tqdm
 
-from nearai.evaluation import record_evaluation_metrics, record_single_score_evaluation
+from nearai.evaluation import load_benchmark_entry_info, record_evaluation_metrics, record_single_score_evaluation
 from nearai.openapi_client.api.benchmark_api import BenchmarkApi
 from nearai.solvers import SolverScoringMethod, SolverStrategy
 
@@ -65,7 +65,7 @@ class BenchmarkExecutor:
 
         cache_ = self.client.get_benchmark_result_v1_benchmark_get_result_get(benchmark_id=self.benchmark_id)
         # Need to do json.loads twice to convert back to the same data returned by solvers.
-        cache = {result.index: (result.solved, json.loads(json.loads(result.info))) for result in cache_}
+        cache = {result.index: (result.solved, load_benchmark_entry_info(result.info)) for result in cache_}
 
         n_true_results = 0
         remaining = len(data_tasks)

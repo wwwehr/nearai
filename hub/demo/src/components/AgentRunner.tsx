@@ -1,11 +1,25 @@
 'use client';
 
 import {
+  BreakpointDisplay,
+  Button,
+  Card,
+  CardList,
+  Flex,
+  Form,
+  InputTextarea,
+  PlaceholderSection,
+  PlaceholderStack,
+  Slider,
+  Text,
+  Tooltip,
+} from '@near-pagoda/ui';
+import {
   ArrowRight,
-  Chats,
-  Copy,
+  CodeBlock,
   Eye,
-  Gear,
+  Folder,
+  Info,
   List,
 } from '@phosphor-icons/react';
 import { useMutation } from '@tanstack/react-query';
@@ -13,6 +27,7 @@ import {
   type KeyboardEventHandler,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -22,19 +37,8 @@ import { type z } from 'zod';
 import { AgentPermissionsModal } from '~/components/AgentPermissionsModal';
 import { AgentWelcome } from '~/components/AgentWelcome';
 import { EntryEnvironmentVariables } from '~/components/EntryEnvironmentVariables';
-import { BreakpointDisplay } from '~/components/lib/BreakpointDisplay';
-import { Button } from '~/components/lib/Button';
-import { Card, CardList } from '~/components/lib/Card';
-import { Code, filePathToCodeLanguage } from '~/components/lib/Code';
-import { Dialog } from '~/components/lib/Dialog';
-import { Flex } from '~/components/lib/Flex';
-import { Form } from '~/components/lib/Form';
 import { IframeWithBlob } from '~/components/lib/IframeWithBlob';
-import { InputTextarea } from '~/components/lib/InputTextarea';
 import { Sidebar } from '~/components/lib/Sidebar';
-import { Slider } from '~/components/lib/Slider';
-import { Text } from '~/components/lib/Text';
-import { Tooltip } from '~/components/lib/Tooltip';
 import { Messages } from '~/components/Messages';
 import { SignInPrompt } from '~/components/SignInPrompt';
 import { ThreadsSidebar } from '~/components/ThreadsSidebar';
@@ -45,15 +49,15 @@ import {
   useCurrentEntryEnvironmentVariables,
 } from '~/hooks/entries';
 import { useQueryParams } from '~/hooks/url';
+import { sourceUrlForEntry } from '~/lib/entries';
 import { type chatWithAgentModel, type threadMessageModel } from '~/lib/models';
-import { returnOptimisticThreadMessage } from '~/lib/thread';
 import { useAuthStore } from '~/stores/auth';
+import { useThreadsStore } from '~/stores/threads';
 import { api } from '~/trpc/react';
-import { copyTextToClipboard } from '~/utils/clipboard';
 import { handleClientError } from '~/utils/error';
 import { formatBytes } from '~/utils/number';
 
-import { PlaceholderCard, PlaceholderSection } from './lib/Placeholder';
+import { ThreadFileModal } from './ThreadFileModal';
 
 type RunView = 'conversation' | 'output' | undefined;
 
@@ -86,6 +90,7 @@ export const AgentRunner = ({
 
   const isAuthenticated = useAuthStore((store) => store.isAuthenticated);
   const { queryParams, updateQueryPath } = useQueryParams([
+    'showLogs',
     'threadId',
     'view',
     'transactionHashes',
@@ -95,8 +100,9 @@ export const AgentRunner = ({
     'agent',
     Object.keys(queryParams),
   );
-  const threadId = queryParams.threadId ?? '';
   const utils = api.useUtils();
+  const threadId = queryParams.threadId ?? '';
+  const showLogs = queryParams.showLogs === 'true';
 
   const form = useForm<FormSchema>({
     defaultValues: {
@@ -105,67 +111,107 @@ export const AgentRunner = ({
   });
 
   const [htmlOutput, setHtmlOutput] = useState('');
-  const [openedFileId, setOpenedFileId] = useState<string | null>(null);
+  const [openedFileName, setOpenedFileName] = useState<string | null>(null);
   const [parametersOpenForSmallScreens, setParametersOpenForSmallScreens] =
     useState(false);
   const [threadsOpenForSmallScreens, setThreadsOpenForSmallScreens] =
     useState(false);
   const formRef = useRef<HTMLFormElement | null>(null);
 
+  const addOptimisticMessages = useThreadsStore(
+    (store) => store.addOptimisticMessages,
+  );
+  const optimisticMessages = useThreadsStore(
+    (store) => store.optimisticMessages,
+  );
+  const chatMutationThreadId = useRef('');
+  const chatMutationStartedAt = useRef<Date | null>(null);
+  const resetThreadsStore = useThreadsStore((store) => store.reset);
+  const setThread = useThreadsStore((store) => store.setThread);
+  const threadsById = useThreadsStore((store) => store.threadsById);
+  const thread = threadsById[chatMutationThreadId.current || threadId];
+
   const threadQuery = api.hub.thread.useQuery(
     {
+      afterMessageId: thread?.latestMessageId,
+      runId: thread?.run?.id,
       threadId,
     },
     {
-      enabled: false,
+      enabled: isAuthenticated && !!threadId,
+      refetchInterval: 1500,
+      retry: false,
     },
   );
-  const thread = threadQuery.data;
-
-  const openedFile = openedFileId
-    ? thread?.files?.find((file) => file.id === openedFileId)
-    : undefined;
-
-  const latestAssistantMessages: z.infer<typeof threadMessageModel>[] = [];
-  if (thread) {
-    for (let i = thread.messages.length - 1; i >= 0; i--) {
-      const message = thread.messages[i]!;
-      const messageType = message.metadata?.message_type ?? '';
-      if (message.role === 'assistant' && !messageType.startsWith('system:')) {
-        latestAssistantMessages.push(message);
-      } else {
-        break;
-      }
-    }
-  }
 
   const _chatMutation = api.hub.chatWithAgent.useMutation();
   const chatMutation = useMutation({
     mutationFn: async (data: AgentChatMutationInput) => {
       try {
-        const updatedThread = await _chatMutation.mutateAsync({
+        chatMutationStartedAt.current = new Date();
+
+        const input = {
           thread_id: threadId || undefined,
           agent_id: agentId,
           agent_env_vars: entryEnvironmentVariables.metadataVariablesByKey,
           user_env_vars: entryEnvironmentVariables.urlVariablesByKey,
           ...data,
+        };
+
+        addOptimisticMessages(threadId, [input]);
+        const response = await _chatMutation.mutateAsync(input);
+
+        setThread({
+          ...response.thread,
+          files: [],
+          messages: [response.message],
+          run: response.run,
         });
 
-        utils.hub.thread.setData(
-          {
-            threadId,
-          },
-          updatedThread,
-        );
+        chatMutationThreadId.current = response.thread.id;
+        updateQueryPath({ threadId: response.thread.id }, 'replace', false);
 
-        updateQueryPath({ threadId: updatedThread.id }, 'replace', false);
-
-        void utils.hub.threads.invalidate();
+        void utils.hub.threads.refetch();
       } catch (error) {
         handleClientError({ error, title: 'Failed to run agent' });
       }
     },
   });
+
+  const logMessages = useMemo(() => {
+    const result = (thread ? Object.values(thread.messagesById) : []).filter(
+      (message) => message.metadata?.message_type?.startsWith('system:'),
+    );
+    return result;
+  }, [thread]);
+
+  const messages = useMemo(() => {
+    const result = [
+      ...(thread ? Object.values(thread.messagesById) : []),
+      ...optimisticMessages.map((message) => message.data),
+    ].filter(
+      (message) =>
+        showLogs || !message.metadata?.message_type?.startsWith('system:'),
+    );
+    return result;
+  }, [thread, optimisticMessages, showLogs]);
+
+  const files = useMemo(() => {
+    return thread ? Object.values(thread.filesByName) : [];
+  }, [thread]);
+
+  const latestAssistantMessages = useMemo(() => {
+    const result: z.infer<typeof threadMessageModel>[] = [];
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const message = messages[i]!;
+      if (message.role === 'assistant') {
+        result.unshift(message);
+      } else {
+        break;
+      }
+    }
+    return result;
+  }, [messages]);
 
   const {
     agentRequestsNeedingPermissions,
@@ -175,7 +221,12 @@ export const AgentRunner = ({
     onIframePostMessage,
   } = useAgentRequestsWithIframe(currentEntry, chatMutation, threadId);
 
-  const isLoading = threadQuery.isLoading && !chatMutation.isPending;
+  const isRunning =
+    chatMutation.isPending ||
+    thread?.run?.status === 'queued' ||
+    thread?.run?.status === 'in_progress';
+
+  const isLoading = !!threadId && !thread && !isRunning;
 
   const [__view, __setView] = useState<RunView>();
   const view = (queryParams.view as RunView) ?? __view;
@@ -197,24 +248,7 @@ export const AgentRunner = ({
   );
 
   const onSubmit: SubmitHandler<FormSchema> = async (data) => {
-    if (!data.new_message.trim()) return;
-
-    utils.hub.thread.setData(
-      {
-        threadId,
-      },
-      {
-        id: threadId,
-        files: thread?.files ?? [],
-        messages: [
-          ...(thread?.messages ?? []),
-          returnOptimisticThreadMessage(threadId, data.new_message),
-        ],
-      },
-    );
-
     form.setValue('new_message', '');
-
     await chatMutation.mutateAsync(data);
   };
 
@@ -234,14 +268,33 @@ export const AgentRunner = ({
   };
 
   useEffect(() => {
-    if (threadId && thread?.id !== threadId) {
-      void threadQuery.refetch({ cancelRefetch: true });
+    // This logic simply provides helpful logs for debugging in production
+
+    if (!threadQuery.isFetching && (threadQuery.data || threadQuery.error)) {
+      const now = new Date();
+      const elapsedSecondsSinceRunStart = chatMutationStartedAt.current
+        ? (now.getTime() - chatMutationStartedAt.current.getTime()) / 1000
+        : null;
+
+      console.log(
+        `Thread polling fetch responded at: ${now.toLocaleTimeString()}`,
+        {
+          data: threadQuery.data,
+          error: threadQuery.error,
+          elapsedSecondsSinceRunStart,
+        },
+      );
     }
-  }, [thread, threadId, threadQuery]);
+  }, [threadQuery.data, threadQuery.error, threadQuery.isFetching]);
 
   useEffect(() => {
-    const files = threadQuery?.data?.files;
-    const htmlFile = files?.find((file) => file.filename === 'index.html');
+    if (threadQuery.data) {
+      setThread(threadQuery.data);
+    }
+  }, [setThread, threadQuery.data]);
+
+  useEffect(() => {
+    const htmlFile = files.find((file) => file.filename === 'index.html');
 
     if (htmlFile) {
       const htmlContent = htmlFile.content.replaceAll(
@@ -254,28 +307,21 @@ export const AgentRunner = ({
       setHtmlOutput('');
       setView('conversation');
     }
-  }, [threadQuery, htmlOutput, agentId, setView]);
-
-  useEffect(() => {
-    if (!threadId) {
-      utils.hub.thread.setData(
-        {
-          threadId: '',
-        },
-        {
-          files: [],
-          messages: [],
-          id: '',
-        },
-      );
-    }
-  }, [threadId, utils]);
+  }, [files, htmlOutput, agentId, setView]);
 
   useEffect(() => {
     if (currentEntry && isAuthenticated) {
       form.setFocus('new_message');
     }
   }, [threadId, currentEntry, isAuthenticated, form]);
+
+  useEffect(() => {
+    if (threadId !== chatMutationThreadId.current) {
+      chatMutationThreadId.current = '';
+      chatMutationStartedAt.current = null;
+      resetThreadsStore();
+    }
+  }, [threadId, resetThreadsStore]);
 
   useEffect(() => {
     form.reset();
@@ -322,14 +368,13 @@ export const AgentRunner = ({
 
         <Sidebar.Main>
           {isLoading ? (
-            <PlaceholderCard style={{ marginTop: 'auto' }} />
+            <PlaceholderStack style={{ marginBottom: 'auto' }} />
           ) : (
             <>
               {view === 'output' ? (
                 <>
                   <IframeWithBlob
                     html={htmlOutput}
-                    minHeight={currentEntry.details.agent?.html_minimum_height}
                     onPostMessage={onIframePostMessage}
                     postMessage={iframePostMessage}
                   />
@@ -338,13 +383,14 @@ export const AgentRunner = ({
                     <Messages
                       grow={false}
                       messages={latestAssistantMessages}
+                      scrollTo={false}
                       threadId={threadId}
                     />
                   )}
                 </>
               ) : (
                 <Messages
-                  messages={thread?.messages ?? []}
+                  messages={messages}
                   threadId={threadId}
                   welcomeMessage={
                     <AgentWelcome details={currentEntry.details} />
@@ -364,65 +410,123 @@ export const AgentRunner = ({
               />
 
               {isAuthenticated ? (
-                <Flex align="start" gap="m">
-                  <Text size="text-xs" style={{ marginRight: 'auto' }}>
-                    <b>Shift + Enter</b> to add a new line
-                  </Text>
+                <Flex align="start" gap="m" justify="space-between">
+                  <BreakpointDisplay
+                    show="larger-than-phone"
+                    style={{ marginRight: 'auto' }}
+                  >
+                    <Text size="text-xs">
+                      <b>Shift + Enter</b> to add a new line
+                    </Text>
+                  </BreakpointDisplay>
 
-                  <Flex align="start" gap="xs">
+                  <Flex
+                    align="start"
+                    gap="s"
+                    style={{ paddingRight: '0.15rem' }}
+                  >
                     <BreakpointDisplay show="sidebar-small-screen">
-                      <Button
-                        label="Select Thread"
-                        icon={<List />}
-                        size="small"
-                        fill="ghost"
-                        onClick={() => setThreadsOpenForSmallScreens(true)}
-                      />
+                      <Tooltip asChild content="View all threads">
+                        <Button
+                          label="Select Thread"
+                          icon={<List />}
+                          size="small"
+                          variant="secondary"
+                          fill="ghost"
+                          onClick={() => setThreadsOpenForSmallScreens(true)}
+                        />
+                      </Tooltip>
                     </BreakpointDisplay>
 
                     <BreakpointDisplay show="sidebar-small-screen">
-                      <Button
-                        label="Edit Parameters"
-                        icon={<Gear />}
-                        size="small"
-                        fill="ghost"
-                        onClick={() => setParametersOpenForSmallScreens(true)}
-                      />
+                      <Tooltip
+                        asChild
+                        content="View output files & agent settings"
+                      >
+                        <Button
+                          label={files.length.toString()}
+                          iconLeft={<Folder />}
+                          size="small"
+                          variant="secondary"
+                          fill="ghost"
+                          style={{ paddingInline: '0.5rem' }}
+                          onClick={() => setParametersOpenForSmallScreens(true)}
+                        />
+                      </Tooltip>
                     </BreakpointDisplay>
+
+                    {htmlOutput && (
+                      <Tooltip
+                        asChild
+                        content={
+                          view === 'output'
+                            ? 'View conversation'
+                            : 'View rendered output'
+                        }
+                      >
+                        <Button
+                          label="Toggle View"
+                          icon={
+                            <Eye
+                              weight={view === 'output' ? 'fill' : 'regular'}
+                            />
+                          }
+                          size="small"
+                          variant="secondary"
+                          fill="ghost"
+                          onClick={() =>
+                            view === 'output'
+                              ? setView('conversation', true)
+                              : setView('output', true)
+                          }
+                        />
+                      </Tooltip>
+                    )}
+
+                    <Tooltip
+                      asChild
+                      content={
+                        showLogs ? 'Hide system logs' : 'Show system logs'
+                      }
+                    >
+                      <Button
+                        label={logMessages.length.toString()}
+                        iconLeft={
+                          <Info weight={showLogs ? 'fill' : 'regular'} />
+                        }
+                        size="small"
+                        variant="secondary"
+                        fill="ghost"
+                        style={{ paddingInline: '0.5rem' }}
+                        onClick={() =>
+                          updateQueryPath(
+                            { showLogs: showLogs ? undefined : 'true' },
+                            'replace',
+                            false,
+                          )
+                        }
+                      />
+                    </Tooltip>
+
+                    {env.NEXT_PUBLIC_CONSUMER_MODE && (
+                      <Tooltip asChild content="Inspect agent source">
+                        <Button
+                          label="Agent Source"
+                          icon={<CodeBlock />}
+                          size="small"
+                          fill="ghost"
+                          href={`https://app.near.ai${sourceUrlForEntry(currentEntry)}`}
+                        />
+                      </Tooltip>
+                    )}
                   </Flex>
-
-                  {htmlOutput && (
-                    <>
-                      {view === 'output' ? (
-                        <Tooltip asChild content="Switch to conversation view">
-                          <Button
-                            label="Toggle View"
-                            icon={<Chats />}
-                            size="small"
-                            variant="secondary"
-                            onClick={() => setView('conversation', true)}
-                          />
-                        </Tooltip>
-                      ) : (
-                        <Tooltip asChild content="Switch to output view">
-                          <Button
-                            label="Toggle View"
-                            icon={<Eye />}
-                            size="small"
-                            variant="secondary"
-                            onClick={() => setView('output', true)}
-                          />
-                        </Tooltip>
-                      )}
-                    </>
-                  )}
 
                   <Button
                     label="Send Message"
                     type="submit"
                     icon={<ArrowRight weight="bold" />}
                     size="small"
-                    loading={chatMutation.isPending}
+                    loading={isRunning}
                   />
                 </Flex>
               ) : (
@@ -442,39 +546,46 @@ export const AgentRunner = ({
                 Output
               </Text>
 
-              {thread?.files && Object.keys(thread.files).length ? (
-                <CardList>
-                  {Object.values(thread.files).map((file) => (
-                    <Card
-                      padding="s"
-                      gap="s"
-                      key={file.id}
-                      background="sand-2"
-                      onClick={() => {
-                        setOpenedFileId(file.id);
-                      }}
-                    >
-                      <Flex align="center" gap="s">
-                        <Text
-                          size="text-s"
-                          color="violet-11"
-                          clickableHighlight
-                          weight={500}
-                          clampLines={1}
-                          style={{ marginRight: 'auto' }}
-                        >
-                          {file.filename}
-                        </Text>
-
-                        <Text size="text-xs">{formatBytes(file.bytes)}</Text>
-                      </Flex>
-                    </Card>
-                  ))}
-                </CardList>
+              {isLoading ? (
+                <PlaceholderStack />
               ) : (
-                <Text size="text-s" color="sand-10">
-                  No files generated yet.
-                </Text>
+                <>
+                  {files.length ? (
+                    <CardList>
+                      {files.map((file) => (
+                        <Card
+                          padding="s"
+                          gap="s"
+                          key={file.id}
+                          background="sand-2"
+                          onClick={() => {
+                            setOpenedFileName(file.filename);
+                          }}
+                        >
+                          <Flex align="center" gap="s">
+                            <Text
+                              size="text-s"
+                              color="sand-12"
+                              weight={500}
+                              clampLines={1}
+                              style={{ marginRight: 'auto' }}
+                            >
+                              {file.filename}
+                            </Text>
+
+                            <Text size="text-xs">
+                              {formatBytes(file.bytes)}
+                            </Text>
+                          </Flex>
+                        </Card>
+                      ))}
+                    </CardList>
+                  ) : (
+                    <Text size="text-s" color="sand-10">
+                      No files generated yet.
+                    </Text>
+                  )}
+                </>
               )}
             </Flex>
 
@@ -520,33 +631,11 @@ export const AgentRunner = ({
         clearRequests={() => setAgentRequestsNeedingPermissions(null)}
       />
 
-      <Dialog.Root
-        open={openedFileId !== null}
-        onOpenChange={() => setOpenedFileId(null)}
-      >
-        <Dialog.Content
-          title={openedFileId}
-          size="l"
-          header={
-            <Button
-              label="Copy file to clipboard"
-              icon={<Copy />}
-              size="small"
-              fill="outline"
-              onClick={() =>
-                openedFile && copyTextToClipboard(openedFile?.content)
-              }
-              style={{ marginLeft: 'auto' }}
-            />
-          }
-        >
-          <Code
-            bleed
-            source={openedFile?.content}
-            language={filePathToCodeLanguage(openedFile?.filename)}
-          />
-        </Dialog.Content>
-      </Dialog.Root>
+      <ThreadFileModal
+        filesByName={thread?.filesByName}
+        openedFileName={openedFileName}
+        setOpenedFileName={setOpenedFileName}
+      />
     </Form>
   );
 };

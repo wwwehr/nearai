@@ -1,30 +1,30 @@
 'use client';
 
-import { Copy, Folder, LockKey } from '@phosphor-icons/react';
+import {
+  BreakpointDisplay,
+  Button,
+  Card,
+  CardList,
+  Container,
+  Flex,
+  PlaceholderCard,
+  PlaceholderStack,
+  Section,
+  SvgIcon,
+  Text,
+} from '@near-pagoda/ui';
+import { Folder, LockKey } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { type z } from 'zod';
 
-import { BreakpointDisplay } from '~/components/lib/BreakpointDisplay';
-import { Button } from '~/components/lib/Button';
-import { Card, CardList } from '~/components/lib/Card';
-import { Code, filePathToCodeLanguage } from '~/components/lib/Code';
-import { Flex } from '~/components/lib/Flex';
-import {
-  PlaceholderCard,
-  PlaceholderStack,
-} from '~/components/lib/Placeholder';
+import { Code } from '~/components/lib/Code';
 import { Sidebar } from '~/components/lib/Sidebar';
-import { Text } from '~/components/lib/Text';
 import { useEntryParams } from '~/hooks/entries';
 import { useQueryParams } from '~/hooks/url';
 import { type entryModel } from '~/lib/models';
 import { useAuthStore } from '~/stores/auth';
 import { api } from '~/trpc/react';
-import { copyTextToClipboard } from '~/utils/clipboard';
-
-import { Container } from './lib/Container';
-import { Section } from './lib/Section';
-import { SvgIcon } from './lib/SvgIcon';
+import { filePathToCodeLanguage } from '~/utils/file';
 
 const METADATA_FILE_PATH = 'metadata.json';
 
@@ -121,8 +121,7 @@ export const EntrySource = ({ entry }: Props) => {
                   >
                     <Text
                       size="text-s"
-                      color="violet-11"
-                      clickableHighlight
+                      color="sand-12"
                       weight={500}
                       clampLines={1}
                     >
@@ -152,17 +151,6 @@ export const EntrySource = ({ entry }: Props) => {
                 onClick={() => setSidebarOpenForSmallScreens(true)}
               />
             </BreakpointDisplay>
-
-            <Button
-              label="Copy file to clipboard"
-              icon={<Copy />}
-              size="small"
-              fill="outline"
-              onClick={() =>
-                openedFile && copyTextToClipboard(openedFile.content)
-              }
-              disabled={activeFileIsCompressed}
-            />
           </Flex>
           {activeFileIsCompressed ? (
             <Text>This file type {`doesn't`} have a source preview.</Text>

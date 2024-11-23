@@ -1,18 +1,20 @@
 'use client';
 
+import {
+  Badge,
+  Button,
+  Flex,
+  Grid,
+  Input,
+  Section,
+  Table,
+  Text,
+  Tooltip,
+  useTable,
+} from '@near-pagoda/ui';
 import { ChatCircleDots, CodeBlock, Play } from '@phosphor-icons/react';
 import { format, formatDistanceToNow } from 'date-fns';
 
-import { Badge } from '~/components/lib/Badge';
-import { Button } from '~/components/lib/Button';
-import { Flex } from '~/components/lib/Flex';
-import { Grid } from '~/components/lib/Grid';
-import { Input } from '~/components/lib/Input';
-import { Section } from '~/components/lib/Section';
-import { Table } from '~/components/lib/Table';
-import { useTable } from '~/components/lib/Table/hooks';
-import { Text } from '~/components/lib/Text';
-import { Tooltip } from '~/components/lib/Tooltip';
 import { env } from '~/env';
 import { useEntriesSearch } from '~/hooks/entries';
 import {
@@ -110,12 +112,7 @@ export const EntriesTable = ({ category, title }: Props) => {
                 style={{ minWidth: '10rem', maxWidth: '20rem' }}
               >
                 <Flex direction="column">
-                  <Text
-                    size="text-s"
-                    weight={500}
-                    color="sand-12"
-                    clickableHighlight
-                  >
+                  <Text size="text-s" weight={600} color="sand-12">
                     {entry.name}
                   </Text>
                   <Text size="text-xs" clampLines={1}>
@@ -128,7 +125,7 @@ export const EntriesTable = ({ category, title }: Props) => {
                 href={`/profiles/${entry.namespace}`}
                 style={{ minWidth: '8rem', maxWidth: '12rem' }}
               >
-                <Text size="text-s" weight={500} clampLines={1}>
+                <Text size="text-s" color="sand-12" clampLines={1}>
                   {entry.namespace}
                 </Text>
               </Table.Cell>
@@ -209,7 +206,7 @@ export const EntriesTable = ({ category, title }: Props) => {
                         }
                         size="small"
                         fill="ghost"
-                        href={`/agents/${entry.namespace}/${entry.name}/${entry.version}/run`}
+                        href={`${primaryUrlForEntry(entry)}/run`}
                       />
                     </Tooltip>
                   )}

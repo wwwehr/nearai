@@ -2,7 +2,9 @@
 
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
-import { useTheme } from 'next-themes';
+import { useTheme } from '@near-pagoda/ui';
+import { Button, Tooltip } from '@near-pagoda/ui';
+import { Copy } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import {
@@ -10,12 +12,15 @@ import {
   atomOneLight,
 } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
+import { copyTextToClipboard } from '~/utils/clipboard';
+
 import s from './Code.module.scss';
 
-type CodeLanguage =
+export type CodeLanguage =
   | 'css'
   | 'html'
   | 'javascript'
+  | 'typescript'
   | 'markdown'
   | 'python'
   | 'json'
@@ -27,18 +32,39 @@ type CodeLanguage =
 type Props = {
   bleed?: boolean;
   language: CodeLanguage;
+  showCopyButton?: boolean;
   showLineNumbers?: boolean;
   source: string | undefined | null;
 };
 
+function normalizeLanguage(input: string | null | undefined) {
+  if (!input) return '';
+
+  let value: CodeLanguage = input;
+
+  if (['js', 'jsx'].includes(value)) {
+    value = 'javascript';
+  } else if (['ts', 'tsx'].includes(value)) {
+    value = 'typescript';
+  } else if (value === 'py') {
+    value = 'python';
+  } else if (value === 'md') {
+    value = 'markdown';
+  }
+
+  return value;
+}
+
 export const Code = ({
   bleed,
-  language,
+  showCopyButton = true,
   showLineNumbers = true,
-  source,
+  ...props
 }: Props) => {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const language = normalizeLanguage(props.language);
+  const source = props.source?.replace(/[\n]+$/, '').replace(/^[\n]+/, '');
 
   const style =
     mounted && resolvedTheme === 'dark' ? atomOneDark : atomOneLight;
@@ -50,12 +76,28 @@ export const Code = ({
   if (!mounted) return null;
 
   return (
-    <div className={s.code} data-bleed={bleed}>
+    <div className={s.code} data-bleed={bleed} data-language={language}>
+      {showCopyButton && (
+        <Tooltip asChild content="Copy to clipboard">
+          <Button
+            label="Copy code to clipboard"
+            icon={<Copy />}
+            variant="secondary"
+            size="small"
+            fill="ghost"
+            onClick={() => source && copyTextToClipboard(source)}
+            className={s.copyButton}
+            tabIndex={-1}
+          />
+        </Tooltip>
+      )}
+
       {source && (
         <SyntaxHighlighter
+          PreTag="div"
           language={language ?? ''}
           style={style}
-          showLineNumbers={language === 'markdown' ? false : showLineNumbers}
+          showLineNumbers={showLineNumbers}
         >
           {source}
         </SyntaxHighlighter>
@@ -63,25 +105,3 @@ export const Code = ({
     </div>
   );
 };
-
-export function filePathToCodeLanguage(
-  path: string | undefined | null,
-): CodeLanguage {
-  const extension = path?.split('.').at(-1);
-  if (!extension) return '';
-
-  switch (extension) {
-    case 'css':
-      return 'css';
-    case 'html':
-      return 'html';
-    case 'js':
-      return 'javascript';
-    case 'py':
-      return 'python';
-    case 'md':
-      return 'markdown';
-  }
-
-  return '';
-}

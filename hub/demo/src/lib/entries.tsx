@@ -50,19 +50,19 @@ export function primaryUrlForEntry(entry: z.infer<typeof entryModel>) {
 
   switch (entry.category as EntryCategory) {
     case 'agent':
-      url = `/agents/${entry.namespace}/${entry.name}/${entry.version}`;
+      url = `/agents/${entry.namespace}/${entry.name}/latest`;
       break;
 
     case 'benchmark':
-      url = `/benchmarks/${entry.namespace}/${entry.name}/${entry.version}`;
+      url = `/benchmarks/${entry.namespace}/${entry.name}/latest`;
       break;
 
     case 'dataset':
-      url = `/datasets/${entry.namespace}/${entry.name}/${entry.version}`;
+      url = `/datasets/${entry.namespace}/${entry.name}/latest`;
       break;
 
     case 'model':
-      url = `/models/${entry.namespace}/${entry.name}/${entry.version}`;
+      url = `/models/${entry.namespace}/${entry.name}/latest`;
       break;
   }
 
@@ -117,6 +117,10 @@ export function sourceUrlForEntry(entry: z.infer<typeof entryModel>) {
 
 export function idForEntry(entry: z.infer<typeof entryModel>) {
   return `${entry.namespace}/${entry.name}/${entry.version}`;
+}
+
+export function idMatchesEntry(id: string, entry: z.infer<typeof entryModel>) {
+  return id.startsWith(`${entry.namespace}/${entry.name}/`);
 }
 
 export function parseEntryId(id: string) {

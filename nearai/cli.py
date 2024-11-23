@@ -1,34 +1,19 @@
 import importlib.metadata
-import io
 import json
 import os
 import re
 import runpy
 import sys
-import tarfile
 from collections import OrderedDict
 from dataclasses import asdict
+from datetime import datetime, timedelta
 from pathlib import Path
 from textwrap import fill
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import boto3
 import fire
-from openapi_client import EntryLocation, EntryMetadataInput
-from openapi_client.api.benchmark_api import BenchmarkApi
-from openapi_client.api.default_api import DefaultApi
-from openapi_client.api.evaluation_api import EvaluationApi
-from openapi_client.api.jobs_api import JobsApi
-from openapi_client.api.permissions_api import PermissionsApi
-from shared.client_config import (
-    DEFAULT_MODEL,
-    DEFAULT_MODEL_MAX_TOKENS,
-    DEFAULT_MODEL_TEMPERATURE,
-    DEFAULT_NAMESPACE,
-    DEFAULT_PROVIDER,
-)
-from shared.naming import NamespacedName, create_registry_name
-from shared.provider_models import ProviderModels, get_provider_namespaced_model
+from openai.types.beta.threads.message import Attachment
 from tabulate import tabulate
 
 from nearai.agents.local_runner import LocalRunner
@@ -39,7 +24,25 @@ from nearai.config import (
 )
 from nearai.finetune import FinetuneCli
 from nearai.lib import check_metadata, parse_location, parse_tags
+from nearai.log import LogCLI
+from nearai.openapi_client import EntryLocation, EntryMetadataInput
+from nearai.openapi_client.api.benchmark_api import BenchmarkApi
+from nearai.openapi_client.api.default_api import DefaultApi
+from nearai.openapi_client.api.delegation_api import DelegationApi
+from nearai.openapi_client.api.evaluation_api import EvaluationApi
+from nearai.openapi_client.api.jobs_api import JobsApi, WorkerKind
+from nearai.openapi_client.api.permissions_api import PermissionsApi
+from nearai.openapi_client.models.body_add_job_v1_jobs_add_job_post import BodyAddJobV1JobsAddJobPost
 from nearai.registry import get_registry_folder, registry
+from nearai.shared.client_config import (
+    DEFAULT_MODEL,
+    DEFAULT_MODEL_MAX_TOKENS,
+    DEFAULT_MODEL_TEMPERATURE,
+    DEFAULT_NAMESPACE,
+    DEFAULT_PROVIDER,
+)
+from nearai.shared.naming import NamespacedName, create_registry_name
+from nearai.shared.provider_models import ProviderModels, get_provider_namespaced_model
 from nearai.tensorboard_feed import TensorboardCli
 
 
@@ -77,13 +80,16 @@ class RegistryCli:
 
         metadata_path = path / "metadata.json"
 
-        # Get the name of the folder
-        folder_name = path.name
+        version = path.name
+        pattern = r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$"  # noqa: E501
+        assert re.match(pattern, version), f"Invalid semantic version format: {version}"
+        name = path.parent.name
+        assert not re.match(pattern, name), f"Invalid agent name: {name}"
 
         with open(metadata_path, "w") as f:
             metadata: Dict[str, Any] = {
-                "name": folder_name,
-                "version": "0.0.1",
+                "name": name,
+                "version": version,
                 "description": description,
                 "category": category,
                 "tags": [],
@@ -93,12 +99,18 @@ class RegistryCli:
 
             if category == "agent":
                 metadata["details"]["agent"] = {}
+                metadata["details"]["agent"]["welcome"] = {
+                    "title": name,
+                    "description": description,
+                }
                 metadata["details"]["agent"]["defaults"] = {
                     "model": DEFAULT_MODEL,
                     "model_provider": DEFAULT_PROVIDER,
                     "model_temperature": DEFAULT_MODEL_TEMPERATURE,
                     "model_max_tokens": DEFAULT_MODEL_MAX_TOKENS,
+                    "max_iterations": 1,
                 }
+                metadata["details"]["agent"]["framework"] = "base"
 
             json.dump(metadata, f, indent=2)
 
@@ -173,7 +185,7 @@ class RegistryCli:
         with open(metadata_path) as f:
             metadata: Dict[str, Any] = json.load(f)
 
-        namespace = CONFIG.auth.account_id
+        namespace = CONFIG.auth.namespace
 
         entry_location = EntryLocation.model_validate(
             dict(
@@ -238,9 +250,9 @@ class RegistryCli:
             for path in paths:
                 self.upload(str(path))
 
-    def upload(self, local_path: str = ".") -> None:
+    def upload(self, local_path: str = ".") -> EntryLocation:
         """Upload item to the registry."""
-        registry.upload(Path(local_path), show_progress=True)
+        return registry.upload(Path(local_path), show_progress=True)
 
     def download(self, entry_location: str, force: bool = False) -> None:
         """Download item."""
@@ -270,7 +282,7 @@ class BenchmarkCli:
         if CONFIG.auth is None:
             print("Please login with `nearai login`")
             exit(1)
-        namespace = CONFIG.auth.account_id
+        namespace = CONFIG.auth.namespace
 
         # Sort the args to have a consistent representation.
         solver_args = json.dumps(OrderedDict(sorted(args.items())))
@@ -343,7 +355,14 @@ class BenchmarkCli:
                 map(lambda n: n in name, solver_strategy_obj.compatible_datasets())
             ), f"Solver strategy {solver_strategy} is not compatible with dataset {name}"
 
-        be = BenchmarkExecutor(DatasetInfo(name, subset, dataset), solver_strategy_obj, benchmark_id=benchmark_id)
+        dest_path = get_registry_folder() / name
+        metadata_path = dest_path / "metadata.json"
+        with open(metadata_path, "r") as file:
+            metadata = json.load(file)
+
+        be = BenchmarkExecutor(
+            DatasetInfo(name, subset, dataset, metadata), solver_strategy_obj, benchmark_id=benchmark_id
+        )
 
         cpu_count = os.cpu_count()
         max_concurrent = (cpu_count if cpu_count is not None else 1) if max_concurrent < 0 else max_concurrent
@@ -412,6 +431,47 @@ class EvaluationCli:
             metric_name_max_length,
         )
 
+    def read_solutions(self, entry: str, status: Optional[bool] = None, verbose: bool = False) -> None:
+        """Reads solutions.json from evaluation entry."""
+        entry_path = registry.download(entry)
+        solutions_file = entry_path / "solutions.json"
+
+        if not solutions_file.exists():
+            print(f"No solutions file found for entry: {entry}")
+            return
+
+        try:
+            with open(solutions_file) as f:
+                solutions = json.load(f)
+        except json.JSONDecodeError:
+            print(f"Error reading solutions file for entry: {entry}")
+            return
+
+        # Filter solutions if status is specified
+        if status is not None:
+            solutions = [s for s in solutions if s.get("status") == status]
+        if not solutions:
+            print("No solutions found matching criteria")
+            return
+        print(f"\nFound {len(solutions)} solutions{' with status=' + str(status) if status is not None else ''}")
+
+        for i, solution in enumerate(solutions, 1):
+            print("-" * 80)
+            print(f"\nSolution {i}/{len(solutions)}:")
+            datum = solution.get("datum")
+            print(f"datum: {json.dumps(datum, indent=2, ensure_ascii=False)}")
+            status = solution.get("status")
+            print(f"status: {status}")
+            info: dict = solution.get("info", {})
+            if not verbose:
+                info.pop("verbose")
+            print(f"info: {json.dumps(info, indent=2, ensure_ascii=False)}")
+            if i == 1:
+                print("Enter to continue, type 'exit' to quit.")
+            new_message = input("> ")
+            if new_message.lower() == "exit":
+                break
+
 
 class AgentCli:
     def inspect(self, path: str) -> None:
@@ -441,7 +501,6 @@ class AgentCli:
                 task=new_message,
                 thread_id=thread_id,
                 tool_resources=tool_resources,
-                record_run=False,
                 last_message_id=last_message_id,
                 local=local,
                 env_vars=env_vars,
@@ -457,6 +516,7 @@ class AgentCli:
         task: str,
         thread_id: Optional[str] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
+        file_ids: Optional[List[str]] = None,
         local: bool = False,
         env_vars: Optional[Dict[str, Any]] = None,
     ) -> None:
@@ -466,7 +526,7 @@ class AgentCli:
             task=task,
             thread_id=thread_id,
             tool_resources=tool_resources,
-            record_run=True,
+            file_ids=file_ids,
             local=local,
             env_vars=env_vars,
         )
@@ -480,7 +540,7 @@ class AgentCli:
         task: str,
         thread_id: Optional[str] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
-        record_run: bool = True,
+        file_ids: Optional[List[str]] = None,
         last_message_id: Optional[str] = None,
         local: bool = False,
         env_vars: Optional[Dict[str, Any]] = None,
@@ -498,30 +558,24 @@ class AgentCli:
             thread_id=thread.id,
             role="user",
             content=task,
+            attachments=[Attachment(file_id=file_id) for file_id in file_ids] if file_ids else None,
         )
 
         if not local:
             hub_client.beta.threads.runs.create_and_poll(
                 thread_id=thread.id,
                 assistant_id=agents,
-                instructions="You are a helpful assistant. Complete the given task.",
-                model="fireworks::accounts/fireworks/models/llama-v3p1-405b-instruct",
             )
         else:
             run = hub_client.beta.threads.runs.create(
                 thread_id=thread.id,
                 assistant_id=agents,
-                instructions="You are a helpful assistant. Complete the given task.",
-                model="fireworks::accounts/fireworks/models/llama-v3p1-405b-instruct",
                 extra_body={"delegate_execution": True},
             )
             params = {
-                "max_iterations": 1,
-                "record_run": True,
                 "api_url": CONFIG.api_url,
                 "tool_resources": run.tools,
                 "data_source": "local_files",
-                "model": run.model,
                 "user_env_vars": env_vars,
                 "agent_env_vars": {},
             }
@@ -534,6 +588,8 @@ class AgentCli:
         message_list = list(messages)
         if message_list:
             for msg in message_list:
+                if msg.metadata and msg.metadata.get("message_type"):
+                    continue
                 if msg.role == "assistant":
                     print(f"Assistant: {msg.content[0].text.value}")
             last_message_id = message_list[-1].id
@@ -604,11 +660,11 @@ class AgentCli:
 
         """
         # Check if the user is authenticated
-        if CONFIG.auth is None or CONFIG.auth.account_id is None:
+        if CONFIG.auth is None or CONFIG.auth.namespace is None:
             print("Please login with `nearai login` before creating an agent.")
             return
 
-        namespace = CONFIG.auth.account_id
+        namespace = CONFIG.auth.namespace
 
         if fork:
             # Fork an existing agent
@@ -870,6 +926,7 @@ class CLI:
         self.login = LoginCLI()
         self.logout = LogoutCLI()
         self.hub = HubCLI()
+        self.log = LogCLI()
 
         self.config = ConfigCli()
         self.benchmark = BenchmarkCli()
@@ -880,18 +937,32 @@ class CLI:
         self.vllm = VllmCli()
         self.permission = PermissionCli()
 
-    def submit(self, path: Optional[str] = None):
+    def submit(self, path: Optional[str] = None, worker_kind: str = WorkerKind.GPU_8_A100.value):
         """Submit a task to be executed by a worker."""
         if path is None:
             path = os.getcwd()
 
-        tar_stream = io.BytesIO()
-        with tarfile.open(fileobj=tar_stream, mode="w:gz") as tar:
-            tar.add(path, arcname=os.path.basename(path))
-        tar_stream.seek(0)
+        worker_kind_t = WorkerKind(worker_kind)
 
-        client = JobsApi()
-        client.add_job_v1_jobs_add_job_post(tar_stream.read())
+        location = self.registry.upload(path)
+
+        delegation_api = DelegationApi()
+        delegation_api.delegate_v1_delegation_delegate_post(
+            delegate_account_id=CONFIG.scheduler_account_id,
+            expires_at=datetime.now() + timedelta(days=1),
+        )
+
+        try:
+            client = JobsApi()
+            client.add_job_v1_jobs_add_job_post(
+                worker_kind_t,
+                BodyAddJobV1JobsAddJobPost(entry_location=location),
+            )
+        except Exception as e:
+            print("Error: ", e)
+            delegation_api.revoke_delegation_v1_delegation_revoke_delegation_post(
+                delegate_account_id=CONFIG.scheduler_account_id,
+            )
 
     def location(self) -> None:  # noqa: D102
         """Show location where nearai is installed."""

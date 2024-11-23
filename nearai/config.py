@@ -4,13 +4,27 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
 import openai
-from openapi_client import ApiClient, Configuration
+import urllib3
 from pydantic import BaseModel
-from shared.auth_data import AuthData
-from shared.client_config import DEFAULT_PROVIDER, DEFAULT_PROVIDER_MODEL, ClientConfig
+
+from nearai.openapi_client import ApiClient, Configuration
+from nearai.shared.auth_data import AuthData
+from nearai.shared.client_config import DEFAULT_PROVIDER, DEFAULT_PROVIDER_MODEL, ClientConfig
 
 DATA_FOLDER = Path.home() / ".nearai"
-DATA_FOLDER.mkdir(parents=True, exist_ok=True)
+try:
+    DATA_FOLDER.mkdir(parents=True, exist_ok=True)
+except Exception as e:
+    try:
+        print(f"Exception occurred at creating {DATA_FOLDER}", e)
+        DATA_FOLDER = Path.cwd() / ".nearai"
+        DATA_FOLDER.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        print(f"Exception occurred at creating {DATA_FOLDER}", e)
+        # only /tmp folder has write access on lambda runner
+        DATA_FOLDER = Path("/tmp") / ".nearai"
+        DATA_FOLDER.mkdir(parents=True, exist_ok=True)
+
 CONFIG_FILE = DATA_FOLDER / "config.json"
 LOCAL_CONFIG_FILE = Path(".nearai") / "config.json"
 REPO_FOLDER = Path(__file__).parent.parent
@@ -77,6 +91,7 @@ class Config(BaseModel):
     api_url: Optional[str] = "https://api.near.ai"
     inference_url: str = "http://localhost:5000/v1/"
     inference_api_key: str = "n/a"
+    scheduler_account_id: str = "nearaischeduler.near"
     nearai_hub: NearAiHubConfig = NearAiHubConfig()
     confirm_commands: bool = True
     auth: Optional[AuthData] = None
@@ -126,6 +141,8 @@ def setup_api_client():
         kwargs["access_token"] = f"Bearer {CONFIG.auth.model_dump_json()}"
     configuration = Configuration(**kwargs)
     client = ApiClient(configuration)
+    if "http_proxy" in os.environ:
+        client.rest_client.pool_manager = urllib3.ProxyManager(proxy_url=os.environ["http_proxy"])
     ApiClient.set_default(client)
 
 

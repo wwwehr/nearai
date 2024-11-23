@@ -66,7 +66,7 @@ jobs:
       run: ./scripts/build_mkdocs.sh
 
   integration:
-    runs-on: integration
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: NearAI CI
     steps:
@@ -102,10 +102,10 @@ jobs:
       run: |
         docker compose -f .docker/compose-e2e.yml build nearai_base
 
-    - name: Save nearai_base Image
-      run: |
-        mkdir -p /tmp/docker-cache
-        docker save nearai_base | pv -s $(docker image inspect nearai_base --format='{{.Size}}') > /tmp/docker-cache/nearai_base.tar
+    # - name: Save nearai_base Image
+    #   run: |
+    #     mkdir -p /tmp/docker-cache
+    #     docker save nearai_base | pv -s $(docker image inspect nearai_base --format='{{.Size}}') > /tmp/docker-cache/nearai_base.tar
     
     - name: Pull Docker Images
       run: |

@@ -2,7 +2,7 @@
 
 NEAR.AI provides an OpenAI-compatible API for inference, allowing you to easily integrate powerful language models into your applications. This guide covers the basic endpoints and how to use them.
 
-Other examples available here: [examples](https://github.com/nearai/nearai/hub/examples)
+Other examples available here: [examples](https://github.com/nearai/nearai/tree/main/hub/examples)
 
 ## Getting Started
 

@@ -316,7 +316,7 @@ class SqlClient:
         result = cursor.fetchone()
         return VectorStoreFile(**result) if result else None
 
-    def get_file_details_by_filename(self, vector_store_id: str, filename: str) -> Optional[VectorStoreFile]:
+    def get_file_details_by_filename(self, vector_store_id: str, filename: str) -> Optional[List[VectorStoreFile]]:
         """Get file details for a specific filename and vector_store_id.
 
         Args:

@@ -181,7 +181,7 @@ const ModelTrainingSeries = () => {
               Monthly Rounds
             </Text>
             <Text color="sand-11" size="text-s">
-              Current round ends: Nov 30 @ 11:59 PM UTC
+              Current round ends: Jan 15 @ 11:59 PM UTC
             </Text>
           </Flex>
         </Flex>

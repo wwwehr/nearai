@@ -12,6 +12,7 @@ import {
   filesModel,
   modelsModel,
   noncesModel,
+  optionalVersion,
   revokeNonceModel,
   threadMessageModel,
   threadMetadataModel,
@@ -26,6 +27,7 @@ import {
 } from '~/server/api/trpc';
 import { loadEntriesFromDirectory } from '~/server/utils/data-source';
 import { conditionallyIncludeAuthorizationHeader } from '~/server/utils/headers';
+import { conditionallyRemoveSecret } from '~/server/utils/secrets';
 import { fetchThreadContents } from '~/server/utils/threads';
 import { createZodFetcher } from '~/utils/zod-fetch';
 
@@ -80,7 +82,7 @@ export const hubRouter = createTRPCRouter({
         method: 'POST',
       });
 
-      const data: unknown = await response.json();
+      const data: unknown = await response.json().catch(() => response.text());
 
       if (!response.ok || !Array.isArray(data)) throw data;
 
@@ -207,7 +209,7 @@ export const hubRouter = createTRPCRouter({
     const url = `${env.ROUTER_URL}/models`;
 
     const response = await fetch(url);
-    const data: unknown = await response.json();
+    const data: unknown = await response.json().catch(() => response.text());
 
     return modelsModel.parse(data);
   }),
@@ -239,7 +241,7 @@ export const hubRouter = createTRPCRouter({
         body: JSON.stringify({ nonce: input.nonce }),
       });
 
-      const data: unknown = await response.json();
+      const data: unknown = await response.json().catch(() => response.text());
       if (!response.ok) throw data;
 
       return data;
@@ -259,7 +261,7 @@ export const hubRouter = createTRPCRouter({
         method: 'POST',
       });
 
-      const data: unknown = await response.json();
+      const data: unknown = await response.json().catch(() => response.text());
       if (!response.ok) throw data;
 
       return data;
@@ -274,9 +276,7 @@ export const hubRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       const url = new URL(`${env.ROUTER_URL}/get_user_secrets`);
-
       url.searchParams.append('limit', `${input.limit}`);
-      url.searchParams.append('offset', `${input.offset}`);
 
       const secrets = await fetchWithZod(
         entrySecretModel.array(),
@@ -300,10 +300,19 @@ export const hubRouter = createTRPCRouter({
         name: z.string(),
         namespace: z.string(),
         value: z.string(),
-        version: z.string(),
+        version: optionalVersion,
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      /*
+        If there's an existing secret that would create a conflict, 
+        remove it before adding it again to avoid the Hub API throwing 
+        an error. We might want to consider adding proper upsert support 
+        on the Hub API side when we have time.
+      */
+
+      await conditionallyRemoveSecret(ctx.authorization, input);
+
       const url = `${env.ROUTER_URL}/create_hub_secret`;
 
       const response = await fetch(url, {
@@ -315,7 +324,7 @@ export const hubRouter = createTRPCRouter({
         body: JSON.stringify(input),
       });
 
-      const data: unknown = await response.json();
+      const data: unknown = await response.json().catch(() => response.text());
       if (!response.ok) throw data;
 
       return true;
@@ -324,11 +333,11 @@ export const hubRouter = createTRPCRouter({
   removeSecret: protectedProcedure
     .input(
       z.object({
-        category: entryCategory.optional(),
+        category: entryCategory,
         key: z.string(),
         name: z.string(),
         namespace: z.string(),
-        version: z.string().optional(),
+        version: optionalVersion,
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -343,7 +352,7 @@ export const hubRouter = createTRPCRouter({
         body: JSON.stringify(input),
       });
 
-      const data: unknown = await response.json();
+      const data: unknown = await response.json().catch(() => response.text());
       if (!response.ok) throw data;
 
       return true;
@@ -374,7 +383,7 @@ export const hubRouter = createTRPCRouter({
         body: formData,
       });
 
-      const data: unknown = await response.json();
+      const data: unknown = await response.json().catch(() => response.text());
       if (!response.ok) throw data;
 
       return true;
@@ -560,7 +569,9 @@ export const hubRouter = createTRPCRouter({
           },
         );
 
-        const data: unknown = await response.json();
+        const data: unknown = await response
+          .json()
+          .catch(() => response.text());
         if (!response.ok) throw data;
 
         return true;

@@ -100,7 +100,7 @@ class SolverInferenceSession:
                 return response_content
         except Exception as e:
             print(f"Error: {e}")
-            return " "
+            return f"{e}"
 
 
 class SolverStrategy(ABC, metaclass=SolverStrategyMeta):

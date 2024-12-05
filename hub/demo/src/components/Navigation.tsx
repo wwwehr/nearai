@@ -134,7 +134,7 @@ export const Navigation = () => {
               </NavigationMenu.Item>
             ))}
 
-            {/* The following code is left commented out incase we add a nav dropdown again in the near future: */}
+            {/* The following code is left commented out in case we add a nav dropdown again in the near future: */}
 
             {/* {resourcesNav ? (
               <NavigationMenu.Item>
@@ -221,7 +221,7 @@ export const Navigation = () => {
                 ))}
               </Dropdown.Section>
 
-              {/* The following code is left commented out incase we add a nav dropdown again in the near future: */}
+              {/* The following code is left commented out in case we add a nav dropdown again in the near future: */}
 
               {/* {resourcesNav ? (
                 <Dropdown.Section>

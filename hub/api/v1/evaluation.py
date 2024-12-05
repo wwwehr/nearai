@@ -19,9 +19,9 @@ v1_router = APIRouter(
 )
 
 
-def _is_important_metric(metric_name, metrics) -> bool:
+def _is_important_metric(metric_name: str, metrics: List[str], page: str) -> bool:
     """Simple heuristics to determine if the metric is important."""
-    if len(metrics) == 2:
+    if len(metrics) == 2 and "competition" not in page:
         # One score and metadata.
         return True
     return "coding" in metric_name or "average" in metric_name or "avg" in metric_name
@@ -34,15 +34,15 @@ class EvaluationTable(BaseModel):
 
 
 @v1_router.get("/table")
-async def table() -> EvaluationTable:
-    rows, columns, important_columns = evaluation_table()
+async def table(page: str = "") -> EvaluationTable:
+    rows, columns, important_columns = evaluation_table(page)
     list_rows = [
         {**dict(key_tuple), **{m: metrics[m] for m in columns if metrics.get(m)}} for key_tuple, metrics in rows.items()
     ]
     return EvaluationTable(rows=list_rows, columns=columns, important_columns=important_columns)
 
 
-def evaluation_table() -> Tuple[Dict[tuple[tuple[str, Any], ...], Dict[str, str]], List[str], List[str]]:
+def evaluation_table(page: str = "") -> Tuple[Dict[tuple[tuple[str, Any], ...], Dict[str, str]], List[str], List[str]]:
     """Returns rows, columns, and important columns."""
     entries = list_entries_inner(
         namespace="",
@@ -86,7 +86,7 @@ def evaluation_table() -> Tuple[Dict[tuple[tuple[str, Any], ...], Dict[str, str]
             for metric_name, metric_value in metrics.items():
                 if metric_name == EVALUATED_ENTRY_METADATA:
                     continue
-                if _is_important_metric(metric_name, metrics):
+                if _is_important_metric(metric_name, metrics, page):
                     important_metric_names.add(metric_name)
                 rows[key_tuple][metric_name] = str(metric_value)
                 metric_names.add(metric_name)

@@ -21,8 +21,11 @@ v1_router = APIRouter(
 
 def _is_important_metric(metric_name: str, metrics: List[str], page: str) -> bool:
     """Simple heuristics to determine if the metric is important."""
-    if len(metrics) == 2 and "competition" not in page:
+    is_competition_page = "competition" in page
+    if len(metrics) == 2 and not is_competition_page:
         # One score and metadata.
+        return True
+    if is_competition_page and ("mbpp" in metric_name or "mmlu" in metric_name):
         return True
     return "coding" in metric_name or "average" in metric_name or "avg" in metric_name
 

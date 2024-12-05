@@ -77,6 +77,9 @@ def evaluation_table(page: str = "") -> Tuple[Dict[tuple[tuple[str, Any], ...], 
                 "version": metrics[EVALUATED_ENTRY_METADATA].get("version", ""),
                 "provider": metrics[EVALUATED_ENTRY_METADATA].get("provider", ""),
             }
+            if "competition" in page and key["agent"]:
+                # Filter out agents for competition pages.
+                continue
 
             # Convert the key dictionary to a tuple to use as a key in rows
             key_tuple = tuple(key.items())

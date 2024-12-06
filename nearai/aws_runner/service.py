@@ -70,7 +70,8 @@ def handler(event, context):
     )
     if not new_environment_registry_id:
         return f"Run not recorded. Ran {agents} agent(s) with generated near client and environment {environment_id}"
-
+    stop_time = time.perf_counter()
+    write_metric("RunnerExecutionFinishedDuration", stop_time - start_time)
     call("rm -rf /tmp/..?* /tmp/.[!.]* /tmp/*", shell=True)
     stop_time = time.perf_counter()
     write_metric("TotalRunnerDuration", stop_time - start_time)
@@ -104,7 +105,10 @@ def load_agent(client, agent, params: dict, additional_path: str = "", verbose=T
         agent_files = client.get_agent(agent)
         stop_time = time.perf_counter()
         write_metric("GetAgentFromRegistry_Duration", stop_time - start_time, verbose=verbose)
+        start_time = time.perf_counter()
         agent_metadata = client.get_agent_metadata(agent)
+        stop_time = time.perf_counter()
+        write_metric("GetMetadataFromRegistry_Duration", stop_time - start_time, verbose=verbose)
     elif params["data_source"] == "local_files":
         agent_files = get_local_agent_files(agent, additional_path)
 
@@ -173,7 +177,7 @@ def start_with_environment(
     verbose: bool = params.get("verbose", True)
     if verbose:
         print(
-            f"Running with:\nagents: {agents}\nparams: {params}"
+            f"Running with:\nagents: {agents}\nparams: {params.keys()}"
             f"\nthread_id: {thread_id}\nrun_id: {run_id}\nauth: {auth}"
         )
     api_url = str(params.get("api_url", DEFAULT_API_URL))

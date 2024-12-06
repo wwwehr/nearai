@@ -10,6 +10,13 @@ class SimilaritySearch(BaseModel):
     distance: float
 
 
+class SimilaritySearchFile(BaseModel):
+    file_id: str
+    file_content: str
+    distance: float
+    filename: str
+
+
 class StaticFileChunkingStrategyParam(TypedDict, total=False):
     chunk_overlap_tokens: Required[int]
     """The number of tokens that overlap between chunks. The default value is `400`.
@@ -59,7 +66,7 @@ class ExpiresAfter(TypedDict, total=False):
 class CreateVectorStoreRequest(BaseModel):
     """Request model for creating a new vector store."""
 
-    chunking_strategy: Optional[ChunkingStrategy] = None
+    chunking_strategy: Union[AutoFileChunkingStrategyParam, StaticFileChunkingStrategyParam, None] = None
     """The chunking strategy to use for the vector store."""
     expires_after: Optional[ExpiresAfter] = None
     """The expiration time for the vector store."""

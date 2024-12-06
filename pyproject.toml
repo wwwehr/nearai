@@ -111,7 +111,7 @@ pytest-random-order = "^1.1.1"
 pytest-xdist = "^3.6.1"
 
 [tool.pytest.ini_options]
-addopts = "--random-order -n auto"
+addopts = "-n auto"
 timeout = 300
 norecursedirs = ["hub", "dist", "docs"]
 markers = [

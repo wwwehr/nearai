@@ -79,24 +79,28 @@ class SolverInferenceSession:
         self.messages.append({"role": "system", "content": message})
 
     def run_task(self, task: str) -> str:
-        if self.agent:
-            assert self.env_run
-            self.env_run.run(task)
-            message = self.env_run.env.get_last_message(role="assistant")
-            return message.get("content") if message else ""
-        else:
-            self.messages.append({"role": "user", "content": task})
-            completion_response = cast(
-                ModelResponse,
-                self.client.completions(
-                    model=self.model_full_path,
-                    messages=self.messages,
-                    temperature=0.0,
-                ),
-            )
-            response_content = str(cast(List[Choices], completion_response.choices)[0].message.content)
-            self.messages.append({"role": "assistant", "content": response_content})
-            return response_content
+        try:
+            if self.agent:
+                assert self.env_run
+                self.env_run.run(task)
+                message = self.env_run.env.get_last_message(role="assistant")
+                return message.get("content") if message else ""
+            else:
+                self.messages.append({"role": "user", "content": task})
+                completion_response = cast(
+                    ModelResponse,
+                    self.client.completions(
+                        model=self.model_full_path,
+                        messages=self.messages,
+                        temperature=0.0,
+                    ),
+                )
+                response_content = str(cast(List[Choices], completion_response.choices)[0].message.content)
+                self.messages.append({"role": "assistant", "content": response_content})
+                return response_content
+        except Exception as e:
+            print(f"Error: {e}")
+            return f"{e}"
 
 
 class SolverStrategy(ABC, metaclass=SolverStrategyMeta):

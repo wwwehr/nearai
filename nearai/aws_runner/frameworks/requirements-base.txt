@@ -12,4 +12,3 @@ litellm >= 1.41.0
 openai == 1.51.2
 py-near >= 1.1.50
 loguru == 0.7.2
-ed25519 == 1.5

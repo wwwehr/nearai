@@ -73,6 +73,11 @@ export const entryCategory = z.enum([
 ]);
 export type EntryCategory = z.infer<typeof entryCategory>;
 
+export const optionalVersion = z.preprocess(
+  (value) => (!value || value === 'latest' || value === '*' ? '' : value),
+  z.string(),
+);
+
 export const entryDetailsModel = z.intersection(
   z
     .object({
@@ -222,7 +227,7 @@ const walletTransactionActionModel = z.discriminatedUnion('type', [
   }),
 ]);
 
-export const agentWalletTransactionsRequestModel = z.object({
+export const agentNearSendTransactionsRequestModel = z.object({
   transactions: z
     .object({
       signerId: z.string().optional(),
@@ -233,7 +238,7 @@ export const agentWalletTransactionsRequestModel = z.object({
   requestId: z.string().nullish(),
 });
 
-export const agentWalletViewRequestModel = z.object({
+export const agentNearViewRequestModel = z.object({
   contractId: z.string(),
   methodName: z.string(),
   args: z.record(z.string(), z.unknown()).optional(),
@@ -255,9 +260,17 @@ export const agentWalletViewRequestModel = z.object({
     .optional(),
 });
 
-export const agentWalletAccountRequestModel = z.object({
+export const agentNearAccountRequestModel = z.object({
   accountId: z.string().nullable().default(''),
   requestId: z.string().nullish(),
+});
+
+export const agentAddSecretsRequestModel = z.object({
+  secrets: z
+    .object({ agentId: z.string(), key: z.string(), value: z.string() })
+    .array(),
+  requestId: z.string().nullish(),
+  reloadAgentOnSuccess: z.boolean().default(true),
 });
 
 export const threadMetadataModel = z.intersection(

@@ -1,21 +1,22 @@
 'use client';
 
+import {
+  Badge,
+  Button,
+  Card,
+  ConditionalLink,
+  Flex,
+  ImageIcon,
+  Text,
+  Tooltip,
+} from '@near-pagoda/ui';
 import { CodeBlock, Play } from '@phosphor-icons/react';
 import { type ReactNode } from 'react';
 import { type z } from 'zod';
 
-import { Badge } from '~/components/lib/Badge';
-import { Button } from '~/components/lib/Button';
-import { Card } from '~/components/lib/Card';
-import { Flex } from '~/components/lib/Flex';
-import { Text } from '~/components/lib/Text';
-import { Tooltip } from '~/components/lib/Tooltip';
 import { StarButton } from '~/components/StarButton';
 import { ENTRY_CATEGORY_LABELS, primaryUrlForEntry } from '~/lib/entries';
 import { type entryModel } from '~/lib/models';
-
-import { ConditionalLink } from './lib/ConditionalLink';
-import { ImageIcon } from './lib/ImageIcon';
 
 type Props = {
   entry: z.infer<typeof entryModel>;
@@ -33,6 +34,7 @@ export const EntryCard = ({ entry, linksOpenNewTab, footer }: Props) => {
       <Flex gap="s" align="center">
         <ConditionalLink href={primaryUrl}>
           <ImageIcon
+            indicateParentClickable
             src={entry.details.icon}
             alt={entry.name}
             fallbackIcon={icon}
@@ -40,25 +42,29 @@ export const EntryCard = ({ entry, linksOpenNewTab, footer }: Props) => {
         </ConditionalLink>
 
         <Flex gap="none" direction="column">
-          <ConditionalLink
+          <Text
             href={primaryUrl}
             target={target}
             style={{ zIndex: 1, position: 'relative' }}
+            size="text-base"
+            weight={600}
+            color="sand-12"
+            decoration="none"
           >
-            <Text size="text-base" weight={600} color="sand-12">
-              {entry.name}
-            </Text>
-          </ConditionalLink>
+            {entry.name}
+          </Text>
 
-          <ConditionalLink
+          <Text
             href={`/profiles/${entry.namespace}`}
             target={target}
             style={{ marginTop: '-0.1rem' }}
+            size="text-xs"
+            weight={400}
+            color="sand-11"
+            decoration="none"
           >
-            <Text size="text-xs" weight={400}>
-              @{entry.namespace}
-            </Text>
-          </ConditionalLink>
+            @{entry.namespace}
+          </Text>
         </Flex>
       </Flex>
 

@@ -12,17 +12,6 @@ export const authorizationModel = z.object({
   nonce: z.string().regex(/^\d{32}$/), // String containing exactly 32 digits
 });
 
-export const messageModel = z.object({
-  role: z.enum(['user', 'assistant', 'system']),
-  content: z.string(),
-});
-
-export const runModel = z.object({
-  id: z.string(),
-  thread_id: z.string(),
-  status: z.string(),
-});
-
 export const chatWithAgentModel = z.object({
   agent_id: z.string(),
   new_message: z.string(),
@@ -30,38 +19,6 @@ export const chatWithAgentModel = z.object({
   max_iterations: z.number(),
   user_env_vars: z.record(z.string(), z.unknown()).nullable().optional(),
   agent_env_vars: z.record(z.string(), z.unknown()).nullable().optional(),
-});
-
-export const chatWithModelModel = z.object({
-  max_tokens: z.number().default(64),
-  temperature: z.number().default(0.1),
-  frequency_penalty: z.number().default(0),
-  n: z.number().default(1),
-  messages: z.array(messageModel),
-  model: z.string(),
-  provider: z.string(),
-  stop: z.array(z.string()).default([]),
-});
-
-export const chatResponseModel = z.object({
-  id: z.string(),
-  choices: z.array(
-    z.object({
-      finish_reason: z.string(),
-      index: z.number(),
-      logprobs: z.unknown().nullable(),
-      message: messageModel,
-    }),
-  ),
-  created: z.number(),
-  model: z.string(),
-  object: z.string(),
-  system_fingerprint: z.unknown().nullable(),
-  usage: z.object({
-    completion_tokens: z.number(),
-    prompt_tokens: z.number(),
-    total_tokens: z.number(),
-  }),
 });
 
 export const listModelsModel = z.object({
@@ -115,6 +72,11 @@ export const entryCategory = z.enum([
   'model',
 ]);
 export type EntryCategory = z.infer<typeof entryCategory>;
+
+export const optionalVersion = z.preprocess(
+  (value) => (!value || value === 'latest' || value === '*' ? '' : value),
+  z.string(),
+);
 
 export const entryDetailsModel = z.intersection(
   z
@@ -199,7 +161,7 @@ export const entrySecretModel = z.object({
   namespace: z.string(),
   name: z.string(),
   version: z.string().optional(),
-  description: z.string().default(''),
+  description: z.string().nullable().default(''),
   key: z.string(),
   value: z.string(),
   category: z.string().optional(),
@@ -265,7 +227,7 @@ const walletTransactionActionModel = z.discriminatedUnion('type', [
   }),
 ]);
 
-export const agentWalletTransactionsRequestModel = z.object({
+export const agentNearSendTransactionsRequestModel = z.object({
   transactions: z
     .object({
       signerId: z.string().optional(),
@@ -276,7 +238,7 @@ export const agentWalletTransactionsRequestModel = z.object({
   requestId: z.string().nullish(),
 });
 
-export const agentWalletViewRequestModel = z.object({
+export const agentNearViewRequestModel = z.object({
   contractId: z.string(),
   methodName: z.string(),
   args: z.record(z.string(), z.unknown()).optional(),
@@ -298,9 +260,17 @@ export const agentWalletViewRequestModel = z.object({
     .optional(),
 });
 
-export const agentWalletAccountRequestModel = z.object({
+export const agentNearAccountRequestModel = z.object({
   accountId: z.string().nullable().default(''),
   requestId: z.string().nullish(),
+});
+
+export const agentAddSecretsRequestModel = z.object({
+  secrets: z
+    .object({ agentId: z.string(), key: z.string(), value: z.string() })
+    .array(),
+  requestId: z.string().nullish(),
+  reloadAgentOnSuccess: z.boolean().default(true),
 });
 
 export const threadMetadataModel = z.intersection(
@@ -321,6 +291,22 @@ export const threadModel = z.object({
 });
 
 export const threadsModel = threadModel.array();
+
+export const threadRunModel = z.object({
+  id: z.string(),
+  thread_id: z.string(),
+  status: z.enum([
+    'queued',
+    'in_progress',
+    'requires_action',
+    'cancelling',
+    'cancelled',
+    'failed',
+    'completed',
+    'incomplete',
+    'expired',
+  ]),
+});
 
 export const threadMessageMetadataModel = z.intersection(
   z

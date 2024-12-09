@@ -23,19 +23,15 @@ we recommend placing it inside your local registry `mkdir -p ~/.nearai/registry/
   * otherwise you can use `nearai registry metadata_template ~/.nearai/registry/example_agent agent "Example agent"` and edit it, as well as a created agent.py, [example of which is below](#example-agentpy) using the [environment API](#the-environment-api).
 
 
-#### 4. Run your agent locally using the cli and passing it a folder to write output to. 
+#### 4. Run your agent locally using the cli. 
 ```shell
-nearai agent interactive example_agent /tmp/example_agent_run_1 --local
+nearai agent interactive ~/.nearai/registry/example_agent --local
 ```
-
-When running the agent locally, session files such as chat history are stored in the `/tmp/nearai/conversations/` folder. 
-If you want to reset these files and clear the conversation history, you can run the agent with the `--reset` flag. 
-This will remove the existing session data and start a new one.
 
 
 ### Example agent.py
 ```python
-# In local interactive mode, the first user input is collected before the agent runs.
+# In local interactive mode, the welcome message (from metadata) is displayed, then the first user input is collected before the agent runs.
 prompt = {"role": "system", "content": "You are a travel agent that helps users plan trips."}
 result = env.completion([prompt] + env.list_messages())
 env.add_reply(result)
@@ -52,16 +48,15 @@ from other systems such as a scheduler or indexer.
 
 ## Agent Operation and Features:
 * `interactive` mode runs the agent in an infinite loop until: it is terminated by typing "exit" in the chat; is forcibly exited with a code; or stopped by the user with "Ctrl+C".
-* The execution folder is optional; by default, the initial agent's folder may be used instead.
 * If you use a folder other than the local registry, provide the full path to the agent instead of just the agent name.
 
 Command: 
 ```
-nearai agent interactive AGENT [EXECUTION_FOLDER] --local
+nearai agent interactive ABSOLUTE_PATH_TO_AGENT --local
 ```
 Example:
 ```shell
-nearai agent interactive example_agent --local
+nearai agent interactive /Users/jane/agents/example_agent --local
 ```
 
 * The agent can save temporary files to track the progress of a task from the user in case the dialogue execution is interrupted. By default, the entire message history is stored in a file named `chat.txt`. The agent can add messages there by using [`env.add_reply()`](api.md#nearai.agents.environment.Environment.add_message). Learn more about [the environment API](#the-environment-api).
@@ -86,23 +81,36 @@ The `--force` flag allows you to overwrite the local agent with the version from
 ⚠️ Warning: Review the agent code before running it!
 
 ### Running an agent interactively
-Agents can be run interactively. The environment_path should be a folder where the agent chat record (chat.txt) and 
-other files can be written, usually `~/tmp/test-agents/<AGENT_NAME>-run-X`.
+Agents can be run interactively. Downloaded agents can be run by name. Local agents can be run by absolute path.
 
-* command `nearai agent interactive AGENT ENVIRONMENT_PATH`
+* command `nearai agent interactive AGENT_FULL_NAME`
 * example 
 ```shell
-nearai agent interactive flatirons.near/xela-agent/5 /tmp/test-agents/xela-agent-run-1
+nearai agent interactive flatirons.near/xela-agent/5
 ```
+
+* command `nearai agent interactive AGENT_ABSOLUTE_PATH --local`
+* example
+```shell
+nearai agent interactive /Users/jane/agents/example_agent --local
+```
+
 
 ### Running an agent as a task
 To run without user interaction pass the task input to the task
 
-* command `nearai agent task <AGENT> <INPUT> <ENVIRONMENT_PATH>`
+* command `nearai agent task <AGENT_FULL_NAME> <INPUT>`
 * example 
 ```shell
-nearai agent task flatirons.near/xela-agent/5 "Build a command line chess engine" ~/tmp/test-agents/xela-agent/chess-engine
+nearai agent task flatirons.near/xela-agent/5 "Build a command line chess engine"
 ```
+
+* command `nearai agent task <AGENT_ABSOLUTE_PATH> <INPUT> --local`
+* example
+```shell
+nearai agent task /Users/jane/agents/example_agent "Build a command line chess engine"
+```
+
 
 ### Running an agent through AI Hub
 To run an agent in the [AI Hub](https://app.near.ai/agents):
@@ -136,14 +144,14 @@ Your agent will receive an `env` object that has the following methods:
 tell the agent that it is the user's turn, stop iterating.
   * [`completion`](api.md#nearai.agents.environment.Environment.completion): request inference completions from a provider and model.
 The model format can be either `PROVIDER::MODEL` or simply `MODEL`. 
-By default the provider is `fireworks` and the model is `llama-v3p1-405b-instruct-long`. 
+By default the provider is `fireworks` and the model is `qwen2p5-72b-instruct`. 
 The model can be passed into `completion` function or as an agent metadata:
    ```json
    "details": {
      "agent": {
        "defaults": {
          // All fields below are optional.
-         "model": "llama-v3p1-405b-instruct-long",
+         "model": "qwen2p5-72b-instruct",
          "model_max_tokens": 16384,
          "model_provider": "fireworks",
          "model_temperature": 1.0
@@ -152,6 +160,16 @@ The model can be passed into `completion` function or as an agent metadata:
    }
    ```
   * [`list_messages`](api.md#nearai.agents.environment.Environment.list_messages): returns the list of messages in the conversation.
+
+### Calling another agent
+Other agents can be invoked with the `run_agent` method. This method takes as arguments the three parts of an agent name (owner, name, version),
+accepts an optional model and query, and whether to record the agent's results on a new thread. 
+* [`run_agent`](api.md#nearai.agents.environment.Environment.run_agent): call another agent
+
+```
+env.run_agent("flatirons.near", "shopper", "latest", query="NEAR cryptocurrency shirts", fork_thread=False)
+```
+
 
 ### Additional environment methods
 There are several variations for completions:
@@ -205,13 +223,13 @@ def my_tool():
 tool_registry = env.get_tool_registry()
 tool_registry.register_tool(my_tool)
 tool_def = tool_registry.get_tool_definition('my_tool')
-response = env.completions_and_run_tools(messages, tools=[tool_def], model="llama-v3p1-405b-instruct")
+response = env.completions_and_run_tools(messages, tools=[tool_def])
 ```
 
 To pass all the built in tools plus any you have registered use the `get_all_tool_definitions` method.
 ```python
 all_tools = env.get_tool_registry().get_all_tool_definitions()
-response = env.completions_and_run_tools(messages, tools=all_tools, model="llama-v3p1-405b-instruct")
+response = env.completions_and_run_tools(messages, tools=all_tools)
 ```
 If you do not want to use the built-in tools, use `get_tool_registry(new=True)`
 ```python
@@ -242,7 +260,7 @@ If you do not want to use the built-in tools, use `get_tool_registry(new=True)`
     "agent": {
        "defaults": {
          // All fields below are optional.
-         "model": "llama-v3p1-405b-instruct-long",
+         "model": "qwen2p5-72b-instruct",
          "model_max_tokens": 16384,
          "model_provider": "fireworks",
          "model_temperature": 1.0
@@ -278,36 +296,38 @@ reprocess the previous response and follow up about travel to Paris.
 ```
 
 ## Running an agent through the API
-Agents can be run through the `/agent/runs` endpoint. 
+Agents can be run through the `/thread/runs`, `/thread/{thread_id}/runs` or  `/agent/runs` endpoints. The /thread syntax
+matches the OpenAI / LangGraph API. The /agent syntax is NearAI specific.
+
 You will need to pass a signed message to authenticate. This example uses the credentials written by `nearai login` to
 your `~/.nearai/config.json` file.
 
 ```shell
 auth_json=$(jq -c '.auth' ~/.nearai/config.json);
 
-curl "https://api.near.ai/v1/agent/runs" \
+curl "https://api.near.ai/v1/threads/runs" \
       -X POST \
       --header 'Content-Type: application/json' \
       --header "Authorization: Bearer $auth_json" \
 -d @- <<'EOF'
   {
-    "agent_id": "flatirons.near/xela-agent/5",
+    "agent_id": "flatirons.near/xela-agent/5.0.1",
     "new_message":"Build a backgammon game",
-    "max_iterations": "2"
+    "max_iterations": "1"
   }
 EOF
 ```
 
-The full message will look like this. An `environment_id` param can also be passed to continue a previous run. 
+The full message will look like this. A `thread_id` param can also be passed to continue a previous conversation. 
 ```shell
-curl "https://api.near.ai/v1/agent/runs" \
+curl "https://api.near.ai/v1/threads/runs" \
       -X POST \
       --header 'Content-Type: application/json' \
       --header 'Authorization: Bearer {"account_id":"your_account.near","public_key":"ed25519:YOUR_PUBLIC_KEY","signature":"A_REAL_SIGNATURE","callback_url":"https://app.near.ai/","message":"Welcome to NEAR AI Hub!","recipient":"ai.near","nonce":"A_UNIQUE_NONCE_FOR_THIS_SIGNATURE"}' \
 -d @- <<'EOF'
   {
-    "agent_id": "flatirons.near/xela-agent/5",
-    "environment_id": "a_previous_environment_id",
+    "agent_id": "flatirons.near/xela-agent/5.0.1",
+    "thread_id": "a_previous_thread_id",
     "new_message":"Build a backgammon game", 
     "max_iterations": "2"
   }
@@ -315,14 +335,11 @@ EOF
 ```
 
 ## Remote results
-The results of both run_remote and the /agent/runs endpoint are either an error or the resulting environment state.
->Agent run finished. New environment is "flatirons.near/environment_run_flatirons.near_example-travel-agent_1_1c82938c55fc43e492882ee938c6356a/0"
+The results of both run_remote and the /agent/runs endpoints are either an error or the resulting thread_id.
+>"thread_579e1cf3f42742c785218106"
 
-To view the resulting state, download the `environment.tar.gz` file from the registry and extract it.
-```shell
-nearai registry download flatirons.near/environment_run_flatirons.near_example-travel-agent_1_1c82938c55fc43e492882ee938c6356a/0
-```
-
+Threads follow the OpenAI / LangGraph api standard. `/threads/{thread_id}/messages` will return the messages on the thread.
+See the full NearAI OpenAPI spec here: [https://api.near.ai/openapi.json](https://api.near.ai/openapi.json)
 
 ### Signed messages
 NearAI authentication is through a Signed Message: a payload signed by a Near Account private key. (How to [Login with NEAR](login.md))
@@ -407,7 +424,7 @@ To run your agent remotely with a particular framework, set the framework name i
 ```
 For local development, you can install any libraries you would like to use by adding them to top level `pyproject.toml`.
 
-Current frameworks can be found in the repo's [frameworks](https://github.com/nearai/nearai/tree/main/aws_runner/frameworks) folder.
+Current frameworks can be found in the repo's [frameworks](https://github.com/nearai/nearai/tree/main/nearai/aws_runner/frameworks) folder.
 
 ### LangChain / LangGraph
 The example agent [langgraph-min-example](https://app.near.ai/agents/flatirons.near/langgraph-min-example/1.0.1/source)

@@ -3,14 +3,14 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
-from aws_runner.service import EnvironmentRun, start_with_environment
 from litellm import Choices, ModelResponse
 from litellm.types.completion import ChatCompletionMessageParam
-from shared.inference_client import InferenceClient
-from shared.provider_models import get_provider_namespaced_model
 
 from nearai.agents.agent import Agent
+from nearai.aws_runner.service import EnvironmentRun, start_with_environment
 from nearai.config import CONFIG, get_hub_client
+from nearai.shared.inference_client import InferenceClient
+from nearai.shared.provider_models import get_provider_namespaced_model
 
 
 class SolverScoringMethod(Enum):
@@ -79,23 +79,28 @@ class SolverInferenceSession:
         self.messages.append({"role": "system", "content": message})
 
     def run_task(self, task: str) -> str:
-        if self.agent:
-            assert self.env_run
-            self.env_run.run(task)
-            return self.env_run.env.get_last_message(role="assistant")
-        else:
-            self.messages.append({"role": "user", "content": task})
-            completion_response = cast(
-                ModelResponse,
-                self.client.completions(
-                    model=self.model_full_path,
-                    messages=self.messages,
-                    temperature=0.0,
-                ),
-            )
-            response_content = str(cast(List[Choices], completion_response.choices)[0].message.content)
-            self.messages.append({"role": "assistant", "content": response_content})
-            return response_content
+        try:
+            if self.agent:
+                assert self.env_run
+                self.env_run.run(task)
+                message = self.env_run.env.get_last_message(role="assistant")
+                return message.get("content") if message else ""
+            else:
+                self.messages.append({"role": "user", "content": task})
+                completion_response = cast(
+                    ModelResponse,
+                    self.client.completions(
+                        model=self.model_full_path,
+                        messages=self.messages,
+                        temperature=0.0,
+                    ),
+                )
+                response_content = str(cast(List[Choices], completion_response.choices)[0].message.content)
+                self.messages.append({"role": "assistant", "content": response_content})
+                return response_content
+        except Exception as e:
+            print(f"Error: {e}")
+            return f"{e}"
 
 
 class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
@@ -106,6 +111,7 @@ class SolverStrategy(ABC, metaclass=SolverStrategyMeta):
         self.client_config = CONFIG.get_client_config()
         self.client = InferenceClient(self.client_config)
         assert model != "" or agent != ""
+        self.dataset_evaluation_name = ""
 
         self.provider = ""
         self.model_namespace = ""
@@ -215,11 +221,19 @@ from nearai.solvers.mbpp_solver import MBPPSolverStrategy  # noqa: E402
 from nearai.solvers.mmlu_solver import MMLUSolverStrategy  # noqa: E402
 
 __all__ = [
-    "SolverStrategyRegistry",
     "DDOTSV0Solver",
+    "GSM8KSolverStrategy",
+    "HellaswagSolverStrategy",
+    "LeanSolverStrategy",
+    "LiveBenchSolverStrategy",
     "MBPPSolverStrategy",
     "MMLUSolverStrategy",
-    "HellaswagSolverStrategy",
-    "LiveBenchSolverStrategy",
-    "GSM8KSolverStrategy",
+    "SolverStrategyRegistry",
 ]
+
+try:
+    from nearai.solvers.lean_solver import LeanSolverStrategy  # noqa: E402
+
+    __all__.append("LeanSolverStrategy")
+except ImportError:
+    LeanSolverStrategy = None  # type: ignore

@@ -3,9 +3,12 @@
   box-shadow: var(--shadow-card-with-outline);
   overflow: hidden;
   max-width: 100%;
+  position: relative;
 
-  pre {
+  > div {
     background: var(--sand-0) !important;
+    padding: 1rem !important;
+    padding-right: 2.5rem !important;
   }
 
   :global(.linenumber) {
@@ -17,9 +20,37 @@
     border-radius: 0;
     box-shadow: none;
 
-    pre {
+    > div {
       background: transparent !important;
       padding: 0 !important;
     }
+  }
+}
+
+.copyButton {
+  position: absolute;
+  right: 0;
+  top: 0;
+  border-radius: 0 6px 0 6px;
+  border: none !important;
+  z-index: 10;
+
+  &:hover {
+    border: none !important;
+  }
+
+  svg {
+    transition: var(--transitions);
+    position: relative;
+    z-index: 15;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    background: var(--sand-0);
+    opacity: 0.8;
+    border-radius: 0 6px 0 6px;
   }
 }

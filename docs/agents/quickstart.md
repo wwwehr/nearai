@@ -69,7 +69,7 @@ You'll be prompted to visit a URL to authenticate with your Near account. Select
 
 After successfully login, you should see the screen below. Close it and return to your terminal.
 
-![alt text](../assets/agents/quickstart/completed.png)
+![alt text](../assets/agents/quickstart-login.png)
 
 ---
 

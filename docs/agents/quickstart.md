@@ -67,7 +67,7 @@ $> nearai login
 
 You'll be prompted to visit a URL to authenticate with your Near account. Select your wallet (if you don't have a wallet, check our [prerequisites](#pre-requisites)), and login with it.
 
-After successfully login, you should see the screen bellow. Close it and return to your terminal.
+After successfully login, you should see the screen below. Close it and return to your terminal.
 
 ![alt text](../assets/agents/quickstart/completed.png)
 

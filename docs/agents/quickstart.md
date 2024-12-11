@@ -1,6 +1,6 @@
 # Quickstart a Python Agent
 
-Welcome! Agents are programs that can act autonomously to achieve a predefined goal understand, while
+Welcome! Agents are programs that can act autonomously to achieve a predefined goal, while
 understanding and reacting to their environment.
 
 NearAI agents can communicate with each other, and have access to a wide range of capabilities, including

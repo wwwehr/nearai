@@ -65,13 +65,19 @@ def create_thread(
     thread: ThreadCreateParams = Body(...),
     auth: AuthToken = Depends(get_auth),
 ) -> Thread:
+    thread_model = ThreadModel(
+        messages=thread["messages"] if hasattr(thread, "messages") else [],
+        meta_data=thread["metadata"] if hasattr(thread, "metadata") else None,
+        tool_resources=thread["tool_resources"] if hasattr(thread, "tool_resources") else None,
+        owner_id=auth.account_id,
+    )
+
+    return _create_thread(thread_model, auth)
+
+
+def _create_thread(thread_model: ThreadModel, auth: AuthToken = Depends(get_auth)) -> Thread:
     with get_session() as session:
-        thread_model = ThreadModel(
-            messages=thread["messages"] if hasattr(thread, "messages") else [],
-            meta_data=thread["metadata"] if hasattr(thread, "metadata") else None,
-            tool_resources=thread["tool_resources"] if hasattr(thread, "tool_resources") else None,
-            owner_id=auth.account_id,
-        )
+        thread_model.owner_id = auth.account_id
         session.add(thread_model)
         session.commit()
         return thread_model.to_openai()
@@ -489,7 +495,6 @@ class RunCreateParamsBase(BaseModel):
 @threads_router.post("/threads/{thread_id}/runs")
 def create_run(
     thread_id: str,
-    background_tasks: BackgroundTasks,
     run: RunCreateParamsBase = Body(...),
     auth: AuthToken = Depends(get_auth),
     scheduler=Depends(get_scheduler),
@@ -554,23 +559,20 @@ def create_run(
             return run_model.to_openai()
 
         # Queue the run
-        if not run.schedule_at:
-            background_tasks.add_task(run_agent, thread_id, run_model.id, background_tasks, auth)
-        else:
-            logger.info(f"Scheduling run to run at {run.schedule_at}")
-            scheduler.add_job(
-                run_agent,
-                "date",
-                run_date=run.schedule_at,
-                args=[thread_id, run_model.id, auth],
-                jobstore="default",
-            )
+        scheduler.add_job(
+            run_agent,
+            "date",
+            run_date=run.schedule_at or datetime.now(),
+            args=[thread_id, run_model.id, None, auth],
+            jobstore="default",
+        )
 
         return run_model.to_openai()
 
 
 def run_agent(
-    thread_id: str, run_id: str, background_tasks: BackgroundTasks, auth: AuthToken = Depends(get_auth)
+        # TODO remove BackgroundTasks = None
+    thread_id: str, run_id: str, background_tasks: BackgroundTasks = None, auth: AuthToken = Depends(get_auth)
 ) -> OpenAIRun:
     """Task to run an agent in the background."""
     logger.info(f"Running agent for run: {run_id} on thread: {thread_id}")
@@ -663,7 +665,9 @@ def run_agent(
                 flag_modified(parent_run, "child_run_ids")  # SQLAlchemy is not detecting changes...
                 session.commit()
                 logger.info(f"Calling parent run: {parent_run.id}, after child run: {run_id}")
-                background_tasks.add_task(run_agent, parent_run.thread_id, parent_run.id, background_tasks, auth)
+
+                if background_tasks:
+                    background_tasks.add_task(run_agent, parent_run.thread_id, parent_run.id, background_tasks, auth)
 
         return run_model.to_openai()
 

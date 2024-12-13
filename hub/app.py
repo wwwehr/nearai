@@ -15,6 +15,7 @@ from hub.api.v1.files import files_router
 from hub.api.v1.hub_secrets import hub_secrets_router
 from hub.api.v1.jobs import v1_router as job_router
 from hub.api.v1.logs import logs_router
+from hub.api.v1.neardata import lifespan
 from hub.api.v1.permissions import v1_router as permission_router
 from hub.api.v1.registry import v1_router as registry_router
 from hub.api.v1.routes import v1_router
@@ -30,7 +31,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 load_dotenv()
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 origins = ["*"]
 

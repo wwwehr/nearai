@@ -34,7 +34,8 @@ async def async_fetch_json(url: str) -> Any:
 
 
 async def get_latest_block_id():
-    return 134822056
+    # DEBUG. This block has the event
+    # return 134822056
 
     data = await async_fetch_json("https://api.fastnear.com/status")
     if data:

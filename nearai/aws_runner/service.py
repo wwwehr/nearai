@@ -18,8 +18,7 @@ from nearai.shared.provider_models import PROVIDER_MODEL_SEP
 
 cloudwatch = boto3.client("cloudwatch", region_name="us-east-2")
 
-PATH = "/tmp/agent-runner-docker/environment-runs"
-RUN_PATH = PATH + "/run"
+OUTPUT_PATH = "/tmp/nearai-agent-runner"
 DEFAULT_API_URL = "https://api.near.ai"
 
 
@@ -224,8 +223,14 @@ def start_with_environment(
     )
     inference_client = InferenceClient(client_config)
     hub_client = client_config.get_hub_client()
+    run_path = (
+        additional_path
+        if not params.get("change_to_agent_temp_dir", True) and additional_path
+        else f"{OUTPUT_PATH}/{agent.namespace}/{agent.name}/{agent.version}"
+    )
+
     env = Environment(
-        additional_path if additional_path else RUN_PATH,
+        run_path,
         loaded_agents,
         inference_client,
         hub_client,

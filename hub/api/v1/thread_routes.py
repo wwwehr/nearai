@@ -560,7 +560,7 @@ def create_run(
 
         # Queue the run
         scheduler.add_job(
-            run_agent,
+            _run_agent,
             "date",
             run_date=run.schedule_at or datetime.now(),
             args=[thread_id, run_model.id, None, auth],
@@ -571,10 +571,15 @@ def create_run(
 
 
 def run_agent(
-        # TODO remove BackgroundTasks = None
-    thread_id: str, run_id: str, background_tasks: BackgroundTasks = None, auth: AuthToken = Depends(get_auth)
+    thread_id: str, run_id: str, background_tasks: BackgroundTasks, auth: AuthToken = Depends(get_auth)
 ) -> OpenAIRun:
     """Task to run an agent in the background."""
+    return _run_agent(thread_id, run_id, background_tasks, auth)
+
+
+def _run_agent(
+    thread_id: str, run_id: str, background_tasks: Optional[BackgroundTasks] = None, auth: AuthToken = Depends(get_auth)
+) -> OpenAIRun:
     logger.info(f"Running agent for run: {run_id} on thread: {thread_id}")
 
     with get_session() as session:

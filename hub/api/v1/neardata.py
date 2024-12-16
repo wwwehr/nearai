@@ -21,6 +21,9 @@ BASE_URL = "https://mainnet.neardata.xyz/v0/block/"
 # Path to store the last read blockId
 BLOCK_ID_FILE = "last_block_id.txt"
 
+# OPTION TO READ MULTIPLE BLOCKS PER RUN
+NUMBER_OF_BLOCKS_TO_READ_IF_NOT_SYNCED = 1
+
 scheduler = AsyncIOScheduler()
 
 
@@ -34,7 +37,7 @@ async def async_fetch_json(url: str) -> Any:
 
 
 async def get_latest_block_id():
-    # DEBUG. This block has the event
+    # DEBUG. This block has the required event
     # return 134822056
 
     data = await async_fetch_json("https://api.fastnear.com/status")
@@ -124,12 +127,12 @@ async def process_log(log, receipt_execution_outcome, auth_token):
 def load_auth_token():
     from nearai.config import Config, load_config_file
 
-    CONFIG = Config()
+    app_config = Config()
     # Update config from global config file
     config_data = load_config_file(local=False)
-    CONFIG = CONFIG.update_with(config_data)
+    app_config = app_config.update_with(config_data)
 
-    return CONFIG.auth
+    return app_config.auth
 
 
 async def run_agent(agent, message, signer_id, data, auth_token: AuthToken):
@@ -194,9 +197,7 @@ async def process_blocks(auth_token):
 
 
 async def periodic_task(auth_token: AuthToken):
-    NUMBER_OF_BLOCKS_TO_READ_IF_NOT_SYNCED = 5
-
-    # Try to catch up reading NUMBER_OF_BLOCKS_TO_READ_IF_NOT_SYNCED blocs per second
+    # Try to catch up reading NUMBER_OF_BLOCKS_TO_READ_IF_NOT_SYNCED blocks per run
     for _ in range(NUMBER_OF_BLOCKS_TO_READ_IF_NOT_SYNCED):
         block_found = await process_blocks(auth_token)
         if not block_found:

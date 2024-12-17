@@ -2,7 +2,6 @@
 
 import {
   Badge,
-  Button,
   Dropdown,
   Flex,
   ImageIcon,
@@ -13,8 +12,7 @@ import {
   Text,
   Tooltip,
 } from '@near-pagoda/ui';
-import { copyTextToClipboard } from '@near-pagoda/ui/utils';
-import { CaretDown, Copy } from '@phosphor-icons/react';
+import { CaretDown, GitFork, LockKey } from '@phosphor-icons/react';
 import { usePathname, useRouter } from 'next/navigation';
 import { type ReactElement, type ReactNode, useEffect } from 'react';
 
@@ -22,8 +20,11 @@ import { ErrorSection } from '~/components/ErrorSection';
 import { StarButton } from '~/components/StarButton';
 import { env } from '~/env';
 import { useCurrentEntry, useEntryParams } from '~/hooks/entries';
-import { ENTRY_CATEGORY_LABELS } from '~/lib/entries';
+import { ENTRY_CATEGORY_LABELS, primaryUrlForEntry } from '~/lib/entries';
 import { type EntryCategory } from '~/lib/models';
+
+import { DevelopButton } from './DevelopButton';
+import { ForkButton } from './ForkButton';
 
 type Props = {
   category: EntryCategory;
@@ -75,7 +76,7 @@ export const EntryDetailsLayout = ({
           <Flex
             align="center"
             gap="m"
-            phone={{ direction: 'column', align: 'stretch', gap: 'l' }}
+            tablet={{ direction: 'column', align: 'stretch', gap: 'l' }}
           >
             <Flex align="center" gap="m" style={{ marginRight: 'auto' }}>
               <ImageIcon
@@ -111,7 +112,7 @@ export const EntryDetailsLayout = ({
                   </Text>
                 </Flex>
 
-                <Flex align="center" gap="xs">
+                <Flex align="center" gap="s">
                   <Dropdown.Root>
                     <Dropdown.Trigger asChild>
                       <Badge
@@ -175,26 +176,56 @@ export const EntryDetailsLayout = ({
                     </Dropdown.Content>
                   </Dropdown.Root>
 
-                  <Tooltip
-                    asChild
-                    content={`Copy ${category} path to clipboard`}
-                  >
-                    <Button
-                      label="Copy"
-                      icon={<Copy />}
-                      size="x-small"
-                      variant="secondary"
-                      fill="ghost"
-                      onClick={() =>
-                        copyTextToClipboard(`${namespace}/${name}/${version}`)
+                  {currentEntry?.fork_of && (
+                    <Tooltip
+                      content={
+                        <Text size="text-xs" color="current">
+                          This {category} is a fork of{' '}
+                          <Text
+                            size="text-xs"
+                            href={primaryUrlForEntry({
+                              category: currentEntry.category,
+                              namespace: currentEntry.fork_of.namespace,
+                              name: currentEntry.fork_of.name,
+                            })}
+                          >
+                            {currentEntry.fork_of.namespace}/
+                            {currentEntry.fork_of.name}
+                          </Text>
+                        </Text>
                       }
-                    />
-                  </Tooltip>
+                      root={{ disableHoverableContent: false }}
+                    >
+                      <SvgIcon
+                        icon={<GitFork weight="fill" />}
+                        size="xs"
+                        color="sand-9"
+                        style={{ cursor: 'help' }}
+                      />
+                    </Tooltip>
+                  )}
+
+                  {currentEntry?.details.private_source && (
+                    <Tooltip
+                      content={`The source code for this ${category} is private`}
+                    >
+                      <SvgIcon
+                        icon={<LockKey weight="fill" />}
+                        size="xs"
+                        color="sand-9"
+                        style={{ cursor: 'help' }}
+                      />
+                    </Tooltip>
+                  )}
                 </Flex>
               </Flex>
             </Flex>
 
-            <StarButton entry={currentEntry} variant="detailed" />
+            <Flex align="center" gap="s">
+              <DevelopButton entry={currentEntry} />
+              <StarButton entry={currentEntry} variant="detailed" />
+              <ForkButton entry={currentEntry} variant="detailed" />
+            </Flex>
           </Flex>
 
           {tabs && (

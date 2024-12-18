@@ -1,9 +1,11 @@
 import os
 import time
-import tweepy
+
+import tweepy  # type: ignore
 
 bearer_token = os.getenv("TWITTER_BEARER_TOKEN")
 client = tweepy.Client(bearer_token)
+
 
 async def get_latest_mentions(user_id, timestamp, max_results=5):
     try:
@@ -12,7 +14,6 @@ async def get_latest_mentions(user_id, timestamp, max_results=5):
         data = response.data
         if data:
             for tweet in data:
-                print(tweet)
                 print("text", tweet.text)
                 print("id", tweet.id)
                 print("===================")
@@ -26,10 +27,12 @@ async def get_latest_mentions(user_id, timestamp, max_results=5):
             if header.lower().startswith("x-rate-limit-"):
                 if header == "x-rate-limit-reset":
                     print(
-                        f"{header}: at {e.response.headers[header]} which is in ({float(e.response.headers[header]) - time.time()})"
+                        f"{header}: at {e.response.headers[header]} "
+                        f"which is in ({float(e.response.headers[header]) - time.time()})"
                     )
                 else:
                     print(f"{header}: {e.response.headers[header]}")
+
 
 # Example usage
 # user_id = 1867270324649160704

@@ -4,14 +4,13 @@ from functools import partial
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
-
-from hub.tasks.twitter_client import get_latest_mentions
 from nearai.shared.client_config import DEFAULT_MODEL
 
 from hub.api.v1.auth import AuthToken
 from hub.api.v1.thread_routes import RunCreateParamsBase, ThreadModel, _create_thread, create_run
+from hub.tasks.twitter_client import get_latest_mentions
 
-RESET_BLOCK_ID_ON_START = True # reusing setting name for now
+RESET_BLOCK_ID_ON_START = True  # reusing setting name for now
 
 # Path to store the last read tweet id
 TWEET_STATUS_FILE = "last_tweet.txt"
@@ -19,14 +18,11 @@ TWEET_STATUS_FILE = "last_tweet.txt"
 scheduler = AsyncIOScheduler()
 
 # todo pull from registry 'integration' item
-EVENT_SOURCE_CONFIG = {
-    "user_id": "1867270324649160704"
-}
+EVENT_SOURCE_CONFIG = {"user_id": "1867270324649160704"}
 
 # todo pull from agent metadata
-LISTENER_CONFIG = {
-    "agent_name": "flatirons.near/nearsecretagent/0.0.1"
-}
+LISTENER_CONFIG = {"agent_name": "flatirons.near/nearsecretagent/0.0.1"}
+
 
 # Function to get the last read tweet timestamp from a file
 async def get_last_tweet_timestamp():
@@ -50,15 +46,14 @@ def user_rate_limit_exceeded(tweet):
 
 def rate_limit_reply(tweet):
     # if the user has received a rate limit reply already today, do nothing.
-    response = "So many questions, try again tomorrow." # pull from agent metadata?
+    # response = "So many questions, try again tomorrow."  # pull from agent metadata?
     # todo implement
     pass
 
 
 async def listener_function(auth_token, tweet):
-
     message = tweet.text
-    sender = tweet.user_id
+    sender = tweet.id
 
     # if user_rate_limit_exceeded(tweet):
     #     rate_limit_reply(tweet)
@@ -132,6 +127,7 @@ async def process_tweets(auth_token, tweets):
     for tweet in tweets:
         await listener_function(auth_token, tweet)
 
+
 # Main asynchronous function to process fetch and process tweets
 async def periodic_task(auth_token):
     # Get the last processed tweet timestamp
@@ -147,6 +143,7 @@ async def periodic_task(auth_token):
 
     return False
 
+
 @asynccontextmanager
 async def lifespan(app):
     # remove last known tweet timestamp to reset the state on start
@@ -159,7 +156,7 @@ async def lifespan(app):
 
     job = partial(periodic_task, auth_token)
 
-    scheduler.add_job(job, IntervalTrigger(seconds=1))
+    scheduler.add_job(job, IntervalTrigger(seconds=10))
     scheduler.start()
 
     yield

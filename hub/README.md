@@ -89,3 +89,12 @@ ROUTER_URL=https://api.near.ai/v1
 ```bash
 npm run dev
 ```
+
+## Local Hub Features
+To enable the feature for "[Running Agents Based on Events from the NEAR Blockchain](/docs/near_events.md)," follow these steps:
+
+1. Set `READ_NEAR_EVENTS=True` in the `.env` file.
+2. Log in to NEAR AI by running [NEAR Login](/docs/login.md):
+
+   During this process, you will be prompted to sign with a NEAR account created for your hub. This signature will be used to trigger agents.
+

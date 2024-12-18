@@ -1,10 +1,9 @@
 import json
 import os
 from os import getenv
-from typing import Dict, Iterable, Union
+from typing import Dict
 
 from dotenv import load_dotenv
-from litellm.types.completion import ChatCompletionMessageParam
 from nearai.shared.near.sign import (
     CompletionSignaturePayload,
     create_inference_signature,

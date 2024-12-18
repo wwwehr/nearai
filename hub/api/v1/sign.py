@@ -32,12 +32,12 @@ def is_trusted_runner_api_key(runner_api_key):
 
 
 def get_hub_key() -> str:
-    return getenv("HUB_PRIVATE_KEY")
+    return getenv("HUB_PRIVATE_KEY", "")
 
 
 def get_signed_completion(
-    messages: Union[Iterable[ChatCompletionMessageParam], str],
-    model: Union[Iterable[ChatCompletionMessageParam], str],
+    messages_json: str,
+    model: str,
     temperature: float,
     max_tokens: int,
     response_message_text: str,
@@ -50,7 +50,7 @@ def get_signed_completion(
         agent_name=agent_name,
         completion=response_message_text,
         model=model,
-        messages=json.dumps(messages),
+        messages=messages_json,
         temperature=float(temperature),
         max_tokens=int(max_tokens),
     )

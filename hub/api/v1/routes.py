@@ -190,8 +190,7 @@ def chat_completions(
             raise HTTPException(status_code=400, detail=error_message) from None
 
     try:
-        runner_data = json.loads(auth.runner_data)
-        print("runner_data", runner_data)
+        runner_data = json.loads(auth.runner_data or "{}")
         agent = runner_data.get("agent", None)
         runner_api_key = runner_data.get("runner_api_key", None)
         # TODO add signature generation for streams too
@@ -205,9 +204,9 @@ def chat_completions(
                 agent_name=agent,
                 response_message_text=response_message_text,
                 model=request_model,
-                messages=[x.model_dump() for x in request.messages],
+                messages_json=json.dumps([x.model_dump() for x in request.messages]),
                 temperature=float(request.temperature),
-                max_tokens=int(request.max_tokens),
+                max_tokens=int(request.max_tokens or 0),
             )
 
             resp = resp.model_copy(update={"system_fingerprint": json.dumps(signed_completion)})

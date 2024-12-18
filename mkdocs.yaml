@@ -139,6 +139,7 @@ nav:
     - Secrets: 'hub_secrets.md'
     - Contributing: 'contributing.md'
     - Decentralization: 'decentralization.md'
+    - NEAR Event-Triggered Agents: 'near_events.md'
   - Assistants:
     - Overview: 'assistants/overview.md'
     - Integrate: 'assistants/integrate.md'

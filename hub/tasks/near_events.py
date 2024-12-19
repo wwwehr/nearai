@@ -27,7 +27,7 @@ BASE_URL = "https://mainnet.neardata.xyz/v0/block/"
 BLOCK_ID_FILE = "last_block_id.txt"
 
 # OPTION TO READ MULTIPLE BLOCKS PER RUN
-NUMBER_OF_BLOCKS_TO_READ_IF_NOT_SYNCED = 1
+NUMBER_OF_BLOCKS_TO_READ_IF_NOT_SYNCED = int(os.getenv("NEAR_EVENTS_NUMBER_OF_BLOCKS_TO_READ_PER_RUN", 2))
 
 scheduler = AsyncIOScheduler()
 
@@ -43,7 +43,7 @@ async def async_fetch_json(url: str) -> Any:
 
 async def get_latest_block_id():
     # DEBUG. This block has the required event
-    # return 134822056
+    # return 135350100
 
     data = await async_fetch_json("https://api.fastnear.com/status")
     if data:
@@ -111,6 +111,7 @@ async def process_log(log, receipt_execution_outcome, auth_token):
                             "event": event.get("event"),
                             "message": data.get("message", ""),
                             "signer_id": data.get("signer_id", ""),
+                            "request_id": data.get("request_id", None),
                             "env_vars": data.get("env_vars", None),
                             "referral_id": data.get("referral_id", ""),
                             "amount": data.get("amount", ""),
@@ -170,6 +171,8 @@ async def run_agent(agent, content, auth_token: AuthToken):
         delegate_execution=False,
         parent_run_id=None,
     )
+
+    logger.warning(f"Scheduling agent run: {agent}")
 
     create_run(thread_id=thread.id, run=run_params, auth=auth_token, scheduler=scheduler)
 

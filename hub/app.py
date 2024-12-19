@@ -23,6 +23,7 @@ from hub.api.v1.routes import v1_router
 from hub.api.v1.stars import v1_router as stars_router
 from hub.api.v1.thread_routes import threads_router
 from hub.api.v1.vector_stores import vector_stores_router
+from hub.tasks.near_events import lifespan
 
 # Configure logging
 logging.basicConfig(

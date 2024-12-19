@@ -17,6 +17,7 @@ The NEAR AI HUB monitors the latest blocks from the NEAR blockchain and can trig
       "env_vars": null,
       "signer_id": "account.near",
       "referral_id": null,
+      "request_id": null,
       "amount": "0"
     }
   ]
@@ -30,7 +31,7 @@ When such an event is detected, the agent specified in the `agent` field (e.g., 
 
 ```json
 {
-  "event": "agent_run",
+  "event": "run_agent",
   "message": "...",
   "receipt_id": "...",
   // Other fields from the `data` object in the logs.

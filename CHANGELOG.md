@@ -1,3 +1,17 @@
+## v0.1.6 (2024-12-19)
+
+### Feat
+
+- hub to read commands in EVENT_JSON logs in NEAR blocks and run … (#655)
+- env.completion to support `temperature` and `max_tokens` parameter for a specific request. (#652)
+- web-agent-framework updated packages (#481)
+
+### Fix
+
+- yield/resume compatibility (#663)
+- add /tmp folder as an option for `DATA_FOLDER` (#576)
+- service default model (#562)
+
 ## v0.1.5 (2024-11-09)
 
 ## v0.1.4 (2024-11-08)

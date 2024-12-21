@@ -3,18 +3,15 @@ import json
 import logging
 import os
 import re
-from contextlib import asynccontextmanager
-from functools import partial
 from typing import Any
 
 import httpx
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.interval import IntervalTrigger
 from dotenv import load_dotenv
 from nearai.shared.client_config import DEFAULT_MODEL
 
 from hub.api.v1.auth import AuthToken
 from hub.api.v1.thread_routes import RunCreateParamsBase, ThreadModel, _create_thread, create_run
+from hub.tasks.scheduler import get_async_scheduler
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -29,8 +26,6 @@ BLOCK_ID_FILE = "last_block_id.txt"
 
 # OPTION TO READ MULTIPLE BLOCKS PER RUN
 NUMBER_OF_BLOCKS_TO_READ_IF_NOT_SYNCED = int(os.getenv("NEAR_EVENTS_NUMBER_OF_BLOCKS_TO_READ_PER_RUN", 2))
-
-scheduler = AsyncIOScheduler()
 
 
 async def async_fetch_json(url: str) -> Any:
@@ -122,27 +117,16 @@ async def process_log(log, receipt_execution_outcome, auth_token):
                     )
 
 
-def load_auth_token():
-    from nearai.config import Config, load_config_file
-
-    app_config = Config()
-    # Update config from global config file
-    config_data = load_config_file(local=False)
-    app_config = app_config.update_with(config_data)
-
-    return app_config.auth
-
-
 async def run_agent(agent, content, auth_token: AuthToken):
-    if not agent:
-        return logger.error("Missing data")
+    if not agent or not content:
+        return logger.error("Missing data in scheduled call to run_agent")
 
     # TODO find out how to get rid of 401 error here
     # auth_token.on_behalf_of = signer_id
 
     thread_model = ThreadModel(
         meta_data={
-            "agent_ids": [agent],
+            "agent_ids": f"{agent}",
         },
         tool_resources=None,
         owner_id=auth_token.account_id,
@@ -175,7 +159,7 @@ async def run_agent(agent, content, auth_token: AuthToken):
 
     logger.warning(f"Scheduling agent run: {agent}")
 
-    create_run(thread_id=thread.id, run=run_params, auth=auth_token, scheduler=scheduler)
+    create_run(thread_id=thread.id, run=run_params, auth=auth_token, scheduler=get_async_scheduler())
 
 
 # Main asynchronous function to process blocks
@@ -221,7 +205,7 @@ async def process_blocks_in_parallel(auth_token, num_parallel=NUMBER_OF_BLOCKS_T
         return False
 
 
-async def periodic_task(auth_token: AuthToken):
+async def near_events_task(auth_token: AuthToken):
     # Try to catch up reading NUMBER_OF_BLOCKS_TO_READ_IF_NOT_SYNCED blocks per run
     # for _ in range(NUMBER_OF_BLOCKS_TO_READ_IF_NOT_SYNCED):
     #     block_found = await process_blocks_sequentially(auth_token)
@@ -231,24 +215,9 @@ async def periodic_task(auth_token: AuthToken):
     await process_blocks_in_parallel(auth_token)
 
 
-@asynccontextmanager
-async def lifespan(app):
-    if os.getenv("READ_NEAR_EVENTS", "false").lower() == "true":
-        # remove last known block_id to reset the state on start
-        if RESET_BLOCK_ID_ON_START:
-            if os.path.exists(BLOCK_ID_FILE):
-                os.remove(BLOCK_ID_FILE)
-                logger.info(f"File {BLOCK_ID_FILE} has been deleted.")
-
-        auth_token = load_auth_token()
-
-        job = partial(periodic_task, auth_token)
-
-        scheduler.add_job(job, IntervalTrigger(seconds=1))
-        scheduler.start()
-
-        yield
-
-        scheduler.shutdown()
-    else:
-        yield
+def process_near_events_initial_state():
+    # remove last known block_id to reset the state on start
+    if RESET_BLOCK_ID_ON_START:
+        if os.path.exists(BLOCK_ID_FILE):
+            os.remove(BLOCK_ID_FILE)
+            logger.info(f"File {BLOCK_ID_FILE} has been deleted.")

@@ -6,20 +6,44 @@ import tweepy  # type: ignore
 bearer_token = os.getenv("TWITTER_BEARER_TOKEN")
 client = tweepy.Client(bearer_token)
 
+TWEET_FIELDS = [
+    "article",
+    "attachments",
+    "author_id",
+    "card_uri",
+    "community_id",
+    "context_annotations",
+    "conversation_id",
+    "created_at",
+    "display_text_range",
+    # "edit_controls",  contains unserializable datetime
+    "edit_history_tweet_ids",
+    "entities",
+    "geo",
+    "id",
+    "in_reply_to_user_id",
+    "lang",
+    "media_metadata",
+    "note_tweet",
+    "possibly_sensitive",
+    "public_metrics",
+    "referenced_tweets",
+    "reply_settings",
+    "scopes",
+    "source",
+    "text",
+    "withheld",
+]
+
 
 async def get_latest_mentions(user_id, timestamp, max_results=5):
     try:
         # todo: pass timestamp to get only new mentions
-        response = client.get_users_mentions(user_id, max_results=max_results)
+        response = client.get_users_mentions(user_id, max_results=max_results, tweet_fields=TWEET_FIELDS)
         data = response.data
         if data:
-            for tweet in data:
-                print("text", tweet.text)
-                print("id", tweet.id)
-                print("===================")
             return data
         else:
-            print(f"No data, response status code: {response.status_code}")
             return None
     except tweepy.TooManyRequests as e:
         print("Rate limit exceeded. Headers:")

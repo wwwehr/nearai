@@ -16,14 +16,13 @@ from hub.api.v1.files import files_router
 from hub.api.v1.hub_secrets import hub_secrets_router
 from hub.api.v1.jobs import v1_router as job_router
 from hub.api.v1.logs import logs_router
-from hub.api.v1.neardata import lifespan
 from hub.api.v1.permissions import v1_router as permission_router
 from hub.api.v1.registry import v1_router as registry_router
 from hub.api.v1.routes import v1_router
 from hub.api.v1.stars import v1_router as stars_router
 from hub.api.v1.thread_routes import threads_router
 from hub.api.v1.vector_stores import vector_stores_router
-from hub.tasks.near_events import lifespan
+from hub.tasks.schedule import lifespan
 
 # Configure logging
 logging.basicConfig(

@@ -1,8 +1,8 @@
 """Agent key value storage.
 
-Revision ID: 531422e5c684
-Revises: e7197522ba61
-Create Date: 2024-12-17 16:41:32.671496
+Revision ID: c5af2948a246
+Revises: 7255ee296766
+Create Date: 2024-12-20 13:06:55.971788
 
 """
 
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "531422e5c684"
-down_revision: Union[str, None] = "e7197522ba61"
+revision: str = "c5af2948a246"
+down_revision: Union[str, None] = "7255ee296766"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

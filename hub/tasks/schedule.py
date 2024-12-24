@@ -31,12 +31,13 @@ async def lifespan(app):
     if read_near_events:
         process_near_events_initial_state()
         job = partial(near_events_task, auth_token)
-
+        await job()
         get_async_scheduler().add_job(job, IntervalTrigger(seconds=1))
 
     if read_x_events:
         process_x_events_initial_state()
         job = partial(x_events_task, auth_token)
+        await job()
         get_async_scheduler().add_job(job, IntervalTrigger(seconds=120))
 
     if read_near_events or read_x_events:

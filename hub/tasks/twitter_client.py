@@ -1,5 +1,6 @@
 import os
 import time
+from datetime import datetime, timedelta
 
 import tweepy  # type: ignore
 
@@ -36,10 +37,21 @@ TWEET_FIELDS = [
 ]
 
 
-async def get_latest_mentions(user_id, timestamp, max_results=5):
+async def get_latest_mentions(user_name, timestamp, max_results=10):
     try:
         # todo: pass timestamp to get only new mentions
-        response = client.get_users_mentions(user_id, max_results=max_results, tweet_fields=TWEET_FIELDS)
+        # response = client.get_users_mentions(user_id, max_results=max_results, tweet_fields=TWEET_FIELDS)
+
+        if not timestamp:
+            timestamp = datetime.utcnow() - timedelta(hours=1)
+            start_time = timestamp.isoformat() + "Z"
+        else:
+            start_time = datetime.utcfromtimestamp(timestamp).isoformat() + "Z"
+
+        response = client.search_recent_tweets(
+            query=f"@{user_name}", tweet_fields=TWEET_FIELDS, max_results=max_results, start_time=start_time
+        )
+
         data = response.data
         if data:
             return data

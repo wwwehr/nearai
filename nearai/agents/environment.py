@@ -1025,8 +1025,20 @@ class Environment(object):
         name = self._agents[0].name
         return self.client.get_agent_data(namespace, name)
 
-    def get_agent_data_by_key(self, key):
+    def get_agent_data_by_key(self, key, default=None):
         """Get agent data by key."""
         namespace = self._agents[0].namespace
         name = self._agents[0].name
-        return self.client.get_agent_data_by_key(namespace, name, key)
+        result = self.client.get_agent_data_by_key(namespace, name, key)
+        return (
+            result
+            if result
+            else {
+                "value": default,
+                "namespace": namespace,
+                "key": key,
+                "name": name,
+                "updated_at": "",
+                "created_at": "",
+            }
+        )

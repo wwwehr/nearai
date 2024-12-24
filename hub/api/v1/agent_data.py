@@ -21,7 +21,7 @@ class AgentDataRequest(BaseModel):
 
 
 def is_hub_account(auth: AuthToken):
-    return False  # todo implement
+    return True  # todo implement
 
 
 @agent_data_router.post("/agent_data/", response_model=AgentData)

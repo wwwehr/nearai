@@ -19,7 +19,7 @@ scheduler = AsyncIOScheduler()
 ACCOUNTS_TO_TRACK = ["nearai_intern", "zacodil"]
 
 # future: pull from agent metadata
-LISTENER_CONFIG = {"agent_name": "agent.raidvault.near/airdrop/0.11"}
+LISTENER_CONFIG = {"agent_name": "agent.raidvault.near/airdrop/latest"}
 
 
 def get_user_last_tweet_filename(user_name=""):

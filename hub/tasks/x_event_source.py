@@ -104,7 +104,7 @@ async def x_events_task(auth_token):
         save_last_tweet_time(last_tweet_timestamp, user_name)
 
     for tweet in x_tasks:
-        logger.info("Scheduling new agent run for message", tweet.text)
+        logger.info(f"Scheduling new agent run for message {tweet.text}")
         await listener_function(auth_token, tweet)
 
 

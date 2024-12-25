@@ -51,10 +51,20 @@ async def listener_function(auth_token, tweet):
         "replied_to": [],
     }
 
+    # add replied_to
     if "referenced_tweets" in tweet.data:
         for referenced_tweet in tweet.data["referenced_tweets"]:
             if referenced_tweet["type"] == "replied_to":
                 message["replied_to"].append(referenced_tweet["id"])
+
+    # convert urls (t.co/ => url text)
+    if "entities" in tweet.data:
+        if "urls" in tweet.data["entities"]:
+            for url_data in tweet.data["entities"]["urls"]:
+                if "://t.co/" in url_data["url"]:
+                    tweet.text = tweet.text.replace(url_data["url"], url_data["display_url"])
+                else:
+                    tweet.text = tweet.text.replace(url_data["url"], url_data["expanded_url"])
 
     await run_agent(
         LISTENER_CONFIG["agent_name"],
@@ -67,6 +77,7 @@ async def listener_function(auth_token, tweet):
 async def x_events_task(auth_token):
     # Get the last processed tweet timestamp
 
+    x_tasks = []
     for user_name in ACCOUNTS_TO_TRACK:
         last_tweet_timestamp = await get_last_tweet_timestamp(user_name)
 
@@ -76,17 +87,24 @@ async def x_events_task(auth_token):
         if tweets:
             for tweet in reversed(tweets):
                 tweet_timestamp = int(tweet.created_at.timestamp())
+                #  Check if the tweet is newer than the last processed tweet
                 if not last_tweet_timestamp or tweet_timestamp > int(last_tweet_timestamp):
-                    print("Scheduling new agent run for message", tweet.text)
-                    last_tweet_timestamp = tweet_timestamp
-                    await listener_function(auth_token, tweet)
+                    # Ensure the tweet is not already in x_tasks by checking its ID
+                    if not any(existing_tweet.id == tweet.id for existing_tweet in x_tasks):
+                        x_tasks.append(tweet)
 
-                    save_last_tweet_time(last_tweet_timestamp, user_name)
+                    last_tweet_timestamp = tweet_timestamp
 
                     # local_mode supports only single task
                     # return True
                 else:
                     print(f"Tweet is too old: {tweet_timestamp} < {last_tweet_timestamp}")
+
+        save_last_tweet_time(last_tweet_timestamp, user_name)
+
+    for tweet in x_tasks:
+        logger.info("Scheduling new agent run for message", tweet.text)
+        await listener_function(auth_token, tweet)
 
 
 def process_x_events_initial_state():

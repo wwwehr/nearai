@@ -61,10 +61,11 @@ async def listener_function(auth_token, tweet):
     if "entities" in tweet.data:
         if "urls" in tweet.data["entities"]:
             for url_data in tweet.data["entities"]["urls"]:
+                # Replace URLs in text
                 if "://t.co/" in url_data["url"]:
-                    tweet.text = tweet.text.replace(url_data["url"], url_data["display_url"])
+                    message["text"] = tweet.text.replace(url_data["url"], url_data["display_url"])
                 else:
-                    tweet.text = tweet.text.replace(url_data["url"], url_data["expanded_url"])
+                    message["text"] = tweet.text.replace(url_data["url"], url_data["expanded_url"])
 
     await run_agent(
         LISTENER_CONFIG["agent_name"],

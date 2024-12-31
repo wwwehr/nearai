@@ -1,6 +1,5 @@
 import io
 import json
-import os
 from typing import Any, Dict, Iterable, List, Literal, Optional, Union
 
 import litellm
@@ -33,8 +32,9 @@ load_dotenv()
 
 
 class InferenceClient(object):
-    def __init__(self, config: ClientConfig) -> None:  # noqa: D107
+    def __init__(self, config: ClientConfig, runner_api_key: str = "") -> None:  # noqa: D107
         self._config = config
+        self.runner_api_key = runner_api_key
         if config.auth is not None:
             self._auth = config.auth.generate_bearer_token()
         else:
@@ -85,9 +85,7 @@ class InferenceClient(object):
 
         auth_bearer_token = self._auth
         new_token = json.loads(auth_bearer_token)
-        # TODO read RUNNER_API_KEY from secured source instead of env var
-        runner_api_key = os.environ.get("RUNNER_API_KEY", None)
-        new_token["runner_data"] = json.dumps({"agent": agent_name, "runner_api_key": runner_api_key})
+        new_token["runner_data"] = json.dumps({"agent": agent_name, "runner_api_key": self.runner_api_key})
         auth_bearer_token = json.dumps(new_token)
 
         if temperature is None:

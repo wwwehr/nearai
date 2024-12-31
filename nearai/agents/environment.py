@@ -3,6 +3,7 @@ import io
 import json
 import logging
 import os
+import pwd
 import re
 import shlex
 import shutil
@@ -103,6 +104,7 @@ class Environment(object):
         env_vars: Optional[Dict[str, Any]] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
         print_system_log: bool = False,
+        agent_runner_user: Optional[str] = None,
         approvals: Optional[Dict[str, Any]] = default_approvals,
     ) -> None:
         self._path = path
@@ -116,6 +118,7 @@ class Environment(object):
         self._last_used_model = ""
         self.tool_resources: Dict[str, Any] = tool_resources if tool_resources else {}
         self.print_system_log = print_system_log
+        self.agent_runner_user = agent_runner_user
         self._approvals = approvals
         self._hub_client = hub_client
         self._thread_id = thread_id
@@ -1002,10 +1005,12 @@ class Environment(object):
             extra_body={"status": "requires_action"},
         )
 
-    def clear_temp_agent_files(self) -> None:
+    def clear_temp_agent_files(self, verbose=True) -> None:
         """Remove temp agent files created to be used in `runpy`."""
         for agent in self._agents:
             if os.path.exists(agent.temp_dir):
+                if verbose:
+                    print("removed agent.temp_files", agent.temp_dir)
                 shutil.rmtree(agent.temp_dir)
 
     def set_next_actor(self, who: str) -> None:

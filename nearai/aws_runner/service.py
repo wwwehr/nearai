@@ -16,11 +16,35 @@ from nearai.shared.inference_client import InferenceClient
 from nearai.shared.near.sign import SignatureVerificationResult, verify_signed_message
 from nearai.shared.provider_models import PROVIDER_MODEL_SEP
 
-cloudwatch = boto3.client("cloudwatch", region_name="us-east-2")
-
 OUTPUT_PATH = "/tmp/nearai-agent-runner"
 DEFAULT_API_URL = "https://api.near.ai"
+HUB_CONFIG_PATH = "/opt/hub_config.env"
 
+def load_secure_variables():
+    hub_config_path = os.environ.get("HUB_CONFIG_PATH", HUB_CONFIG_PATH)
+    variables = {}
+    if os.path.exists(hub_config_path):
+        with open(hub_config_path, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    key, value = line.split("=", 1)
+                    variables[key] = value
+
+    return variables
+
+
+def create_cloudwatch():
+    return boto3.client(
+            "cloudwatch",
+            region_name="us-east-2",
+            aws_access_key_id=secure_vars.get("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=secure_vars.get("AWS_SECRET_ACCESS_KEY")
+        )
+
+
+secure_vars = load_secure_variables()
+cloudwatch = create_cloudwatch()
 
 def handler(event, context):
     start_time = time.perf_counter()
@@ -77,7 +101,7 @@ def handler(event, context):
 
 
 def write_metric(metric_name, value, unit="Milliseconds", verbose=True):
-    if os.environ.get("AWS_ACCESS_KEY_ID"):  # running in lambda or locally passed credentials
+    if secure_vars.get("AWS_ACCESS_KEY_ID"):  # running in lambda or locally passed credentials
         cloudwatch.put_metric_data(
             Namespace="NearAI",
             MetricData=[
@@ -217,18 +241,18 @@ def start_with_environment(
     if verbose:
         print(
             "Agent info:"
-            f"provider: {agent.model_provider}\n"
-            f"model: {agent.model}\n"
-            f"temperature: {agent.model_temperature}\n"
-            f"max_tokens: {agent.model_max_tokens}\n"
-            f"max_iterations: {agent.max_iterations}\n"
+            f"- provider: {agent.model_provider}\n"
+            f"- model: {agent.model}\n"
+            f"- temperature: {agent.model_temperature}\n"
+            f"- max_tokens: {agent.model_max_tokens}\n"
+            f"- max_iterations: {agent.max_iterations}\n"
         )
 
     client_config = ClientConfig(
         base_url=api_url + "/v1",
         auth=auth,
     )
-    inference_client = InferenceClient(client_config)
+    inference_client = InferenceClient(client_config, secure_vars.get("RUNNER_API_KEY"))
     hub_client = client_config.get_hub_client()
     run_path = (
         additional_path
@@ -245,6 +269,7 @@ def start_with_environment(
         run_id,
         env_vars=user_env_vars,
         print_system_log=print_system_log,
+        agent_runner_user=secure_vars.get("AGNER_RUNNER_USER")
     )
     if agent.welcome_title:
         print(agent.welcome_title)

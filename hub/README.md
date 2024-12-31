@@ -98,3 +98,19 @@ To enable the feature for "[Running Agents Based on Events from the NEAR Blockch
 
    During this process, you will be prompted to sign with a NEAR account created for your hub. This signature will be used to trigger agents.
 
+## How to Sign HUB completions
+
+Set up `hub/.env`:
+- Define `HUB_PRIVATE_KEY` as the master private key to derive agents' private keys.
+- set `TRUSTED_RUNNER_API_KEYS` and list the API keys of all runners authorized to generate signed completions.
+
+Set up `nearai/aws_runner/.env`:
+- Define `RUNNER_API_KEY` with a key that is included in the Hub's TRUSTED_RUNNER_API_KEYS list.
+
+Once this setup is complete, agents will be able to receive signatures from the `env.signed_completion` method.
+
+**Why This Is Important**
+
+If any runner is allowed to request signatures from the Hub without proper restrictions, it could send modified agent code and still receive valid signatures. This compromises the integrity of the signed completions and opens the system to potential security risks.
+
+When TEE runners are implemented, this security measure can be simplified.

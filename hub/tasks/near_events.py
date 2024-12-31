@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -27,7 +28,7 @@ BASE_URL = "https://mainnet.neardata.xyz/v0/block/"
 BLOCK_ID_FILE = "last_block_id.txt"
 
 # OPTION TO READ MULTIPLE BLOCKS PER RUN
-NUMBER_OF_BLOCKS_TO_READ_IF_NOT_SYNCED = 1
+NUMBER_OF_BLOCKS_TO_READ_IF_NOT_SYNCED = int(os.getenv("NEAR_EVENTS_NUMBER_OF_BLOCKS_TO_READ_PER_RUN", 2))
 
 scheduler = AsyncIOScheduler()
 
@@ -43,7 +44,7 @@ async def async_fetch_json(url: str) -> Any:
 
 async def get_latest_block_id():
     # DEBUG. This block has the required event
-    # return 134822056
+    # return 135350100
 
     data = await async_fetch_json("https://api.fastnear.com/status")
     if data:
@@ -65,14 +66,14 @@ async def get_last_block_id():
 
 # Function to save the last blockId to a file
 def save_last_block_id(block_id):
-    logger.info(f"Saving last block {block_id}")
+    # logger.info(f"Saving last block {block_id}")
     with open(BLOCK_ID_FILE, "w") as f:
         f.write(str(block_id))
 
 
 # Asynchronous function to load a block by its ID
 async def load_block(block_id, auth_token):
-    logger.info(f"Loading block {block_id}")
+    # logger.info(f"Loading block {block_id}")
     data = await async_fetch_json(f"{BASE_URL}{block_id}")
     if data and data.get("shards"):
         # If data and shards are found, process them
@@ -111,6 +112,7 @@ async def process_log(log, receipt_execution_outcome, auth_token):
                             "event": event.get("event"),
                             "message": data.get("message", ""),
                             "signer_id": data.get("signer_id", ""),
+                            "request_id": data.get("request_id", None),
                             "env_vars": data.get("env_vars", None),
                             "referral_id": data.get("referral_id", ""),
                             "amount": data.get("amount", ""),
@@ -171,32 +173,62 @@ async def run_agent(agent, content, auth_token: AuthToken):
         parent_run_id=None,
     )
 
+    logger.warning(f"Scheduling agent run: {agent}")
+
     create_run(thread_id=thread.id, run=run_params, auth=auth_token, scheduler=scheduler)
 
 
 # Main asynchronous function to process blocks
-async def process_blocks(auth_token):
-    # Get the last processed blockId
+# async def process_blocks_sequentially(auth_token):
+#     # Get the last processed blockId
+#     block_id = await get_last_block_id()
+#
+#     # Try to load the next block
+#     new_block_id = await load_block(block_id + 1, auth_token)
+#     if new_block_id:
+#         # If block is found, save the new blockId
+#         logger.info(f"New block found: {new_block_id}")
+#         save_last_block_id(new_block_id)
+#         return True
+#     else:
+#         logger.warning(f"Block not found: {block_id}")
+#         return False
+
+
+async def process_blocks_in_parallel(auth_token, num_parallel=NUMBER_OF_BLOCKS_TO_READ_IF_NOT_SYNCED):
     block_id = await get_last_block_id()
 
-    # Try to load the next block
-    new_block_id = await load_block(block_id + 1, auth_token)
-    if new_block_id:
-        # If block is found, save the new blockId
-        logger.info(f"New block found: {new_block_id}")
-        save_last_block_id(new_block_id)
+    async def process_single_block(block_id):
+        new_block_id = await load_block(block_id, auth_token)
+        if new_block_id:
+            # logger.info(f"New block found: {new_block_id}")
+            save_last_block_id(new_block_id)
+            return new_block_id
+        else:
+            logger.warning(f"Block not found: {block_id}")
+            return None
+
+    tasks = [process_single_block(block_id + i + 1) for i in range(num_parallel)]
+
+    results = await asyncio.gather(*tasks)
+    successful_blocks = [result for result in results if result is not None]
+
+    if successful_blocks:
+        logger.info(f"Successfully loaded blocks: {successful_blocks}")
         return True
     else:
-        logger.warning(f"Block not found: {block_id}")
+        logger.warning("No new blocks were found.")
         return False
 
 
 async def periodic_task(auth_token: AuthToken):
     # Try to catch up reading NUMBER_OF_BLOCKS_TO_READ_IF_NOT_SYNCED blocks per run
-    for _ in range(NUMBER_OF_BLOCKS_TO_READ_IF_NOT_SYNCED):
-        block_found = await process_blocks(auth_token)
-        if not block_found:
-            break
+    # for _ in range(NUMBER_OF_BLOCKS_TO_READ_IF_NOT_SYNCED):
+    #     block_found = await process_blocks_sequentially(auth_token)
+    #     if not block_found:
+    #         break
+
+    await process_blocks_in_parallel(auth_token)
 
 
 @asynccontextmanager

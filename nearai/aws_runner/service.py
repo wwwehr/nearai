@@ -20,6 +20,7 @@ OUTPUT_PATH = "/tmp/nearai-agent-runner"
 DEFAULT_API_URL = "https://api.near.ai"
 HUB_CONFIG_PATH = "/opt/hub_config.env"
 
+
 def load_secure_variables():
     hub_config_path = os.environ.get("HUB_CONFIG_PATH", HUB_CONFIG_PATH)
     variables = {}
@@ -36,15 +37,16 @@ def load_secure_variables():
 
 def create_cloudwatch():
     return boto3.client(
-            "cloudwatch",
-            region_name="us-east-2",
-            aws_access_key_id=secure_vars.get("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=secure_vars.get("AWS_SECRET_ACCESS_KEY")
-        )
+        "cloudwatch",
+        region_name="us-east-2",
+        aws_access_key_id=secure_vars.get("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=secure_vars.get("AWS_SECRET_ACCESS_KEY"),
+    )
 
 
 secure_vars = load_secure_variables()
 cloudwatch = create_cloudwatch()
+
 
 def handler(event, context):
     start_time = time.perf_counter()
@@ -269,7 +271,7 @@ def start_with_environment(
         run_id,
         env_vars=user_env_vars,
         print_system_log=print_system_log,
-        agent_runner_user=secure_vars.get("AGNER_RUNNER_USER")
+        agent_runner_user=secure_vars.get("AGNER_RUNNER_USER"),
     )
     if agent.welcome_title:
         print(agent.welcome_title)

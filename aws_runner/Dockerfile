@@ -7,7 +7,7 @@ ARG FRAMEWORK=""
 ARG AGNER_RUNNER_USER="agent_runner"
 ARG HUB_CONFIG_PATH="/opt/hub_config.env"
 
-COPY nearai/aws_runner/frameworks/requirements${FRAMEWORK}.txt ${LAMBDA_TASK_ROOT}
+COPY aws_runner/frameworks/requirements${FRAMEWORK}.txt ${LAMBDA_TASK_ROOT}
 
 RUN pip install -r requirements${FRAMEWORK}.txt
 
@@ -19,7 +19,7 @@ RUN /usr/sbin/groupadd -r $AGNER_RUNNER_USER && \
 RUN mkdir -p /$AGNER_RUNNER_USER/.nearai/registry && \
     chown $AGNER_RUNNER_USER:$AGNER_RUNNER_USER /$AGNER_RUNNER_USER/.nearai/registry
 
-COPY nearai/aws_runner/.env $HUB_CONFIG_PATH
+COPY aws_runner/.env $HUB_CONFIG_PATH
 RUN chown root:root $HUB_CONFIG_PATH && chmod 600 $HUB_CONFIG_PATH
 
 

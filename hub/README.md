@@ -104,7 +104,7 @@ Set up `hub/.env`:
 - Define `HUB_PRIVATE_KEY` as the master private key to derive agents' private keys.
 - set `TRUSTED_RUNNER_API_KEYS` and list the API keys of all runners authorized to generate signed completions.
 
-Set up `nearai/aws_runner/.env`:
+Set up `aws_runner/.env`:
 - Define `RUNNER_API_KEY` with a key that is included in the Hub's TRUSTED_RUNNER_API_KEYS list.
 
 Once this setup is complete, agents will be able to receive signatures from the `env.signed_completion` method.

@@ -359,10 +359,23 @@ def list_entries(
     )
 
 
+def agents_with_x_accounts_to_track() -> List[EntryInformation]:
+    """Returns latest version of agents that track x_accounts."""
+    # TODO add a dime condition to avoid infinite x read ?
+    res = list_entries_inner(
+        category="agent",
+        custom_where="details::agent::x_accounts_to_track IS NOT NULL",
+        show_hidden=False,
+        show_latest_version=True,
+    )
+    return res
+
+
 def list_entries_inner(
     namespace: str = "",
     category: str = "",
     tags: str = "",
+    custom_where: str = "",
     total: int = 32,
     offset: int = 0,
     show_hidden: bool = False,
@@ -406,6 +419,9 @@ def list_entries_inner(
         if show_latest_version
         else ""
     )
+
+    # TODO add extra protection to avoid SQL INJECTION?
+    custom_where_condition = f" AND ({custom_where})" if custom_where else ""
 
     bind_params["star_point_of_view"] = star_point_of_view
     bind_params["starred_by"] = starred_by
@@ -467,6 +483,7 @@ def list_entries_inner(
                 {namespace_condition}
                 {starred_by_condition}
                 {fork_of_condition}
+                {custom_where_condition}
             ORDER BY registry.id DESC
             LIMIT :total
             OFFSET :offset
@@ -528,6 +545,7 @@ def list_entries_inner(
                             {namespace_condition}
                             {starred_by_condition}
                             {fork_of_condition}
+                            {custom_where_condition}
                         GROUP BY registry.id
                         HAVING COUNT(DISTINCT entry_tags.tag) = :ntags
                     ),
@@ -553,6 +571,8 @@ def list_entries_inner(
             bind_params["upper_bound"] = offset + total + 1
             bind_params["tags"] = tags_list
             bind_params["ntags"] = len(tags_list)
+
+        print("query_text", query_text)
 
         for (
             id,

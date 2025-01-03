@@ -6,7 +6,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 from hub.tasks.near_events import near_events_task, process_near_events_initial_state
 from hub.tasks.scheduler import get_async_scheduler
-from hub.tasks.x_event_source import process_x_events_initial_state, x_events_task
+from hub.tasks.x_event_source import x_events_task
 
 
 def load_auth_token():
@@ -35,7 +35,6 @@ async def lifespan(app):
         get_async_scheduler().add_job(job, IntervalTrigger(seconds=1))
 
     if read_x_events:
-        process_x_events_initial_state()
         job = partial(x_events_task, auth_token)
         await job()
         get_async_scheduler().add_job(job, IntervalTrigger(seconds=120))

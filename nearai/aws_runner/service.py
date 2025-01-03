@@ -44,6 +44,23 @@ def create_cloudwatch():
     )
 
 
+def clear_aws_env_vars():
+    # Remove AWS credentials from the environment variables in the current process.
+    # These variables are typically set automatically in AWS Lambda or other environments
+    # and may expose sensitive information if not handled properly.
+    keys_to_remove = [
+        "AWS_ACCESS_KEY_ID",  # Access key ID for AWS
+        "AWS_SECRET_ACCESS_KEY",  # Secret access key for AWS
+        "AWS_SESSION_TOKEN",  # Session token for temporary credentials
+    ]
+
+    # Loop through the list of keys and delete them from the environment if they exist.
+    for key in keys_to_remove:
+        if key in os.environ:
+            del os.environ[key]
+
+
+clear_aws_env_vars()
 secure_vars = load_secure_variables()
 cloudwatch = create_cloudwatch()
 

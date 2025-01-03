@@ -34,15 +34,6 @@ class InferenceClient(object):
         private_auth = config.auth.generate_bearer_token() if config.auth is not None else None
         private_client = openai.OpenAI(base_url=self._config.base_url, api_key=private_auth)
 
-        # This makes sense in the CLI where we don't mind doing this request and caching it.
-        # In the aws_runner this is an extra request every time we run.
-        # TODO(#233): add a choice of a provider model in aws_runner, and then this step can be skipped.
-
-        def provider_models() -> ProviderModels:  # noqa: D102
-            return ProviderModels(self._config)
-
-        self.provider_models = provider_models()
-
         def completions(
             model: str,
             messages: Iterable[ChatCompletionMessageParam],
@@ -294,6 +285,13 @@ class InferenceClient(object):
             return private_client.images.generate(prompt=prompt)
 
         self.generate_image = generate_image
+
+    # This makes sense in the CLI where we don't mind doing this request and caching it.
+    # In the aws_runner this is an extra request every time we run.
+    # TODO(#233): add a choice of a provider model in aws_runner, and then this step can be skipped.
+    @property
+    def provider_models(self) -> ProviderModels:  # noqa: D102
+        return ProviderModels(self._config)
 
     def get_vector_store(self, vector_store_id: str) -> VectorStore:
         """Gets a vector store by id."""

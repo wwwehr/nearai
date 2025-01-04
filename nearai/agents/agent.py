@@ -1,6 +1,8 @@
 import io
 import json
+import multiprocessing
 import os
+import pwd
 import shutil
 import sys
 import tempfile
@@ -40,6 +42,10 @@ class Agent(object):
 
         self.temp_dir = self.write_agent_files_to_temp(agent_files)
         self.change_to_temp_dir = change_to_temp_dir
+
+    def get_full_name(self):
+        """Returns full agent name."""
+        return f"{self.namespace}/{self.name}/{self.version}"
 
     @staticmethod
     def write_agent_files_to_temp(agent_files):
@@ -131,10 +137,14 @@ class Agent(object):
             "__file__": agent_filename,
         }
 
-        try:
-            if self.change_to_temp_dir:
-                os.chdir(self.temp_dir)
-            sys.path.insert(0, self.temp_dir)
+        def run_agent_code(agent_filename, namespace):
+            # switch to user env.agent_runner_user
+            if env.agent_runner_user:
+                user_info = pwd.getpwnam(env.agent_runner_user)
+                os.setgid(user_info.pw_gid)
+                os.setuid(user_info.pw_uid)
+
+            # Run the code
             # NOTE: runpy.run_path does not work in a multithreaded environment when running benchmark.
             #       The performance of runpy.run_path may also change depending on a system, e.g. it may
             #       work on Linux but not work on Mac.
@@ -142,6 +152,18 @@ class Agent(object):
             with open(agent_filename, "r") as f:
                 code = compile(f.read(), agent_filename, "exec")
                 exec(code, namespace)
+
+        try:
+            if self.change_to_temp_dir:
+                os.chdir(self.temp_dir)
+            sys.path.insert(0, self.temp_dir)
+
+            if env.agent_runner_user:
+                process = multiprocessing.Process(target=run_agent_code, args=(agent_filename, namespace))
+                process.start()
+                process.join()
+            else:
+                run_agent_code(agent_filename, namespace)
         finally:
             sys.path.remove(self.temp_dir)
             if self.change_to_temp_dir:

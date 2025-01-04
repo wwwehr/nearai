@@ -16,10 +16,37 @@ from nearai.shared.inference_client import InferenceClient
 from nearai.shared.near.sign import SignatureVerificationResult, verify_signed_message
 from nearai.shared.provider_models import PROVIDER_MODEL_SEP
 
-cloudwatch = boto3.client("cloudwatch", region_name="us-east-2")
-
 OUTPUT_PATH = "/tmp/nearai-agent-runner"
 DEFAULT_API_URL = "https://api.near.ai"
+
+
+def create_cloudwatch():
+    return boto3.client("cloudwatch", region_name="us-east-2")
+
+
+def load_protected_variables():
+    variables = {}
+
+    # Remove AWS credentials and HUB API KEYS from the environment variables.
+    # These variables are typically set automatically in AWS Lambda or other environments
+    # and may expose sensitive information if not handled properly.
+    keys_to_remove = [
+        "AWS_ACCESS_KEY_ID",  # Access key ID for AWS
+        "AWS_SECRET_ACCESS_KEY",  # Secret access key for AWS
+        "RUNNER_API_KEY",  # API KEY for a NEAR AI Runner
+    ]
+
+    # Loop through the list of keys and delete them from the environment if they exist.
+    for key in keys_to_remove:
+        if key in os.environ:
+            variables[key] = os.environ[key]
+            del os.environ[key]
+
+    return variables
+
+
+cloudwatch = create_cloudwatch()
+protected_vars = load_protected_variables()
 
 
 def handler(event, context):
@@ -77,7 +104,7 @@ def handler(event, context):
 
 
 def write_metric(metric_name, value, unit="Milliseconds", verbose=True):
-    if os.environ.get("AWS_ACCESS_KEY_ID"):  # running in lambda or locally passed credentials
+    if cloudwatch:  # running in lambda or locally passed credentials
         cloudwatch.put_metric_data(
             Namespace="NearAI",
             MetricData=[
@@ -188,12 +215,19 @@ def start_with_environment(
     near_client = PartialNearClient(api_url, auth)
 
     loaded_agents: list[Agent] = []
+
+    # TODO: Handle the case when multiple agents are provided (comma-separated)
+    if "," in agents:
+        print("Only a single agent run is supported.")
+        agents = agents.split(",")[0]
+
     for agent_name in agents.split(","):
         agent = load_agent(near_client, agent_name, params, additional_path, verbose=verbose)
         # agents secrets has higher priority then agent metadata's env_vars
         agent.env_vars = {**agent.env_vars, **agent_env_vars.get(agent_name, {})}
         loaded_agents.append(agent)
 
+    # TODO: Handle the case when multiple agents are provided (comma-separated)
     agent = loaded_agents[0]
     if params.get("provider", ""):
         agent.model_provider = params["provider"]
@@ -210,18 +244,18 @@ def start_with_environment(
     if verbose:
         print(
             "Agent info:"
-            f"provider: {agent.model_provider}\n"
-            f"model: {agent.model}\n"
-            f"temperature: {agent.model_temperature}\n"
-            f"max_tokens: {agent.model_max_tokens}\n"
-            f"max_iterations: {agent.max_iterations}\n"
+            f"- provider: {agent.model_provider}\n"
+            f"- model: {agent.model}\n"
+            f"- temperature: {agent.model_temperature}\n"
+            f"- max_tokens: {agent.model_max_tokens}\n"
+            f"- max_iterations: {agent.max_iterations}\n"
         )
 
     client_config = ClientConfig(
         base_url=api_url + "/v1",
         auth=auth,
     )
-    inference_client = InferenceClient(client_config)
+    inference_client = InferenceClient(client_config, protected_vars.get("RUNNER_API_KEY"))
     hub_client = client_config.get_hub_client()
     run_path = (
         additional_path
@@ -238,6 +272,7 @@ def start_with_environment(
         run_id,
         env_vars=user_env_vars,
         print_system_log=print_system_log,
+        agent_runner_user=protected_vars.get("AGENT_RUNNER_USER"),
     )
     if agent.welcome_title:
         print(agent.welcome_title)

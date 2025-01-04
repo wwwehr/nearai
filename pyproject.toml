@@ -214,5 +214,6 @@ module = [
     'torchao.*',
     'fireworks.*',
     'apscheduler.*',
+    "ed25519.*"
 ]
 ignore_missing_imports = true

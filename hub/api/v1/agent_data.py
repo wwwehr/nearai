@@ -17,7 +17,7 @@ class AgentDataRequest(BaseModel):
     namespace: str
     name: str
     key: str
-    value: Union[str, dict[Any, Any]]
+    value: Union[dict[Any, Any]]
 
 
 def is_hub_account(auth: AuthToken):
@@ -55,7 +55,7 @@ def save_agent_data(request_data: AgentDataRequest, auth: AuthToken = Depends(ge
 
 
 @agent_data_router.get("/agent_data/{namespace}/{name}", response_model=List[AgentData])
-def get_agent_data(namespace: str, name: str, auth: AuthToken = Depends(get_auth)):
+def get_agent_data(namespace: str, name: str, auth: AuthToken = Depends(get_auth)) -> List[AgentData]:
     if not (auth.account_id == namespace) and not is_hub_account(auth):
         raise HTTPException(status_code=403, detail="Not authorized to retrieve data for this agent")
 
@@ -65,7 +65,9 @@ def get_agent_data(namespace: str, name: str, auth: AuthToken = Depends(get_auth
 
 
 @agent_data_router.get("/agent_data/{namespace}/{name}/{key}", response_model=Optional[AgentData])
-def get_agent_data_by_key(namespace: str, name: str, key: str, auth: AuthToken = Depends(get_auth)):
+def get_agent_data_by_key(
+    namespace: str, name: str, key: str, auth: AuthToken = Depends(get_auth)
+) -> Optional[AgentData]:
     if not (auth.account_id == namespace) and not is_hub_account(auth):
         raise HTTPException(status_code=403, detail="Not authorized to retrieve data for this agent")
 

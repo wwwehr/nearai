@@ -1,9 +1,10 @@
 import logging
 import os
+from typing import Dict, List
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from hub.api.v1.registry import agents_with_x_accounts_to_track
+from hub.api.v1.registry import EntryInformation, agents_with_x_accounts_to_track
 from hub.tasks.near_events import run_agent
 from hub.tasks.twitter_client import get_latest_mentions
 
@@ -21,7 +22,7 @@ def get_user_last_tweet_filename(user_name=""):
     return TWEET_STATUS_FILE.replace(".txt", f"_{user_name}.txt")
 
 
-X_ACCOUNTS_TO_TRACK = {}
+X_ACCOUNTS_TO_TRACK: Dict[str, List[EntryInformation]] = {}
 
 # TODO reload this list on Timeout
 registry_items_with_x_accounts_to_track = agents_with_x_accounts_to_track()

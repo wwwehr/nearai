@@ -23,6 +23,7 @@ def get_user_last_tweet_filename(user_name=""):
 
 X_ACCOUNTS_TO_TRACK = {}
 
+# TODO reload this list on Timeout
 registry_items_with_x_accounts_to_track = agents_with_x_accounts_to_track()
 for registry_item in registry_items_with_x_accounts_to_track:
     x_accounts_to_add = registry_item.details.get("agent", {}).get("x_accounts_to_track", [])
@@ -44,6 +45,8 @@ for registry_item in registry_items_with_x_accounts_to_track:
                 else:
                     X_ACCOUNTS_TO_TRACK[x_account_to_add] = [registry_item]
 
+x_accounts_list = ", ".join(X_ACCOUNTS_TO_TRACK.keys())
+print(f"X accounts to track: {x_accounts_list}")
 
 # remove last known tweet timestamp to reset the state on start
 if RESET_TWEET_TIMESTAMP_ON_START:

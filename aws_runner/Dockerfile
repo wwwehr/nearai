@@ -4,37 +4,28 @@ RUN yum install -y gcc libffi-devel openssl-devel shadow-utils acl
 
 # pass with --build-arg FRAMEWORK=-langgraph
 ARG FRAMEWORK=""
-ARG AGNER_RUNNER_USER="agent_runner"
-ARG HUB_CONFIG_PATH="/tmp/hub_config.env"
 
 COPY aws_runner/frameworks/requirements${FRAMEWORK}.txt ${LAMBDA_TASK_ROOT}
 
 RUN pip install -r requirements${FRAMEWORK}.txt
 
-CMD /bin/sh -c "echo Setting agent runner user as $AGNER_RUNNER_USER"
+ARG AGENT_RUNNER_USER="agent_runner"
 
-RUN /usr/sbin/groupadd -r $AGNER_RUNNER_USER && \
-    /usr/sbin/useradd -r -g $AGNER_RUNNER_USER -m $AGNER_RUNNER_USER
+CMD /bin/sh -c "echo Setting agent runner user as $AGENT_RUNNER_USER"
 
-RUN mkdir -p /$AGNER_RUNNER_USER/.nearai/registry && \
-    chown $AGNER_RUNNER_USER:$AGNER_RUNNER_USER /$AGNER_RUNNER_USER/.nearai/registry
+RUN /usr/sbin/groupadd -r $AGENT_RUNNER_USER && \
+    /usr/sbin/useradd -r -g $AGENT_RUNNER_USER -m $AGENT_RUNNER_USER
 
-COPY aws_runner/.env $HUB_CONFIG_PATH
-# The command sets the ownership of the file at $HUB_CONFIG_PATH to user and group with UID/GID 1000:1000.
-# UID 1000 is the default user ID for the non-root user in AWS Lambda's execution environment.
-# This ensures that the file is owned by the Lambda execution user and the group associated with it.
-# chmod 600 ensures that the file is readable and writable only by the owner, providing restricted access.
-RUN chown 1000:1000 $HUB_CONFIG_PATH && chmod 600 $HUB_CONFIG_PATH
+RUN mkdir -p /$AGENT_RUNNER_USER/.nearai/registry && \
+    chown $AGENT_RUNNER_USER:$AGENT_RUNNER_USER /$AGENT_RUNNER_USER/.nearai/registry
 
+RUN chown -R $AGENT_RUNNER_USER:$AGENT_RUNNER_USER /var/task
 
-RUN chown -R $AGNER_RUNNER_USER:$AGNER_RUNNER_USER /var/task
-
-RUN setfacl -Rdm u:$AGNER_RUNNER_USER:rwx /tmp && \
-    setfacl -Rm u:$AGNER_RUNNER_USER:rwx /tmp
+RUN setfacl -Rdm u:$AGENT_RUNNER_USER:rwx /tmp && \
+    setfacl -Rm u:$AGENT_RUNNER_USER:rwx /tmp
 
 
 RUN mkdir ${LAMBDA_TASK_ROOT}/nearai
 COPY nearai ${LAMBDA_TASK_ROOT}/nearai
 
-# USER lambda_user
 CMD [ "nearai/aws_runner/service.handler" ]

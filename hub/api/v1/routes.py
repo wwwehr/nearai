@@ -195,7 +195,7 @@ def chat_completions(
         runner_api_key = runner_data.get("runner_api_key", None)
         # TODO add signature generation for streams too
         if not request.stream and agent and is_trusted_runner_api_key(runner_api_key):
-            print(f"Generation signature for {agent}...")
+            logger.info(f"Generation signature for {agent}...")
 
             request_model = f"{request.provider}::{request.model}" if request.provider else request.model
 

@@ -18,51 +18,35 @@ from nearai.shared.provider_models import PROVIDER_MODEL_SEP
 
 OUTPUT_PATH = "/tmp/nearai-agent-runner"
 DEFAULT_API_URL = "https://api.near.ai"
-HUB_CONFIG_PATH = "/tmp/hub_config.env"
-
-
-def load_secure_variables():
-    hub_config_path = os.environ.get("HUB_CONFIG_PATH", HUB_CONFIG_PATH)
-    variables = {}
-    if os.path.exists(hub_config_path):
-        with open(hub_config_path, "r") as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#"):
-                    key, value = line.split("=", 1)
-                    variables[key] = value
-
-    return variables
 
 
 def create_cloudwatch():
-    return boto3.client(
-        "cloudwatch",
-        region_name="us-east-2",
-        aws_access_key_id=secure_vars.get("AWS_ACCESS_KEY_ID"),
-        aws_secret_access_key=secure_vars.get("AWS_SECRET_ACCESS_KEY"),
-    )
+    return boto3.client("cloudwatch", region_name="us-east-2")
 
 
-def clear_aws_env_vars():
-    # Remove AWS credentials from the environment variables in the current process.
+def load_protected_variables():
+    variables = {}
+
+    # Remove AWS credentials and HUB API KEYS from the environment variables.
     # These variables are typically set automatically in AWS Lambda or other environments
     # and may expose sensitive information if not handled properly.
     keys_to_remove = [
         "AWS_ACCESS_KEY_ID",  # Access key ID for AWS
         "AWS_SECRET_ACCESS_KEY",  # Secret access key for AWS
-        "AWS_SESSION_TOKEN",  # Session token for temporary credentials
+        "RUNNER_API_KEY",  # API KEY for a NEAR AI Runner
     ]
 
     # Loop through the list of keys and delete them from the environment if they exist.
     for key in keys_to_remove:
         if key in os.environ:
+            variables[key] = os.environ[key]
             del os.environ[key]
 
+    return variables
 
-clear_aws_env_vars()
-secure_vars = load_secure_variables()
+
 cloudwatch = create_cloudwatch()
+protected_vars = load_protected_variables()
 
 
 def handler(event, context):
@@ -120,7 +104,7 @@ def handler(event, context):
 
 
 def write_metric(metric_name, value, unit="Milliseconds", verbose=True):
-    if secure_vars.get("AWS_ACCESS_KEY_ID"):  # running in lambda or locally passed credentials
+    if cloudwatch:  # running in lambda or locally passed credentials
         cloudwatch.put_metric_data(
             Namespace="NearAI",
             MetricData=[
@@ -271,7 +255,7 @@ def start_with_environment(
         base_url=api_url + "/v1",
         auth=auth,
     )
-    inference_client = InferenceClient(client_config, secure_vars.get("RUNNER_API_KEY"))
+    inference_client = InferenceClient(client_config, protected_vars.get("RUNNER_API_KEY"))
     hub_client = client_config.get_hub_client()
     run_path = (
         additional_path
@@ -288,7 +272,7 @@ def start_with_environment(
         run_id,
         env_vars=user_env_vars,
         print_system_log=print_system_log,
-        agent_runner_user=secure_vars.get("AGNER_RUNNER_USER"),
+        agent_runner_user=protected_vars.get("AGENT_RUNNER_USER"),
     )
     if agent.welcome_title:
         print(agent.welcome_title)

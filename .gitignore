@@ -5,7 +5,6 @@ __pycache__/
 /nearai/tests/test-agents/
 venv
 *.env
-/openapi_client/
 .mise*
 site/
 .cache/

@@ -18,7 +18,7 @@ from nearai.shared.provider_models import PROVIDER_MODEL_SEP
 
 OUTPUT_PATH = "/tmp/nearai-agent-runner"
 DEFAULT_API_URL = "https://api.near.ai"
-HUB_CONFIG_PATH = "/opt/hub_config.env"
+HUB_CONFIG_PATH = "/tmp/hub_config.env"
 
 
 def load_secure_variables():

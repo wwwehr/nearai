@@ -860,6 +860,7 @@ class Environment(object):
         **kwargs: Any,
     ) -> Dict[str, str]:
         """Returns a completion for the given messages using the given model with the agent signature."""
+        # TODO Return signed completions for non-latest versions only?
         agent_name = self.get_primary_agent().get_full_name()
         raw_response = self.completions(messages, model, agent_name=agent_name, **kwargs)
         assert isinstance(raw_response, ModelResponse), "Expected ModelResponse"

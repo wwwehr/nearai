@@ -345,17 +345,17 @@ def list_entries(
     fork_of_namespace: str = "",
 ) -> List[EntryInformation]:
     return list_entries_inner(
-        namespace,
-        category,
-        tags,
-        total,
-        offset,
-        show_hidden,
-        show_latest_version,
-        starred_by,
-        star_point_of_view,
-        fork_of_name,
-        fork_of_namespace,
+        namespace=namespace,
+        category=category,
+        tags=tags,
+        total=total,
+        offset=offset,
+        show_hidden=show_hidden,
+        show_latest_version=show_latest_version,
+        starred_by=starred_by,
+        star_point_of_view=star_point_of_view,
+        fork_of_name=fork_of_name,
+        fork_of_namespace=fork_of_namespace,
     )
 
 
@@ -571,8 +571,6 @@ def list_entries_inner(
             bind_params["upper_bound"] = offset + total + 1
             bind_params["tags"] = tags_list
             bind_params["ntags"] = len(tags_list)
-
-        print("query_text", query_text)
 
         for (
             id,

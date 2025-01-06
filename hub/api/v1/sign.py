@@ -35,7 +35,7 @@ def get_hub_key() -> str:
 
 
 def get_signed_completion(
-    messages_json: str,
+    messages: list[dict[str, str]],
     model: str,
     temperature: float,
     max_tokens: int,
@@ -49,7 +49,7 @@ def get_signed_completion(
         agent_name=agent_name,
         completion=response_message_text,
         model=model,
-        messages=messages_json,
+        messages=messages,
         temperature=float(temperature),
         max_tokens=int(max_tokens),
     )

@@ -1,4 +1,5 @@
 import io
+import json
 from typing import Any, Dict, Iterable, List, Literal, Optional, Union
 
 import litellm
@@ -28,11 +29,11 @@ from nearai.shared.provider_models import ProviderModels
 
 
 class InferenceClient(object):
-    def __init__(self, config: ClientConfig) -> None:  # noqa: D107
+    def __init__(self, config: ClientConfig, runner_api_key: str = "") -> None:  # noqa: D107
         self._config = config
 
         private_auth = config.auth.generate_bearer_token() if config.auth is not None else None
-        private_client = openai.OpenAI(base_url=self._config.base_url, api_key=private_auth)
+        private_client = openai.OpenAI(base_url=config.base_url, api_key=private_auth)
 
         def completions(
             model: str,
@@ -40,6 +41,7 @@ class InferenceClient(object):
             stream: bool = False,
             temperature: Optional[float] = None,
             max_tokens: Optional[int] = None,
+            agent_name: Optional[str] = None,
             **kwargs: Any,
         ) -> Union[ModelResponse, CustomStreamWrapper]:
             """Takes a `model` and `messages` and returns completions.
@@ -49,6 +51,9 @@ class InferenceClient(object):
             2. `model_short_name`. Default provider will be used.
             """
             provider, model = self.provider_models.match_provider_model(model)
+
+            new_private_auth = json.loads(private_auth)
+            new_private_auth["runner_data"] = json.dumps({"agent": agent_name, "runner_api_key": runner_api_key})
 
             if temperature is None:
                 temperature = DEFAULT_MODEL_TEMPERATURE
@@ -72,7 +77,7 @@ class InferenceClient(object):
                         max_tokens=max_tokens,
                         base_url=self._config.base_url,
                         provider=provider,
-                        api_key=private_auth,
+                        api_key=json.dumps(new_private_auth),
                         **kwargs,
                     )
                     break
@@ -292,6 +297,23 @@ class InferenceClient(object):
     @property
     def provider_models(self) -> ProviderModels:  # noqa: D102
         return ProviderModels(self._config)
+
+    def get_agent_public_key(self, agent_name: str) -> str:
+        """Request agent public key."""
+        headers = {
+            "Content-Type": "application/json",
+        }
+
+        data = {"agent_name": agent_name}
+
+        endpoint = f"{self._config.base_url}/get_agent_public_key"
+
+        try:
+            response = requests.post(endpoint, headers=headers, params=data)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            raise ValueError(f"Failed to get agent public key: {e}") from None
 
     def get_vector_store(self, vector_store_id: str) -> VectorStore:
         """Gets a vector store by id."""

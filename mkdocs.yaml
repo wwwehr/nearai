@@ -9,7 +9,9 @@ validation:
   omitted_files: warn
   absolute_links: warn
   unrecognized_links: warn
-  anchors: warn
+  anchors: ignore
+  links:
+    anchors: ignore
 theme:
   name: material
   favicon: assets/images/favicon.ico

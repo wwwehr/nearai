@@ -187,6 +187,8 @@ line-ending = "auto"
 
 [tool.mypy]
 strict = false
+disallow_untyped_calls = false
+disallow_untyped_decorators = false
 mypy_path = "typings"
 exclude = [
     "tests",

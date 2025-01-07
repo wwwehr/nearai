@@ -239,7 +239,8 @@ module = [
     "docx.*",
     "pptx.*",
     "pypdf.*",
-    "chardet.*"
+    "chardet.*",
+    "botocore.*"
 ]
 ignore_missing_imports = true
 

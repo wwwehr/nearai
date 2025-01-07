@@ -203,6 +203,11 @@ exclude = [
 
 [[tool.mypy.overrides]]
 module = [
+    "base58.*",
+    "pytz.*",
+    "litellm.*",
+    "boto3.*",
+    "tenacity.*",
     'datasets.*',
     'fire.*',
     'tqdm.*',

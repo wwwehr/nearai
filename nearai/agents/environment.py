@@ -805,7 +805,7 @@ class Environment(object):
 
         messages_without_ids = [{k: v for k, v in item.items() if k != "id"} for item in params.messages]
         ordered_messages_without_ids = [
-            {"role": item["role"], "content": item["content"]} for item in messages_without_ids
+            {"role": str(item["role"]), "content": str(item["content"])} for item in messages_without_ids
         ]
 
         return validate_completion_signature(
@@ -815,7 +815,7 @@ class Environment(object):
                 agent_name=self.get_primary_agent().get_full_name(),
                 completion=completion,
                 model=params.model,
-                messages=json.dumps(ordered_messages_without_ids),
+                messages=ordered_messages_without_ids,
                 temperature=params.temperature,
                 max_tokens=params.max_tokens,
             ),

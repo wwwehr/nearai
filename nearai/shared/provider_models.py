@@ -54,8 +54,6 @@ def get_provider_namespaced_model(provider_model: str, provider: Optional[str] =
 class ProviderModels:
     def __init__(self, config: ClientConfig) -> None:  # noqa: D107
         self._config = config
-        assert config.auth is not None
-        self._auth = config.auth
 
     @property
     def provider_models(self) -> Dict[NamespacedName, Dict[str, str]]:

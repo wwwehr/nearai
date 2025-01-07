@@ -94,7 +94,7 @@ class ChatCompletionsRequest(LlmRequest):
 class EmbeddingsRequest(BaseModel):
     """Request for embeddings."""
 
-    input: str | List[str] | Iterable[int] | Iterable[Iterable[int]]
+    input: Union[str, List[str], Iterable[int], Iterable[Iterable[int]]]
     model: str = f"fireworks{PROVIDER_MODEL_SEP}nomic-ai/nomic-embed-text-v1.5"
     provider: Optional[str] = None
 
@@ -117,7 +117,9 @@ class ImageGenerationRequest(BaseModel):
 
 # The request might come as provider::model
 # OpenAI API specs expects model name to be only the model name, not provider::model
-def convert_request(request: ChatCompletionsRequest | CompletionsRequest | EmbeddingsRequest | ImageGenerationRequest):
+def convert_request(
+    request: Union[ChatCompletionsRequest, CompletionsRequest, EmbeddingsRequest, ImageGenerationRequest],
+):
     provider, model = get_provider_model(request.provider, request.model)
     request.model = model
     request.provider = provider
@@ -195,16 +197,19 @@ def chat_completions(
         runner_api_key = runner_data.get("runner_api_key", None)
         # TODO add signature generation for streams too
         if not request.stream and agent and is_trusted_runner_api_key(runner_api_key):
-            logger.info(f"Generation signature for {agent}...")
+            print(f"Generation signature for {agent}...")
 
             request_model = f"{request.provider}::{request.model}" if request.provider else request.model
 
             response_message_text = resp.choices[0].message.content
+
+            messages_dict: List[dict[str, str]] = [message.dict() for message in request.messages]
+
             signed_completion = get_signed_completion(
                 agent_name=agent,
                 response_message_text=response_message_text,
                 model=request_model,
-                messages_json=json.dumps([x.model_dump() for x in request.messages]),
+                messages=messages_dict,
                 temperature=float(request.temperature),
                 max_tokens=int(request.max_tokens or 0),
             )

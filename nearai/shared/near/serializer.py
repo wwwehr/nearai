@@ -54,12 +54,21 @@ class BinarySerializer:
                 for el in value:
                     self.serialize_field(el, field_type[0])
         elif type(field_type) == dict:  # noqa: E721
-            assert field_type["kind"] == "option"
-            if value is None:
-                self.serialize_num(0, 1)
+            if "kind" not in field_type:
+                raise ValueError(f"Invalid field_type: {field_type}")
+
+            if field_type["kind"] == "option":
+                if value is None:
+                    self.serialize_num(0, 1)
+                else:
+                    self.serialize_num(1, 1)
+                    self.serialize_field(value, field_type["type"])
+            elif field_type["kind"] == "struct":
+                assert isinstance(value, dict), f"Expected dict for struct, got {type(value)}"
+                for field_name, field_details in field_type["fields"]:
+                    self.serialize_field(value[field_name], field_details)
             else:
-                self.serialize_num(1, 1)
-                self.serialize_field(value, field_type["type"])
+                raise ValueError(f"Unknown kind: {field_type['kind']}")
         elif type(field_type) == type:  # noqa: E721
             assert type(value) == field_type, "%s != type(%s)" % (field_type, value)  # noqa: E721
             self.serialize_struct(value)

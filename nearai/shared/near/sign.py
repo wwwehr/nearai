@@ -196,7 +196,7 @@ class CompletionSignaturePayload:
         agent_name: str,
         completion: str,
         model: str,
-        messages: str,
+        messages: list[dict[str, str]],
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
     ):
@@ -218,7 +218,18 @@ COMPLETION_PAYLOAD_SCHEMA: list[list[Any]] = [
             "fields": [
                 ["agent_name", "string"],
                 ["model", "string"],
-                ["messages", "string"],
+                [
+                    "messages",
+                    [
+                        {
+                            "kind": "struct",
+                            "fields": [
+                                ["role", "string"],
+                                ["content", "string"],
+                            ],
+                        }
+                    ],
+                ],
                 [
                     "temperature",
                     {

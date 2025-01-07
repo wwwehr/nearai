@@ -202,8 +202,9 @@ def start_with_environment(
     verbose: bool = params.get("verbose", True)
     if verbose:
         print(
-            f"Running with:\nagents: {agents}\nparams: {params.keys()}"
-            f"\nthread_id: {thread_id}\nrun_id: {run_id}\nauth: {auth}"
+            f"Running with: agents: {agents} // params: {params.keys()} "
+            f"// thread_id: {thread_id} // run_id: {run_id} "
+            f"// auth by {auth.account_id}"
         )
     api_url = str(params.get("api_url", DEFAULT_API_URL))
     user_env_vars: dict = params.get("user_env_vars", {})
@@ -243,12 +244,9 @@ def start_with_environment(
         agent.max_iterations = params["max_iterations"]
     if verbose:
         print(
-            "Agent info:"
-            f"- provider: {agent.model_provider}\n"
-            f"- model: {agent.model}\n"
-            f"- temperature: {agent.model_temperature}\n"
-            f"- max_tokens: {agent.model_max_tokens}\n"
-            f"- max_iterations: {agent.max_iterations}\n"
+            f"Agent info: provider: {agent.model_provider} // model: {agent.model} "
+            f"// temperature: {agent.model_temperature} // max_tokens: {agent.model_max_tokens} "
+            f"// max_iterations: {agent.max_iterations}"
         )
 
     client_config = ClientConfig(

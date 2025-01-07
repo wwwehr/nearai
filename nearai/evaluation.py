@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from textwrap import fill
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 from datasets import Dataset  # type: ignore[attr-defined]
 from tabulate import tabulate
@@ -31,7 +31,7 @@ def load_benchmark_entry_info(info: str) -> Any:
 
 
 def record_single_score_evaluation(
-    solver_strategy: SolverStrategy, benchmark_id: int, data_tasks: Dataset | List[dict], score: float
+    solver_strategy: SolverStrategy, benchmark_id: int, data_tasks: Union[Dataset, List[dict]], score: float
 ) -> None:
     """Uploads single score evaluation into registry."""
     evaluation_name = solver_strategy.evaluation_name()
@@ -45,7 +45,7 @@ def _prepend_name_to_metrics(evaluation_name: str, metrics: Dict[str, Any]) -> D
 def record_evaluation_metrics(
     solver_strategy: SolverStrategy,
     benchmark_id: int,
-    data_tasks: Dataset | List[dict],
+    data_tasks: Union[Dataset, List[dict]],
     metrics: Dict[str, Any],
     prepend_evaluation_name: bool = True,
 ) -> None:
@@ -74,7 +74,7 @@ def record_evaluation_metrics(
 def upload_evaluation(
     evaluation_name: str,
     benchmark_id: int,
-    data_tasks: Dataset | List[dict],
+    data_tasks: Union[Dataset, List[dict]],
     metrics: Dict[str, Any],
     model: str = "",
     agent: str = "",

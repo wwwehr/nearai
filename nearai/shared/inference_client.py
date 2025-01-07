@@ -5,7 +5,6 @@ from typing import Any, Dict, Iterable, List, Literal, Optional, Union
 import litellm
 import openai
 import requests
-from dotenv import load_dotenv
 from litellm import CustomStreamWrapper, ModelResponse
 from litellm import completion as litellm_completion
 from litellm.types.completion import ChatCompletionMessageParam
@@ -27,8 +26,6 @@ from nearai.shared.models import (
     StaticFileChunkingStrategyParam,
 )
 from nearai.shared.provider_models import ProviderModels
-
-load_dotenv()
 
 
 class InferenceClient(object):

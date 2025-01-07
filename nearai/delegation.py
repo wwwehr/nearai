@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Union
 
 from nearai.openapi_client.api.delegation_api import Delegation, DelegationApi
 from nearai.openapi_client.api_client import ApiClient
@@ -50,7 +50,7 @@ def check_on_behalf_of():
     return api.api_client.configuration.access_token
 
 
-def delegate(account_id: str, expires_at: datetime | timedelta):
+def delegate(account_id: str, expires_at: Union[datetime, timedelta]):
     if isinstance(expires_at, timedelta):
         expires_at = datetime.now() + expires_at
     DelegationApi().delegate_v1_delegation_delegate_post(account_id, expires_at)

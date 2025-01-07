@@ -15,6 +15,9 @@ RUN apt-get update -y \
     curl \
     wget \
     ca-certificates \
+    build-essential \
+    python3-dev \
+    gcc \
     && rm -rf /var/lib/apt/lists/*
 
 ## Create unpriv user

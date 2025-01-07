@@ -187,6 +187,7 @@ line-ending = "auto"
 
 [tool.mypy]
 strict = false
+mypy_path = "typings"
 exclude = [
     "tests",
     "venv",
@@ -214,6 +215,28 @@ module = [
     'torchao.*',
     'fireworks.*',
     'apscheduler.*',
-    "ed25519.*"
+    "ed25519.*",
+    "numpy.*",
+    "nacl.*",
+    "nacl.signing.*",
+    "openai.*",
+    "openai.types.*",
+    "openai.types.beta.*",
+    "openai.types.beta.threads.*",
+    "openai.types.beta.vector_store.*",
+    "openai.types.file_object.*",
+    "psutil.*",
+    "sqlalchemy.*",
+    "alembic.*",
+    "sqlmodel.*",
+    "docx.*",
+    "pptx.*",
+    "pypdf.*",
+    "chardet.*"
 ]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "hub.api.v1.models"
+implicit_reexport = true
+ignore_errors = true

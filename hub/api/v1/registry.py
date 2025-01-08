@@ -359,18 +359,6 @@ def list_entries(
     )
 
 
-def agents_with_x_accounts_to_track() -> List[EntryInformation]:
-    """Returns latest version of agents that track x_accounts."""
-    # TODO add a dime condition to avoid infinite x read ?
-    res = list_entries_inner(
-        category="agent",
-        custom_where="details::agent::x_accounts_to_track IS NOT NULL",
-        show_hidden=False,
-        show_latest_version=True,
-    )
-    return res
-
-
 def list_entries_inner(
     namespace: str = "",
     category: str = "",

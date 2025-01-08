@@ -39,9 +39,6 @@ TWEET_FIELDS = [
 
 async def get_latest_mentions(user_name, timestamp, max_results=10):
     try:
-        # todo: pass timestamp to get only new mentions
-        # response = client.get_users_mentions(user_id, max_results=max_results, tweet_fields=TWEET_FIELDS)
-
         if not timestamp:
             timestamp = datetime.utcnow() - timedelta(hours=1)
             start_time = timestamp.isoformat() + "Z"

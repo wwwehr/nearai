@@ -320,7 +320,7 @@ class Environment(object):
 
         self.generate_image = generate_image
 
-        def save_agent_data( key, data: Union[str, Dict[str, Any]]):
+        def save_agent_data(key, data: Dict[str, Any]):
             """Save agent data."""
             namespace = self._agents[0].namespace
             name = self._agents[0].name

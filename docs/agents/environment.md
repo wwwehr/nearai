@@ -33,7 +33,7 @@ env.add_reply("I have finished ")
 
 ---
 
-## Run Input Through a Model
+## Inference
 
 The `completion` method is used to run a prompt on a specific model, using a specific provider.
 
@@ -72,33 +72,51 @@ result = env.completion([prompt] + messages, "fireworks::qwen2p5-72b-instruct")
 
 ---
 
-## Read and Write Files
+## Files 
 
-Each time an agent runs,
-Agents have access to the local filesystem, allowing them to create and manipulate files.
+Agents have access to two types of files through the environment:
 
-* [`write_file(fname, content)`](api.md#nearai.agents.environment.Environment.write_file): writes content to a file in a temporary directory associated with the current conversation thread
-* [`list_files(path)`](api.md#nearai.agents.environment.Environment.list_files): list the files in a path, use `.` to list the files in the agent's directory
-* [`get_system_path()`](api.md#nearai.agents.environment.Environment.get_system_path): get the path of the agent's directory
-* [`read_file(fname)`](api.md#nearai.agents.environment.Environment.read_file): read's a file from the temporary directory associated with the current thread, and returns its content as a string
+  1. Those created within the current [conversation thread](./threads.md#accesing-files)
+  2. Those uplodaded with the agent [to the registry](./registry.md#uploading-an-agent)
 
+Here are some of the methods available for working with files:
 
+| Method                       | Description                                                                                         |
+|------------------------------|-----------------------------------------------------------------------------------------------------|
+| [`write_file(fname, content)`](api.md#nearai.agents.environment.Environment.write_file) | Writes `content` to the file `fname`, which is only accesible by the current [thread](./threads.md) |
+| [`list_files(path)`](api.md#nearai.agents.environment.Environment.list_files)           | Lists the files in the specified `path`, use `.` to list all files available in the [thread](./threads.md) |
+| [`read_file(fname)`](api.md#nearai.agents.environment.Environment.read_file)           | Reads the content of the file `fname` and returns it as a string                                       |
+| [`get_system_path()`](api.md#nearai.agents.environment.Environment.get_system_path)        | Returns the path from where the agent is running                                                           |
 
+---
 
+## Calling another agent
 
+Agents can call other agents to interact with them using the [`run_agent`](../api.md#nearai.agents.environment.Environment.run_agent) method. To call an agent, we need to provide the agent's account, name, and version. Optionally, we can pass a query to the agent.
 
- * [`exec_command`](api.md#nearai.agents.environment.Environment.exec_command): execute a terminal command
+```python
+result = env.run_agent("travel.primitives.near", "trip-organizer", "latest", query="Plan a two-day trip to Buenos Aires", fork_thread=False)
+print(result)
 
-
-### Calling another agent
-Other agents can be invoked with the `run_agent` method. This method takes as arguments the three parts of an agent name (owner, name, version),
-accepts an optional model and query, and whether to record the agent's results on a new thread. 
-* [`run_agent`](api.md#nearai.agents.environment.Environment.run_agent): call another agent
-
+# thread_312f2ea5e42742c785218106
 ```
-env.run_agent("flatirons.near", "shopper", "latest", query="NEAR cryptocurrency shirts", fork_thread=False)
-```
 
+The result of the `run_agent` method is a string containing the thread ID where the external agent executed.
+
+!!! warning "Shared Environment"
+    The agent being called will receive the thread environment, meaning it can access **all the messages and files** from the current conversation. Moreover, the called agent will be able to **add messages and files to the current thread**.
+
+### Thread Fork
+The `run_agent` method has an optional `fork_thread` parameter to control whether the called agent should have access to the current thread's messages and files. By default, `fork_thread` is set to `False`.
+
+![alt text](../assets/agents/call-agent.png)
+
+If we **do fork**, the agent we are calling will work on a copy of the thread, meaning that they have access to all files and messages created so far, but any message or file they create will be part of their own thread.
+
+If we do **not fork** the thread, the called agent will work in the same thread as the current agent, meaning that they have access to all files and messages created so far, and any message or file they create will be part of the current thread.
+
+
+---
 
 ### Additional environment methods
 There are several variations for completions:
@@ -116,6 +134,20 @@ directly or use them through the tool_registry and passing them to a completions
 ### Logging
 * [`add_system_log`](api.md#nearai.agents.environment.Environment.add_system_log): adds a system or environment log that is then saved into "system_log.txt".
 * [`add_agent_log`](api.md#nearai.agents.environment.Environment.add_system_log): any agent logs may go here. Saved into "agent_log.txt".
+
+
+
+## Terminal Commands
+
+Agents have access to the local terminal through the environment, the following methods are available:
+
+| Method                       | Description                                                                                         |
+|------------------------------|-----------------------------------------------------------------------------------------------------|
+| [`list_terminal_commands()`](api.md#nearai.agents.environment.Environment.list_terminal_commands)   | Lists the history of terminal commands executed by the agent                                         |
+| [`exec_command(command)`](api.md#nearai.agents.environment.Environment.exec_command)      | Executes the terminal `command` and returns the output                                                |
+
+---
+
 
 
 ### Tool registry and function Tool Calling

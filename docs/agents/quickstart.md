@@ -78,7 +78,7 @@ After successfully login, you should see the screen below. Close it and return t
 Now that you have logged in, lets create your first AI agent, a simple agent called `hello-ai`:
 
 ```bash
-nearai agent create --name hello-ai --description "My First AI Agent"
+nearai agent create --name hello-ai --description "My First NEAR AI Agent"
 
 # Example Response:
 # Agent created at: /Users/user/.nearai/registry/<your-account.near>/hello-ai/0.0.1
@@ -110,7 +110,7 @@ from nearai.agents.environment import Environment
 
 def run(env: Environment):
     # A system message guides an agent to solve specific tasks.
-    prompt = {"role": "system", "content": "You are a travel agent that helps users plan trips."}
+    prompt = {"role": "system", "content": "You are a helpful assistant."}
 
     # Use the model set in the metadata to generate a response
     result = env.completion([prompt] + env.list_messages())

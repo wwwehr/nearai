@@ -74,7 +74,7 @@ Know that you can also run agents **directly on the [Web AI Hub](https://app.nea
     cat agent.py
     ```
 
-<hr style="width: 80%; margin: 0 auto;">
+<hr class="subsection">
 
 ### Interactive Run
 
@@ -85,7 +85,7 @@ Interactive runs execute the agent on a loop, allowing you to chat with it inter
 nearai agent interactive ~/.nearai/registry/gagdiez.near/hello-ai/latest --local
 ```
 
-<hr style="width: 80%; margin: 0 auto;">
+<hr class="subsection">
 
 ### Running as a Task
 When running an agent as a task, we simply provide an input and let the agent execute it without any user interaction.

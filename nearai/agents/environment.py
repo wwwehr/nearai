@@ -322,17 +322,13 @@ class Environment(object):
 
         def save_agent_data(key, data: Dict[str, Any]):
             """Save agent data."""
-            namespace = self._agents[0].namespace
-            name = self._agents[0].name
-            return client.save_agent_data(namespace, name, key, data)
+            return client.save_agent_data(key, data)
 
         self.save_agent_data = save_agent_data
 
         def get_agent_data():
             """Get agent data."""
-            namespace = self._agents[0].namespace
-            name = self._agents[0].name
-            return client.get_agent_data(namespace, name)
+            return client.get_agent_data()
 
         self.get_agent_data = get_agent_data
 
@@ -340,7 +336,7 @@ class Environment(object):
             """Get agent data by key."""
             namespace = self._agents[0].namespace
             name = self._agents[0].name
-            result = client.get_agent_data_by_key(namespace, name, key)
+            result = client.get_agent_data_by_key(key)
             return (
                 result
                 if result

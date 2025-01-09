@@ -29,11 +29,16 @@ from nearai.shared.provider_models import ProviderModels
 
 
 class InferenceClient(object):
-    def __init__(self, config: ClientConfig, runner_api_key: str = "") -> None:  # noqa: D107
+    def __init__(self, config: ClientConfig, runner_api_key: str = "", agent_identifier: str = "") -> None:  # noqa: D107
         self._config = config
         self.runner_api_key = runner_api_key
+        self.agent_identifier = agent_identifier
         if config.auth is not None:
-            self._auth = config.auth.generate_bearer_token()
+            auth_bearer_token = config.auth.generate_bearer_token()
+            new_token = json.loads(auth_bearer_token)
+            new_token["runner_data"] = json.dumps({"agent": agent_identifier, "runner_api_key": self.runner_api_key})
+            auth_bearer_token = json.dumps(new_token)
+            self._auth = auth_bearer_token
         else:
             self._auth = None
         self.client = openai.OpenAI(base_url=self._config.base_url, api_key=self._auth)
@@ -69,7 +74,6 @@ class InferenceClient(object):
         stream: bool = False,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
-        agent_name: Optional[str] = None,
         **kwargs: Any,
     ) -> Union[ModelResponse, CustomStreamWrapper]:
         """Takes a `model` and `messages` and returns completions.
@@ -79,11 +83,6 @@ class InferenceClient(object):
         2. `model_short_name`. Default provider will be used.
         """
         provider, model = self.provider_models.match_provider_model(model)
-
-        auth_bearer_token = self._auth
-        new_token = json.loads(auth_bearer_token)
-        new_token["runner_data"] = json.dumps({"agent": agent_name, "runner_api_key": self.runner_api_key})
-        auth_bearer_token = json.dumps(new_token)
 
         if temperature is None:
             temperature = DEFAULT_MODEL_TEMPERATURE
@@ -107,7 +106,7 @@ class InferenceClient(object):
                     max_tokens=max_tokens,
                     base_url=self._config.base_url,
                     provider=provider,
-                    api_key=auth_bearer_token,
+                    api_key=self._auth,
                     **kwargs,
                 )
                 break
@@ -295,29 +294,27 @@ class InferenceClient(object):
         """Generate an image."""
         return self.client.images.generate(prompt=prompt)
 
-    def save_agent_data(self, namespace: str, name: str, key: str, agent_data: Dict[str, Any]):
-        """Save agent data."""
+    def save_agent_data(self, key: str, agent_data: Dict[str, Any]):
+        """Save agent data for the agent this client was initialized with."""
         return self.client.post(
-            path=f"{self._config.base_url}/agent_data/",
+            path=f"{self._config.base_url}/agent_data",
             body={
-                "namespace": namespace,
-                "name": name,
                 "key": key,
                 "value": agent_data,
             },
             cast_to=Dict[str, Any],
         )
 
-    def get_agent_data(self, namespace: str, name: str):
-        """Get agent data."""
+    def get_agent_data(self):
+        """Get agent data for the agent this client was initialized with."""
         return self.client.get(
-            path=f"{self._config.base_url}/agent_data/{namespace}/{name}",
+            path=f"{self._config.base_url}/agent_data",
             cast_to=Dict[str, str],
         )
 
-    def get_agent_data_by_key(self, namespace: str, name: str, key: str):
-        """Get agent data by key."""
+    def get_agent_data_by_key(self, key: str):
+        """Get agent data by key for the agent this client was initialized with."""
         return self.client.get(
-            path=f"{self._config.base_url}/agent_data/{namespace}/{name}/{key}",
+            path=f"{self._config.base_url}/agent_data/{key}",
             cast_to=Dict[str, str],
         )

@@ -320,6 +320,38 @@ class Environment(object):
 
         self.generate_image = generate_image
 
+        def save_agent_data(key, data: Dict[str, Any]):
+            """Save agent data."""
+            return client.save_agent_data(key, data)
+
+        self.save_agent_data = save_agent_data
+
+        def get_agent_data():
+            """Get agent data."""
+            return client.get_agent_data()
+
+        self.get_agent_data = get_agent_data
+
+        def get_agent_data_by_key(key, default=None):
+            """Get agent data by key."""
+            namespace = self._agents[0].namespace
+            name = self._agents[0].name
+            result = client.get_agent_data_by_key(key)
+            return (
+                result
+                if result
+                else {
+                    "value": default,
+                    "namespace": namespace,
+                    "key": key,
+                    "name": name,
+                    "updated_at": "",
+                    "created_at": "",
+                }
+            )
+
+        self.get_agent_data_by_key = get_agent_data_by_key
+
         # HubClient methods
         def add_reply(
             message: str,

@@ -68,6 +68,7 @@ apscheduler = { version = "^3.10.4", optional = true }
 fireworks-ai = "^0.15.7"
 typer = "^0.12.5"
 uvicorn = "^0.32.0"
+tweepy = { version = "^4.14.0" }
 
 [project.optional-dependencies]
 # Experiment platform
@@ -84,7 +85,8 @@ hub = [
     "pypdf",
     "chardet",
     "shortuuid",
-    "apscheduler"
+    "apscheduler",
+    "tweepy"
 ]
 torch = ["torch", "torchao", "torchtune"]
 vllm = ["vllm", "torch"]

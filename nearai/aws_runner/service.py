@@ -10,6 +10,7 @@ import boto3
 from nearai.agents.agent import Agent
 from nearai.agents.environment import Environment
 from nearai.aws_runner.partial_near_client import PartialNearClient
+from nearai.registry import get_registry_folder
 from nearai.shared.auth_data import AuthData
 from nearai.shared.client_config import ClientConfig
 from nearai.shared.inference_client import InferenceClient
@@ -21,7 +22,9 @@ DEFAULT_API_URL = "https://api.near.ai"
 
 
 def create_cloudwatch():
-    return boto3.client("cloudwatch", region_name="us-east-2")
+    if os.environ.get("AWS_ACCESS_KEY_ID") and os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+        return boto3.client("cloudwatch", region_name="us-east-2")
+    return None
 
 
 def load_protected_variables():
@@ -133,6 +136,7 @@ def load_agent(client, agent, params: dict, additional_path: str = "", verbose=T
         stop_time = time.perf_counter()
         write_metric("GetMetadataFromRegistry_Duration", stop_time - start_time, verbose=verbose)
     elif params["data_source"] == "local_files":
+        agent = agent.replace(f"{get_registry_folder()}/", "")
         agent_files = get_local_agent_files(agent, additional_path)
 
         for file in agent_files:

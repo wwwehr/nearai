@@ -48,7 +48,7 @@ theme:
     - navigation.instant.prefetch
     - navigation.instant.progress
     - navigation.prune
-    - navigation.sections
+    - navigation.expand
     - navigation.tabs
     # - navigation.tabs.sticky
     - navigation.top
@@ -142,8 +142,13 @@ nav:
     - Quickstart: 'agents/quickstart.md'
     - Registry: 'agents/registry.md'
     - Threads: 'agents/threads.md'
-    - Environment: 'agents/environment.md'
-    - More: 'agents.md'
+    - Environment:
+      - 'agents/env/overview.md'
+      - 'agents/env/messages_files.md'
+      - 'agents/env/inference.md'
+      - 'agents/env/tools.md'
+      - 'agents/env/calling_other_agents.md'
+      - 'agents/env/variables.md'
 
   - Assistants:
     - Overview: 'assistants/overview.md'

@@ -94,33 +94,52 @@ When running an agent as a task, we simply provide an input and let the agent ex
 nearai agent task ~/.nearai/registry/gagdiez.near/hello-ai/latest "write a poem about the sorrow of loosing oneself, but end on a positive note" --local
 ```
 
----
+## Running the Agent Remotely
 
-## Running an Agent Remotely
+Agents can be run through the `/thread/runs`, `/thread/{thread_id}/runs` or  `/agent/runs` endpoints. The /thread syntax
+matches the OpenAI / LangGraph API. The /agent syntax is NearAI specific.
 
-Agents that are in the registry can be run through the CLI using the `nearai agent run_remote` command.
-
-```shell
-  nearai agent run_remote gagdiez.near/hello-ai/latest --new_message="I would like you to write a short song"
-```
-
-<!-- TODO: Clarify this, I do not understand how it works given that I did not manage to make it work -->
-
-Running an agent remotely will create a thread on the NearAI platform, where the agent will execute the provided input. The `new_message` flag is used to provide the agent with a prompt request.
-
-The results of `run_remote` is either an error or the resulting thread_id (e.g. `"thread_579e1cf3f42742c785218106"`) which can be used to retrieve the conversation.
-
-Threads follow the OpenAI / LangGraph api standard. `/threads/{thread_id}/messages` will return the messages on the thread.
-See the full NearAI OpenAPI spec here: [https://api.near.ai/openapi.json](https://api.near.ai/openapi.json)
-
-<!-- A new_message could be included to further refine the request. In this example without a new_message the agent will
-reprocess the previous response and follow up about travel to Paris. 
+You will need to pass a signed message to authenticate. This example uses the credentials written by `nearai login` to
+your `~/.nearai/config.json` file.
 
 ```shell
-  nearai agent run_remote flatirons.near/example-travel-agent/1 \
-  environment_id="flatirons.near/environment_run_flatirons.near_example-travel-agent_1_1c82938c55fc43e492882ee938c6356a/0"
+auth_json=$(jq -c '.auth' ~/.nearai/config.json);
+
+curl "https://api.near.ai/v1/threads/runs" \
+      -X POST \
+      --header 'Content-Type: application/json' \
+      --header "Authorization: Bearer $auth_json" \
+-d @- <<'EOF'
+  {
+    "agent_id": "flatirons.near/xela-agent/5.0.1",
+    "new_message":"Build a backgammon game",
+    "max_iterations": "1"
+  }
+EOF
 ```
--->
+
+The full message will look like this. A `thread_id` param can also be passed to continue a previous conversation. 
+```shell
+curl "https://api.near.ai/v1/threads/runs" \
+      -X POST \
+      --header 'Content-Type: application/json' \
+      --header 'Authorization: Bearer {"account_id":"your_account.near","public_key":"ed25519:YOUR_PUBLIC_KEY","signature":"A_REAL_SIGNATURE","callback_url":"https://app.near.ai/","message":"Welcome to NEAR AI Hub!","recipient":"ai.near","nonce":"A_UNIQUE_NONCE_FOR_THIS_SIGNATURE"}' \
+-d @- <<'EOF'
+  {
+    "agent_id": "flatirons.near/xela-agent/5.0.1",
+    "thread_id": "a_previous_thread_id",
+    "new_message":"Build a backgammon game", 
+    "max_iterations": "2"
+  }
+EOF
+```
+
+??? tip "Remote results"
+    The results of the /agent/runs endpoints are either an error or the resulting thread_id.
+    >"thread_579e1cf3f42742c785218106"
+
+    Threads follow the OpenAI / LangGraph api standard. `/threads/{thread_id}/messages` will return the messages on the thread.
+    See the full NearAI OpenAPI spec here: [https://api.near.ai/openapi.json](https://api.near.ai/openapi.json)
 
 ---
 

@@ -4,8 +4,6 @@ from os import getenv
 from typing import Any, Dict, Iterable, List, Literal, Optional, Union
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Path, Query
-from nearai.agents.local_runner import LocalRunner
-from nearai.config import load_config_file
 from nearai.shared.auth_data import AuthData
 from nearai.shared.client_config import DEFAULT_PROVIDER_MODEL
 from openai import BaseModel
@@ -638,19 +636,6 @@ def _run_agent(
                 invoke_agent_via_url(custom_runner_url, agents, thread_id, run_id, auth, params)
             else:
                 raise HTTPException(status_code=400, detail="Runner invoke URL not set for local runner")
-        elif runner == "local_runner":
-            """Runs agents directly from the local machine."""
-
-            params["api_url"] = load_config_file()["api_url"]
-
-            LocalRunner(
-                None,
-                run_model.assistant_id,
-                thread_id,
-                run_id,
-                AuthData(**auth.model_dump()),  # TODO: https://github.com/nearai/nearai/issues/421
-                params,
-            )
         else:
             function_name = f"{runner}-{framework.lower()}"
             if agent_api_url != "https://api.near.ai":

@@ -148,6 +148,7 @@ See the [Agents](agents.md) documentation and How to guide
 * [Running an agent through the API](agents.md#running-an-agent-through-the-api)
 * [Remote results](agents.md#remote-results)
     * [Signed messages](agents.md#signed-messages)
+* [Private ML SDK](private-ml-sdk.md)
 
 
 ## Benchmarking

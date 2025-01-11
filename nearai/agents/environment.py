@@ -132,6 +132,12 @@ class Environment(object):
             open(os.path.join(self._path, CHAT_FILENAME), "a").close()
         os.chdir(self._path)
 
+        def signer_account_id() -> str:
+            """Expose the NEAR account_id of a user that signs this request to run an agent."""
+            return client._config.auth.account_id if client._config and client._config.auth else ""
+
+        self.signer_account_id = signer_account_id()
+
         # Client methods
         def query_vector_store(vector_store_id: str, query: str, full_files: bool = False):
             """Queries a vector store.

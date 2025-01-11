@@ -132,9 +132,12 @@ class Environment(object):
             open(os.path.join(self._path, CHAT_FILENAME), "a").close()
         os.chdir(self._path)
 
-        def signer_account_id() -> str:
+        def signer_account_id() -> Optional[str]:
             """Expose the NEAR account_id of a user that signs this request to run an agent."""
-            return client._config.auth.account_id if client._config and client._config.auth else ""
+            try:
+                return client._config.auth.account_id if client._config.auth else None
+            except (AttributeError, TypeError):
+                return None
 
         self.signer_account_id = signer_account_id()
 

@@ -600,12 +600,16 @@ class Environment(object):
         if model != self._last_used_model:
             self._last_used_model = model
             self.add_system_log(f"Connecting to {model}")
+
+        temperature = kwargs.pop("temperature", self._agents[0].model_temperature if self._agents else None)
+        max_tokens = kwargs.pop("max_tokens", self._agents[0].model_max_tokens if self._agents else None)
+
         return self.client.completions(
             model,
             messages,
             stream=stream,
-            temperature=self._agents[0].model_temperature if self._agents else None,
-            max_tokens=self._agents[0].model_max_tokens if self._agents else None,
+            temperature=temperature,
+            max_tokens=max_tokens,
             **kwargs,
         )
 
@@ -759,9 +763,10 @@ class Environment(object):
         self,
         messages: Union[Iterable[ChatCompletionMessageParam], str],
         model: Union[Iterable[ChatCompletionMessageParam], str] = "",
+        **kwargs: Any,
     ) -> str:
         """Returns a completion for the given messages using the given model."""
-        raw_response = self.completions(messages, model)
+        raw_response = self.completions(messages, model, **kwargs)
         assert isinstance(raw_response, ModelResponse), "Expected ModelResponse"
         response: ModelResponse = raw_response
         assert all(map(lambda choice: isinstance(choice, Choices), response.choices)), "Expected Choices"

@@ -3,8 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
 import { useTheme } from '@near-pagoda/ui';
-import { Button, Tooltip } from '@near-pagoda/ui';
-import { copyTextToClipboard } from '@near-pagoda/ui/utils';
+import { Button, copyTextToClipboard, Tooltip } from '@near-pagoda/ui';
 import { Copy } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import SyntaxHighlighter from 'react-syntax-highlighter';
@@ -16,6 +15,7 @@ import {
 import s from './Code.module.scss';
 
 export type CodeLanguage =
+  | 'shell'
   | 'css'
   | 'html'
   | 'javascript'
@@ -75,7 +75,12 @@ export const Code = ({
   if (!mounted) return null;
 
   return (
-    <div className={s.code} data-bleed={bleed} data-language={language}>
+    <div
+      className={s.code}
+      data-bleed={bleed}
+      data-copy={showCopyButton}
+      data-language={language}
+    >
       {showCopyButton && (
         <Tooltip asChild content="Copy to clipboard">
           <Button

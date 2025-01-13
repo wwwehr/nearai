@@ -7,6 +7,7 @@ import {
   CardList,
   Flex,
   Form,
+  handleClientError,
   InputTextarea,
   PlaceholderSection,
   PlaceholderStack,
@@ -14,7 +15,7 @@ import {
   Text,
   Tooltip,
 } from '@near-pagoda/ui';
-import { formatBytes, handleClientError } from '@near-pagoda/ui/utils';
+import { formatBytes } from '@near-pagoda/ui/utils';
 import {
   ArrowRight,
   CodeBlock,
@@ -120,6 +121,7 @@ export const AgentRunner = ({
   const optimisticMessages = useThreadsStore(
     (store) => store.optimisticMessages,
   );
+  const initialUserMessageSent = useRef(false);
   const chatMutationThreadId = useRef('');
   const chatMutationStartedAt = useRef<Date | null>(null);
   const resetThreadsStore = useThreadsStore((store) => store.reset);
@@ -213,7 +215,6 @@ export const AgentRunner = ({
     agentRequestsNeedingPermissions,
     setAgentRequestsNeedingPermissions,
     conditionallyProcessAgentRequests,
-    iframeNonce,
     iframePostMessage,
     onIframePostMessage,
   } = useAgentRequestsWithIframe(currentEntry, chatMutation, threadId);
@@ -314,6 +315,7 @@ export const AgentRunner = ({
 
   useEffect(() => {
     if (threadId !== chatMutationThreadId.current) {
+      initialUserMessageSent.current = false;
       chatMutationThreadId.current = '';
       chatMutationStartedAt.current = null;
       resetThreadsStore();
@@ -341,7 +343,8 @@ export const AgentRunner = ({
     const initialUserMessage = agentDetails?.initial_user_message;
     const maxIterations = agentDetails?.defaults?.max_iterations ?? 1;
 
-    if (initialUserMessage && !threadId && !chatMutation.isPending) {
+    if (initialUserMessage && !threadId && !initialUserMessageSent.current) {
+      initialUserMessageSent.current = true;
       void chatMutation.mutateAsync({
         max_iterations: maxIterations,
         new_message: initialUserMessage,
@@ -372,7 +375,6 @@ export const AgentRunner = ({
                 <>
                   <IframeWithBlob
                     html={htmlOutput}
-                    nonce={iframeNonce}
                     onPostMessage={onIframePostMessage}
                     postMessage={iframePostMessage}
                   />

@@ -40,8 +40,8 @@ def run(env: Environment):
 
 Agents have access to two types of files through the environment:
 
-  1. Those created within the current [conversation thread](./threads.md#accessing-files)
-  2. Those uplodaded with the agent [to the registry](./registry.md#uploading-an-agent)
+  1. Those created within the current [conversation thread](../threads.md)
+  2. Those uploaded with the agent [to the registry](../registry.md#uploading-an-agent)
 
 ### Storing Data
 
@@ -101,5 +101,5 @@ def run(env: Environment):
 
 <!-- Explain what the logs are used for -->
 
-* [`add_system_log`](api.md#nearai.agents.environment.Environment.add_system_log): adds a system or environment log that is then saved into "system_log.txt".
-* [`add_agent_log`](api.md#nearai.agents.environment.Environment.add_system_log): any agent logs may go here. Saved into "agent_log.txt".
+* [`add_system_log`](../../api.md#nearai.agents.environment.Environment.add_system_log): adds a system or environment log that is then saved into "system_log.txt".
+* [`add_agent_log`](../../api.md#nearai.agents.environment.Environment.add_system_log): any agent logs may go here. Saved into "agent_log.txt".

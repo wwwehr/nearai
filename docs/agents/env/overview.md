@@ -1,3 +1,5 @@
+# The Environment Object
+
 Each time an agents executes it receives an environment, which gives it access to features such as:
 
 * Retrieve messages in the conversation, both from the user and the agent
@@ -8,7 +10,7 @@ Each time an agents executes it receives an environment, which gives it access t
 <!-- 
 
 ### Signed messages
-NearAI authentication is through a Signed Message: a payload signed by a Near Account private key. (How to [Login with NEAR](login.md))
+NEAR AI authentication is through a Signed Message: a payload signed by a Near Account private key. (How to [Login with NEAR](login.md))
 
 If you need one for manual testing, you can `nearai login` then copy the auth section from your `~/.nearai/config.json`.
 

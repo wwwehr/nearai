@@ -40,7 +40,7 @@ const auth = await login(wallet, "Login to NEAR AI", nonce, recipient, callbackU
 
 ### Python
 
-In Python, we recommend using the `nearai` CLI to login into your NEAR account. More details [here](../login.md).
+In Python, we recommend using the `nearai` CLI to login into your NEAR account. More details [here](../agents/quickstart.md#login-to-near-ai).
 
 ```python
 nearai login

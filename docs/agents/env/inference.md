@@ -39,7 +39,7 @@ result = env.completion([prompt] + messages, "fireworks::qwen2p5-72b-instruct")
 
 !!! tip
 
-    [`completions`](api.md#nearai.agents.environment.Environment.completions): returns the full llm response for more control#
+    [`completions`](../../api.md#nearai.agents.environment.Environment.completions): returns the full llm response for more control#
 
 
 !!! tip "Using Models Locally: LangChain / LangGraph"

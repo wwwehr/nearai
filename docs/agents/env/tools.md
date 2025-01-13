@@ -1,6 +1,6 @@
 # Tools & Commands
 
-NearAI supports function based tool calling where the LLM can decide to call one of the functions (Tools) that you pass it.
+NEAR AI supports function based tool calling where the LLM can decide to call one of the functions (Tools) that you pass it.
 You can register your own function or use any of the built-in tools (list_files, read_file, write_file, exec_command, query_vector_store, request_user_input).
 
 The tool registry supports OpenAI style tool calling and Llama style. When a llama model is explicitly passed to completion(s)_and_run_tools
@@ -9,8 +9,8 @@ using `<function>` tags.
 
 To tell the LLM about your tools and automatically execute them when selected by the LLM, call one of these environment methods:
 
-* [`completion_and_run_tools`](api.md#nearai.agents.environment.Environment.completion_and_run_tools): Allows tools to be passed and processes any returned tool_calls by running the tool
-* [`completions_and_run_tools`](api.md#nearai.agents.environment.Environment.completions_and_run_tools): Handles tool calls and returns the full llm response.
+* [`completion_and_run_tools`](../../api.md#nearai.agents.environment.Environment.completion_and_run_tools): Allows tools to be passed and processes any returned tool_calls by running the tool
+* [`completions_and_run_tools`](../../api.md#nearai.agents.environment.Environment.completions_and_run_tools): Handles tool calls and returns the full llm response.
 
 By default, these methods will add both the LLM response and tool invocation responses to the message list. 
 You do not need to call `env.add_message` for these responses.
@@ -18,9 +18,9 @@ This behavior allows the LLM to see its call then tool responses in the message 
 This can be disabled by passing `add_to_messages=False` to the method.
 
 
- * [`get_tool_registry`](api.md#nearai.agents.environment.Environment.get_tool_registry): returns the tool registry, a dictionary of tools that can be called by the agent. By default
-it is populated with the tools listed above for working with files and commands plus [`request_user_input`](api.md#nearai.agents.environment.Environment.request_user_input). To register a function as
-a new tool, call [`register_tool`](api.md#nearai.agents.tool_registry.ToolRegistry.register_tool) on the tool registry, passing it your function. 
+ * [`get_tool_registry`](../../api.md#nearai.agents.environment.Environment.get_tool_registry): returns the tool registry, a dictionary of tools that can be called by the agent. By default
+it is populated with the tools listed above for working with files and commands plus [`request_user_input`](../../api.md#nearai.agents.environment.Environment.request_user_input). To register a function as
+a new tool, call [`register_tool`](../../api.md#nearai.agents.tool_registry.ToolRegistry.register_tool) on the tool registry, passing it your function. 
 ```python
 def my_tool():
     """A simple tool that returns a string. This docstring helps the LLM know when to call the tool."""
@@ -53,5 +53,5 @@ Agents have access to the local terminal through the environment, the following 
 
 | Method                                                                                            | Description                                                  |
 |---------------------------------------------------------------------------------------------------|--------------------------------------------------------------|
-| [`list_terminal_commands()`](api.md#nearai.agents.environment.Environment.list_terminal_commands) | Lists the history of terminal commands executed by the agent |
-| [`exec_command(command)`](api.md#nearai.agents.environment.Environment.exec_command)              | Executes the terminal `command` and returns the output       |
+| [`list_terminal_commands()`](../../api.md#nearai.agents.environment.Environment.list_terminal_commands) | Lists the history of terminal commands executed by the agent |
+| [`exec_command(command)`](../../api.md#nearai.agents.environment.Environment.exec_command)              | Executes the terminal `command` and returns the output       |

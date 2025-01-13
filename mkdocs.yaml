@@ -127,32 +127,34 @@ extra_css:
   - https://unpkg.com/katex@0/dist/katex.min.css
   - docs.css
 nav:
-  - Getting Started: 
+  - Home: 
     - Welcome To NearAI Docs: 'index.md'
-    - Benchmarks and Evaluations: 'benchmarks_and_evaluations.md'
-    - Inference (OpenAI compatible): 'inference.md'
-    - Fine-tuning: 'fine_tuning.md'
-    - API Reference: 'api.md'
-    - Vector Stores: 'vector-stores.md'
-    - Login with NEAR: 'login.md'
-    - Secrets: 'hub_secrets.md'
     - Contributing: 'contributing.md'
     - Decentralization: 'decentralization.md'
   - Agents:
     - Quickstart: 'agents/quickstart.md'
     - Registry: 'agents/registry.md'
+    - Local & Remote Runs: 'agents/running.md'
     - Threads: 'agents/threads.md'
     - Environment:
       - 'agents/env/overview.md'
       - 'agents/env/messages_files.md'
       - 'agents/env/inference.md'
-      - 'agents/env/tools.md'
       - 'agents/env/calling_other_agents.md'
+      - 'agents/env/tools.md'
       - 'agents/env/variables.md'
-
+      - Secrets: 'agents/secrets.md'
+    - Inference (OpenAI): 'inference.md'
+    - Vector Stores (OpenAI): 'vector-stores.md'
+    - Benchmarks and Evaluations: 'models/benchmarks_and_evaluations.md'
+  - Models:
+    - Fine-tuning: 'models/fine_tuning.md'
+    - Benchmarks and Evaluations: 'models/benchmarks_and_evaluations.md'
   - Assistants:
     - Overview: 'assistants/overview.md'
     - Integrate: 'assistants/integrate.md'
+  - API: 'api.md'
+
 plugins:
   - social
   - autorefs

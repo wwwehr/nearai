@@ -8,7 +8,7 @@ Every agent execution happens within a conversation thread, which is isolated fr
 
 <!-- TODO: add to API docs
 Threads follow the OpenAI / LangGraph api standard. `/threads/{thread_id}/messages` will return the messages on the thread.
-See the full NearAI OpenAPI spec here: [https://api.near.ai/openapi.json](https://api.near.ai/openapi.json) -->
+See the full NEAR AI OpenAPI spec here: [https://api.near.ai/openapi.json](https://api.near.ai/openapi.json) -->
 
 ---
 

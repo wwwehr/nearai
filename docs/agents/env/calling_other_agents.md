@@ -1,6 +1,6 @@
 # Calling another agent
 
-Agents can call other agents to interact with them using the [`run_agent`](../api.md#nearai.agents.environment.Environment.run_agent) method. To call an agent, we need to provide the agent's account, name, and version. Optionally, we can pass a query to the agent.
+Agents can call other agents to interact with them using the [`run_agent`](../../api.md#nearai.agents.environment.Environment.run_agent) method. To call an agent, we need to provide the agent's account, name, and version. Optionally, we can pass a query to the agent.
 
 ```python
 result = env.run_agent("travel.primitives.near", "trip-organizer", "latest", query="Plan a two-day trip to Buenos Aires", fork_thread=False)
@@ -17,7 +17,7 @@ The result of the `run_agent` method is a string containing the thread ID where 
 ## Thread Fork
 The `run_agent` method has an optional `fork_thread` parameter to control whether the called agent should have access to the current thread's messages and files. By default, `fork_thread` is set to `False`.
 
-![alt text](../assets/agents/call-agent.png)
+![alt text](../../assets/agents/call-agent.png)
 
 If we **do fork**, the agent we are calling will work on a copy of the thread, meaning that they have access to all files and messages created so far, but any message or file they create will be part of their own thread.
 

@@ -1,12 +1,85 @@
+import logging
 import os
 from contextlib import asynccontextmanager
+from datetime import datetime
 from functools import partial
 
 from apscheduler.triggers.interval import IntervalTrigger
+from fastapi import HTTPException
+from nearai.shared.client_config import DEFAULT_MODEL
+from sqlmodel import select
 
+from hub.api.v1.auth import AuthToken
+from hub.api.v1.models import RunSchedule, get_session
+from hub.api.v1.thread_routes import RunCreateParamsBase, ThreadModel, _create_thread, create_run
 from hub.tasks.near_events import near_events_task, process_near_events_initial_state
 from hub.tasks.scheduler import get_async_scheduler
 from hub.tasks.x_event_source import x_events_task
+
+logger = logging.getLogger(__name__)
+
+
+async def process_due_tasks(auth_token: AuthToken):
+    due_tasks = get_due_tasks()
+
+    if len(due_tasks):
+        with get_session() as session:
+            for task in due_tasks:
+                thread_model = ThreadModel(
+                    meta_data={
+                        "agent_ids": f"{task.agent}",
+                    },
+                    tool_resources=None,
+                    owner_id=auth_token.account_id,
+                )
+
+                if task.thread_id is None:
+                    thread = _create_thread(thread_model, auth=auth_token)
+                    task.thread_id = thread.id
+
+                model = task.run_params.get("model", DEFAULT_MODEL)
+
+                run_params = RunCreateParamsBase(
+                    assistant_id=task.agent,
+                    model=model,
+                    instructions=None,
+                    tools=None,
+                    metadata=None,
+                    include=[],
+                    additional_instructions=None,
+                    additional_messages=[{"content": task.input_message, "role": "user"}],
+                    max_completion_tokens=None,
+                    max_prompt_tokens=None,
+                    parallel_tool_calls=None,
+                    response_format=None,
+                    temperature=None,
+                    tool_choice=None,
+                    top_p=None,
+                    truncation_strategy=None,
+                    stream=False,
+                    schedule_at=None,
+                    delegate_execution=False,
+                    parent_run_id=None,
+                )
+
+                # save successful run attempt in DB
+                task.has_run = True
+                session.add(task)
+                session.commit()
+
+                create_run(thread_id=task.thread_id, run=run_params, auth=auth_token, scheduler=get_async_scheduler())
+
+
+def get_due_tasks() -> list[RunSchedule]:
+    now = datetime.now()
+
+    with get_session() as session:
+        due_tasks = session.exec(select(RunSchedule).where(RunSchedule.run_at <= now, ~RunSchedule.has_run)).all()
+
+        if due_tasks is None:
+            raise HTTPException(status_code=403, detail="RunSchedule request failed")
+
+        return due_tasks
 
 
 def load_auth_token():
@@ -25,8 +98,15 @@ def load_auth_token():
 async def lifespan(app):
     """Schedule recurring tasks."""
     auth_token = load_auth_token()
+    run_scheduler = os.getenv("RUN_SCHEDULER", "false").lower() == "true"
     read_near_events = os.getenv("READ_NEAR_EVENTS", "false").lower() == "true"
     read_x_events = os.getenv("READ_X_EVENTS", "false").lower() == "true"
+
+    # RunSchedule tasks
+    if run_scheduler:
+        job = partial(process_due_tasks, auth_token)
+        await job()
+        get_async_scheduler().add_job(job, IntervalTrigger(seconds=1), name="schedule_run")
 
     if read_near_events:
         process_near_events_initial_state()
@@ -39,7 +119,7 @@ async def lifespan(app):
         await job()
         get_async_scheduler().add_job(job, IntervalTrigger(seconds=120), name="x_events")
 
-    if read_near_events or read_x_events:
+    if read_near_events or read_x_events or run_scheduler:
         get_async_scheduler().start()
 
         yield

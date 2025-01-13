@@ -1,4 +1,6 @@
 import io
+import json
+from functools import cached_property
 from typing import Any, Dict, Iterable, List, Literal, Optional, Union
 
 import litellm
@@ -28,10 +30,16 @@ from nearai.shared.provider_models import ProviderModels
 
 
 class InferenceClient(object):
-    def __init__(self, config: ClientConfig) -> None:  # noqa: D107
+    def __init__(self, config: ClientConfig, runner_api_key: str = "", agent_identifier: str = "") -> None:  # noqa: D107
         self._config = config
+        self.runner_api_key = runner_api_key
+        self.agent_identifier = agent_identifier
         if config.auth is not None:
-            self._auth = config.auth.generate_bearer_token()
+            auth_bearer_token = config.auth.generate_bearer_token()
+            new_token = json.loads(auth_bearer_token)
+            new_token["runner_data"] = json.dumps({"agent": agent_identifier, "runner_api_key": self.runner_api_key})
+            auth_bearer_token = json.dumps(new_token)
+            self._auth = auth_bearer_token
         else:
             self._auth = None
         self.client = openai.OpenAI(base_url=self._config.base_url, api_key=self._auth)
@@ -39,9 +47,26 @@ class InferenceClient(object):
     # This makes sense in the CLI where we don't mind doing this request and caching it.
     # In the aws_runner this is an extra request every time we run.
     # TODO(#233): add a choice of a provider model in aws_runner, and then this step can be skipped.
-    @property
+    @cached_property
     def provider_models(self) -> ProviderModels:  # noqa: D102
         return ProviderModels(self._config)
+
+    def get_agent_public_key(self, agent_name: str) -> str:
+        """Request agent public key."""
+        headers = {
+            "Content-Type": "application/json",
+        }
+
+        data = {"agent_name": agent_name}
+
+        endpoint = f"{self._config.base_url}/get_agent_public_key"
+
+        try:
+            response = requests.post(endpoint, headers=headers, params=data)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            raise ValueError(f"Failed to get agent public key: {e}") from None
 
     def completions(
         self,
@@ -59,8 +84,6 @@ class InferenceClient(object):
         2. `model_short_name`. Default provider will be used.
         """
         provider, model = self.provider_models.match_provider_model(model)
-
-        auth_bearer_token = self._auth
 
         if temperature is None:
             temperature = DEFAULT_MODEL_TEMPERATURE
@@ -84,7 +107,7 @@ class InferenceClient(object):
                     max_tokens=max_tokens,
                     base_url=self._config.base_url,
                     provider=provider,
-                    api_key=auth_bearer_token,
+                    api_key=self._auth,
                     **kwargs,
                 )
                 break
@@ -271,3 +294,28 @@ class InferenceClient(object):
     def generate_image(self, prompt: str):
         """Generate an image."""
         return self.client.images.generate(prompt=prompt)
+
+    def save_agent_data(self, key: str, agent_data: Dict[str, Any]):
+        """Save agent data for the agent this client was initialized with."""
+        return self.client.post(
+            path=f"{self._config.base_url}/agent_data",
+            body={
+                "key": key,
+                "value": agent_data,
+            },
+            cast_to=Dict[str, Any],
+        )
+
+    def get_agent_data(self):
+        """Get agent data for the agent this client was initialized with."""
+        return self.client.get(
+            path=f"{self._config.base_url}/agent_data",
+            cast_to=Dict[str, str],
+        )
+
+    def get_agent_data_by_key(self, key: str):
+        """Get agent data by key for the agent this client was initialized with."""
+        return self.client.get(
+            path=f"{self._config.base_url}/agent_data/{key}",
+            cast_to=Dict[str, str],
+        )

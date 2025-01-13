@@ -345,17 +345,17 @@ def list_entries(
     fork_of_namespace: str = "",
 ) -> List[EntryInformation]:
     return list_entries_inner(
-        namespace,
-        category,
-        tags,
-        total,
-        offset,
-        show_hidden,
-        show_latest_version,
-        starred_by,
-        star_point_of_view,
-        fork_of_name,
-        fork_of_namespace,
+        namespace=namespace,
+        category=category,
+        tags=tags,
+        total=total,
+        offset=offset,
+        show_hidden=show_hidden,
+        show_latest_version=show_latest_version,
+        starred_by=starred_by,
+        star_point_of_view=star_point_of_view,
+        fork_of_name=fork_of_name,
+        fork_of_namespace=fork_of_namespace,
     )
 
 
@@ -363,6 +363,7 @@ def list_entries_inner(
     namespace: str = "",
     category: str = "",
     tags: str = "",
+    custom_where: str = "",
     total: int = 32,
     offset: int = 0,
     show_hidden: bool = False,
@@ -406,6 +407,9 @@ def list_entries_inner(
         if show_latest_version
         else ""
     )
+
+    # TODO add extra protection to avoid SQL INJECTION?
+    custom_where_condition = f" AND ({custom_where})" if custom_where else ""
 
     bind_params["star_point_of_view"] = star_point_of_view
     bind_params["starred_by"] = starred_by
@@ -467,6 +471,7 @@ def list_entries_inner(
                 {namespace_condition}
                 {starred_by_condition}
                 {fork_of_condition}
+                {custom_where_condition}
             ORDER BY registry.id DESC
             LIMIT :total
             OFFSET :offset
@@ -528,6 +533,7 @@ def list_entries_inner(
                             {namespace_condition}
                             {starred_by_condition}
                             {fork_of_condition}
+                            {custom_where_condition}
                         GROUP BY registry.id
                         HAVING COUNT(DISTINCT entry_tags.tag) = :ntags
                     ),

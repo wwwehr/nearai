@@ -2,6 +2,14 @@
 
 Agents interact with the users through messages, and can also access and create files. This page provides an overview of how agents can work with messages and files.
 
+??? tip "Quick Overview"
+    * Each run of an agent is executed in a separate thread, which contains messages and files.
+    * The agent can access the messages in the current thread using `env.list_messages()`.
+    * The agent can save temporary files to track the progress of a task.
+    * By default, the entire message history is stored in a file named `chat.txt`. The agent can add messages there by using `env.add_reply()`.
+    * During its operation, the agent creates a file named `.next_agent`, which stores the role of the next participant expected in the dialogue (either `user` or `agent`) during the next iteration of the loop. The agent can control this value using `env.set_next_actor()`.
+    * The agent can use local imports from the home folder or its subfolders. It is executed from a temporary folder within a temporary environment.
+
 ---
 
 ## Thread Messages

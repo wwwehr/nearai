@@ -12,14 +12,15 @@ import {
 } from '@near-pagoda/ui';
 import {
   BookOpenText,
+  CaretDown,
   ChatCircleDots,
   Cube,
   Gear,
+  GithubLogo,
   List,
   Moon,
   Star,
   Sun,
-  Trophy,
   User,
   X,
 } from '@phosphor-icons/react';
@@ -28,6 +29,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { APP_TITLE } from '~/constants';
 import { env } from '~/env';
 import { signInWithNear } from '~/lib/auth';
 import { ENTRY_CATEGORY_LABELS } from '~/lib/entries';
@@ -43,36 +45,11 @@ const agentsNav = {
 };
 
 const hubNavItems = [
-  {
-    label: 'Competitions',
-    path: '/competitions',
-    icon: <Trophy />,
-  },
   agentsNav,
-  {
-    label: 'Models',
-    path: '/models',
-    icon: ENTRY_CATEGORY_LABELS.model.icon,
-  },
   {
     label: 'Threads',
     path: '/chat',
     icon: <ChatCircleDots />,
-  },
-  {
-    label: 'Datasets',
-    path: '/datasets',
-    icon: ENTRY_CATEGORY_LABELS.dataset.icon,
-  },
-  {
-    label: 'Benchmarks',
-    path: '/benchmarks',
-    icon: ENTRY_CATEGORY_LABELS.benchmark.icon,
-  },
-  {
-    label: 'Evaluations',
-    path: '/evaluations',
-    icon: ENTRY_CATEGORY_LABELS.evaluation.icon,
   },
 ];
 
@@ -87,6 +64,38 @@ const chatNavItems = [
 
 const navItems = env.NEXT_PUBLIC_CONSUMER_MODE ? chatNavItems : hubNavItems;
 
+const resourcesNavItems = env.NEXT_PUBLIC_CONSUMER_MODE
+  ? null
+  : [
+      {
+        label: 'Datasets',
+        path: '/datasets',
+        icon: ENTRY_CATEGORY_LABELS.dataset.icon,
+      },
+      {
+        label: 'Evaluations',
+        path: '/evaluations',
+        icon: ENTRY_CATEGORY_LABELS.evaluation.icon,
+      },
+      {
+        label: 'Models',
+        path: '/models',
+        icon: ENTRY_CATEGORY_LABELS.model.icon,
+      },
+      {
+        label: 'Documentation',
+        path: 'https://docs.near.ai',
+        target: '_blank',
+        icon: <BookOpenText />,
+      },
+      {
+        label: 'Near AI CLI',
+        path: 'https://github.com/nearai/nearai',
+        target: '_blank',
+        icon: <GithubLogo />,
+      },
+    ];
+
 export const Navigation = () => {
   const auth = useAuthStore((store) => store.auth);
   const clearAuth = useAuthStore((store) => store.clearAuth);
@@ -95,10 +104,6 @@ export const Navigation = () => {
   const path = usePathname();
   const [mounted, setMounted] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
-
-  const title = env.NEXT_PUBLIC_CONSUMER_MODE
-    ? 'AI Assistant'
-    : 'AI Research Hub';
 
   useEffect(() => {
     setMounted(true);
@@ -115,7 +120,8 @@ export const Navigation = () => {
   return (
     <header className={s.navigation}>
       <Link className={s.logo} href="/">
-        {title}
+        <span className={s.logoNearAi}>NEAR AI</span>
+        <span className={s.logoTitle}>{APP_TITLE}</span>
       </Link>
 
       <BreakpointDisplay show="larger-than-tablet" className={s.breakpoint}>
@@ -134,9 +140,7 @@ export const Navigation = () => {
               </NavigationMenu.Item>
             ))}
 
-            {/* The following code is left commented out in case we add a nav dropdown again in the near future: */}
-
-            {/* {resourcesNav ? (
+            {resourcesNavItems ? (
               <NavigationMenu.Item>
                 <NavigationMenu.Trigger>
                   Resources
@@ -144,13 +148,17 @@ export const Navigation = () => {
                 </NavigationMenu.Trigger>
 
                 <NavigationMenu.Content className={s.menuDropdown}>
-                  {resourcesNav.map((item) => (
+                  {resourcesNavItems.map((item) => (
                     <NavigationMenu.Link
                       key={item.path}
                       asChild
                       active={path.startsWith(item.path)}
                     >
-                      <Link href={item.path} key={item.path}>
+                      <Link
+                        href={item.path}
+                        target={item.target}
+                        key={item.path}
+                      >
                         <SvgIcon icon={item.icon} />
                         {item.label}
                       </Link>
@@ -158,7 +166,7 @@ export const Navigation = () => {
                   ))}
                 </NavigationMenu.Content>
               </NavigationMenu.Item>
-            ) : null} */}
+            ) : null}
           </NavigationMenu.List>
         </NavigationMenu.Root>
       </BreakpointDisplay>

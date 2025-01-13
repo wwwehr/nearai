@@ -45,6 +45,10 @@ from nearai.shared.models import (
     GitLabSource,
     StaticFileChunkingStrategyParam,
 )
+from nearai.shared.near.sign import (
+    CompletionSignaturePayload,
+    validate_completion_signature,
+)
 
 DELIMITER = "\n"
 CHAT_FILENAME = "chat.txt"
@@ -57,6 +61,22 @@ LLAMA_TOOL_FORMAT_PATTERN2 = re.compile(r"(.*)<tool_call>\n(.*)\n</tool_call>(.*
 
 
 default_approvals: Dict[str, Any] = {"confirm_execution": lambda _: True}
+
+
+class InferenceParameters:
+    def __init__(  # noqa: D107
+        self,
+        model: str,
+        messages: Iterable[ChatCompletionMessageParam],
+        stream: bool,
+        temperature=None,
+        max_tokens=None,
+    ):
+        self.model = model
+        self.messages = messages
+        self.stream = stream
+        self.temperature = temperature
+        self.max_tokens = max_tokens
 
 
 class CustomLogHandler(logging.Handler):
@@ -83,29 +103,435 @@ class Environment(object):
         env_vars: Optional[Dict[str, Any]] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
         print_system_log: bool = False,
+        agent_runner_user: Optional[str] = None,
         approvals: Optional[Dict[str, Any]] = default_approvals,
     ) -> None:
+        # Warning: never expose `client` or `_hub_client` to agent's environment
+
+        # Placeholder for solver
+        self.client: Optional[InferenceClient] = None
+
         self._path = path
         self._agents = agents
         self._done = False
         self._pending_ext_agent = False
-        self.client = client
-        self._tools = ToolRegistry()
-        self.register_standard_tools()
         self.env_vars: Dict[str, Any] = env_vars if env_vars else {}
         self._last_used_model = ""
         self.tool_resources: Dict[str, Any] = tool_resources if tool_resources else {}
         self.print_system_log = print_system_log
+        self.agent_runner_user = agent_runner_user
         self._approvals = approvals
-        self._hub_client = hub_client
         self._thread_id = thread_id
         self._run_id = run_id
         self._debug_mode = True if self.env_vars.get("DEBUG") else False
+
+        self._tools = ToolRegistry()
 
         if create_files:
             os.makedirs(self._path, exist_ok=True)
             open(os.path.join(self._path, CHAT_FILENAME), "a").close()
         os.chdir(self._path)
+
+        def signer_account_id() -> Optional[str]:
+            """Expose the NEAR account_id of a user that signs this request to run an agent."""
+            try:
+                return client._config.auth.account_id if client._config.auth else None
+            except (AttributeError, TypeError):
+                return None
+
+        self.signer_account_id = signer_account_id()
+
+        # Client methods
+        def query_vector_store(vector_store_id: str, query: str, full_files: bool = False):
+            """Queries a vector store.
+
+            vector_store_id: The id of the vector store to query.
+            query: The query to search for.
+            """
+            return client.query_vector_store(vector_store_id, query, full_files)
+
+        self.query_vector_store = query_vector_store
+
+        def upload_file(
+            file_content: str,
+            purpose: Literal["assistants", "batch", "fine-tune", "vision"] = "assistants",
+        ):
+            """Uploads a file to the registry."""
+            return client.upload_file(file_content, purpose)
+
+        self.upload_file = upload_file
+
+        def create_vector_store_from_source(
+            name: str,
+            source: Union[GitHubSource, GitLabSource],
+            source_auth: Optional[str] = None,
+            chunking_strategy: Optional[ChunkingStrategy] = None,
+            expires_after: Optional[ExpiresAfter] = None,
+            metadata: Optional[Dict[str, str]] = None,
+        ) -> VectorStore:
+            """Creates a vector store from the given source.
+
+            Args:
+            ----
+                name: The name of the vector store.
+                source: The source from which to create the vector store.
+                source_auth: The source authentication token.
+                chunking_strategy: The chunking strategy to use.
+                expires_after: The expiration policy.
+                metadata: Additional metadata.
+
+            Returns:
+            -------
+                VectorStore: The created vector store.
+
+            """
+            return client.create_vector_store_from_source(
+                name=name,
+                source=source,
+                source_auth=source_auth,
+                chunking_strategy=chunking_strategy,
+                expires_after=expires_after,
+                metadata=metadata,
+            )
+
+        self.create_vector_store_from_source = create_vector_store_from_source
+
+        def add_file_to_vector_store(vector_store_id: str, file_id: str):
+            """Adds a file to the vector store."""
+            return client.add_file_to_vector_store(vector_store_id, file_id)
+
+        self.add_file_to_vector_store = add_file_to_vector_store
+
+        def create_vector_store(
+            name: str,
+            file_ids: list,
+            expires_after: Union[ExpiresAfter, NotGiven] = NOT_GIVEN,
+            chunking_strategy: Union[
+                AutoFileChunkingStrategyParam, StaticFileChunkingStrategyParam, NotGiven
+            ] = NOT_GIVEN,
+            metadata: Optional[Dict[str, str]] = None,
+        ) -> VectorStore:
+            """Creates a vector store.
+
+            Args:
+            ----
+                name: The name of the vector store.
+                file_ids: List of file ids to create the vector store.
+                chunking_strategy: The chunking strategy to use.
+                expires_after: The expiration policy.
+                metadata: Additional metadata.
+
+            Returns:
+            -------
+                VectorStore: The created vector store.
+
+            """
+            return client.create_vector_store(
+                name=name,
+                file_ids=file_ids,
+                chunking_strategy=chunking_strategy,
+                expires_after=expires_after,
+                metadata=metadata,
+            )
+
+        self.create_vector_store = create_vector_store
+
+        def get_vector_store(self, vector_store_id: str) -> VectorStore:
+            """Gets a vector store by id."""
+            return client.get_vector_store(vector_store_id)
+
+        self.get_vector_store = get_vector_store
+
+        # Save cache of requested models for inference to avoid extra server calls
+        self.cached_models_for_inference: Dict[str, str] = {}
+
+        def get_model_for_inference(model: str = "") -> str:
+            """Returns 'provider::model_full_path'."""
+            if self.cached_models_for_inference.get(model, None) is None:
+                provider = self._agents[0].model_provider if self._agents else ""
+                if model == "":
+                    model = self._agents[0].model if self._agents else ""
+                if model == "":
+                    return DEFAULT_PROVIDER_MODEL
+
+                _, model_for_inference = client.provider_models.match_provider_model(model, provider)
+
+                self.cached_models_for_inference[model] = model_for_inference
+
+            return self.cached_models_for_inference[model]
+
+        self.get_model_for_inference = get_model_for_inference
+
+        def _run_inference_completions(
+            messages: Union[Iterable[ChatCompletionMessageParam], str],
+            model: Union[Iterable[ChatCompletionMessageParam], str],
+            stream: bool,
+            **kwargs: Any,
+        ) -> Union[ModelResponse, CustomStreamWrapper]:
+            """Run inference completions for given parameters."""
+            params, kwargs = self.get_inference_parameters(messages, model, stream, **kwargs)
+
+            completions = client.completions(
+                params.model, params.messages, params.stream, params.temperature, params.max_tokens, **kwargs
+            )
+
+            return completions
+
+        self._run_inference_completions = _run_inference_completions
+
+        def get_agent_public_key():
+            """Returns public key of the agent."""
+            agent_name = self.get_primary_agent().get_full_name()
+
+            return client.get_agent_public_key(agent_name)
+
+        self.get_agent_public_key = get_agent_public_key
+
+        def run_agent(
+            owner: str,
+            agent_name: str,
+            version: str,
+            model: Optional[str] = None,
+            query: Optional[str] = None,
+            fork_thread: bool = True,
+        ):
+            """Runs a child agent on the thread."""
+            child_thread_id = self._thread_id
+            if fork_thread:
+                child_thread_id = client.threads_fork(self._thread_id).id
+                self.add_system_log(f"Forked thread {child_thread_id}", logging.INFO)
+
+            if query:
+                client.threads_messages_create(thread_id=child_thread_id, content=query, role="user")
+
+            assistant_id = f"{owner}/{agent_name}/{version}"
+            model = model or DEFAULT_PROVIDER_MODEL
+            self.add_system_log(f"Running agent {assistant_id}", logging.INFO)
+            client.run_agent(
+                current_run_id=self._run_id,
+                child_thread_id=child_thread_id,
+                assistant_id=assistant_id,
+            )
+            self._pending_ext_agent = True
+
+            return child_thread_id
+
+        self.run_agent = run_agent
+
+        # TODO(https://github.com/nearai/nearai/issues/549): Allow only a subset of agents to access/update user memory.
+        def add_user_memory(memory: str):
+            """Add user memory."""
+            return client.add_user_memory(memory)
+
+        self.add_user_memory = add_user_memory
+
+        def query_user_memory(query: str):
+            """Query user memory."""
+            return client.query_user_memory(query)
+
+        self.query_user_memory = query_user_memory
+
+        def generate_image(prompt: str):
+            """Generate an image."""
+            return client.generate_image(prompt)
+
+        self.generate_image = generate_image
+
+        def save_agent_data(key, data: Dict[str, Any]):
+            """Save agent data."""
+            return client.save_agent_data(key, data)
+
+        self.save_agent_data = save_agent_data
+
+        def get_agent_data():
+            """Get agent data."""
+            return client.get_agent_data()
+
+        self.get_agent_data = get_agent_data
+
+        def get_agent_data_by_key(key, default=None):
+            """Get agent data by key."""
+            namespace = self._agents[0].namespace
+            name = self._agents[0].name
+            result = client.get_agent_data_by_key(key)
+            return (
+                result
+                if result
+                else {
+                    "value": default,
+                    "namespace": namespace,
+                    "key": key,
+                    "name": name,
+                    "updated_at": "",
+                    "created_at": "",
+                }
+            )
+
+        self.get_agent_data_by_key = get_agent_data_by_key
+
+        # HubClient methods
+        def add_reply(
+            message: str,
+            attachments: Optional[Iterable[Attachment]] = None,
+            message_type: Optional[str] = None,
+        ):
+            """Assistant adds a message to the environment."""
+            # NOTE: message from `user` are not stored in the memory
+
+            return hub_client.beta.threads.messages.create(
+                thread_id=self._thread_id,
+                role="assistant",
+                content=message,
+                extra_body={
+                    "assistant_id": self._agents[0].identifier,
+                    "run_id": self._run_id,
+                },
+                attachments=attachments,
+                metadata={"message_type": message_type} if message_type else None,
+            )
+
+        self.add_reply = add_reply
+
+        def _add_message(
+            role: str,
+            message: str,
+            attachments: Optional[Iterable[Attachment]] = None,
+            **kwargs: Any,
+        ):
+            return hub_client.beta.threads.messages.create(
+                thread_id=self._thread_id,
+                role=role,  # type: ignore
+                content=message,
+                extra_body={
+                    "assistant_id": self._agents[0].identifier,
+                    "run_id": self._run_id,
+                },
+                metadata=kwargs,
+                attachments=attachments,
+            )
+
+        self._add_message = _add_message
+
+        def _list_messages(
+            limit: Union[int, NotGiven] = NOT_GIVEN,
+            order: Literal["asc", "desc"] = "asc",
+            thread_id: Optional[str] = None,
+        ) -> List[Message]:
+            """Returns messages from the environment."""
+            messages = hub_client.beta.threads.messages.list(
+                thread_id=thread_id or self._thread_id, limit=limit, order=order
+            )
+            self.add_system_log(f"Retrieved {len(messages.data)} messages from NearAI Hub")
+            return messages.data
+
+        self._list_messages = _list_messages
+
+        def list_files_from_thread(
+            order: Literal["asc", "desc"] = "asc", thread_id: Optional[str] = None
+        ) -> List[FileObject]:
+            """Lists files in the thread."""
+            messages = self._list_messages(order=order)
+            # Extract attachments from messages
+            attachments = [a for m in messages if m.attachments for a in m.attachments]
+            # Extract files from attachments
+            file_ids = [a.file_id for a in attachments]
+            files = [hub_client.files.retrieve(f) for f in file_ids if f]
+            return files
+
+        self.list_files_from_thread = list_files_from_thread
+
+        def read_file_by_id(file_id: str):
+            """Read a file from the thread."""
+            content = hub_client.files.content(file_id).content.decode("utf-8")
+            print("file content returned by api", content)
+            return content
+
+        self.read_file_by_id = read_file_by_id
+
+        def write_file(
+            filename: str,
+            content: Union[str, bytes],
+            encoding: str = "utf-8",
+            filetype: str = "text/plain",
+            write_to_disk: bool = True,
+        ) -> FileObject:
+            """Writes a file to the environment.
+
+            filename: The name of the file to write to
+            content: The content to write to the file
+            encoding: The encoding to use when writing the file (default is utf-8)
+            filetype: The MIME type of the file (default is text/plain)
+            write_to_disk: If True, write locally to disk (default is True)
+            """
+            if write_to_disk:
+                # Write locally
+                path = Path(self.get_primary_agent_temp_dir()) / filename
+                path.parent.mkdir(parents=True, exist_ok=True)
+                if isinstance(content, bytes):
+                    with open(path, "wb") as f:
+                        f.write(content)
+                else:
+                    with open(path, "w", encoding=encoding) as f:
+                        f.write(content)
+
+            if isinstance(content, bytes):
+                file_data = content
+            else:
+                file_data = io.BytesIO(content.encode(encoding))  # type:ignore
+
+            # Upload to Hub
+            file = hub_client.files.create(file=(filename, file_data, filetype), purpose="assistants")
+            res = self.add_reply(
+                message=f"Successfully wrote {len(content) if content else 0} characters to {filename}",
+                attachments=[{"file_id": file.id, "tools": [{"type": "file_search"}]}],
+                message_type="system:file_write",
+            )
+            self.add_system_log(
+                f"Uploaded file {filename} with {len(content)} characters, id: {file.id}. Added in thread as: {res.id}"
+            )
+            return file
+
+        self.write_file = write_file
+
+        def mark_done() -> Run:  # noqa: D102
+            self._done = True
+            res = hub_client.beta.threads.runs.update(
+                thread_id=self._thread_id,
+                run_id=self._run_id,
+                extra_body={
+                    "status": "completed",
+                    "completed_at": datetime.now().isoformat(),
+                },
+            )
+            return res
+
+        self.mark_done = mark_done
+
+        def mark_failed() -> Run:
+            """Marks the environment run as failed."""
+            self._done = True
+            self.add_system_log("Environment run failed", logging.ERROR)
+            res = hub_client.beta.threads.runs.update(
+                thread_id=self._thread_id,
+                run_id=self._run_id,
+                extra_body={"status": "failed", "failed_at": datetime.now().isoformat()},
+            )
+            return res
+
+        self.mark_failed = mark_failed
+
+        def request_user_input() -> Run:
+            """Must be called to request input from the user."""
+            return hub_client.beta.threads.runs.update(
+                thread_id=self._thread_id,
+                run_id=self._run_id,
+                extra_body={"status": "requires_action"},
+            )
+
+        self.request_user_input = request_user_input
+
+        # Must be placed after method definitions
+        self.register_standard_tools()
 
     def get_tool_registry(self, new: bool = False) -> ToolRegistry:
         """Returns the tool registry, a dictionary of tools that can be called by the agent."""
@@ -130,27 +556,6 @@ class Environment(object):
 
         return None
 
-    def add_reply(
-        self,
-        message: str,
-        attachments: Optional[Iterable[Attachment]] = None,
-        message_type: Optional[str] = None,
-    ):
-        """Assistant adds a message to the environment."""
-        # NOTE: message from `user` are not stored in the memory
-
-        return self._hub_client.beta.threads.messages.create(
-            thread_id=self._thread_id,
-            role="assistant",
-            content=message,
-            extra_body={
-                "assistant_id": self._agents[0].identifier,
-                "run_id": self._run_id,
-            },
-            attachments=attachments,
-            metadata={"message_type": message_type} if message_type else None,
-        )
-
     def add_message(
         self,
         role: str,
@@ -163,25 +568,6 @@ class Environment(object):
         role = "assistant"
 
         return self._add_message(role, message, attachments, **kwargs)
-
-    def _add_message(
-        self,
-        role: str,
-        message: str,
-        attachments: Optional[Iterable[Attachment]] = None,
-        **kwargs: Any,
-    ):
-        return self._hub_client.beta.threads.messages.create(
-            thread_id=self._thread_id,
-            role=role,  # type: ignore
-            content=message,
-            extra_body={
-                "assistant_id": self._agents[0].identifier,
-                "run_id": self._run_id,
-            },
-            metadata=kwargs,
-            attachments=attachments,
-        )
 
     def add_system_log(self, log: str, level: int = logging.INFO) -> None:
         """Add system log with timestamp and log level."""
@@ -258,19 +644,6 @@ class Environment(object):
         with open(path, "r") as f:
             return [json.loads(message) for message in f.read().split(DELIMITER) if message]
 
-    def _list_messages(
-        self,
-        limit: Union[int, NotGiven] = NOT_GIVEN,
-        order: Literal["asc", "desc"] = "asc",
-        thread_id: Optional[str] = None,
-    ) -> List[Message]:
-        """Returns messages from the environment."""
-        messages = self._hub_client.beta.threads.messages.list(
-            thread_id=thread_id or self._thread_id, limit=limit, order=order
-        )
-        self.add_system_log(f"Retrieved {len(messages.data)} messages from NearAI Hub")
-        return messages.data
-
     def list_messages(self, thread_id: Optional[str] = None):
         """Backwards compatibility for chat_completions messages."""
         messages = self._list_messages(thread_id=thread_id)
@@ -316,18 +689,6 @@ class Environment(object):
         """Lists files in the environment."""
         return os.listdir(os.path.join(self.get_primary_agent_temp_dir(), path))
 
-    def list_files_from_thread(
-        self, order: Literal["asc", "desc"] = "asc", thread_id: Optional[str] = None
-    ) -> List[FileObject]:
-        """Lists files in the thread."""
-        messages = self._list_messages(order=order)
-        # Extract attachments from messages
-        attachments = [a for m in messages if m.attachments for a in m.attachments]
-        # Extract files from attachments
-        file_ids = [a.file_id for a in attachments]
-        files = [self._hub_client.files.retrieve(f) for f in file_ids if f]
-        return files
-
     def get_system_path(self) -> Path:
         """Returns the system path where chat.txt & system_log are stored."""
         return Path(self._path)
@@ -361,145 +722,6 @@ class Environment(object):
             self.add_system_log(f"Warn: File {filename} not found during read_file operation")
 
         return file_content
-
-    def read_file_by_id(self, file_id: str):
-        """Read a file from the thread."""
-        content = self._hub_client.files.content(file_id).content.decode("utf-8")
-        print("file content returned by api", content)
-        return content
-
-    def write_file(
-        self,
-        filename: str,
-        content: Union[str, bytes],
-        encoding: str = "utf-8",
-        filetype: str = "text/plain",
-        write_to_disk: bool = True,
-    ) -> FileObject:
-        """Writes a file to the environment.
-
-        filename: The name of the file to write to
-        content: The content to write to the file
-        encoding: The encoding to use when writing the file (default is utf-8)
-        filetype: The MIME type of the file (default is text/plain)
-        write_to_disk: If True, write locally to disk (default is True)
-        """
-        if write_to_disk:
-            # Write locally
-            path = Path(self.get_primary_agent_temp_dir()) / filename
-            path.parent.mkdir(parents=True, exist_ok=True)
-            if isinstance(content, bytes):
-                with open(path, "wb") as f:
-                    f.write(content)
-            else:
-                with open(path, "w", encoding=encoding) as f:
-                    f.write(content)
-
-        if isinstance(content, bytes):
-            file_data = content
-        else:
-            file_data = io.BytesIO(content.encode(encoding))  # type:ignore
-
-        # Upload to Hub
-        file = self._hub_client.files.create(file=(filename, file_data, filetype), purpose="assistants")
-        res = self.add_reply(
-            message=f"Successfully wrote {len(content) if content else 0} characters to {filename}",
-            attachments=[{"file_id": file.id, "tools": [{"type": "file_search"}]}],
-            message_type="system:file_write",
-        )
-        self.add_system_log(
-            f"Uploaded file {filename} with {len(content)} characters, id: {file.id}. Added in thread as: {res.id}"
-        )
-        return file
-
-    def query_vector_store(self, vector_store_id: str, query: str, full_files: bool = False):
-        """Queries a vector store.
-
-        vector_store_id: The id of the vector store to query.
-        query: The query to search for.
-        """
-        return self.client.query_vector_store(vector_store_id, query, full_files)
-
-    def upload_file(
-        self,
-        file_content: str,
-        purpose: Literal["assistants", "batch", "fine-tune", "vision"] = "assistants",
-    ):
-        """Uploads a file to the registry."""
-        return self.client.upload_file(file_content, purpose)
-
-    def create_vector_store_from_source(
-        self,
-        name: str,
-        source: Union[GitHubSource, GitLabSource],
-        source_auth: Optional[str] = None,
-        chunking_strategy: Optional[ChunkingStrategy] = None,
-        expires_after: Optional[ExpiresAfter] = None,
-        metadata: Optional[Dict[str, str]] = None,
-    ) -> VectorStore:
-        """Creates a vector store from the given source.
-
-        Args:
-        ----
-            name: The name of the vector store.
-            source: The source from which to create the vector store.
-            source_auth: The source authentication token.
-            chunking_strategy: The chunking strategy to use.
-            expires_after: The expiration policy.
-            metadata: Additional metadata.
-
-        Returns:
-        -------
-            VectorStore: The created vector store.
-
-        """
-        return self.client.create_vector_store_from_source(
-            name=name,
-            source=source,
-            source_auth=source_auth,
-            chunking_strategy=chunking_strategy,
-            expires_after=expires_after,
-            metadata=metadata,
-        )
-
-    def add_file_to_vector_store(self, vector_store_id: str, file_id: str):
-        """Adds a file to the vector store."""
-        return self.client.add_file_to_vector_store(vector_store_id, file_id)
-
-    def create_vector_store(
-        self,
-        name: str,
-        file_ids: list,
-        expires_after: Union[ExpiresAfter, NotGiven] = NOT_GIVEN,
-        chunking_strategy: Union[AutoFileChunkingStrategyParam, StaticFileChunkingStrategyParam, NotGiven] = NOT_GIVEN,
-        metadata: Optional[Dict[str, str]] = None,
-    ) -> VectorStore:
-        """Creates a vector store.
-
-        Args:
-        ----
-            name: The name of the vector store.
-            file_ids: List of file ids to create the vector store.
-            chunking_strategy: The chunking strategy to use.
-            expires_after: The expiration policy.
-            metadata: Additional metadata.
-
-        Returns:
-        -------
-            VectorStore: The created vector store.
-
-        """
-        return self.client.create_vector_store(
-            name=name,
-            file_ids=file_ids,
-            chunking_strategy=chunking_strategy,
-            expires_after=expires_after,
-            metadata=metadata,
-        )
-
-    def get_vector_store(self, vector_store_id: str) -> VectorStore:
-        """Gets a vector store by id."""
-        return self.client.get_vector_store(vector_store_id)
 
     def exec_command(self, command: str) -> Dict[str, Union[str, int]]:
         """Executes a command in the environment and logs the output.
@@ -566,24 +788,14 @@ class Environment(object):
             f.write(json.dumps(result) + DELIMITER)
         return result
 
-    def get_model_for_inference(self, model: str = "") -> str:
-        """Returns 'provider::model_full_path'."""
-        provider = self._agents[0].model_provider if self._agents else ""
-        if model == "":
-            model = self._agents[0].model if self._agents else ""
-        if model == "":
-            return DEFAULT_PROVIDER_MODEL
-        _, model = self.client.provider_models.match_provider_model(model, provider)
-        return model
-
-    def _run_inference_completions(
+    def get_inference_parameters(
         self,
         messages: Union[Iterable[ChatCompletionMessageParam], str],
         model: Union[Iterable[ChatCompletionMessageParam], str],
         stream: bool,
         **kwargs: Any,
-    ) -> Union[ModelResponse, CustomStreamWrapper]:
-        """Run inference completions for given parameters."""
+    ) -> Tuple[InferenceParameters, Any]:
+        """Run inference parameters to run completions."""
         if isinstance(messages, str):
             self.add_system_log(
                 "Deprecated completions call. Pass `messages` as a first parameter.",
@@ -604,14 +816,15 @@ class Environment(object):
         temperature = kwargs.pop("temperature", self._agents[0].model_temperature if self._agents else None)
         max_tokens = kwargs.pop("max_tokens", self._agents[0].model_max_tokens if self._agents else None)
 
-        return self.client.completions(
-            model,
-            messages,
+        params = InferenceParameters(
+            model=model,
+            messages=messages,
             stream=stream,
             temperature=temperature,
             max_tokens=max_tokens,
-            **kwargs,
         )
+
+        return params, kwargs
 
     # TODO(286): `messages` may be model and `model` may be messages temporarily to support deprecated API.
     def completions(
@@ -623,6 +836,39 @@ class Environment(object):
     ) -> Union[ModelResponse, CustomStreamWrapper]:
         """Returns all completions for given messages using the given model."""
         return self._run_inference_completions(messages, model, stream, **kwargs)
+
+    def verify_signed_message(
+        self,
+        completion: str,
+        messages: Union[Iterable[ChatCompletionMessageParam], str],
+        public_key: Union[str, None] = None,
+        signature: Union[str, None] = None,
+        model: Union[Iterable[ChatCompletionMessageParam], str] = "",
+        **kwargs: Any,
+    ) -> bool:
+        """Verifies a signed message."""
+        if public_key is None or signature is None:
+            return False
+
+        params, _ = self.get_inference_parameters(messages, model, False, **kwargs)
+
+        messages_without_ids = [{k: v for k, v in item.items() if k != "id"} for item in params.messages]
+        ordered_messages_without_ids = [
+            {"role": str(item["role"]), "content": str(item["content"])} for item in messages_without_ids
+        ]
+
+        return validate_completion_signature(
+            public_key,
+            signature,
+            CompletionSignaturePayload(
+                agent_name=self.get_primary_agent().get_full_name(),
+                completion=completion,
+                model=params.model,
+                messages=ordered_messages_without_ids,
+                temperature=params.temperature,
+                max_tokens=params.max_tokens,
+            ),
+        )
 
     def completions_and_run_tools(
         self,
@@ -775,6 +1021,32 @@ class Environment(object):
         assert response_message, "No completions returned"
         return response_message
 
+    def signed_completion(
+        self,
+        messages: Union[Iterable[ChatCompletionMessageParam], str],
+        model: Union[Iterable[ChatCompletionMessageParam], str] = "",
+        **kwargs: Any,
+    ) -> Dict[str, str]:
+        """Returns a completion for the given messages using the given model with the agent signature."""
+        # TODO Return signed completions for non-latest versions only?
+        agent_name = self.get_primary_agent().get_full_name()
+        raw_response = self.completions(messages, model, agent_name=agent_name, **kwargs)
+        assert isinstance(raw_response, ModelResponse), "Expected ModelResponse"
+        response: ModelResponse = raw_response
+
+        signature_data = json.loads(response.system_fingerprint) if response.system_fingerprint else {}
+
+        assert all(map(lambda choice: isinstance(choice, Choices), response.choices)), "Expected Choices"
+        choices: List[Choices] = response.choices  # type: ignore
+        response_message = choices[0].message.content
+        assert response_message, "No completions returned"
+
+        return {
+            "response": response_message,
+            "signature": signature_data.get("signature", None),
+            "public_key": signature_data.get("public_key", None),
+        }
+
     def completion_and_run_tools(
         self,
         messages: List[ChatCompletionMessageParam],
@@ -812,29 +1084,6 @@ class Environment(object):
 
     def is_done(self) -> bool:  # noqa: D102
         return self._done
-
-    def mark_done(self) -> Run:  # noqa: D102
-        self._done = True
-        res = self._hub_client.beta.threads.runs.update(
-            thread_id=self._thread_id,
-            run_id=self._run_id,
-            extra_body={
-                "status": "completed",
-                "completed_at": datetime.now().isoformat(),
-            },
-        )
-        return res
-
-    def mark_failed(self) -> Run:
-        """Marks the environment run as failed."""
-        self._done = True
-        self.add_system_log("Environment run failed", logging.ERROR)
-        res = self._hub_client.beta.threads.runs.update(
-            thread_id=self._thread_id,
-            run_id=self._run_id,
-            extra_body={"status": "failed", "failed_at": datetime.now().isoformat()},
-        )
-        return res
 
     def create_snapshot(self) -> bytes:
         """Create an in memory snapshot."""
@@ -893,18 +1142,12 @@ class Environment(object):
     def __str__(self) -> str:  # noqa: D105
         return f"Environment({self._path})"
 
-    def request_user_input(self) -> Run:
-        """Must be called to request input from the user."""
-        return self._hub_client.beta.threads.runs.update(
-            thread_id=self._thread_id,
-            run_id=self._run_id,
-            extra_body={"status": "requires_action"},
-        )
-
-    def clear_temp_agent_files(self) -> None:
+    def clear_temp_agent_files(self, verbose=True) -> None:
         """Remove temp agent files created to be used in `runpy`."""
         for agent in self._agents:
             if os.path.exists(agent.temp_dir):
+                if verbose:
+                    print("removed agent.temp_files", agent.temp_dir)
                 shutil.rmtree(agent.temp_dir)
 
     def set_next_actor(self, who: str) -> None:
@@ -969,46 +1212,3 @@ class Environment(object):
                         hash_obj.update(chunk)
 
         return hash_obj.hexdigest()
-
-    def run_agent(
-        self,
-        owner: str,
-        agent_name: str,
-        version: str,
-        model: Optional[str] = None,
-        query: Optional[str] = None,
-        fork_thread: bool = True,
-    ):
-        """Runs a child agent on the thread."""
-        child_thread_id = self._thread_id
-        if fork_thread:
-            child_thread_id = self.client.threads_fork(self._thread_id).id
-            self.add_system_log(f"Forked thread {child_thread_id}", logging.INFO)
-
-        if query:
-            self.client.threads_messages_create(thread_id=child_thread_id, content=query, role="user")
-
-        assistant_id = f"{owner}/{agent_name}/{version}"
-        model = model or DEFAULT_PROVIDER_MODEL
-        self.add_system_log(f"Running agent {assistant_id}", logging.INFO)
-        self.client.run_agent(
-            current_run_id=self._run_id,
-            child_thread_id=child_thread_id,
-            assistant_id=assistant_id,
-        )
-        self._pending_ext_agent = True
-
-        return child_thread_id
-
-    # TODO(https://github.com/nearai/nearai/issues/549): Allow only a subset of agents to access/update user memory.
-    def add_user_memory(self, memory: str):
-        """Add user memory."""
-        return self.client.add_user_memory(memory)
-
-    def query_user_memory(self, query: str):
-        """Query user memory."""
-        return self.client.query_user_memory(query)
-
-    def generate_image(self, prompt: str):
-        """Generate an image."""
-        return self.client.generate_image(prompt)

@@ -74,7 +74,9 @@ def get_due_tasks() -> list[RunSchedule]:
     now = datetime.now()
 
     with get_session() as session:
-        due_tasks = session.exec(select(RunSchedule).where(RunSchedule.run_at <= now, ~RunSchedule.has_run)).all()
+        due_tasks = session.exec(
+            select(RunSchedule).where(RunSchedule.run_at <= now, RunSchedule.has_run == False)  # noqa: E712
+        ).all()
 
         if due_tasks is None:
             raise HTTPException(status_code=403, detail="RunSchedule request failed")

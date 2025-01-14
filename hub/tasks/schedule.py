@@ -81,7 +81,7 @@ def get_due_tasks() -> list[RunSchedule]:
         if due_tasks is None:
             raise HTTPException(status_code=403, detail="RunSchedule request failed")
 
-        return due_tasks
+        return list(due_tasks)
 
 
 def load_auth_token():

@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class CreateScheduleRunRequest(BaseModel):
-    """Request model for creating a new hub secret."""
+    """Request model for creating a new scheduled run."""
 
     agent: str
     input_message: str

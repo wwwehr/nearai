@@ -39,11 +39,11 @@ def load_protected_variables():
         "RUNNER_API_KEY",  # API KEY for a NEAR AI Runner
     ]
 
-    # Loop through the list of keys and delete them from the environment if they exist.
-    for key in keys_to_remove:
-        if key in os.environ:
-            variables[key] = os.environ[key]
-            del os.environ[key]
+    # # Loop through the list of keys and delete them from the environment if they exist.
+    # for key in keys_to_remove:
+    #     if key in os.environ:
+    #         variables[key] = os.environ[key]
+    #         del os.environ[key]
 
     return variables
 

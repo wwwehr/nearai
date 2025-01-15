@@ -617,18 +617,18 @@ class AgentCli:
         """Create a new agent or fork an existing one.
 
         Usage:
-          nearai agent create
+          nearai agent create  # Enters interactive mode
           nearai agent create --name <agent_name> --description <description>
           nearai agent create --fork <namespace/agent_name/version> [--name <new_agent_name>]
 
         Options:
-          --name          Name of the new agent.
-          --description   Description of the new agent.
+          --name          Name of the new agent (optional).
+          --description   Description of the new agent (optional).
           --fork          Fork an existing agent specified by namespace/agent_name/version.
 
         Examples
         --------
-          nearai agent create
+          nearai agent create   # Enters interactive mode
           nearai agent create --name my_agent --description "My new agent"
           nearai agent create --fork agentic.near/summary/0.0.3 --name new_summary_agent
 
@@ -649,17 +649,44 @@ class AgentCli:
 
     def _create_new_agent(self, namespace: str, name: Optional[str], description: Optional[str]) -> None:
         """Create a new agent from scratch."""
+        # Only show header in interactive mode
+        if name is None and description is None:
+            print("\nCreating a new AI agent...")
+            print("------------------------")
+        
         # Prompt for agent name if not provided
-        if not name or not isinstance(name, str):
-            name = input("Name: ").strip()
-            while not name or not isinstance(name, str):
-                print("Agent name cannot be empty.")
+        while not name or not isinstance(name, str):
+            if description is not None:  # Legacy mode
                 name = input("Name: ").strip()
+            else:  # Interactive mode
+                name = input("Enter agent name: ").strip()
+            
+            if not name:
+                print("Agent name cannot be empty.")
+                continue
+                
+            # Validate name pattern
+            identifier_pattern = re.compile(r"^[a-zA-Z0-9_\-.]+$")
+            if identifier_pattern.match(name) is None:
+                print("Invalid name format. Use only letters, numbers, underscores, hyphens, and dots.")
+                name = None
+                continue
 
         # Prompt for description if not provided
         while not description or not isinstance(description, str):
-            print("A description is needed for agent matching and cannot be empty.")
-            description = input("Description: ").strip()
+            if name and description is None:  # Interactive mode
+                description = input("Enter agent description: ").strip()
+            else:  # Legacy mode
+                print("A description is needed for agent matching and cannot be empty.")
+                description = input("Description: ").strip()
+            
+            if not description:
+                print("Description cannot be empty.")
+                continue
+            if len(description) < 10:
+                print("Description should be at least 10 characters long.")
+                description = None
+                continue
 
         # Set the agent path
         agent_path = get_registry_folder() / namespace / name / "0.0.1"
@@ -708,8 +735,8 @@ run(env)
         with open(agent_py_path, "w") as f:
             f.write(agent_py_content)
 
-        print(f"\nAgent created at: {agent_path}")
-        print("Consider editing:")
+        print(f"\nSUCCESS! New AI Agent created at -> {agent_path}")
+        print("\nEdit agent code here:")
         print(f"\t{agent_path}/agent.py")
         print(f"\t{agent_path}/metadata.json")
         print("\nUseful commands:")

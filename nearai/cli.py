@@ -544,7 +544,7 @@ class AgentCli:
 
             while True:
                 try:
-                    choice = int(input("\nSelect an agent (enter number): ")) - 1
+                    choice = int(Prompt.ask("[blue bold]Select an agent (enter number)")) - 1
                     if 0 <= choice < len(agents):
                         agent = str(agents[choice])
                         break

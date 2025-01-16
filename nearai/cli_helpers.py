@@ -22,7 +22,7 @@ def display_agents_in_columns(agents: list[Path]) -> None:
     )
 
     # Add columns
-    table.add_column("#", style="dim", width=4)
+    table.add_column("#", style="bold", width=4)
     table.add_column("Namespace", style="blue")
     table.add_column("Agent Name", style="cyan")
     table.add_column("Version", style="green")

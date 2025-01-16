@@ -1,13 +1,16 @@
-from pathlib import Path
 import json
-from rich.table import Table
+from pathlib import Path
+
 from rich.console import Console
+from rich.table import Table
+
 
 def display_agents_in_columns(agents: list[Path]) -> None:
     """Display agents in a rich table format.
-    
+
     Args:
         agents: List of Path objects pointing to agent locations
+
     """
     # Create table
     table = Table(
@@ -37,7 +40,7 @@ def display_agents_in_columns(agents: list[Path]) -> None:
                 metadata = json.load(f)
                 description = metadata.get("description", "No description")
                 tags = metadata.get("tags", [])
-        except:
+        except (FileNotFoundError, json.JSONDecodeError):
             description = "Unable to load metadata"
             tags = []
 
@@ -55,4 +58,4 @@ def display_agents_in_columns(agents: list[Path]) -> None:
     console = Console()
     console.print("\n")
     console.print(table)
-    console.print("\n") 
+    console.print("\n")

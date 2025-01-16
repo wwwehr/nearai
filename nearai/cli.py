@@ -16,7 +16,6 @@ from rich.prompt import Prompt, Confirm
 from rich.panel import Panel
 from rich.console import Console
 from rich.text import Text
-from rich.markdown import Markdown
 
 import fire
 from openai.types.beta.threads.message import Attachment
@@ -708,15 +707,17 @@ run(env)
 
         # Create success message
         console = Console()
-        
         success_title = Text(" 🎉 SUCCESS!", style="bold green")
-        path_text = Text(f"\n  New AI Agent created at -> {agent_path}", style="white")
+        path_text = Text.assemble(
+            ("\n  • New AI Agent created at: ", "bold green"),
+            (f"{agent_path}", "bold")
+        )
         
         files_panel = Panel(
             Text.assemble(
                 ("Edit agent code here:\n\n", "yellow"),
-                (f"📄 - {agent_path}/agent.py\n", "blue"),
-                (f"📄 - {agent_path}/metadata.json", "blue")
+                (f"📄 - {agent_path}/agent.py\n", "bold blue"),
+                (f"📄 - {agent_path}/metadata.json", "bold blue")
             ),
             title="Agent Files",
             border_style="yellow"
@@ -725,9 +726,9 @@ run(env)
         commands_panel = Panel(
             Text.assemble(
                 ("Run your agent locally:\n", "light_green"),
-                (f"  nearai agent interactive {agent_path} --local\n\n", "white"),
+                (f"  nearai agent interactive {agent_path} --local\n\n", "bold"),
                 ("Upload to NEAR AIregistry:\n", "light_green"),
-                (f"  nearai registry upload {agent_path}", "white")
+                (f"  nearai registry upload {agent_path}", "bold")
             ),
             title="Useful Commands",
             border_style="green"
@@ -808,7 +809,7 @@ run(env)
 
         console.print("""[medium_spring_green]
         
-    ::::    :::  ::::::::::      :::      :::::::::            :::      ::::::::::: 
+    ::::    :::  ::::::::::      :::      :::::::::            :::      :::::::::::  
     :+:+:   :+:  :+:           :+: :+:    :+:    :+:         :+: :+:        :+:     
     :+:+:+  +:+  +:+          +:+   +:+   +:+    +:+        +:+   +:+       +:+     
     +#+ +:+ +#+  +#++:++#    +#++:++#++:  +#++:++#:        +#++:++#++:      +#+     
@@ -884,7 +885,6 @@ run(env)
         if not Confirm.ask("[bold]Would you like to proceed?", default=True):
             console.print("[red]❌ Agent creation cancelled")
             sys.exit(0)
-
         return namespace, name, description
 
 

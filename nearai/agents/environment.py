@@ -318,6 +318,18 @@ class Environment(object):
 
         self.run_agent = run_agent
 
+        def schedule_run(
+            agent: str,
+            input_message: str,
+            run_at: datetime,
+            run_params: Optional[Dict[str, str]] = None,
+            thread_id: Optional[str] = None,
+        ):
+            """Schedules a run."""
+            return client.schedule_run(agent, input_message, thread_id, run_params, run_at)
+
+        self.schedule_run = schedule_run
+
         # TODO(https://github.com/nearai/nearai/issues/549): Allow only a subset of agents to access/update user memory.
         def add_user_memory(memory: str):
             """Add user memory."""

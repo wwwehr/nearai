@@ -7,6 +7,9 @@ Each time an agents executes it receives an environment, which gives it access t
 * Read and write files on the agent's storage
 * Call other agents
 
+## Available variables
+ * [`signer_account_id`](../../api.md#nearai.agents.environment.Environment.signer_account_id): get the NEAR Account ID of the signer 
+
 <!-- 
 
 ### Signed messages

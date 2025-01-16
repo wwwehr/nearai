@@ -346,6 +346,19 @@ class Delegation(SQLModel, table=True):
     expires_at: Optional[datetime] = Field(default=None)
 
 
+class ScheduledRun(SQLModel, table=True):
+    __tablename__ = "scheduled_runs"
+    id: int = Field(default=None, primary_key=True)
+    thread_id: str = Field(nullable=True)
+    agent: str = Field(nullable=False)
+    input_message: str = Field(nullable=False)
+    run_params: Dict = Field(default_factory=dict, sa_column=Column(JSON))
+    created_at: datetime = Field(default_factory=datetime.now, nullable=False)
+    created_by: str = Field(nullable=False)
+    run_at: datetime = Field(nullable=False)
+    has_run: bool = Field(default=False, nullable=False)
+
+
 db_url = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
 engine = create_engine(db_url, pool_size=DB_POOL_SIZE)
 

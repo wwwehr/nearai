@@ -49,6 +49,7 @@ from nearai.shared.client_config import (
 from nearai.shared.naming import NamespacedName, create_registry_name
 from nearai.shared.provider_models import ProviderModels, get_provider_namespaced_model
 from nearai.tensorboard_feed import TensorboardCli
+from nearai.banners import NEAR_AI_BANNER
 
 
 class RegistryCli:
@@ -876,18 +877,7 @@ run(env)
         namespace = CONFIG.auth.namespace
         
         # Welcome message
-
-        console.print("""[medium_spring_green]
-        
-    ::::    :::  ::::::::::      :::      :::::::::            :::      :::::::::::  
-    :+:+:   :+:  :+:           :+: :+:    :+:    :+:         :+: :+:        :+:     
-    :+:+:+  +:+  +:+          +:+   +:+   +:+    +:+        +:+   +:+       +:+     
-    +#+ +:+ +#+  +#++:++#    +#++:++#++:  +#++:++#:        +#++:++#++:      +#+     
-    +#+  +#+#+#  +#+         +#+     +#+  +#+    +#+       +#+     +#+      +#+     
-    #+#   #+#+#  #+#         #+#     #+#  #+#    #+#       #+#     #+#      #+#     
-    ###    ####  ##########  ###     ###  ###    ###       ###     ###  ###########  
-
-        """)
+        console.print(NEAR_AI_BANNER)
         welcome_panel = Panel(
             Text.assemble(
                 ("Let's create a new agent! 🦾 \n", "bold green"),

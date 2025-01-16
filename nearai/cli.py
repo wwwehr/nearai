@@ -500,21 +500,91 @@ class AgentCli:
 
     def interactive(
         self,
-        agent: str,
+        agent: Optional[str] = None,
         thread_id: Optional[str] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
         local: bool = False,
         env_vars: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Runs agent interactively."""
+        """Runs agent interactively.
+        
+        Args:
+            agent: Optional path to the agent directory. If not provided, will show agent selection menu
+            thread_id: Optional thread ID to continue an existing conversation
+            tool_resources: Optional tool resources to pass to the agent
+            local: Whether to run the agent locally (default: False)
+            env_vars: Optional environment variables to pass to the agent
+        """
+        if agent is None:
+            # List available agents in the registry folder
+            registry_path = Path(get_registry_folder())
+            if not registry_path.exists():
+                print("Error: Registry folder not found. Please create an agent first.")
+                return
+
+            agents = []
+            # Walk through registry to find agents
+            for namespace in registry_path.iterdir():
+                if namespace.is_dir():
+                    for agent_name in namespace.iterdir():
+                        if agent_name.is_dir():
+                            for version in agent_name.iterdir():
+                                if version.is_dir():
+                                    agents.append(version)
+
+            if not agents:
+                print("No agents found. Please create an agent first with 'nearai agent create'")
+                return
+
+            print("\nAvailable agents:")
+            for idx, path in enumerate(agents, 1):
+                try:
+                    with open(path / "metadata.json") as f:
+                        metadata = json.load(f)
+                        description = metadata.get("description", "No description")
+                except:
+                    description = "Unable to load metadata"
+                print(f"{idx}. {path.parts[-3]}/{path.parts[-2]}/{path.parts[-1]} - {description}")
+
+            while True:
+                try:
+                    choice = int(input("\nSelect an agent (enter number): ")) - 1
+                    if 0 <= choice < len(agents):
+                        agent = str(agents[choice])
+                        break
+                    print("Invalid selection. Please try again.")
+                except ValueError:
+                    print("Please enter a valid number.")
+                except KeyboardInterrupt:
+                    print("\nOperation cancelled.")
+                    return
+
+        # Convert agent path to Path object if it's a string
+        agent_path = Path(agent)
+        if not agent_path.exists():
+            print(f"Error: Agent not found at path: {agent_path}")
+            return
+
+        try:
+            # Get the last 3 parts of the path (namespace/name/version)
+            parts = agent_path.parts[-3:]
+            agent_id = "/".join(parts)
+        except IndexError:
+            print("Error: Invalid agent path. Expected format: path/to/namespace/name/version")
+            print("Example: ~/.nearai/registry/namespace/agent-name/0.0.1")
+            return
+
         last_message_id = None
+        print(f"\n=== Starting interactive session with agent: {agent_id} ===")
+        print("Type 'exit' to end the session\n")
+        
         while True:
             new_message = input("> ")
             if new_message.lower() == "exit":
                 break
 
             last_message_id = self._task(
-                agent=agent,
+                agent=agent_id,
                 task=new_message,
                 thread_id=thread_id,
                 tool_resources=tool_resources,

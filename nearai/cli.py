@@ -731,14 +731,26 @@ class AgentCli:
             _, name, description = self._prompt_agent_details()
 
         # Set the agent path
-        agent_path = get_registry_folder() / namespace / name / "0.0.1"
+        registry_folder = get_registry_folder()
+        if registry_folder is None:
+            raise ValueError("Registry folder path cannot be None")
+
+        # Narrow the type of namespace & name from Optional[str] to str
+        namespace_str: str = namespace if namespace is not None else ""
+        if namespace_str == "":
+            raise ValueError("Namespace cannot be None or empty")
+
+        name_str: str = name if name is not None else ""
+        if name_str == "":
+            raise ValueError("Name cannot be None or empty")
+
+        agent_path = registry_folder / namespace_str / name_str / "0.0.1"
         agent_path.mkdir(parents=True, exist_ok=True)
 
-        # Create metadata.json
-        metadata = {
-            "name": name,
+        metadata: Dict[str, Any] = {
+            "name": name_str,
             "version": "0.0.1",
-            "description": description,
+            "description": description or "",
             "category": "agent",
             "tags": [],
             "details": {
@@ -873,7 +885,9 @@ run(env)
     def _prompt_agent_details(self) -> Tuple[str, str, str]:
         console = Console()
 
-        # Get namespace from CONFIG
+        # Get namespace from CONFIG, with null check
+        if CONFIG.auth is None:
+            raise ValueError("Not logged in. Please run 'nearai login' first.")
         namespace = CONFIG.auth.namespace
 
         # Welcome message

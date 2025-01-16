@@ -709,25 +709,25 @@ run(env)
         # Create success message
         console = Console()
         
-        success_title = Text("🎉 SUCCESS!", style="bold green")
-        path_text = Text(f"\nNew AI Agent created at:\n{agent_path}", style="blue")
+        success_title = Text(" 🎉 SUCCESS!", style="bold green")
+        path_text = Text(f"\n  New AI Agent created at -> {agent_path}", style="white")
         
         files_panel = Panel(
             Text.assemble(
                 ("Edit agent code here:\n\n", "yellow"),
-                (f"📄 {agent_path}/agent.py\n", "blue"),
-                (f"📄 {agent_path}/metadata.json", "blue")
+                (f"📄 - {agent_path}/agent.py\n", "blue"),
+                (f"📄 - {agent_path}/metadata.json", "blue")
             ),
-            title="Files",
+            title="Agent Files",
             border_style="yellow"
         )
         
         commands_panel = Panel(
             Text.assemble(
-                ("Run your agent locally:\n", "yellow"),
-                (f"  nearai agent interactive {agent_path} --local\n\n", "blue"),
-                ("Upload to NEAR AIregistry:\n", "yellow"),
-                (f"  nearai registry upload {agent_path}", "blue")
+                ("Run your agent locally:\n", "light_green"),
+                (f"  nearai agent interactive {agent_path} --local\n\n", "white"),
+                ("Upload to NEAR AIregistry:\n", "light_green"),
+                (f"  nearai registry upload {agent_path}", "white")
             ),
             title="Useful Commands",
             border_style="green"
@@ -807,9 +807,10 @@ run(env)
         # Welcome message
         welcome_panel = Panel(
             Text.assemble(
-                ("Let's create a new AI Agent! 🤖\n\n", "bold green"),
+                ("Let's create a new agent! 🦾 \n", "bold green"),
                 ("We'll need some basic information to get started.", "dim")
             ),
+            title="Agent Creator",
             border_style="green"
         )
         console.print(welcome_panel)
@@ -846,7 +847,7 @@ run(env)
 
         # Description prompt
         description_info = Panel(
-            "Describe what your agent does in a few words",
+            "Describe what your agent will do in a few words",
             title="Description Info",
             border_style="blue"
         )
@@ -858,9 +859,9 @@ run(env)
         summary_panel = Panel(
             Text.assemble(
                 ("Summary of your new agent:\n\n", "bold"),
-                ("Namespace: ", "dim"), (f"{namespace}\n", "yellow"),
-                ("Name: ", "dim"), (f"{name}\n", "yellow"),
-                ("Description: ", "dim"), (f"{description}", "yellow")
+                ("Namespace/AccountId:  ", "dim"), (f"{namespace}\n", "green"),
+                ("Agent Name:           ", "dim"), (f"{name}\n", "green"),
+                ("Agent Description:    ", "dim"), (f"{description}", "green")
             ),
             title="📋 Review",
             border_style="green"

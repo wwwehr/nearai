@@ -28,12 +28,15 @@ In your agentâ€™s code, you can access these environment variables using Pythonâ
 To retrieve an environment variable in the agent code:
 
 ```python
+# Using env.env_vars
+value = env.env_vars.get('VARIABLE_NAME', 'default_value')
+
 # Using os.environ
 import os
-value = os.environ.get('VARIABLE_NAME', None)
+value = os.environ.get('VARIABLE_NAME', 'default_value')
 
 # Or using globals()
-value = globals()['env'].env_vars.get('VARIABLE_NAME')
+value = globals()['env'].env_vars.get('VARIABLE_NAME', 'default_value')
 ```
 
 This allows users to fork the agent, modify the environment variables in `metadata.json`, and achieve the desired behavior without changing the code itself.

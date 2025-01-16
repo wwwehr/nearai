@@ -780,19 +780,16 @@ run(env)
         # Create success message
         console = Console()
         success_title = Text(" 🎉 SUCCESS!", style="bold green")
-        path_text = Text.assemble(
-            ("\n  • New AI Agent created at: ", "bold green"),
-            (f"{agent_path}", "bold")
-        )
+        path_text = Text.assemble(("\n  • New AI Agent created at: ", "bold green"), (f"{agent_path}", "bold"))
 
         files_panel = Panel(
             Text.assemble(
                 ("Edit agent code here:\n\n", "yellow"),
                 (f"📄 - {agent_path}/agent.py\n", "bold blue"),
-                (f"📄 - {agent_path}/metadata.json", "bold blue")
+                (f"📄 - {agent_path}/metadata.json", "bold blue"),
             ),
             title="Agent Files",
-            border_style="yellow"
+            border_style="yellow",
         )
 
         commands_panel = Panel(
@@ -802,10 +799,10 @@ run(env)
                 ("Upload this agent to NEAR AI's public registry:\n", "light_green"),
                 (f"  nearai registry upload {agent_path}\n\n", "bold"),
                 ("Run ANY agent from your local registry:\n", "light_green"),
-                ("  nearai agent interactive --local", "bold")
+                ("  nearai agent interactive --local", "bold"),
             ),
             title="Useful Commands",
-            border_style="green"
+            border_style="green",
         )
 
         console.print("\n")
@@ -884,10 +881,10 @@ run(env)
         welcome_panel = Panel(
             Text.assemble(
                 ("Let's create a new agent! 🦾 \n", "bold green"),
-                ("We'll need some basic information to get started.", "dim")
+                ("We'll need some basic information to get started.", "dim"),
             ),
             title="Agent Creator",
-            border_style="green"
+            border_style="green",
         )
         console.print(welcome_panel)
         console.print("\n")
@@ -901,23 +898,22 @@ run(env)
                 ("• dots (.)\n", "dim"),
                 ("• hyphens (-)\n", "dim"),
                 ("• underscores (_)\n\n", "dim"),
-                ("Examples: 'code-reviewer', 'data.analyzer', 'text_summarizer'", "green")
+                ("Examples: 'code-reviewer', 'data.analyzer', 'text_summarizer'", "green"),
             ),
             title="Agent Name Rules",
-            border_style="blue"
+            border_style="blue",
         )
         console.print(name_info)
 
         while True:
             name = Prompt.ask("[bold blue]Enter agent name").strip()
             # Validate name format
-            if not re.match(r'^[a-zA-Z0-9][a-zA-Z0-9._-]*$', name):
+            if not re.match(r"^[a-zA-Z0-9][a-zA-Z0-9._-]*$", name):
                 console.print(
-                    "[red]❌ Invalid name format. "
-                    "Please use only letters, numbers, dots, hyphens, or underscores."
+                    "[red]❌ Invalid name format. " "Please use only letters, numbers, dots, hyphens, or underscores."
                 )
                 continue
-            if ' ' in name:
+            if " " in name:
                 console.print("[red]❌ Spaces are not allowed. Use dots, hyphens, or underscores instead.")
                 continue
             break
@@ -926,9 +922,7 @@ run(env)
 
         # Description prompt
         description_info = Panel(
-            "Describe what your agent will do in a few words",
-            title="Description Info",
-            border_style="blue"
+            "Describe what your agent will do in a few words", title="Description Info", border_style="blue"
         )
         console.print(description_info)
         description = Prompt.ask("[bold blue]Enter description")
@@ -938,12 +932,15 @@ run(env)
         summary_panel = Panel(
             Text.assemble(
                 ("Summary of your new agent:\n\n", "bold"),
-                ("Namespace/AccountId:  ", "dim"), (f"{namespace}\n", "green"),
-                ("Agent Name:           ", "dim"), (f"{name}\n", "green"),
-                ("Agent Description:    ", "dim"), (f"{description}", "green")
+                ("Namespace/AccountId:  ", "dim"),
+                (f"{namespace}\n", "green"),
+                ("Agent Name:           ", "dim"),
+                (f"{name}\n", "green"),
+                ("Agent Description:    ", "dim"),
+                (f"{description}", "green"),
             ),
             title="📋 Review",
-            border_style="green"
+            border_style="green",
         )
         console.print(summary_panel)
         console.print("\n")

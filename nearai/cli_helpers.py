@@ -14,13 +14,7 @@ def display_agents_in_columns(agents: list[Path]) -> None:
 
     """
     # Create table
-    table = Table(
-        title="Available Agents",
-        show_header=True,
-        header_style="bold",
-        show_lines=True,
-        expand=True
-    )
+    table = Table(title="Available Agents", show_header=True, header_style="bold", show_lines=True, expand=True)
 
     # Add columns
     table.add_column("#", style="bold", width=4)
@@ -52,7 +46,7 @@ def display_agents_in_columns(agents: list[Path]) -> None:
             agent_path.parts[-2],  # agent name
             agent_path.parts[-1],  # version
             description,
-            ", ".join(tags) if tags else "—"
+            ", ".join(tags) if tags else "—",
         )
 
     # Display table

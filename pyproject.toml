@@ -50,6 +50,8 @@ dependencies = [
     "typer>=0.12.5,<0.13.0",
     "uvicorn>=0.32.0,<0.33.0",
     "tweepy>=4.14.0,<5.0.0",
+    "rich>=13.7.0,<14.0.0",
+    "types-rich>=13.7.0.20240310,<14.0.0",
 ]
 
 [tool.poetry.dependencies]
@@ -114,6 +116,7 @@ fireworks-ai = "^0.15.7"
 typer = "^0.12.5"
 uvicorn = "^0.32.0"
 tweepy = { version = "^4.14.0" }
+rich = "^13.7.0"
 
 [project.optional-dependencies]
 # Experiment platform
@@ -143,6 +146,7 @@ ruff = "^0.5.2"
 commitizen = "^3.29.0"
 types-openpyxl = "^3.1.5.20240822"
 types-urllib3 = "^1.26.25.14"
+types-rich = "^13.7.0.20240310"
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "^1.6.0"

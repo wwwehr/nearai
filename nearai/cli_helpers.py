@@ -9,6 +9,7 @@ def display_agents_in_columns(agents: list[Path]) -> None:
     """Display agents in a rich table format.
 
     Args:
+    ----
         agents: List of Path objects pointing to agent locations
 
     """

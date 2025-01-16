@@ -511,6 +511,7 @@ class AgentCli:
         """Runs agent interactively.
 
         Args:
+        ----
             agent: Optional path to the agent directory. If not provided, will show agent selection menu
             thread_id: Optional thread ID to continue an existing conversation
             tool_resources: Optional tool resources to pass to the agent

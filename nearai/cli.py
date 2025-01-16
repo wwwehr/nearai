@@ -10,7 +10,13 @@ from dataclasses import asdict
 from datetime import datetime, timedelta
 from pathlib import Path
 from textwrap import fill
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Tuple
+from rich import print as rprint
+from rich.prompt import Prompt, Confirm
+from rich.panel import Panel
+from rich.console import Console
+from rich.text import Text
+from rich.markdown import Markdown
 
 import fire
 from openai.types.beta.threads.message import Attachment
@@ -649,45 +655,10 @@ class AgentCli:
 
     def _create_new_agent(self, namespace: str, name: Optional[str], description: Optional[str]) -> None:
         """Create a new agent from scratch."""
-        # Only show header in interactive mode
+        # If no name/description provided, use interactive prompts
         if name is None and description is None:
-            print("\nCreating a new AI agent...")
-            print("------------------------")
+            _, name, description = self._prompt_agent_details()
         
-        # Prompt for agent name if not provided
-        while not name or not isinstance(name, str):
-            if description is not None:  # Legacy mode
-                name = input("Name: ").strip()
-            else:  # Interactive mode
-                name = input("Enter agent name: ").strip()
-            
-            if not name:
-                print("Agent name cannot be empty.")
-                continue
-                
-            # Validate name pattern
-            identifier_pattern = re.compile(r"^[a-zA-Z0-9_\-.]+$")
-            if identifier_pattern.match(name) is None:
-                print("Invalid name format. Use only letters, numbers, underscores, hyphens, and dots.")
-                name = None
-                continue
-
-        # Prompt for description if not provided
-        while not description or not isinstance(description, str):
-            if name and description is None:  # Interactive mode
-                description = input("Enter agent description: ").strip()
-            else:  # Legacy mode
-                print("A description is needed for agent matching and cannot be empty.")
-                description = input("Description: ").strip()
-            
-            if not description:
-                print("Description cannot be empty.")
-                continue
-            if len(description) < 10:
-                print("Description should be at least 10 characters long.")
-                description = None
-                continue
-
         # Set the agent path
         agent_path = get_registry_folder() / namespace / name / "0.0.1"
         agent_path.mkdir(parents=True, exist_ok=True)
@@ -735,13 +706,41 @@ run(env)
         with open(agent_py_path, "w") as f:
             f.write(agent_py_content)
 
-        print(f"\nSUCCESS! New AI Agent created at -> {agent_path}")
-        print("\nEdit agent code here:")
-        print(f"\t{agent_path}/agent.py")
-        print(f"\t{agent_path}/metadata.json")
-        print("\nUseful commands:")
-        print(f"  > nearai agent interactive {agent_path} --local")
-        print(f"  > nearai registry upload {agent_path}")
+        # Create success message
+        console = Console()
+        
+        success_title = Text("🎉 SUCCESS!", style="bold green")
+        path_text = Text(f"\nNew AI Agent created at:\n{agent_path}", style="blue")
+        
+        files_panel = Panel(
+            Text.assemble(
+                ("Edit agent code here:\n\n", "yellow"),
+                (f"📄 {agent_path}/agent.py\n", "blue"),
+                (f"📄 {agent_path}/metadata.json", "blue")
+            ),
+            title="Files",
+            border_style="yellow"
+        )
+        
+        commands_panel = Panel(
+            Text.assemble(
+                ("Run your agent locally:\n", "yellow"),
+                (f"  nearai agent interactive {agent_path} --local\n\n", "blue"),
+                ("Upload to NEAR AIregistry:\n", "yellow"),
+                (f"  nearai registry upload {agent_path}", "blue")
+            ),
+            title="Useful Commands",
+            border_style="green"
+        )
+
+        console.print("\n")
+        console.print(success_title)
+        console.print(path_text)
+        console.print("\n")
+        console.print(files_panel)
+        console.print("\n")
+        console.print(commands_panel)
+        console.print("\n")
 
     def _fork_agent(self, fork: str, namespace: str, new_name: Optional[str]) -> None:
         """Fork an existing agent."""
@@ -798,6 +797,82 @@ run(env)
         print("\nUseful commands:")
         print(f"  > nearai agent interactive {new_name} --local")
         print(f"  > nearai registry upload {dest_path}")
+
+    def _prompt_agent_details(self) -> Tuple[str, str, str]:
+        console = Console()
+        
+        # Get namespace from CONFIG
+        namespace = CONFIG.auth.namespace
+        
+        # Welcome message
+        welcome_panel = Panel(
+            Text.assemble(
+                ("Let's create a new AI Agent! 🤖\n\n", "bold green"),
+                ("We'll need some basic information to get started.", "dim")
+            ),
+            border_style="green"
+        )
+        console.print(welcome_panel)
+        console.print("\n")
+        
+        # Name prompt with explanation
+        name_info = Panel(
+            Text.assemble(
+                ("Choose a unique name for your agent using only:\n", ""),
+                ("• letters\n", "dim"),
+                ("• numbers\n", "dim"),
+                ("• dots (.)\n", "dim"),
+                ("• hyphens (-)\n", "dim"),
+                ("• underscores (_)\n\n", "dim"),
+                ("Examples: 'code-reviewer', 'data.analyzer', 'text_summarizer'", "green")
+            ),
+            title="Agent Name Rules",
+            border_style="blue"
+        )
+        console.print(name_info)
+        
+        while True:
+            name = Prompt.ask("[bold blue]Enter agent name").strip()
+            # Validate name format
+            if not re.match(r'^[a-zA-Z0-9][a-zA-Z0-9._-]*$', name):
+                console.print("[red]❌ Invalid name format. Please use only letters, numbers, dots, hyphens, or underscores.")
+                continue
+            if ' ' in name:
+                console.print("[red]❌ Spaces are not allowed. Use dots, hyphens, or underscores instead.")
+                continue
+            break
+        
+        console.print("\n")
+
+        # Description prompt
+        description_info = Panel(
+            "Describe what your agent does in a few words",
+            title="Description Info",
+            border_style="blue"
+        )
+        console.print(description_info)
+        description = Prompt.ask("[bold blue]Enter description")
+        
+        # Confirmation
+        console.print("\n")
+        summary_panel = Panel(
+            Text.assemble(
+                ("Summary of your new agent:\n\n", "bold"),
+                ("Namespace: ", "dim"), (f"{namespace}\n", "yellow"),
+                ("Name: ", "dim"), (f"{name}\n", "yellow"),
+                ("Description: ", "dim"), (f"{description}", "yellow")
+            ),
+            title="📋 Review",
+            border_style="green"
+        )
+        console.print(summary_panel)
+        console.print("\n")
+        
+        if not Confirm.ask("[bold]Would you like to proceed?", default=True):
+            console.print("[red]❌ Agent creation cancelled")
+            sys.exit(0)
+
+        return namespace, name, description
 
 
 class VllmCli:

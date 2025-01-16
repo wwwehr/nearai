@@ -22,3 +22,7 @@ The `run_agent` method has an optional `fork_thread` parameter to control whethe
 If we **do fork**, the agent we are calling will work on a copy of the thread, meaning that they have access to all files and messages created so far, but any message or file they create will be part of their own thread.
 
 If we do **not fork** the thread, the called agent will work in the same thread as the current agent, meaning that they have access to all files and messages created so far, and any message or file they create will be part of the current thread.
+
+## Schedule a run
+Agents can schedule a run for a later time using the [`schedule_run`](../../api.md#nearai.agents.environment.Environment.schedule_run) method. The scheduled run will be executed
+ by the scheduler using hub credentials.

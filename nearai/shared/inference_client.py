@@ -1,5 +1,6 @@
 import io
 import json
+from datetime import datetime
 from functools import cached_property
 from typing import Any, Dict, Iterable, List, Literal, Optional, Union
 
@@ -280,6 +281,45 @@ class InferenceClient(object):
             assistant_id=assistant_id,
             extra_body={"parent_run_id": current_run_id},
         )
+
+    def schedule_run(
+        self,
+        agent: str,
+        input_message: str,
+        thread_id: Optional[str],
+        run_params: Optional[Dict[str, str]],
+        run_at: datetime,
+    ):
+        """Query a vector store."""
+        if self._config is None:
+            raise ValueError("Missing NearAI Hub config")
+
+        auth_bearer_token = self._auth
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_bearer_token}",
+        }
+
+        if run_params is None:
+            run_params = {}
+
+        data = {
+            "agent": agent,
+            "input_message": input_message,
+            "thread_id": thread_id,
+            "run_params": run_params,
+            "run_at": run_at,
+        }
+
+        endpoint = f"{self._config.base_url}/schedule_run"
+
+        try:
+            response = requests.post(endpoint, headers=headers, json=data)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            raise ValueError(f"Error querying schedule_run: {e}") from None
 
     def query_user_memory(self, query: str):
         """Query the user memory."""

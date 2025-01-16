@@ -506,6 +506,7 @@ class AgentCli:
         thread_id: Optional[str] = None,
         tool_resources: Optional[Dict[str, Any]] = None,
         local: bool = False,
+        verbose: bool = False,
         env_vars: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Runs agent interactively.
@@ -585,6 +586,7 @@ class AgentCli:
                 tool_resources=tool_resources,
                 last_message_id=last_message_id,
                 local=local,
+                verbose=verbose,
                 env_vars=env_vars,
             )
 
@@ -600,6 +602,7 @@ class AgentCli:
         tool_resources: Optional[Dict[str, Any]] = None,
         file_ids: Optional[List[str]] = None,
         local: bool = False,
+        verbose: bool = False,
         env_vars: Optional[Dict[str, Any]] = None,
     ) -> None:
         """CLI wrapper for the _task method."""
@@ -610,6 +613,7 @@ class AgentCli:
             tool_resources=tool_resources,
             file_ids=file_ids,
             local=local,
+            verbose=verbose,
             env_vars=env_vars,
         )
         if last_message_id:
@@ -625,6 +629,7 @@ class AgentCli:
         file_ids: Optional[List[str]] = None,
         last_message_id: Optional[str] = None,
         local: bool = False,
+        verbose: bool = False,
         env_vars: Optional[Dict[str, Any]] = None,
     ) -> Optional[str]:
         """Runs agent non-interactively with a single task."""
@@ -660,6 +665,7 @@ class AgentCli:
                 "data_source": "local_files",
                 "user_env_vars": env_vars,
                 "agent_env_vars": {},
+                "verbose": verbose,
             }
             auth = CONFIG.auth
             assert auth is not None

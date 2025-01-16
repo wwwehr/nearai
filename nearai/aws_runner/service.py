@@ -20,6 +20,11 @@ from nearai.shared.provider_models import PROVIDER_MODEL_SEP
 OUTPUT_PATH = "/tmp/nearai-agent-runner"
 DEFAULT_API_URL = "https://api.near.ai"
 
+# Local caches
+inference_client = None
+inference_client_cache_time = None
+local_agent_cache: dict[str, Agent] = {}
+
 
 def create_cloudwatch():
     if os.environ.get("AWS_ACCESS_KEY_ID") and os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
@@ -120,13 +125,18 @@ def write_metric(metric_name, value, unit="Milliseconds", verbose=True):
             ],
         )
     elif verbose:
-        print(f"Would have written metric {metric_name} with value {value} to cloudwatch")
+        print(f"[DEBUG] • Would have written metric {metric_name} with value {value} to cloudwatch")
 
 
 def load_agent(client, agent, params: dict, additional_path: str = "", verbose=True) -> Agent:
     agent_metadata = None
 
     if params["data_source"] == "registry":
+        global local_agent_cache
+        if agent in local_agent_cache:
+            print(f"Using {agent} from cache")
+            return local_agent_cache[agent]
+
         start_time = time.perf_counter()
         agent_files = client.get_agent(agent)
         stop_time = time.perf_counter()
@@ -135,6 +145,11 @@ def load_agent(client, agent, params: dict, additional_path: str = "", verbose=T
         agent_metadata = client.get_agent_metadata(agent)
         stop_time = time.perf_counter()
         write_metric("GetMetadataFromRegistry_Duration", stop_time - start_time, verbose=verbose)
+        full_agent = Agent(
+            agent, agent_files, agent_metadata or {}, change_to_temp_dir=params.get("change_to_agent_temp_dir", True)
+        )
+        local_agent_cache[full_agent.identifier] = full_agent
+        return full_agent
     elif params["data_source"] == "local_files":
         agent = agent.replace(f"{get_registry_folder()}/", "")
         agent_files = get_local_agent_files(agent, additional_path)
@@ -143,22 +158,41 @@ def load_agent(client, agent, params: dict, additional_path: str = "", verbose=T
             if os.path.basename(file["filename"]) == "metadata.json":
                 agent_metadata = json.loads(file["content"])
                 if verbose:
-                    print(f"Loaded {agent_metadata} agents from {agent}")
+                    agent_info = f"""[DEBUG]   • Name: {agent_metadata['name']}
+[DEBUG]   • Version: {agent_metadata['version']}
+[DEBUG]   • Description: {agent_metadata['description']}
+[DEBUG]   • Category: {agent_metadata['category']}
+[DEBUG]   • Tags: {', '.join(agent_metadata['tags']) if agent_metadata['tags'] else 'None'}
+[DEBUG]   • Model: {agent_metadata['details']['agent']['defaults']['model']}
+[DEBUG]   • Model Provider: {agent_metadata['details']['agent']['defaults']['model_provider']}
+[DEBUG]   • Model Temperature: {agent_metadata['details']['agent']['defaults']['model_temperature']}
+[DEBUG]   • Model Max Tokens: {agent_metadata['details']['agent']['defaults']['model_max_tokens']}
+[DEBUG]   • Show Entry: {agent_metadata['show_entry']}
+[DEBUG]    ----------------------------
+"""
+                    print(f"\n[DEBUG] Loaded agent from {agent}:\n{agent_info}")
                 break
 
-    if not agent_metadata:
-        print(f"Missing metadata for {agent}")
+        if not agent_metadata:
+            print(f"Missing metadata for {agent}")
 
-    return Agent(
-        agent, agent_files, agent_metadata or {}, change_to_temp_dir=params.get("change_to_agent_temp_dir", True)
-    )
+        return Agent(
+            agent, agent_files, agent_metadata or {}, change_to_temp_dir=params.get("change_to_agent_temp_dir", True)
+        )
+    else:
+        raise ValueError("Invalid data_source")
 
 
 def clear_temp_agent_files(agents, verbose=True):
     for agent in agents:
         if agent.temp_dir and os.path.exists(agent.temp_dir):
             if verbose:
-                print("removed agent.temp_dir", agent.temp_dir)
+                debug_info = f"""[DEBUG] • Removed agent.temp_dir {agent.temp_dir}
+[DEBUG]
+[DEBUG]  =======================================
+
+"""
+                print(debug_info)
             shutil.rmtree(agent.temp_dir)
 
 
@@ -203,11 +237,18 @@ def start_with_environment(
     params = params or {}
     verbose: bool = params.get("verbose", True)
     if verbose:
-        print(
-            f"Running with: agents: {agents} // params: {params.keys()} "
-            f"// thread_id: {thread_id} // run_id: {run_id} "
-            f"// auth by {auth.account_id}"
-        )
+        debug_info = f"""
+
+[DEBUG] ==== Running Agent ====
+
+[DEBUG] Agent(s):     {agents}
+[DEBUG] Thread ID:    {thread_id}
+[DEBUG] Run ID:       {run_id}
+[DEBUG] Auth User:    {auth.account_id}
+"""
+        if params:
+            debug_info += "\n[DEBUG] Parameters:\n" + "\n".join(f"[DEBUG]   • {key}" for key in params.keys())
+        print(debug_info)
     api_url = str(params.get("api_url", DEFAULT_API_URL))
     user_env_vars: dict = params.get("user_env_vars", {})
     agent_env_vars: dict = params.get("agent_env_vars", {})
@@ -246,7 +287,7 @@ def start_with_environment(
         agent.max_iterations = params["max_iterations"]
     if verbose:
         print(
-            f"Agent info: provider: {agent.model_provider} // model: {agent.model} "
+            f"[DEBUG] • Agent info: provider: {agent.model_provider} // model: {agent.model} "
             f"// temperature: {agent.model_temperature} // max_tokens: {agent.model_max_tokens} "
             f"// max_iterations: {agent.max_iterations}"
         )
@@ -255,7 +296,18 @@ def start_with_environment(
         base_url=api_url + "/v1",
         auth=auth,
     )
-    inference_client = InferenceClient(client_config, protected_vars.get("RUNNER_API_KEY"), agent.identifier)
+    global inference_client
+    global inference_client_cache_time
+    # Force a check for new models after an hour if the runner has stayed hot for that long
+    # this is a failsafe given usage patterns at the time of writing, if models are uploaded more frequently and
+    # runners stay hot, it could be adjusted down or client model caching removed.
+    if not inference_client or (time.time() - inference_client_cache_time > 3600):
+        if inference_client_cache_time:
+            write_metric("InferenceClientCacheCleared", "1", "Count")
+        inference_client = InferenceClient(client_config, protected_vars.get("RUNNER_API_KEY"), agent.identifier)
+        inference_client_cache_time = time.time()
+    else:
+        inference_client.generate_auth_for_current_agent(client_config, agent.identifier)
     hub_client = client_config.get_hub_client()
     run_path = (
         additional_path

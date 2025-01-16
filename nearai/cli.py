@@ -796,10 +796,12 @@ run(env)
         
         commands_panel = Panel(
             Text.assemble(
-                ("Run your agent locally:\n", "light_green"),
+                ("Run this agent locally:\n", "light_green"),
                 (f"  nearai agent interactive {agent_path} --local\n\n", "bold"),
-                ("Upload to NEAR AIregistry:\n", "light_green"),
-                (f"  nearai registry upload {agent_path}", "bold")
+                ("Upload this agent to NEAR AI's public registry:\n", "light_green"),
+                (f"  nearai registry upload {agent_path}\n\n", "bold"),
+                (f"Run ANY agent from your local registry:\n", "light_green"),
+                (f" nearai agent interactive --local", "bold")
             ),
             title="Useful Commands",
             border_style="green"

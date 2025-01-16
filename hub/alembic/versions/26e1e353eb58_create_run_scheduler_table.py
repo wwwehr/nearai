@@ -20,7 +20,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     op.create_table(
-        "schedule_runs",
+        "scheduled_runs",
         sa.Column("id", sa.Integer, primary_key=True),
         sa.Column("thread_id", sa.String(255), nullable=True),
         sa.Column("agent", sa.Text, nullable=False),
@@ -34,4 +34,4 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_table("schedule_runs")
+    op.drop_table("scheduled_runs")

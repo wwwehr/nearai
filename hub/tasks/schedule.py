@@ -10,7 +10,7 @@ from nearai.shared.client_config import DEFAULT_MODEL
 from sqlmodel import select
 
 from hub.api.v1.auth import AuthToken
-from hub.api.v1.models import RunSchedule, get_session
+from hub.api.v1.models import ScheduledRun, get_session
 from hub.api.v1.thread_routes import RunCreateParamsBase, ThreadModel, _create_thread, create_run
 from hub.tasks.near_events import near_events_task, process_near_events_initial_state
 from hub.tasks.scheduler import get_async_scheduler
@@ -70,16 +70,16 @@ async def process_due_tasks(auth_token: AuthToken):
                 create_run(thread_id=task.thread_id, run=run_params, auth=auth_token, scheduler=get_async_scheduler())
 
 
-def get_due_tasks() -> list[RunSchedule]:
+def get_due_tasks() -> list[ScheduledRun]:
     now = datetime.now()
 
     with get_session() as session:
         due_tasks = session.exec(
-            select(RunSchedule).where(RunSchedule.run_at <= now, RunSchedule.has_run == False)  # noqa: E712
+            select(ScheduledRun).where(ScheduledRun.run_at <= now, ScheduledRun.has_run == False)  # noqa: E712
         ).all()
 
         if due_tasks is None:
-            raise HTTPException(status_code=403, detail="RunSchedule request failed")
+            raise HTTPException(status_code=403, detail="ScheduledRun request failed")
 
         return list(due_tasks)
 
@@ -100,12 +100,11 @@ def load_auth_token():
 async def lifespan(app):
     """Schedule recurring tasks."""
     auth_token = load_auth_token()
-    run_scheduler = os.getenv("RUN_SCHEDULER", "false").lower() == "true"
+    read_scheduled_runs = os.getenv("READ_SCHEDULED_RUNS", "false").lower() == "true"
     read_near_events = os.getenv("READ_NEAR_EVENTS", "false").lower() == "true"
     read_x_events = os.getenv("READ_X_EVENTS", "false").lower() == "true"
 
-    # RunSchedule tasks
-    if run_scheduler:
+    if read_scheduled_runs:
         job = partial(process_due_tasks, auth_token)
         await job()
         get_async_scheduler().add_job(job, IntervalTrigger(seconds=1), name="schedule_run")
@@ -121,7 +120,7 @@ async def lifespan(app):
         await job()
         get_async_scheduler().add_job(job, IntervalTrigger(seconds=120), name="x_events")
 
-    if read_near_events or read_x_events or run_scheduler:
+    if read_near_events or read_x_events or read_scheduled_runs:
         get_async_scheduler().start()
 
         yield

@@ -194,6 +194,7 @@ There are several variations for completions:
 For working with files and running commands the following methods are also available on `env`. You may call these
 directly or use them through the tool_registry and passing them to a completions method.
 
+ * [`get_signer_id`](api.md#nearai.agents.environment.Environment.get_signer_id): get the signer's NEAR Account ID 
  * [`list_terminal_commands`](api.md#nearai.agents.environment.Environment.list_terminal_commands): list the history of terminal commands
  * [`list_files`](api.md#nearai.agents.environment.Environment.list_files): list the files in the current directory
  * [`get_path`](api.md#nearai.agents.environment.Environment.get_system_path): get the path of the current directory
@@ -201,6 +202,7 @@ directly or use them through the tool_registry and passing them to a completions
  * [`write_file`](api.md#nearai.agents.environment.Environment.write_file): write to a file
  * [`exec_command`](api.md#nearai.agents.environment.Environment.exec_command): execute a terminal command
  * [`query_vector_store`](api.md#nearai.agents.environment.Environment.query_vector_store): query a vector store
+ * [`schedule_run`](api.md#nearai.agents.environment.Environment.schedule_run): schedule a run for a later time. It will be run by the scheduler using hub credentials.
 
 ### Logging
 * [`add_system_log`](api.md#nearai.agents.environment.Environment.add_system_log): adds a system or environment log that is then saved into "system_log.txt".

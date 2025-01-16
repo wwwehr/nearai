@@ -7,10 +7,10 @@ from pydantic import BaseModel
 
 from hub.api.v1.auth import AuthToken, get_auth
 from hub.api.v1.entry_location import EntryLocation
-from hub.api.v1.models import RunSchedule, get_session
+from hub.api.v1.models import ScheduledRun, get_session
 from hub.api.v1.models import Thread as ThreadModel
 
-schedule_run_router = APIRouter(tags=["Run Schedule"])
+scheduled_run_router = APIRouter(tags=["Run Schedule"])
 
 logger = logging.getLogger(__name__)
 
@@ -25,30 +25,32 @@ class CreateScheduleRunRequest(BaseModel):
     run_at: datetime
 
 
-@schedule_run_router.post("/schedule_run")
+@scheduled_run_router.post("/schedule_run")
 def schedule_run(
     request: CreateScheduleRunRequest,
     auth: AuthToken = Depends(get_auth),
 ):
+    """Endpoint to schedule a new run."""
     logger.info(f"Creating scheduled run for agent {request.run_at}: {datetime.now()}")
     assert request.run_at > datetime.now(), "run_at should be in the future"
 
     with get_session() as session:
-        # TODO add permission check for user to avoid many scheduled runs
+        # TODO(715) add permission check for user to avoid many/infinite scheduled runs
 
-        # agent name validation
+        # Validate the agent name
         if EntryLocation.from_str(request.agent) is None:
             raise HTTPException(status_code=400, detail="Agent name is invalid")
 
         if request.thread_id is not None:
-            # verify given thread_id
+            # Verify the given thread_id
             thread_model = session.get(ThreadModel, request.thread_id)
             if thread_model is None:
                 raise HTTPException(status_code=404, detail="Thread not found")
             if thread_model.owner_id != auth.account_id:
                 raise HTTPException(status_code=403, detail="You don't have permission to access this thread")
 
-        run = RunSchedule(
+        # Create a new ScheduledRun instance
+        run = ScheduledRun(
             agent=request.agent,
             input_message=request.input_message,
             thread_id=request.thread_id,

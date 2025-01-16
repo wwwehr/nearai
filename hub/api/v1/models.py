@@ -346,8 +346,8 @@ class Delegation(SQLModel, table=True):
     expires_at: Optional[datetime] = Field(default=None)
 
 
-class RunSchedule(SQLModel, table=True):
-    __tablename__ = "schedule_runs"
+class ScheduledRun(SQLModel, table=True):
+    __tablename__ = "scheduled_runs"
     id: int = Field(default=None, primary_key=True)
     thread_id: str = Field(nullable=True)
     agent: str = Field(nullable=False)

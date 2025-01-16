@@ -19,7 +19,7 @@ from hub.api.v1.logs import logs_router
 from hub.api.v1.permissions import v1_router as permission_router
 from hub.api.v1.registry import v1_router as registry_router
 from hub.api.v1.routes import v1_router
-from hub.api.v1.schedule_run import schedule_run_router
+from hub.api.v1.scheduled_run import scheduled_run_router
 from hub.api.v1.stars import v1_router as stars_router
 from hub.api.v1.thread_routes import threads_router
 from hub.api.v1.vector_stores import vector_stores_router
@@ -51,7 +51,6 @@ app.include_router(run_agent_router, prefix="/v1")
 app.include_router(agent_data_router, prefix="/v1")
 app.include_router(benchmark_router, prefix="/v1")
 app.include_router(stars_router, prefix="/v1")
-app.include_router(hub_secrets_router, prefix="/v1")
 app.include_router(job_router, prefix="/v1")
 app.include_router(permission_router, prefix="/v1")
 app.include_router(evaluation_router, prefix="/v1")
@@ -62,7 +61,8 @@ app.include_router(logs_router, prefix="/v1")
 app.include_router(vector_stores_router, prefix="/v1")
 app.include_router(files_router, prefix="/v1")
 app.include_router(threads_router, prefix="/v1")
-app.include_router(schedule_run_router, prefix="/v1")
+app.include_router(hub_secrets_router, prefix="/v1")
+app.include_router(scheduled_run_router, prefix="/v1")
 
 
 @app.get("/health")

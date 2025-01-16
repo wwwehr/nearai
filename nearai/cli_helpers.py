@@ -10,7 +10,7 @@ def display_agents_in_columns(agents: list[Path]) -> None:
 
     Args:
     ----
-        agents: List of Path objects pointing to agent locations
+        agents: List of Path objects pointing to agent locations (pre-sorted)
 
     """
     # Create table
@@ -24,11 +24,8 @@ def display_agents_in_columns(agents: list[Path]) -> None:
     table.add_column("Description", style="white")
     table.add_column("Tags", style="yellow")
 
-    # Sort agents by namespace then name
-    sorted_agents = sorted(agents, key=lambda x: (x.parts[-3], x.parts[-2]))
-
     # Add rows
-    for idx, agent_path in enumerate(sorted_agents, 1):
+    for idx, agent_path in enumerate(agents, 1):
         try:
             # Read metadata for additional info
             with open(agent_path / "metadata.json") as f:

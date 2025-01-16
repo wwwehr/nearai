@@ -541,6 +541,8 @@ class AgentCli:
                 print("No agents found. Please create an agent first with 'nearai agent create'")
                 return
 
+            # Sort agents by namespace then name
+            agents = sorted(agents, key=lambda x: (x.parts[-3], x.parts[-2]))
             display_agents_in_columns(agents)
 
             while True:

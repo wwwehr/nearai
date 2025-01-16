@@ -164,12 +164,16 @@ def load_agent(client, agent, params: dict, additional_path: str = "", verbose=T
 [DEBUG]   • Category: {agent_metadata.get('category', 'N/A')}
 [DEBUG]   • Tags: {', '.join(agent_metadata.get('tags', [])) if agent_metadata.get('tags') else 'None'}
 [DEBUG]   • Model: {agent_metadata.get('details', {}).get('agent', {}).get('defaults', {}).get('model', 'N/A')}
-[DEBUG]   • Model Provider: {agent_metadata.get('details', {}).get('agent', {}).get('defaults', {}).get('model_provider', 'N/A')}
-[DEBUG]   • Model Temperature: {agent_metadata.get('details', {}).get('agent', {}).get('defaults', {}).get('model_temperature', 'N/A')}
-[DEBUG]   • Model Max Tokens: {agent_metadata.get('details', {}).get('agent', {}).get('defaults', {}).get('model_max_tokens', 'N/A')}
+[DEBUG]   • Model Provider: {agent_metadata.get('details', {}).get('agent', {}).get('defaults', {})
+                    .get('model_provider', 'N/A')}
+[DEBUG]   • Model Temperature: {agent_metadata.get('details', {}).get('agent', {}).get('defaults', {})
+                    .get('model_temperature', 'N/A')}
+[DEBUG]   • Model Max Tokens: {agent_metadata.get('details', {}).get('agent', {}).get('defaults', {})
+                    .get('model_max_tokens', 'N/A')}
 [DEBUG]   • Show Entry: {agent_metadata.get('show_entry', 'N/A')}
 [DEBUG]    ----------------------------
 """
+
                     print(f"\n[DEBUG] Loaded agent from {agent}:\n{agent_info}")
                 break
 

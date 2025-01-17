@@ -43,9 +43,9 @@ import { signInWithNear } from '~/lib/auth';
 import { idMatchesEntry } from '~/lib/entries';
 import { type entriesModel } from '~/lib/models';
 import { useAuthStore } from '~/stores/auth';
+import NearLogoIcon from '~/svgs/near-logo-icon-padding.svg';
 import { trpc } from '~/trpc/TRPCProvider';
 
-import NearLogoIcon from '../svgs/near-logo-icon.svg';
 import s from './page.module.scss';
 
 export default function HomePage() {
@@ -216,7 +216,7 @@ export default function HomePage() {
           </div>
 
           <Flex align="center" gap="s" className={s.heroFooter}>
-            <SvgIcon icon={<Lightning weight="duotone" />} color="amber-10" />
+            <SvgIcon icon={<Lightning weight="fill" />} color="amber-10" />
             <Text weight={500} color="sand-12">
               It only takes 5 minutes to{' '}
               <Text
@@ -282,16 +282,8 @@ export default function HomePage() {
                 <Tooltip asChild content="View an agent integrated with NEAR">
                   <Button
                     size="small"
-                    icon={
-                      <NearLogoIcon
-                        style={{
-                          width: '80%',
-                          height: '80%',
-                          margin: '10%',
-                        }}
-                      />
-                    }
-                    label="NEAR"
+                    icon={<NearLogoIcon />}
+                    label="Near"
                     href="/agents/zavodil.near/near-agent/latest"
                   />
                 </Tooltip>

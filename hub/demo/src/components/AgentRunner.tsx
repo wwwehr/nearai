@@ -92,6 +92,7 @@ export const AgentRunner = ({
     'view',
     'transactionHashes',
     'transactionRequestId',
+    'initialUserMessage',
   ]);
   const entryEnvironmentVariables = useEntryEnvironmentVariables(
     currentEntry,
@@ -220,7 +221,7 @@ export const AgentRunner = ({
   } = useAgentRequestsWithIframe(currentEntry, chatMutation, threadId);
 
   const isRunning =
-    chatMutation.isPending ||
+    _chatMutation.isPending ||
     thread?.run?.status === 'queued' ||
     thread?.run?.status === 'in_progress';
 
@@ -340,17 +341,34 @@ export const AgentRunner = ({
 
   useEffect(() => {
     const agentDetails = currentEntry?.details.agent;
-    const initialUserMessage = agentDetails?.initial_user_message;
+    const initialUserMessage =
+      queryParams.initialUserMessage || agentDetails?.initial_user_message;
     const maxIterations = agentDetails?.defaults?.max_iterations ?? 1;
 
-    if (initialUserMessage && !threadId && !initialUserMessageSent.current) {
+    if (
+      currentEntry &&
+      initialUserMessage &&
+      !threadId &&
+      !initialUserMessageSent.current
+    ) {
       initialUserMessageSent.current = true;
-      void chatMutation.mutateAsync({
-        max_iterations: maxIterations,
-        new_message: initialUserMessage,
-      });
+      void conditionallyProcessAgentRequests([
+        {
+          action: 'initial_user_message',
+          input: {
+            max_iterations: maxIterations,
+            new_message: initialUserMessage,
+          },
+        },
+      ]);
     }
-  }, [currentEntry, threadId, chatMutation]);
+  }, [
+    queryParams,
+    currentEntry,
+    threadId,
+    chatMutation,
+    conditionallyProcessAgentRequests,
+  ]);
 
   if (!currentEntry) {
     if (showLoadingPlaceholder) return <PlaceholderSection />;

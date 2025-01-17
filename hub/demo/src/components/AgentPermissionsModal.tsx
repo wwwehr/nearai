@@ -38,12 +38,18 @@ import {
 import { useAgentSettingsStore } from '~/stores/agent-settings';
 import { useAuthStore } from '~/stores/auth';
 
+import { type AgentChatMutationInput } from './AgentRunner';
+import { Code } from './lib/Code';
 import { SignInPrompt } from './SignInPrompt';
 
 export type AgentRequestWithPermissions =
   | {
       action: 'add_secrets';
       input: z.infer<typeof agentAddSecretsRequestModel>;
+    }
+  | {
+      action: 'initial_user_message';
+      input: AgentChatMutationInput;
     }
   | {
       action: 'remote_agent_run';
@@ -67,6 +73,7 @@ export function checkAgentPermissions(
 ) {
   const settings = useAgentSettingsStore.getState().getAgentSettings(agent);
   let allowAddSecrets = true;
+  let allowInitialUserMessage = true;
   let allowRemoteRunCallsToOtherAgents = true;
   let allowWalletTransactionRequests = true;
 
@@ -74,6 +81,9 @@ export function checkAgentPermissions(
     if (action === 'add_secrets') {
       // Always prompt a user for permission to add secrets
       allowAddSecrets = false;
+    } else if (action === 'initial_user_message') {
+      // Always prompt a user for permission to run initial user message
+      allowInitialUserMessage = false;
     } else if (action === 'remote_agent_run') {
       allowRemoteRunCallsToOtherAgents =
         idMatchesEntry(input.agent_id, agent) ||
@@ -86,6 +96,7 @@ export function checkAgentPermissions(
 
   const allowed =
     allowAddSecrets &&
+    allowInitialUserMessage &&
     allowRemoteRunCallsToOtherAgents &&
     allowWalletTransactionRequests;
 
@@ -93,6 +104,7 @@ export function checkAgentPermissions(
     allowed,
     permissions: {
       allowAddSecrets,
+      allowInitialUserMessage,
       allowRemoteRunCallsToOtherAgents,
       allowWalletTransactionRequests,
     },
@@ -160,7 +172,14 @@ export const AgentPermissionsModal = ({
   }, []);
 
   const requestsThatCanBeAlwaysAllowed =
-    requests?.filter(({ action }) => action !== 'add_secrets') ?? [];
+    requests?.filter(
+      ({ action }) =>
+        action !== 'add_secrets' && action !== 'initial_user_message',
+    ) ?? [];
+
+  const initialUserMessageRequest = requests?.find(
+    (request) => request.action === 'initial_user_message',
+  );
 
   return (
     <Dialog.Root open={requests !== null} onOpenChange={() => clearRequests()}>
@@ -172,6 +191,25 @@ export const AgentPermissionsModal = ({
                 {!check.permissions.allowAddSecrets && (
                   <SecretsToAdd agent={agent} requests={requests} />
                 )}
+
+                {!check.permissions.allowInitialUserMessage &&
+                  initialUserMessageRequest && (
+                    <>
+                      <Text>
+                        The current agent{' '}
+                        <Text href={`/agents/${agentId}`} target="_blank">
+                          {agentId}
+                        </Text>{' '}
+                        wants to start a new thread with an initial message on
+                        your behalf:
+                      </Text>
+
+                      <Code
+                        language="markdown"
+                        source={initialUserMessageRequest.input.new_message}
+                      />
+                    </>
+                  )}
 
                 {!check.permissions.allowRemoteRunCallsToOtherAgents && (
                   <>

@@ -151,7 +151,10 @@ export function useAgentRequestsWithIframe(
           });
 
           void utils.hub.secrets.refetch();
-        } else if (action === 'remote_agent_run') {
+        } else if (
+          action === 'remote_agent_run' ||
+          action === 'initial_user_message'
+        ) {
           await chatMutation.mutateAsync(input);
         } else if (action === 'near_send_transactions') {
           if (wallet) {

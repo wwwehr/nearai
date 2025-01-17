@@ -24,7 +24,7 @@ BLOCK_ID_FILE = "last_block_id.txt"
 # OPTION TO READ MULTIPLE BLOCKS PER RUN
 NUMBER_OF_BLOCKS_TO_READ_IF_NOT_SYNCED = 1
 
-scheduler = AsyncIOScheduler()
+near_scheduler = AsyncIOScheduler()
 
 
 async def async_fetch_json(url: str) -> Any:
@@ -176,7 +176,7 @@ async def run_agent(agent, message, signer_id, data, auth_token: AuthToken):
         # max_iterations=data.get("max_iterations", 1),
     )
 
-    create_run(thread_id=thread.id, run=run_params, auth=auth_token, scheduler=scheduler)
+    create_run(thread_id=thread.id, run=run_params, auth=auth_token, scheduler=near_scheduler)
 
 
 # Main asynchronous function to process blocks
@@ -216,9 +216,9 @@ async def lifespan(app):
 
     job = partial(periodic_task, auth_token)
 
-    scheduler.add_job(job, IntervalTrigger(seconds=1))
-    scheduler.start()
+    near_scheduler.add_job(job, IntervalTrigger(seconds=1))
+    near_scheduler.start()
 
     yield
 
-    scheduler.shutdown()
+    near_scheduler.shutdown()

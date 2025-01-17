@@ -253,7 +253,7 @@ def start_with_environment(
         # Hidden because list of parameters is always the same
         # if params:
         #    debug_info += "\n[DEBUG] Parameters:\n" + "\n".join(f"[DEBUG]   • {key}" for key in params.keys())
-        print(debug_info)
+        # print(debug_info)
     api_url = str(params.get("api_url", DEFAULT_API_URL))
     user_env_vars: dict = params.get("user_env_vars", {})
     agent_env_vars: dict = params.get("agent_env_vars", {})

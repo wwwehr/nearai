@@ -250,7 +250,7 @@ def start_with_environment(
 [DEBUG] Run ID:       {run_id}
 [DEBUG] Auth User:    {auth.account_id}
 """
-        # Hided because list of parameters is always the same
+        # Hidden because list of parameters is always the same
         # if params:
         #    debug_info += "\n[DEBUG] Parameters:\n" + "\n".join(f"[DEBUG]   • {key}" for key in params.keys())
         print(debug_info)

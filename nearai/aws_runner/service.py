@@ -250,8 +250,9 @@ def start_with_environment(
 [DEBUG] Run ID:       {run_id}
 [DEBUG] Auth User:    {auth.account_id}
 """
-        if params:
-            debug_info += "\n[DEBUG] Parameters:\n" + "\n".join(f"[DEBUG]   • {key}" for key in params.keys())
+        # Hided because list of parameters is always the same
+        # if params:
+        #    debug_info += "\n[DEBUG] Parameters:\n" + "\n".join(f"[DEBUG]   • {key}" for key in params.keys())
         print(debug_info)
     api_url = str(params.get("api_url", DEFAULT_API_URL))
     user_env_vars: dict = params.get("user_env_vars", {})

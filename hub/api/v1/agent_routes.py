@@ -139,7 +139,7 @@ def run_agent(body: CreateThreadAndRunRequest, auth: AuthToken = Depends(get_aut
 
     agent_entry: Union[RegistryEntry, None] = None
     for agent in reversed(agents.split(",")):
-        agent_entry = get_agent_entry(agent, data_source, auth.account_id)
+        agent_entry = get_agent_entry(agent, data_source)
 
         # read secret for every requested agent
         if agent_entry:
@@ -244,9 +244,8 @@ def _runner_for_env():
         return runner_env
 
 
-def get_agent_entry(agent, data_source: str, account_id: str) -> Optional[RegistryEntry]:
+def get_agent_entry(agent, data_source: str) -> Optional[RegistryEntry]:
     if data_source == "registry":
-        entry_location = EntryLocation.from_str(agent)
         return get(EntryLocation.from_str(agent))
     elif data_source == "local_files":
         entry_location = EntryLocation.from_str(agent)

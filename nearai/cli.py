@@ -730,7 +730,7 @@ class AgentCli:
         """Create a new agent from scratch."""
         # If no name/description provided, use interactive prompts
         if name is None and description is None:
-            _, name, description = self._prompt_agent_details()
+            _, name, description, init_instructions = self._prompt_agent_details()
 
         # Set the agent path
         registry_folder = get_registry_folder()
@@ -772,14 +772,13 @@ class AgentCli:
         with open(metadata_path, "w") as f:
             json.dump(metadata, f, indent=2)
 
-        # Create a default agent.py
-        agent_py_content = """from nearai.agents.environment import Environment
+        # Create a default agent.py with the provided initial
+        agent_py_content = f"""from nearai.agents.environment import Environment
 
 
 def run(env: Environment):
     # Your agent code here
-    # Example:
-    prompt = {"role": "system", "content": "You are a helpful assistant."}
+    prompt = {{"role": "system", "content": "{init_instructions}"}}
     result = env.completion([prompt] + env.list_messages())
     env.add_reply(result)
     env.request_user_input()
@@ -884,7 +883,7 @@ run(env)
         print(f"  > nearai agent interactive {new_name} --local")
         print(f"  > nearai registry upload {dest_path}")
 
-    def _prompt_agent_details(self) -> Tuple[str, str, str]:
+    def _prompt_agent_details(self) -> Tuple[str, str, str, str]:
         console = Console()
 
         # Get namespace from CONFIG, with null check
@@ -908,7 +907,7 @@ run(env)
         # Name prompt with explanation
         name_info = Panel(
             Text.assemble(
-                ("Choose a unique name for your agent using only:\n", ""),
+                ("Choose a unique name for your agent using only:\n\n", ""),
                 ("• letters\n", "dim"),
                 ("• numbers\n", "dim"),
                 ("• dots (.)\n", "dim"),
@@ -938,22 +937,43 @@ run(env)
 
         # Description prompt
         description_info = Panel(
-            "Describe what your agent will do in a few words", title="Description Info", border_style="blue"
+            "Describe what your agent will do in a few words...", title="Description Info", border_style="blue"
         )
         console.print(description_info)
         description = Prompt.ask("[bold blue]Enter description")
+
+        console.print("\n")
+
+        # Initial instructions prompt
+        init_instructions_info = Panel(
+            Text.assemble(
+                ("Provide initial instructions for your AI agent...\n\n", ""),
+                ("This will be used as the system message to guide the agent's behavior.\n", "dim"),
+                ("You can edit these instructions later in the `agent.py` file.\n\n", "dim"),
+                (
+                    "Example: You are a helpful humorous assistant. Use puns or jokes to make the user smile.",
+                    "green",
+                ),
+            ),
+            title="Instructions",
+            border_style="blue",
+        )
+        console.print(init_instructions_info)
+        init_instructions = Prompt.ask("[bold blue]Enter instructions")
 
         # Confirmation
         console.print("\n")
         summary_panel = Panel(
             Text.assemble(
                 ("Summary of your new agent:\n\n", "bold"),
-                ("Namespace/AccountId:  ", "dim"),
+                ("Namespace/Account:    ", "dim"),
                 (f"{namespace}\n", "green"),
                 ("Agent Name:           ", "dim"),
                 (f"{name}\n", "green"),
-                ("Agent Description:    ", "dim"),
-                (f"{description}", "green"),
+                ("Description:          ", "dim"),
+                (f"{description}\n", "green"),
+                ("Instructions:         ", "dim"),
+                (f"{init_instructions}", "green"),
             ),
             title="📋 Review",
             border_style="green",
@@ -964,7 +984,7 @@ run(env)
         if not Confirm.ask("[bold]Would you like to proceed?", default=True):
             console.print("[red]❌ Agent creation cancelled")
             sys.exit(0)
-        return namespace, name, description
+        return namespace, name, description, init_instructions
 
 
 class VllmCli:

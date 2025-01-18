@@ -603,6 +603,7 @@ def _run_agent(
             f"for run: {run_id} on thread: {thread_id}. Signed by {auth.account_id}."
         )
 
+        # TODO#733 Optimization with using agent.identifier
         specific_agent_version_entry = get_agent_entry(specific_agent_version_to_run, data_source)
         # read secret for every requested agent
         if specific_agent_version_entry:

@@ -41,11 +41,11 @@ async def async_fetch_json(url: str) -> Any:
             if response.status_code == 200:
                 return response.json()
     except httpx.HTTPStatusError as exc:
-        print(f"HTTP error occurred: {exc}")
+        print(f"HTTP error occurred in near_events source: {exc}")
     except httpx.RequestError as exc:
-        print(f"Request error occurred: {exc}")
+        print(f"Request error occurred in near_events source: {exc}")
     except httpx.TimeoutException as exc:
-        print(f"Timeout error occurred: {exc}")
+        print(f"Timeout error occurred in near_events source: {exc}")
 
     return None
 

@@ -580,8 +580,6 @@ def run_agent(
 def _run_agent(
     thread_id: str, run_id: str, background_tasks: Optional[BackgroundTasks] = None, auth: AuthToken = Depends(get_auth)
 ) -> OpenAIRun:
-    logger.info(f"Running agent for run: {run_id} on thread: {thread_id}")
-
     with get_session() as session:
         run_model = session.get(RunModel, run_id)
         if run_model is None:
@@ -592,19 +590,36 @@ def _run_agent(
         agent_env_vars: Dict[str, Any] = {}
         user_env_vars: Dict[str, Any] = {}
 
-        agent_entry = get_agent_entry(run_model.assistant_id, data_source, auth.account_id)
+        agent_entry = get_agent_entry(run_model.assistant_id, data_source)
 
+        specific_agent_version_to_run = (
+            f"{agent_entry.namespace}/{agent_entry.name}/{agent_entry.version}"
+            if agent_entry
+            else run_model.assistant_id
+        )
+
+        logger.info(
+            f"Running agent {specific_agent_version_to_run} "
+            f"for run: {run_id} on thread: {thread_id}. Signed by {auth.account_id}."
+        )
+
+        # TODO#733 Optimization with using agent.identifier
+        specific_agent_version_entry = get_agent_entry(specific_agent_version_to_run, data_source)
         # read secret for every requested agent
-        if agent_entry:
+        if specific_agent_version_entry:
+            agent_env_vars[specific_agent_version_to_run] = specific_agent_version_entry.details.get("env_vars", {})
             db = SqlClient()
 
             (agent_secrets, user_secrets) = db.get_agent_secrets(
-                auth.account_id, agent_entry.namespace, agent_entry.name, agent_entry.version
+                auth.account_id,
+                specific_agent_version_entry.namespace,
+                specific_agent_version_entry.name,
+                specific_agent_version_entry.version,
             )
 
             # agent vars from metadata has lower priority then agent secret
-            agent_env_vars[run_model.assistant_id] = {
-                **(agent_env_vars.get(run_model.assistant_id, {})),
+            agent_env_vars[specific_agent_version_to_run] = {
+                **(agent_env_vars.get(specific_agent_version_to_run, {})),
                 **agent_secrets,
             }
 
@@ -621,11 +636,6 @@ def _run_agent(
             "user_env_vars": user_env_vars,
             "agent_env_vars": agent_env_vars,
         }
-        specific_agent_version_to_run = (
-            f"{agent_entry.namespace}/{agent_entry.name}/{agent_entry.version}"
-            if agent_entry
-            else run_model.assistant_id
-        )
         runner = _runner_for_env()
 
         framework = "base"
@@ -662,7 +672,8 @@ def _run_agent(
             print(
                 f"Running function {function_name} with: "
                 f"assistant_id={run_model.assistant_id}, "
-                f"thread_id={thread_id}, run_id={run_id}"
+                f"thread_id={thread_id}, run_id={run_id}, "
+                f"user_secrets:{len(user_secrets)}, agent_secrets:{len(agent_secrets)}"
             )
             invoke_agent_via_lambda(function_name, specific_agent_version_to_run, thread_id, run_id, auth, params)
         # with get_session() as session:

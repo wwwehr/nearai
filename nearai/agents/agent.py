@@ -8,6 +8,7 @@ import sys
 import tempfile
 import uuid
 from pathlib import Path
+from types import CodeType
 from typing import Any, Dict, List, Optional, Union
 
 from nearai.shared.client_config import ClientConfig
@@ -19,6 +20,7 @@ class Agent(object):
     def __init__(  # noqa: D107
         self, identifier: str, agent_files: Union[List, Path], metadata: Dict, change_to_temp_dir: bool = True
     ):  # noqa: D107
+        self.code: Optional[CodeType] = None
         self.identifier = identifier
         name_parts = identifier.split("/")
         self.namespace = name_parts[0]
@@ -143,7 +145,7 @@ class Agent(object):
             "__file__": self.agent_filename,
         }
 
-        def run_agent_code(namespace):
+        def run_agent_code(agent_namespace):
             # switch to user env.agent_runner_user
             if env.agent_runner_user:
                 user_info = pwd.getpwnam(env.agent_runner_user)
@@ -155,7 +157,7 @@ class Agent(object):
             #       The performance of runpy.run_path may also change depending on a system, e.g. it may
             #       work on Linux but not work on Mac.
             #       `compile` and `exec` have been tested to work properly in a multithreaded environment.
-            exec(self.code, namespace)
+            exec(self.code, agent_namespace)
 
         try:
             if self.change_to_temp_dir:
@@ -165,7 +167,7 @@ class Agent(object):
             sys.path.insert(0, self.temp_dir)
 
             if env.agent_runner_user:
-                process = multiprocessing.Process(target=run_agent_code, args=(self.agent_filename, namespace))
+                process = multiprocessing.Process(target=run_agent_code, args=namespace)
                 process.start()
                 process.join()
             else:

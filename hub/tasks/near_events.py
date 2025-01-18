@@ -34,12 +34,20 @@ async def async_fetch_json(url: str) -> Any:
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
 
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url, headers=headers)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            return None
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers=headers, timeout=3)
+            response.raise_for_status()
+            if response.status_code == 200:
+                return response.json()
+    except httpx.HTTPStatusError as exc:
+        print(f"HTTP error occurred in near_events source: {exc}")
+    except httpx.RequestError as exc:
+        print(f"Request error occurred in near_events source: {exc}")
+    except httpx.TimeoutException as exc:
+        print(f"Timeout error occurred in near_events source: {exc}")
+
+    return None
 
 
 async def get_latest_block_id():

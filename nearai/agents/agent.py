@@ -21,6 +21,7 @@ class Agent(object):
         self, identifier: str, agent_files: Union[List, Path], metadata: Dict, change_to_temp_dir: bool = True
     ):  # noqa: D107
         self.code: Optional[CodeType] = None
+        self.file_cache: dict[str, str] = {}
         self.identifier = identifier
         name_parts = identifier.split("/")
         self.namespace = name_parts[0]
@@ -134,6 +135,14 @@ class Agent(object):
                 raise ValueError(f"Agent run error: {AGENT_FILENAME} does not exist")
             with open(self.agent_filename, "r") as f:
                 self.code = compile(f.read(), self.agent_filename, "exec")
+
+            # cache all agent files in file_cache
+            for root, _, files in os.walk(self.temp_dir):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    with open(file_path, "r") as f:
+                        self.file_cache[file] = f.read()
+
         else:
             print("Using cached agent code")
 

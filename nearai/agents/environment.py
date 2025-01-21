@@ -132,6 +132,7 @@ class Environment(object):
             open(os.path.join(self._path, CHAT_FILENAME), "a").close()
         os.chdir(self._path)
 
+        # Protected client methods
         def signer_account_id() -> Optional[str]:
             """Expose the NEAR account_id of a user that signs this request to run an agent."""
             try:
@@ -141,7 +142,6 @@ class Environment(object):
 
         self.signer_account_id = signer_account_id()
 
-        # Client methods
         def query_vector_store(vector_store_id: str, query: str, full_files: bool = False):
             """Queries a vector store.
 
@@ -545,6 +545,12 @@ class Environment(object):
         # Must be placed after method definitions
         self.register_standard_tools()
 
+    # end of protected client methods
+
+    def get_agent(self):
+        """Returns the agent that is being run."""
+        return self._agents[0]
+
     def get_tool_registry(self, new: bool = False) -> ToolRegistry:
         """Returns the tool registry, a dictionary of tools that can be called by the agent."""
         if new:
@@ -718,6 +724,14 @@ class Environment(object):
             with open(local_path, "r") as local_file:
                 file_content = local_file.read()
 
+        # check agent file cache
+        if not file_content:
+            file_cache = self.get_agent().file_cache
+            if file_cache:
+                file_content = file_cache.get(filename, None)
+
+        # Next check files written out by the agent.
+        #   Agent output files take precedence over files packaged with the agent
         thread_files = self.list_files_from_thread(order="desc")
 
         # Then try to read from thread, starting from the most recent

@@ -155,8 +155,8 @@ export const EntriesTable = ({
           <Table.Body>
             {!sorted && <Table.PlaceholderRows />}
 
-            {pageItems?.map((entry, index) => (
-              <Table.Row key={index}>
+            {pageItems?.map((entry) => (
+              <Table.Row key={entry.id}>
                 <Table.Cell
                   href={primaryUrlForEntry(entry)}
                   style={{ minWidth: '10rem', maxWidth: '20rem' }}

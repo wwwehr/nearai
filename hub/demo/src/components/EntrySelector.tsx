@@ -41,9 +41,7 @@ export const EntrySelector = ({
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const entriesQuery = trpc.hub.entries.useQuery({ category });
 
-  const { searched, searchQuery, setSearchQuery } = useEntriesSearch(
-    entriesQuery.data,
-  );
+  const { searched, setSearchQuery } = useEntriesSearch(entriesQuery.data);
 
   searched?.sort((a, b) => {
     let sort = b.num_stars - a.num_stars;
@@ -65,7 +63,6 @@ export const EntrySelector = ({
         type="search"
         name="search"
         placeholder="Search"
-        value={searchQuery}
         onInput={(event) => setSearchQuery(event.currentTarget.value)}
         ref={searchInputRef}
       />

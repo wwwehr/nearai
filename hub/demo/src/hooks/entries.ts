@@ -1,5 +1,6 @@
+import { useDebouncedFunction } from '@near-pagoda/ui';
 import { useParams, useSearchParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { type z } from 'zod';
 
 import {
@@ -77,19 +78,22 @@ export function useCurrentEntry(
 export function useEntriesSearch(
   data: z.infer<typeof entriesModel> | undefined,
 ) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const searchQueryDebounced = useDebouncedValue(searchQuery, 150);
+  const [searchQuery, _setSearchQuery] = useState('');
+
+  const setSearchQuery = useDebouncedFunction((value: string) => {
+    _setSearchQuery(value);
+  }, 150);
 
   const searched = useMemo(() => {
-    if (!data || !searchQueryDebounced) return data;
+    if (!data || !searchQuery) return data;
 
     return data.filter((item) =>
       wordsMatchFuzzySearch(
         [item.namespace, item.name, ...item.tags],
-        searchQueryDebounced,
+        searchQuery,
       ),
     );
-  }, [data, searchQueryDebounced]);
+  }, [data, searchQuery]);
 
   return {
     searched,

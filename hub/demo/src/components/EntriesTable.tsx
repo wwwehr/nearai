@@ -12,12 +12,19 @@ import {
   Tooltip,
   useTable,
 } from '@near-pagoda/ui';
-import { ChatCircleDots, CodeBlock, Play } from '@phosphor-icons/react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  ChatCircleDots,
+  CodeBlock,
+  Play,
+} from '@phosphor-icons/react';
 import { format, formatDistanceToNow } from 'date-fns';
-import { type ReactNode } from 'react';
+import { type ReactNode, useEffect } from 'react';
 
 import { env } from '~/env';
 import { useEntriesSearch } from '~/hooks/entries';
+import { useClientPagination } from '~/hooks/pagination';
 import {
   benchmarkEvaluationsUrlForEntry,
   ENTRY_CATEGORY_LABELS,
@@ -61,6 +68,24 @@ export const EntriesTable = ({
     sortOrder: 'DESCENDING',
   });
 
+  const {
+    createPageQueryPath,
+    page,
+    previousPage,
+    nextPage,
+    pageItems,
+    totalPagesTruncatedAsArray,
+  } = useClientPagination({
+    data: sorted,
+    itemsPerPage: 30,
+  });
+
+  // TODO: Reset page on search or column sort change
+  // useEffect(() => {
+  //   setPage(undefined);
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [tableProps.sort, searchQuery]);
+
   return (
     <Section bleed={bleed} padding={bleed ? 'none' : undefined}>
       <Grid
@@ -88,7 +113,6 @@ export const EntriesTable = ({
           type="search"
           name="search"
           placeholder={`Search ${title}`}
-          value={searchQuery}
           onInput={(event) => setSearchQuery(event.currentTarget.value)}
         />
       </Grid>
@@ -144,7 +168,7 @@ export const EntriesTable = ({
           <Table.Body>
             {!sorted && <Table.PlaceholderRows />}
 
-            {sorted?.map((entry, index) => (
+            {pageItems?.map((entry, index) => (
               <Table.Row key={index}>
                 <Table.Cell
                   href={primaryUrlForEntry(entry)}
@@ -260,6 +284,54 @@ export const EntriesTable = ({
               </Table.Row>
             ))}
           </Table.Body>
+
+          {totalPagesTruncatedAsArray.length > 1 && (
+            <Table.Foot sticky={false}>
+              <Table.Row>
+                <Table.Cell colSpan={100}>
+                  <Flex align="center" justify="space-between" gap="m">
+                    <Button
+                      label="Previous Page"
+                      icon={<ArrowLeft />}
+                      href={
+                        previousPage
+                          ? createPageQueryPath({
+                              page: previousPage.toString(),
+                            })
+                          : undefined
+                      }
+                      disabled={!previousPage}
+                    />
+
+                    <Flex align="center" justify="center" gap="m" wrap="wrap">
+                      {totalPagesTruncatedAsArray.map((p) => (
+                        <Text
+                          color={p === page ? 'sand-12' : undefined}
+                          decoration={p === page ? 'underline' : 'none'}
+                          href={createPageQueryPath({ page: p.toString() })}
+                          size="text-s"
+                          key={p}
+                        >
+                          {p}
+                        </Text>
+                      ))}
+                    </Flex>
+
+                    <Button
+                      label="Next Page"
+                      icon={<ArrowRight />}
+                      href={
+                        nextPage
+                          ? createPageQueryPath({ page: nextPage.toString() })
+                          : undefined
+                      }
+                      disabled={!nextPage}
+                    />
+                  </Flex>
+                </Table.Cell>
+              </Table.Row>
+            </Table.Foot>
+          )}
         </Table.Root>
       )}
     </Section>

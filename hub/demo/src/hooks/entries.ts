@@ -1,6 +1,6 @@
 import { useDebouncedFunction } from '@near-pagoda/ui';
 import { useParams, useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { type z } from 'zod';
 
 import {
@@ -12,8 +12,6 @@ import {
 import { useAuthStore } from '~/stores/auth';
 import { trpc } from '~/trpc/TRPCProvider';
 import { wordsMatchFuzzySearch } from '~/utils/search';
-
-import { useDebouncedValue } from './debounce';
 
 export function useEntryParams(overrides?: {
   namespace?: string;

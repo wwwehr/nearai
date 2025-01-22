@@ -20,10 +20,12 @@ export function useClientPagination<
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const totalPagesAsArray: number[] = [];
 
-  for (let i = 0; i < totalPages * 5; i++) {
+  for (let i = 0; i < totalPages; i++) {
     totalPagesAsArray.push(i + 1);
   }
 
+  const firstPage = totalPagesAsArray[0];
+  const lastPage = totalPagesAsArray.at(-1);
   const currentPageIndex = totalPagesAsArray.indexOf(page);
   const previousPage =
     currentPageIndex > 0 ? totalPagesAsArray[currentPageIndex - 1] : undefined;
@@ -59,11 +61,20 @@ export function useClientPagination<
     return data?.slice(startIndex, endIndex) as T;
   }, [data, itemsPerPage, page]);
 
+  useEffect(() => {
+    if (totalPages > 0 && (page < 1 || page > totalPages)) {
+      setPage(undefined);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totalPages, page]);
+
   return {
     createPageQueryPath: createQueryPath,
     page,
     previousPage,
     nextPage,
+    firstPage,
+    lastPage,
     pageItems,
     setPage,
     totalItems,
@@ -72,3 +83,5 @@ export function useClientPagination<
     totalPagesTruncatedAsArray,
   };
 }
+
+export type ClientPagination = ReturnType<typeof useClientPagination>;

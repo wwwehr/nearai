@@ -12,15 +12,9 @@ import {
   Tooltip,
   useTable,
 } from '@near-pagoda/ui';
-import {
-  ArrowLeft,
-  ArrowRight,
-  ChatCircleDots,
-  CodeBlock,
-  Play,
-} from '@phosphor-icons/react';
+import { ChatCircleDots, CodeBlock, Play } from '@phosphor-icons/react';
 import { format, formatDistanceToNow } from 'date-fns';
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode } from 'react';
 
 import { env } from '~/env';
 import { useEntriesSearch } from '~/hooks/entries';
@@ -36,6 +30,7 @@ import { trpc } from '~/trpc/TRPCProvider';
 
 import { ForkButton } from './ForkButton';
 import { NewAgentButton } from './NewAgentButton';
+import { Pagination } from './Pagination';
 import { StarButton } from './StarButton';
 
 type Props = {
@@ -68,23 +63,11 @@ export const EntriesTable = ({
     sortOrder: 'DESCENDING',
   });
 
-  const {
-    createPageQueryPath,
-    page,
-    previousPage,
-    nextPage,
-    pageItems,
-    totalPagesTruncatedAsArray,
-  } = useClientPagination({
-    data: sorted,
-    itemsPerPage: 30,
-  });
-
-  // TODO: Reset page on search or column sort change
-  // useEffect(() => {
-  //   setPage(undefined);
-  //   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // }, [tableProps.sort, searchQuery]);
+  const { pageItems, totalPages, setPage, ...paginationProps } =
+    useClientPagination({
+      data: sorted,
+      itemsPerPage: 30,
+    });
 
   return (
     <Section bleed={bleed} padding={bleed ? 'none' : undefined}>
@@ -113,7 +96,10 @@ export const EntriesTable = ({
           type="search"
           name="search"
           placeholder={`Search ${title}`}
-          onInput={(event) => setSearchQuery(event.currentTarget.value)}
+          onInput={(event) => {
+            setPage(undefined);
+            setSearchQuery(event.currentTarget.value);
+          }}
         />
       </Grid>
 
@@ -131,6 +117,7 @@ export const EntriesTable = ({
           {...tableProps}
           setSort={(value) => {
             void entriesQuery.refetch();
+            setPage(undefined);
             tableProps.setSort(value);
           }}
         >
@@ -285,49 +272,11 @@ export const EntriesTable = ({
             ))}
           </Table.Body>
 
-          {totalPagesTruncatedAsArray.length > 1 && (
+          {totalPages > 1 && (
             <Table.Foot sticky={false}>
               <Table.Row>
                 <Table.Cell colSpan={100}>
-                  <Flex align="center" justify="space-between" gap="m">
-                    <Button
-                      label="Previous Page"
-                      icon={<ArrowLeft />}
-                      href={
-                        previousPage
-                          ? createPageQueryPath({
-                              page: previousPage.toString(),
-                            })
-                          : undefined
-                      }
-                      disabled={!previousPage}
-                    />
-
-                    <Flex align="center" justify="center" gap="m" wrap="wrap">
-                      {totalPagesTruncatedAsArray.map((p) => (
-                        <Text
-                          color={p === page ? 'sand-12' : undefined}
-                          decoration={p === page ? 'underline' : 'none'}
-                          href={createPageQueryPath({ page: p.toString() })}
-                          size="text-s"
-                          key={p}
-                        >
-                          {p}
-                        </Text>
-                      ))}
-                    </Flex>
-
-                    <Button
-                      label="Next Page"
-                      icon={<ArrowRight />}
-                      href={
-                        nextPage
-                          ? createPageQueryPath({ page: nextPage.toString() })
-                          : undefined
-                      }
-                      disabled={!nextPage}
-                    />
-                  </Flex>
+                  <Pagination {...paginationProps} />
                 </Table.Cell>
               </Table.Row>
             </Table.Foot>

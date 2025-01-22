@@ -220,7 +220,7 @@ export default function HomePage() {
             <Text weight={500} color="sand-12">
               It only takes 5 minutes to{' '}
               <Text
-                href="https://docs.near.ai/agents/#quickstart-build-and-run-a-python-agent-on-nearai"
+                href="https://docs.near.ai/agents/quickstart"
                 target="_blank"
               >
                 deploy your first agent

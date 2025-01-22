@@ -63,7 +63,7 @@ export const ThreadsSidebar = ({
   const [showAllThreads, setShowAllThreads] = useState(false);
   const threadsToDisplay = showAllThreads
     ? filteredThreads
-    : filteredThreads?.slice(0, 30);
+    : filteredThreads?.slice(0, 50);
   const hiddenThreadsCount =
     (filteredThreads?.length ?? 0) - (threadsToDisplay?.length ?? 0);
 

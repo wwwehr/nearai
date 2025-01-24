@@ -132,6 +132,7 @@ class Environment(object):
             open(os.path.join(self._path, CHAT_FILENAME), "a").close()
         os.chdir(self._path)
 
+        # Protected client methods
         def signer_account_id() -> Optional[str]:
             """Expose the NEAR account_id of a user that signs this request to run an agent."""
             try:
@@ -141,7 +142,6 @@ class Environment(object):
 
         self.signer_account_id = signer_account_id()
 
-        # Client methods
         def query_vector_store(vector_store_id: str, query: str, full_files: bool = False):
             """Queries a vector store.
 
@@ -545,6 +545,8 @@ class Environment(object):
         # Must be placed after method definitions
         self.register_standard_tools()
 
+    # end of protected client methods
+
     def get_tool_registry(self, new: bool = False) -> ToolRegistry:
         """Returns the tool registry, a dictionary of tools that can be called by the agent."""
         if new:
@@ -709,28 +711,55 @@ class Environment(object):
         """Returns temp dir for primary agent where execution happens."""
         return self.get_primary_agent_temp_dir()
 
-    def read_file(self, filename: str):
+    def read_file(self, filename: str) -> Optional[Union[bytes, str]]:
         """Reads a file from the environment or thread."""
-        file_content = None
+        file_content: Optional[Union[bytes, str]] = None
         # First try to read from local filesystem
         local_path = os.path.join(self.get_primary_agent_temp_dir(), filename)
         if os.path.exists(local_path):
-            with open(local_path, "r") as local_file:
-                file_content = local_file.read()
+            try:
+                with open(local_path, "rb") as local_path_file:
+                    local_file_content = local_path_file.read()
+                    try:
+                        # Try to decode as text
+                        file_content = local_file_content.decode("utf-8")
+                    except UnicodeDecodeError:
+                        # If decoding fails, store as binary
+                        file_content = local_file_content
+            except Exception as e:
+                print(f"Error with read_file: {e}")
 
-        thread_files = self.list_files_from_thread(order="desc")
+        if not file_content:
+            # Next check files written out by the agent.
+            # Agent output files take precedence over files packaged with the agent
+            thread_files = self.list_files_from_thread(order="desc")
 
-        # Then try to read from thread, starting from the most recent
-        for f in thread_files:
-            if f.filename == filename:
-                file_content = self.read_file_by_id(f.id)
-                break
+            # Then try to read from thread, starting from the most recent
+            for f in thread_files:
+                if f.filename == filename:
+                    file_content = self.read_file_by_id(f.id)
+                    break
 
-        # Write the file content to the local filesystem
-        if file_content:
-            with open(local_path, "w") as local_file:
-                local_file.write(file_content)
-        else:
+            if not file_content:
+                # Next check agent file cache
+                # Agent output files & thread files take precedence over cached files
+                file_cache = self.get_primary_agent().file_cache
+                if file_cache:
+                    file_content = file_cache.get(filename, None)
+
+            # Write the file content from the thread or cache to the local filesystem
+            # This allows exec_command to operate on the file
+            if file_content:
+                if not os.path.exists(os.path.dirname(local_path)):
+                    os.makedirs(os.path.dirname(local_path))
+
+                with open(local_path, "wb") as local_file:
+                    if isinstance(file_content, bytes):
+                        local_file.write(file_content)
+                    else:
+                        local_file.write(file_content.encode("utf-8"))
+
+        if not file_content:
             self.add_system_log(f"Warn: File {filename} not found during read_file operation")
 
         return file_content

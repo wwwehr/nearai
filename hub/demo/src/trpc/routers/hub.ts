@@ -105,6 +105,9 @@ export const hubRouter = createTRPCRouter({
       const list: z.infer<typeof entriesModel> = data
         .map((item) => {
           const parsed = entryModel.safeParse(item);
+          if (parsed.data?.tags) {
+            parsed.data.tags.sort();
+          }
           return parsed.data;
         })
         .filter((entry) => !!entry);

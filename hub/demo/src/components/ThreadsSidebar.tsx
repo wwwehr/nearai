@@ -60,6 +60,13 @@ export const ThreadsSidebar = ({
   );
   const removeMutation = trpc.hub.removeThread.useMutation();
 
+  const [showAllThreads, setShowAllThreads] = useState(false);
+  const threadsToDisplay = showAllThreads
+    ? filteredThreads
+    : filteredThreads?.slice(0, 50);
+  const hiddenThreadsCount =
+    (filteredThreads?.length ?? 0) - (threadsToDisplay?.length ?? 0);
+
   const currentThreadIdMatchesThread =
     !threadId || !!filteredThreads?.find((thread) => thread.id === threadId);
 
@@ -107,37 +114,38 @@ export const ThreadsSidebar = ({
         </Tooltip>
       </Flex>
 
-      {filteredThreads?.length ? (
-        <Sidebar.SidebarContentBleed>
-          <CardList>
-            {filteredThreads.map((thread) => (
-              <Card
-                href={thread.url}
-                padding="s"
-                paddingInline="m"
-                background={
-                  (currentThreadIdMatchesThread && threadId === thread.id) ||
-                  (!currentThreadIdMatchesThread &&
-                    previousThreadId === thread.id)
-                    ? 'sand-0'
-                    : 'sand-2'
-                }
-                key={thread.id}
-              >
-                <Flex direction="column">
-                  <Flex align="center" gap="s">
-                    <Text
-                      as="span"
-                      size="text-s"
-                      weight={500}
-                      color="sand-12"
-                      clampLines={1}
-                      style={{ marginRight: 'auto' }}
-                    >
-                      {thread.metadata.topic}
-                    </Text>
+      {filteredThreads?.length && threadsToDisplay?.length ? (
+        <>
+          <Sidebar.SidebarContentBleed>
+            <CardList>
+              {threadsToDisplay.map((thread) => (
+                <Card
+                  href={thread.url}
+                  padding="s"
+                  paddingInline="m"
+                  background={
+                    (currentThreadIdMatchesThread && threadId === thread.id) ||
+                    (!currentThreadIdMatchesThread &&
+                      previousThreadId === thread.id)
+                      ? 'sand-0'
+                      : 'sand-2'
+                  }
+                  key={thread.id}
+                >
+                  <Flex direction="column">
+                    <Flex align="center" gap="s">
+                      <Text
+                        as="span"
+                        size="text-s"
+                        weight={500}
+                        color="sand-12"
+                        clampLines={1}
+                        style={{ marginRight: 'auto' }}
+                      >
+                        {thread.metadata.topic}
+                      </Text>
 
-                    {/* <Tooltip
+                      {/* <Tooltip
                     asChild
                     content={`${thread.messageCount} message${thread.messageCount === 1 ? '' : 's'} sent`}
                     key={thread.id}
@@ -148,109 +156,111 @@ export const ThreadsSidebar = ({
                       variant="neutral"
                     />
                   </Tooltip> */}
-                  </Flex>
+                    </Flex>
 
-                  <Flex align="center" gap="s">
-                    <Text
-                      size="text-2xs"
-                      clampLines={1}
-                      style={{ marginRight: 'auto' }}
-                    >
-                      {thread.agent.namespace}/{thread.agent.name}
-                    </Text>
-
-                    {thread.agent.version !== 'latest' && (
-                      <Tooltip
-                        content={`This thread is fixed to a specific agent version: ${thread.agent.version}`}
+                    <Flex align="center" gap="s">
+                      <Text
+                        size="text-2xs"
+                        clampLines={1}
+                        style={{ marginRight: 'auto' }}
                       >
-                        <Badge
-                          size="small"
-                          iconLeft={<Tag />}
-                          label={thread.agent.version}
-                          style={{
-                            maxWidth: '4.5rem',
-                          }}
-                          variant="warning"
-                        />
-                      </Tooltip>
-                    )}
+                        {thread.agent.namespace}/{thread.agent.name}
+                      </Text>
 
-                    <Dropdown.Root>
-                      <Dropdown.Trigger asChild>
-                        <Button
-                          label="Manage Thread"
-                          icon={<DotsThree weight="bold" />}
-                          size="x-small"
-                          fill="ghost"
-                        />
-                      </Dropdown.Trigger>
+                      {thread.agent.version !== 'latest' && (
+                        <Tooltip
+                          content={`This thread is fixed to a specific agent version: ${thread.agent.version}`}
+                        >
+                          <Badge
+                            size="small"
+                            iconLeft={<Tag />}
+                            label={thread.agent.version}
+                            style={{
+                              maxWidth: '4.5rem',
+                            }}
+                            variant="warning"
+                          />
+                        </Tooltip>
+                      )}
 
-                      <Dropdown.Content sideOffset={0}>
-                        <Dropdown.Section>
-                          <Dropdown.SectionContent>
-                            <Text size="text-xs" weight={600} uppercase>
-                              Thread
-                            </Text>
-                          </Dropdown.SectionContent>
-                        </Dropdown.Section>
+                      <Dropdown.Root>
+                        <Dropdown.Trigger asChild>
+                          <Button
+                            label="Manage Thread"
+                            icon={<DotsThree weight="bold" />}
+                            size="x-small"
+                            fill="ghost"
+                          />
+                        </Dropdown.Trigger>
 
-                        <Dropdown.Section>
-                          <Dropdown.Item
-                            onSelect={() => setEditingThreadId(thread.id)}
-                          >
-                            <SvgIcon icon={<Pencil />} />
-                            Rename Thread
-                          </Dropdown.Item>
+                        <Dropdown.Content sideOffset={0}>
+                          <Dropdown.Section>
+                            <Dropdown.SectionContent>
+                              <Text size="text-xs" weight={600} uppercase>
+                                Thread
+                              </Text>
+                            </Dropdown.SectionContent>
+                          </Dropdown.Section>
 
-                          <Dropdown.Item
-                            onSelect={() =>
-                              copyTextToClipboard(
-                                `${window.location.origin}${thread.url}`,
-                              )
-                            }
-                          >
-                            <SvgIcon icon={<LinkIcon />} />
-                            Copy Thread Link
-                          </Dropdown.Item>
+                          <Dropdown.Section>
+                            <Dropdown.Item
+                              onSelect={() => setEditingThreadId(thread.id)}
+                            >
+                              <SvgIcon icon={<Pencil />} />
+                              Rename Thread
+                            </Dropdown.Item>
 
-                          <Dropdown.Item href={thread.agent.url}>
-                            {env.NEXT_PUBLIC_CONSUMER_MODE ? (
-                              <>
-                                <SvgIcon icon={<Plus />} />
-                                New Thread
-                              </>
-                            ) : (
-                              <>
-                                <SvgIcon icon={<Lightbulb />} />
-                                View Agent
-                              </>
-                            )}
-                          </Dropdown.Item>
+                            <Dropdown.Item
+                              onSelect={() =>
+                                copyTextToClipboard(
+                                  `${window.location.origin}${thread.url}`,
+                                )
+                              }
+                            >
+                              <SvgIcon icon={<LinkIcon />} />
+                              Copy Thread Link
+                            </Dropdown.Item>
 
-                          <Dropdown.Item onSelect={() => removeThread(thread)}>
-                            <SvgIcon icon={<Trash />} color="red-10" />
-                            Delete Thread
-                          </Dropdown.Item>
-                        </Dropdown.Section>
+                            <Dropdown.Item href={thread.agent.url}>
+                              {env.NEXT_PUBLIC_CONSUMER_MODE ? (
+                                <>
+                                  <SvgIcon icon={<Plus />} />
+                                  New Thread
+                                </>
+                              ) : (
+                                <>
+                                  <SvgIcon icon={<Lightbulb />} />
+                                  View Agent
+                                </>
+                              )}
+                            </Dropdown.Item>
 
-                        {/* <Dropdown.Section>
-                        <Dropdown.SectionContent>
-                          <Text size="text-xs">
-                            Last message sent at{' '}
-                            <b>
-                              <Timestamp date={thread.lastMessageAt} />
-                            </b>
-                          </Text>
-                        </Dropdown.SectionContent>
-                      </Dropdown.Section> */}
-                      </Dropdown.Content>
-                    </Dropdown.Root>
+                            <Dropdown.Item
+                              onSelect={() => removeThread(thread)}
+                            >
+                              <SvgIcon icon={<Trash />} color="red-10" />
+                              Delete Thread
+                            </Dropdown.Item>
+                          </Dropdown.Section>
+                        </Dropdown.Content>
+                      </Dropdown.Root>
+                    </Flex>
                   </Flex>
-                </Flex>
-              </Card>
-            ))}
-          </CardList>
-        </Sidebar.SidebarContentBleed>
+                </Card>
+              ))}
+            </CardList>
+          </Sidebar.SidebarContentBleed>
+
+          {hiddenThreadsCount > 0 && (
+            <Button
+              size="small"
+              fill="outline"
+              label="Load More Threads"
+              count={hiddenThreadsCount}
+              onClick={() => setShowAllThreads(true)}
+            />
+          )}
+        </>
       ) : (
         <>
           {filteredThreads ? (

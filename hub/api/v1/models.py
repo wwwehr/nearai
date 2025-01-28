@@ -1,3 +1,4 @@
+import re
 import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -214,7 +215,14 @@ class Message(SQLModel, table=True):
             ]
         if self.content:
             if isinstance(self.content, str):
-                self.content = [TextContentBlock(text=Text(value=self.content, annotations=[]), type="text")]
+                # Filter out non-utf8 characters
+                content = self.content.encode("utf-8", errors="ignore").decode("utf-8", errors="ignore")
+
+                # Regular expression to match only valid UTF-8 characters, because we can't support utf8mb4 charset
+                # TODO #767: Remove this when we support utf8mb4 charset
+                content = re.sub(r"[^\x00-\xFF]", "", content)
+
+                self.content = [TextContentBlock(text=Text(value=content, annotations=[]), type="text")]
 
             # Handle both Pydantic models and dictionaries
             self.content = [

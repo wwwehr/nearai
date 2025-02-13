@@ -297,6 +297,8 @@ class Thread(SQLModel, table=True):
     tool_resources: Optional[Dict] = Field(default=None, sa_column=Column(JSON))
     meta_data: Optional[Dict] = Field(default=None, sa_column=Column("metadata", JSON))
     owner_id: str = Field(nullable=False)
+    parent_id: Optional[str] = Field(default=None)
+    child_thread_ids: List[str] = Field(default=[], sa_column=Column(JSON))
 
     def to_openai(self) -> OpenAITThread:
         """Convert to OpenAI Thread."""
@@ -304,6 +306,14 @@ class Thread(SQLModel, table=True):
         if self.meta_data and "agent_ids" in self.meta_data:
             agent_ids = ",".join(self.meta_data["agent_ids"])  # Join the list into a single string
             self.meta_data["agent_ids"] = agent_ids
+
+        self.meta_data = self.meta_data or {}
+        if self.owner_id:
+            self.meta_data["owner_id"] = self.owner_id
+        if self.parent_id:
+            self.meta_data["parent_id"] = self.parent_id
+        if self.child_thread_ids:
+            self.meta_data["child_thread_ids"] = json.dumps(self.child_thread_ids)
 
         return OpenAITThread(
             metadata=self.meta_data,

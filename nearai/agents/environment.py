@@ -12,6 +12,7 @@ import tempfile
 import threading
 import uuid
 from datetime import datetime, timezone
+from enum import Enum
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union, cast
@@ -91,6 +92,16 @@ class CustomLogHandler(logging.Handler):
     def emit(self, record):  # noqa: D102
         log_entry = self.format(record)
         self.add_reply_func(message=log_entry, message_type=f"{self.namespace}:log")
+
+
+class ThreadMode(Enum):
+    SAME = 1
+    FORK = 2
+    CHILD = 3
+
+
+class RunMode(Enum):
+    WITH_CALLBACK = 1
 
 
 class Environment(object):
@@ -463,25 +474,34 @@ class Environment(object):
             owner: str,
             agent_name: str,
             version: str,
-            model: Optional[str] = None,
             query: Optional[str] = None,
-            fork_thread: bool = True,
+            thread_mode: ThreadMode = ThreadMode.FORK,
+            additional_subthread_messages: Optional[List[Message]] = None,
+            run_mode: RunMode = RunMode.WITH_CALLBACK,
         ):
             """Runs a child agent on the thread."""
             child_thread_id = self._thread_id
-            if fork_thread:
+
+            if thread_mode == ThreadMode.SAME:
+                pass
+            elif thread_mode == ThreadMode.FORK:
                 child_thread_id = client.threads_fork(self._thread_id).id
                 self.add_system_log(f"Forked thread {child_thread_id}", logging.INFO)
+            elif thread_mode == ThreadMode.CHILD:
+                child_thread_id = client.create_subthread(self._thread_id).id
+                self.add_system_log(f"Created subthread {child_thread_id}", logging.INFO)
 
             if query:
                 client.threads_messages_create(thread_id=child_thread_id, content=query, role="user")
 
             assistant_id = f"{owner}/{agent_name}/{version}"
-            model = model or DEFAULT_PROVIDER_MODEL
             self.add_system_log(f"Running agent {assistant_id}", logging.INFO)
+            parent_run_id = None
+            if run_mode == RunMode.WITH_CALLBACK:
+                parent_run_id = self._run_id
             client.run_agent(
-                current_run_id=self._run_id,
-                child_thread_id=child_thread_id,
+                parent_run_id=parent_run_id,
+                run_on_thread_id=child_thread_id,
                 assistant_id=assistant_id,
             )
             self._pending_ext_agent = True
@@ -558,12 +578,13 @@ class Environment(object):
             message: str,
             attachments: Optional[Iterable[Attachment]] = None,
             message_type: Optional[str] = None,
+            thread_id: str = self._thread_id,
         ):
             """Assistant adds a message to the environment."""
             # NOTE: message from `user` are not stored in the memory
 
             return hub_client.beta.threads.messages.create(
-                thread_id=self._thread_id,
+                thread_id=thread_id,
                 role="assistant",
                 content=message,
                 extra_body={
@@ -575,6 +596,12 @@ class Environment(object):
             )
 
         self.add_reply = add_reply
+
+        def get_thread(thread_id=self._thread_id):
+            """Returns the current Thread object or the requested Thread."""
+            return client.get_thread(thread_id)
+
+        self.get_thread = get_thread
 
         def _add_message(
             role: str,
@@ -709,10 +736,20 @@ class Environment(object):
             return hub_client.beta.threads.runs.update(
                 thread_id=self._thread_id,
                 run_id=self._run_id,
-                extra_body={"status": "requires_action"},
+                extra_body={"status": "requires_action", "required_action": {"type": "user_input"}},
             )
 
         self.request_user_input = request_user_input
+
+        def request_agent_input() -> Run:
+            """Mark the run as ready for input from another agent."""
+            return hub_client.beta.threads.runs.update(
+                thread_id=self._thread_id,
+                run_id=self._run_id,
+                extra_body={"status": "requires_action", "required_action": {"type": "agent_input"}},
+            )
+
+        self.request_agent_input = request_agent_input
 
         # Must be placed after method definitions
         self.register_standard_tools()

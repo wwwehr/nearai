@@ -15,17 +15,22 @@ import { Star, StarHalf } from '@phosphor-icons/react';
 import { useState } from 'react';
 import { type z } from 'zod';
 
+import { useThreadsStore } from '~/stores/threads';
 import { getPrimaryDomainFromUrl } from '~/utils/url';
 
-import { type requestDecisionSchema } from './schema/decision';
+import { Message } from './Message';
+import {
+  CURRENT_AITP_DECISION_SCHEMA_URL,
+  type decisionSchema,
+  type requestDecisionSchema,
+} from './schema/decision';
 import s from './styles.module.scss';
 
 type Props = {
   content: z.infer<typeof requestDecisionSchema>['request_decision'];
-  contentId: string;
 };
 
-export const RequestDecisionProducts = ({ content, contentId }: Props) => {
+export const RequestDecisionProducts = ({ content }: Props) => {
   if (content.type !== 'products') {
     console.error(
       `Attempted to render <RequestDecisionProducts /> with invalid content type: ${content.type}`,
@@ -34,7 +39,7 @@ export const RequestDecisionProducts = ({ content, contentId }: Props) => {
   }
 
   return (
-    <Card animateIn>
+    <Message>
       {(content.title || content.description) && (
         <Flex direction="column" gap="s">
           {content.title && (
@@ -51,19 +56,19 @@ export const RequestDecisionProducts = ({ content, contentId }: Props) => {
       <div className={s.productGrid}>
         {content.options?.map((option, index) => (
           <Product
-            contentId={contentId}
+            content={content}
             index={index}
             option={option}
             key={option.id + index}
           />
         ))}
       </div>
-    </Card>
+    </Message>
   );
 };
 
 type Product = {
-  contentId: string;
+  content: Props['content'];
   index: number;
   option: NonNullable<
     z.infer<typeof requestDecisionSchema>['request_decision']['options']
@@ -72,7 +77,12 @@ type Product = {
 
 const quantities = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-const Product = (props: Product) => {
+function optionDisplayName(option: Product['option']) {
+  return option.short_variant_name || option.name || option.id;
+}
+
+const Product = ({ content, ...props }: Product) => {
+  const addMessage = useThreadsStore((store) => store.addMessage);
   const [zoomedImageUrl, setZoomedImageUrl] = useState('');
 
   const variants = [...(props.option.variants ?? [])];
@@ -95,11 +105,26 @@ const Product = (props: Product) => {
   );
 
   const addProductToCart = async () => {
-    // TODO
-    console.log(`Selected product with quantity: ${quantity}`, option);
-  };
+    if (!addMessage) return;
 
-  const displayName = option.short_variant_name || option.name || option.id;
+    const result: z.infer<typeof decisionSchema> = {
+      $schema: CURRENT_AITP_DECISION_SCHEMA_URL,
+      decision: {
+        request_decision_id: content.id,
+        options: [
+          {
+            id: option.id,
+            name: option.name,
+            quantity,
+          },
+        ],
+      },
+    };
+
+    void addMessage({
+      new_message: JSON.stringify(result),
+    });
+  };
 
   return (
     <Card background="sand-0" border="sand-0" className={s.productCard}>
@@ -148,7 +173,7 @@ const Product = (props: Product) => {
             <Dropdown.Root>
               <Dropdown.Trigger asChild>
                 <Button
-                  label={displayName}
+                  label={optionDisplayName(option)}
                   labelAlignment="left"
                   variant="secondary"
                   fill="outline"
@@ -174,7 +199,7 @@ const Product = (props: Product) => {
                             }}
                           />
                         )}
-                        {displayName}
+                        {optionDisplayName(variant)}
                       </Flex>
                     </Dropdown.Item>
                   ))}

@@ -124,6 +124,12 @@ class Environment(object):
     ) -> None:
         # Warning: never expose `client` or `_hub_client` to agent's environment
 
+        self.base_url = client._config.base_url
+
+        # user_auth is used to authenticate the user in the ts_runner. It will be removed after that in
+        # `nearai/agents/agent.py`
+        self.user_auth = client._auth
+
         # Placeholder for solver
         self.client: Optional[InferenceClient] = None
 

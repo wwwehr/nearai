@@ -136,7 +136,13 @@ def load_agent(client, agent, params: dict, additional_path: str = "", verbose=T
         global local_agent_cache
         if agent in local_agent_cache:
             print(f"Using {agent} from cache")
-            return local_agent_cache[agent]
+            full_agent = local_agent_cache[agent]
+
+            if full_agent.agent_language == "ts":
+                full_agent.temp_dir = full_agent.write_agent_files_to_temp(full_agent.agent_files)
+                return full_agent
+            else:
+                return local_agent_cache[agent]
 
         start_time = time.perf_counter()
         agent_files = client.get_agent(agent)

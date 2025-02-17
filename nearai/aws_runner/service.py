@@ -27,7 +27,11 @@ local_agent_cache: dict[str, Agent] = {}
 
 
 def create_cloudwatch():
-    if os.environ.get("AWS_ACCESS_KEY_ID") and os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+    if (
+        os.environ.get("AWS_ACCESS_KEY_ID")
+        and os.environ.get("AWS_SECRET_ACCESS_KEY")
+        and os.environ.get("AWS_LAMBDA_FUNCTION_NAME")
+    ):
         return boto3.client("cloudwatch", region_name="us-east-2")
     return None
 
@@ -112,19 +116,22 @@ def handler(event, context):
 
 def write_metric(metric_name, value, unit="Milliseconds", verbose=True):
     if cloudwatch and value:  # running in lambda or locally passed credentials
-        cloudwatch.put_metric_data(
-            Namespace="NearAI",
-            MetricData=[
-                {
-                    "MetricName": metric_name,
-                    "Value": value,
-                    "Unit": unit,
-                    "Dimensions": [
-                        {"Name": "FunctionName", "Value": os.environ["AWS_LAMBDA_FUNCTION_NAME"]},
-                    ],
-                }
-            ],
-        )
+        try:
+            cloudwatch.put_metric_data(
+                Namespace="NearAI",
+                MetricData=[
+                    {
+                        "MetricName": metric_name,
+                        "Value": value,
+                        "Unit": unit,
+                        "Dimensions": [
+                            {"Name": "FunctionName", "Value": os.environ["AWS_LAMBDA_FUNCTION_NAME"]},
+                        ],
+                    }
+                ],
+            )
+        except Exception as e:
+            print("Caught Error writing metric to CloudWatch: ", e)
     elif verbose:
         print(f"[DEBUG] • Would have written metric {metric_name} with value {value} to cloudwatch")
 
@@ -135,8 +142,8 @@ def load_agent(client, agent, params: dict, additional_path: str = "", verbose=T
     if params["data_source"] == "registry":
         use_cache = os.getenv("USE_AGENT_CACHE", "true").lower() == "true"
 
+        global local_agent_cache
         if use_cache:
-            global local_agent_cache
             if agent in local_agent_cache:
                 full_agent = local_agent_cache[agent]
                 full_agent.temp_dir = full_agent.write_agent_files_to_temp(full_agent.agent_files)

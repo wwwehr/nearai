@@ -432,18 +432,21 @@ export const AgentRunner = ({
                 <>
                   <IframeWithBlob
                     html={htmlOutput}
+                    height={currentEntry.details.agent?.html_height}
                     onPostMessage={onIframePostMessage}
                     postMessage={iframePostMessage}
                   />
 
-                  {latestAssistantMessages.length > 0 && (
-                    <ThreadMessages
-                      grow={false}
-                      messages={latestAssistantMessages}
-                      scroll={false}
-                      threadId={threadId}
-                    />
-                  )}
+                  {latestAssistantMessages.length > 0 &&
+                    currentEntry.details.agent
+                      ?.html_show_latest_messages_below && (
+                      <ThreadMessages
+                        grow={false}
+                        messages={latestAssistantMessages}
+                        scroll={false}
+                        threadId={threadId}
+                      />
+                    )}
                 </>
               ) : (
                 <ThreadMessages

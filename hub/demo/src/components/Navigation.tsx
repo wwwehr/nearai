@@ -1,6 +1,6 @@
 'use client';
 
-import { useTheme } from '@near-pagoda/ui';
+import { ImageIcon, useTheme } from '@near-pagoda/ui';
 import {
   BreakpointDisplay,
   Button,
@@ -20,9 +20,11 @@ import {
   List,
   Moon,
   Plus,
+  SignOut,
   Star,
   Sun,
   User,
+  Wallet,
   X,
 } from '@phosphor-icons/react';
 import * as NavigationMenu from '@radix-ui/react-navigation-menu';
@@ -111,6 +113,8 @@ export const Navigation = () => {
   const clearTokenMutation = trpc.auth.clearToken.useMutation();
   const isAuthenticated = useAuthStore((store) => store.isAuthenticated);
   const wallet = useWalletStore((store) => store.wallet);
+  const walletModal = useWalletStore((store) => store.modal);
+  const walletAccount = useWalletStore((store) => store.account);
   const path = usePathname();
   const [mounted, setMounted] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
@@ -120,11 +124,17 @@ export const Navigation = () => {
   }, []);
 
   const signOut = () => {
+    void clearTokenMutation.mutate();
+    clearAuth();
     if (wallet) {
       void wallet.signOut();
     }
-    void clearTokenMutation.mutate();
-    clearAuth();
+  };
+
+  const disconnectWallet = () => {
+    if (wallet) {
+      void wallet.signOut();
+    }
   };
 
   return (
@@ -289,21 +299,25 @@ export const Navigation = () => {
               />
             </Dropdown.Trigger>
 
-            <Dropdown.Content style={{ width: '12rem' }}>
+            <Dropdown.Content style={{ width: '14rem' }}>
               <Dropdown.Section>
                 <Dropdown.SectionContent>
-                  <Text
-                    size="text-xs"
-                    weight={600}
-                    color="sand-12"
-                    clampLines={1}
-                  >
-                    {auth?.account_id}
-                  </Text>
-                </Dropdown.SectionContent>
-              </Dropdown.Section>
+                  <Flex direction="column" gap="m">
+                    <Text size="text-xs" weight={600} uppercase>
+                      Account
+                    </Text>
 
-              <Dropdown.Section>
+                    <Text
+                      size="text-s"
+                      weight={600}
+                      color="sand-12"
+                      clampLines={1}
+                    >
+                      {auth?.account_id}
+                    </Text>
+                  </Flex>
+                </Dropdown.SectionContent>
+
                 {!env.NEXT_PUBLIC_CONSUMER_MODE && (
                   <>
                     <Dropdown.Item href={`/profiles/${auth?.account_id}`}>
@@ -326,10 +340,67 @@ export const Navigation = () => {
                 </Dropdown.Item>
 
                 <Dropdown.Item onSelect={signOut}>
-                  <SvgIcon icon={<X />} />
+                  <SvgIcon icon={<SignOut />} />
                   Sign Out
                 </Dropdown.Item>
               </Dropdown.Section>
+
+              {wallet && walletAccount ? (
+                <Dropdown.Section>
+                  <Dropdown.SectionContent>
+                    <Flex direction="column" gap="m">
+                      <Text size="text-xs" weight={600} uppercase>
+                        Payment Method
+                      </Text>
+
+                      <Flex align="center" gap="s">
+                        <ImageIcon
+                          src={wallet.metadata.iconUrl}
+                          alt={wallet.metadata.name}
+                        />
+
+                        <Flex direction="column">
+                          <Text
+                            size="text-s"
+                            weight={600}
+                            color="sand-12"
+                            clampLines={1}
+                          >
+                            {walletAccount.accountId}
+                          </Text>
+                          <Text size="text-xs" clampLines={1}>
+                            {wallet.metadata.name}
+                          </Text>
+                        </Flex>
+                      </Flex>
+                    </Flex>
+                  </Dropdown.SectionContent>
+
+                  <Dropdown.Item onSelect={disconnectWallet}>
+                    <SvgIcon icon={<X />} />
+                    Disconnect
+                  </Dropdown.Item>
+                </Dropdown.Section>
+              ) : (
+                <Dropdown.Section>
+                  <Dropdown.SectionContent>
+                    <Flex direction="column" gap="m">
+                      <Text size="text-xs" weight={600} uppercase>
+                        Payment Method
+                      </Text>
+
+                      <Text size="text-xs">
+                        Certain agent interactions require a connected wallet.
+                      </Text>
+                    </Flex>
+                  </Dropdown.SectionContent>
+
+                  <Dropdown.Item onSelect={() => walletModal?.show()}>
+                    <SvgIcon icon={<Wallet />} />
+                    Add Payment Method
+                  </Dropdown.Item>
+                </Dropdown.Section>
+              )}
             </Dropdown.Content>
           </Dropdown.Root>
         ) : (

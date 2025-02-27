@@ -156,7 +156,7 @@ class Environment(object):
         self.signer_account_id: str = client._config.auth.account_id if client._config.auth else ""
 
         if fastnear_api_key:
-            default_mainnet_rpc = f"https://rpc.mainnet.fastnear.com?apiKey={fastnear_api_key}"
+            default_mainnet_rpc = f"https://{fastnear_api_key}@rpc.mainnet.fastnear.com"
         else:
             default_mainnet_rpc = "https://rpc.mainnet.near.org"
 
@@ -602,6 +602,9 @@ class Environment(object):
             thread_id: str = self._thread_id,
         ):
             """Assistant adds a message to the environment."""
+            if message_type is None or not message_type.startswith("system:"):
+                print(f"add_reply: {message}")
+
             # NOTE: message from `user` are not stored in the memory
 
             return hub_client.beta.threads.messages.create(
@@ -630,6 +633,8 @@ class Environment(object):
             attachments: Optional[Iterable[Attachment]] = None,
             **kwargs: Any,
         ):
+            print(f"add_message [{role}]: {message}")
+
             return hub_client.beta.threads.messages.create(
                 thread_id=self._thread_id,
                 role=role,  # type: ignore

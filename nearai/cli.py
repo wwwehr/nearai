@@ -759,9 +759,8 @@ class AgentCli:
         last_message_id = None
         print(f"\n=== Starting interactive session with agent: {agent_id} ===")
         print("")
-        print("On Linux/macOS: To submit, press Ctrl+D at the beginning of a new line after your prompt")
-        print("On Windows: Press Ctrl+Z followed by Enter")
         print("Type 'exit' to end the session")
+        print("Type 'multiline' to enter multiline mode")
         print("")
 
         metadata = get_metadata(agent_path, local)
@@ -772,20 +771,43 @@ class AgentCli:
         if description:
             print(description)
 
+        multiline = False
+
+        def print_multiline_prompt():
+            print("On Linux/macOS: To submit, press Ctrl+D at the beginning of a new line after your prompt")
+            print("On Windows: Press Ctrl+Z followed by Enter")
+
         while True:
             first_line = input("> ")
             if first_line.lower() == "exit":
                 break
+            if not multiline and first_line.lower() == "multiline":
+                multiline = True
+                print_multiline_prompt()
+                continue
             lines = [first_line]
-            try:
-                pending_input_on_prev_line = False
-                while True:
-                    pending_input_on_this_line = has_pending_input()
-                    line = input("") if (pending_input_on_prev_line or pending_input_on_this_line) else input("> ")
-                    lines.append(line)
+
+            # NOTE: the code below tries to catch copy-paste by calling has_pending_input().
+            # This is OS-specific functionality and has been tested on Unix/Linux/Mac:
+            # 1. Works well with blocks of text of 3 lines and more.
+            # 2. Alas, does not trigger with text of 2 lines or less.
+            pending_input_on_this_line = has_pending_input()
+            if multiline or pending_input_on_this_line:
+                try:
                     pending_input_on_prev_line = pending_input_on_this_line
-            except EOFError:
-                print("")
+                    while True:
+                        pending_input_on_this_line = has_pending_input()
+                        if pending_input_on_prev_line or pending_input_on_this_line:
+                            line = input("")
+                        else:
+                            if not multiline:
+                                multiline = True
+                                print_multiline_prompt()
+                            line = input("> ")
+                        lines.append(line)
+                        pending_input_on_prev_line = pending_input_on_this_line
+                except EOFError:
+                    print("")
 
             new_message = "\n".join(lines)
 

@@ -1,82 +1,103 @@
 # Agent Streaming
-## Topics
 
-- [Streaming completions in an agent results in agent streaming](#streaming-completions-in-an-agent-results-in-agent-streaming)
-- [UI app.near.ai](#ui-appnearai)
-    - [Agent settings](#agent-settings)
-    - [CLI](#cli)
-- [Agent usage](#agent-usage)
-- [Multiple streaming invocations!](#multiple-streaming-invocations)
-- [API Usage](#api-usage)
-- [FAQ: more complex cases](#faq-more-complex-cases)
-- [Full File examples](#full-file-examples)
-    - [Full agent example](#full-agent-example)
-    - [Full metadata file with show_streaming_message setting](#full-metadata-file-with-show_streaming_message-setting)
+## What is Agent Streaming?
 
-## Streaming completions in an agent results in agent streaming
-When an Agent streams completions by passing `stream=True`, those completion chunks are streamed back to the agent.
+Agent streaming enables output from your agent in a continuous, incremental stream, rather than waiting for a complete one-time response. This improves the user experience by providing immediate feedback and preventing long wait times especially for complex tasks such as multi-step reasoning, data analysis, or tool-based interactions.
+
+## Getting Started
+
+To use agent streaming, first implement streaming completions in your agent's code by passing `stream=True` to your `completion` function:
+
+```python
+    result = self.env.completion([prompt] + messages, stream=True)
+```
+
+_( See [streaming completions](#streaming-completions) for more details.)_
+
+Once complete, you can now view these streams in the UI or CLI, each having their own unique way to enable.
+
+#### Enable UI Streaming
+
+To enable agent streaming in the UI, add `"show_streaming_message": true` to the `agent` details within your agent's [`metadata.json` file](./quickstart.md/#metadatajson):
+
+```json
+  "details": {
+    "agent": {
+      "show_streaming_message": true
+    }
+  }
+```
+
+See [full example below](#__tabbed_1_2)
+
+The UI automatically receives the same stream as the agent. A counter of deltas received and optionally the stream of text itself are shown to the user.
+
+![Streaming screenshot.png](../assets/Streaming%20screenshot.png)
+
+!!! note
+    If your agent produces intermediate, non-user-facing completions (e.g., during tool calls or complex reasoning steps), you might set `"show_streaming_message": false` to prevent partial or internal messages from being displayed directly to the user in the UI.
+
+    It's also important to note that the streaming text is immediately replaced upon the next message, so some applications might still prefer `true` even with intermediate steps.
+
+#### Enable CLI Streaming
+
+To enable agent streaming in the CLI use the `--stream=True` flag when running `nearai agent interactive`.
+
+- This method only has display mode (show each chunk of text) and only shows the final messages.
+- Use this flag each time you run an agent as it does not use the `show_streaming_message` setting from your `metadata.json`
+
+!!! note
+    As with UI streaming, you must first implement [streaming completions](#streaming-completions) in your agent's code _before_ using this command. When working with different agent types (streaming & non-streaming) the following behavior is expected:
+
+    * An agent that **does not** stream completions that is run in `nearai agent interactive` mode with `--stream=True` will show **no output**.
+    * An agent that **does** stream completions will by default show the final message only. When passed `--stream=True` it will show the text as it is received.
+
+## Streaming Completions
+
+To stream completion chunks to your agent, pass `stream=True` when using the `completion` function:
+
+Example:
 
 ```python
     result = self.env.completion([prompt] + messages, stream=True) # stream the completions!
     self.env.add_reply(result) # write the full message to the thread as normal
 ```
-The chunks are also persisted temporarily on the hub and made available to clients through 
+
+These chunks are also persisted temporarily on the Agent Cloud (Hub) and made available to clients through 
 the `/threads/{thread_id}/stream/{run_id}` endpoint.
 
- * Chunk: One or more tokens streamed from the LLM to the agent.
- * Delta: An SSE event that contains a chunk, streamed to clients.
+* Chunk: One or more tokens streamed from the LLM to the agent.
+* Delta: An SSE event that contains a chunk, streamed to clients.
 
-## UI app.near.ai
-The UI automatically receives the same stream as the agent.
-A counter of deltas received and optionally the stream of text itself are shown to the user.
+[See full example below for more](#__tabbed_1_1)
 
-![Streaming screenshot.png](../assets/Streaming%20screenshot.png)
+### Agent Usage
 
+Within the agent the completion function returns a `StreamHandler` object when `stream=True`. 
+This can be iterated over or passed to streaming libraries that accept a `StreamHandler`.
 
-### Agent settings
-To show the text as it is received, set the agent metadata `"show_streaming_message": true`
-inside details->agents. A full file example can be found at the end of this page.
-
-If your agent has tool calls, inter-agent messaging, makes decisions before deciding output, or otherwise produces non-user facing completions,
-you may want to set `"show_streaming_message": false` to avoid showing the user partial messages.
-
-However, this streaming text will be replaced as soon as the next message comes in. For completions that 
-combine user facing text and non-user facing text, some apps may want to briefly show the raw streaming text, quickly replacing 
-it with the final message. This is a design decision for the app to make.
-
-`show_streaming_message` defaults to `true`
-
-### CLI
-Similarly, the CLI can show streaming text as it is received. It only has one display mode (show each chunk of text) and does not use the `show_streaming_message` setting.
-
-You can switch between CLI streaming and message modes by using the `--stream=True` flag. The default is false and will show final messages only.
-
-* An agent that does not stream completions that is run in `nearai agent interactive` mode with `--stream=True` will show no output.
-* An agent that does stream completions will by default show the final message only. When passed `--stream=True` it will show the text as it is received.
-
-
-## Agent usage
-Within the agent the completion function returns a StreamHandler object when stream=True. 
-This can be iterated over or passed to streaming libraries that accept a StreamHandler.
 ```python
-    resp_stream = self.env.completion([prompt] + messages, stream=True)
+    response_stream = self.env.completion([prompt] + messages, stream=True)
 
-    for event in resp_stream:
-        for _idx, chunk in enumerate(resp_stream):
+    for event in response_stream:
+        for _idx, chunk in enumerate(response_stream):
             c = json.dumps(chunk.model_dump())
             print(c)
             # do something with the chunk
             
             # if part of a chain of async calls you could yield the chunk or evaluate or modify it and yield
             # yield chunk
-    self.env.add_reply(resp_stream) # write the full message to the thread
+    self.env.add_reply(response_stream) # write the full message to the thread
 ```
-Use of the /thread/
 
-## Multiple streaming invocations!
+[See full example below for more](#__tabbed_1_1)
+
+### Multiple Streaming Invocations
+
 A single agent run can contain multiple streaming completion calls!
 
-In this example two different personas are passed the same conversation history.
+Here is an example where two different personas are passed the same conversation history:
+
 ```python
         prompt = {"role": "system", "content": "respond as though you were Socrates"}
         messages = self.env.list_messages()
@@ -89,12 +110,14 @@ In this example two different personas are passed the same conversation history.
         self.env.add_reply(result2)
 ```
 
-## API Usage
-Calls to the `/threads/{thread_id}/stream/{run_id}` endpoint return an SSE EventStream of deltas and thread events.
-These events are compatible with OpenAI Thread streaming events, https://platform.openai.com/docs/api-reference/assistants-streaming/events
+ [See full example below for more](#__tabbed_1_1)
 
-### Javascript example
-A React client might handle streaming as follows.
+## Streaming API
+
+Calls to the `/threads/{thread_id}/stream/{run_id}` endpoint return an SSE EventStream of deltas and thread events.
+These events are compatible with OpenAI Thread streaming events, https://platform.openai.com/docs/api-reference/assistants-streaming/events.
+
+Here is an example of how a React client might use this API endpoint:
 
 ```javascript
   const startStreaming = (threadId: string, runId: string) => {
@@ -152,7 +175,8 @@ A React client might handle streaming as follows.
   };
 ```
 
-## FAQ: more complex cases
+## Advanced Streaming / FAQs
+
  * Child threads do not currently support streaming thus invoking another agent on a child thread will not stream.
  * Agent initiated Deltas
      * Writing delta events from the agent to the agent stream is not currently supported.
@@ -163,64 +187,63 @@ A React client might handle streaming as follows.
      * Depending on your use case you may want to separate tool calls from the main response rather than requesting 
         both in the same completion call.
 
-## Full File examples
+## Full Agent Streaming Example
 
-### Full agent example
-```python
-from nearai.agents.environment import Environment
+=== "agent.py"
 
-class Agent:
-    def __init__(self, env: Environment):
-        self.env = env
+    ```python
+    from nearai.agents.environment import Environment
 
-    def run(self):
-        prompt = {"role": "system", "content": "respond as though you were Socrates"}
-        messages = self.env.list_messages()
+    class Agent:
+        def __init__(self, env: Environment):
+            self.env = env
 
-        # Pass stream=True to enable streaming of deltas
-        # They will then show automatically in the UI or can be fetched at /threads/{thread_id}/stream/{run_id}
-        result = self.env.completion([prompt] + messages, stream=True)
-        self.env.add_reply(result)
+        def run(self):
+            prompt = {"role": "system", "content": "respond as though you were Socrates"}
+            messages = self.env.list_messages()
 
-        prompt2 = {"role": "system", "content": "Now, respond as though you were Plato"}
-        result2 = self.env.completion([prompt2] + messages, stream=True)
-        self.env.add_reply(result2)
+            # Pass stream=True to enable streaming of deltas
+            # They will then show automatically in the UI or can be fetched at /threads/{thread_id}/stream/{run_id}
+            result = self.env.completion([prompt] + messages, stream=True)
+            self.env.add_reply(result)
 
-        self.env.request_user_input()
+            prompt2 = {"role": "system", "content": "Now, respond as though you were Plato"}
+            result2 = self.env.completion([prompt2] + messages, stream=True)
+            self.env.add_reply(result2)
 
-if globals().get('env', None):
-    agent = Agent(globals().get('env'))
-    agent.run()
-```
+            self.env.request_user_input()
 
+    if globals().get('env', None):
+        agent = Agent(globals().get('env'))
+        agent.run()
+    ```
 
+=== "metadata.json"
 
-
-### Full metadata file with show_streaming_message setting
-```
-  "name": "streaming-example",
-  "version": "0.0.3",
-  "category": "agent",
-  "description": "Demonstrates streaming agent runs.",
-  "tags": ["streaming"],
-  "details": {
-    "display_name": "Streaming Example",
-    "icon": "https://static.thenounproject.com/png/1677760-200.png",
-    "agent": {
-      "show_streaming_message": true,
-      "welcome": {
-        "title": "Example of streaming agent runs",
-        "description": "I respond as Socrates then as Plato."
-      },
-      "defaults": {
-        "max_iterations": 1,
-        "model": "llama-v3p3-70b-instruct",
-        "model_max_tokens": 4000,
-        "model_provider": "fireworks"
+      ```json
+        "name": "streaming-example",
+        "version": "0.0.3",
+        "category": "agent",
+        "description": "Demonstrates streaming agent runs.",
+        "tags": ["streaming"],
+        "details": {
+          "display_name": "Streaming Example",
+          "icon": "https://static.thenounproject.com/png/1677760-200.png",
+          "agent": {
+            "show_streaming_message": true,
+            "welcome": {
+              "title": "Example of streaming agent runs",
+              "description": "I respond as Socrates then as Plato."
+            },
+            "defaults": {
+              "max_iterations": 1,
+              "model": "llama-v3p3-70b-instruct",
+              "model_max_tokens": 4000,
+              "model_provider": "fireworks"
+            }
+          },
+          "capabilities": []
+        },
+        "show_entry": true
       }
-    },
-    "capabilities": []
-  },
-  "show_entry": true
-}
-```
+      ```

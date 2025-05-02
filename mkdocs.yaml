@@ -155,6 +155,7 @@ nav:
         - Vector Stores: 'agents/vector-stores.md'
         - Inference (OpenAI): 'inference.md'
         - Benchmarks and Evaluations: 'models/benchmarks_and_evaluations.md'
+        - Streaming: 'agents/streaming.md'
       - Templates:
         - CDP AgentKit: 'agents/templates/coinbase.md'
     - Agent Patterns:

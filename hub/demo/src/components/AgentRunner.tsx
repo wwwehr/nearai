@@ -27,6 +27,7 @@ import {
 } from '@phosphor-icons/react';
 import { Paperclip, X } from '@phosphor-icons/react/dist/ssr';
 import { useMutation } from '@tanstack/react-query';
+import { formatDistanceToNow } from 'date-fns';
 import {
   type KeyboardEventHandler,
   useCallback,
@@ -250,10 +251,33 @@ export const AgentRunner = ({
       }
     }
 
+    // Group outputs by filename and keep only the latest version
+    const latestOutputsByFilename = outputs.reduce((acc, file) => {
+      const existing = acc.get(file.filename);
+      // Type guard to check if the file has created_at property
+      const fileWithDate = file as z.infer<typeof threadFileModel> & {
+        created_at?: string;
+      };
+      const existingWithDate = existing as z.infer<typeof threadFileModel> & {
+        created_at?: string;
+      };
+
+      // If not available, we'll use the order in the array (latest files typically come last)
+      if (
+        !existing ||
+        (fileWithDate.created_at &&
+          existingWithDate.created_at &&
+          fileWithDate.created_at > existingWithDate.created_at)
+      ) {
+        acc.set(file.filename, file);
+      }
+      return acc;
+    }, new Map<string, z.infer<typeof threadFileModel>>());
+
     return {
       attachments,
-      outputs,
-      total: all.length,
+      outputs: Array.from(latestOutputsByFilename.values()),
+      total: attachments.length + latestOutputsByFilename.size,
     };
   }, [messages, thread]);
 
@@ -937,24 +961,42 @@ export const AgentRunner = ({
                             setOpenedFileId(file.id);
                           }}
                         >
-                          <Flex align="center" gap="s">
-                            <Text
-                              size="text-s"
-                              color="sand-12"
-                              weight={500}
-                              clampLines={1}
-                              style={{ marginRight: 'auto' }}
-                            >
-                              {file.filename}
-                            </Text>
+                          <Flex direction="column" gap="xs">
+                            <Flex align="center" gap="s">
+                              <Text
+                                size="text-s"
+                                color="sand-12"
+                                weight={500}
+                                clampLines={1}
+                                style={{ marginRight: 'auto' }}
+                              >
+                                {file.filename}
+                              </Text>
 
-                            <Text
-                              size="text-xs"
-                              noWrap
-                              style={{ flexShrink: 0 }}
-                            >
-                              {formatBytes(file.bytes)}
-                            </Text>
+                              <Text
+                                size="text-xs"
+                                noWrap
+                                style={{ flexShrink: 0 }}
+                              >
+                                {formatBytes(file.bytes)}
+                              </Text>
+                            </Flex>
+
+                            {'created_at' in file && file.created_at && (
+                              <Text size="text-xs" color="sand-10">
+                                {formatDistanceToNow(
+                                  new Date(
+                                    typeof file.created_at === 'string'
+                                      ? file.created_at
+                                      : file.created_at *
+                                        (file.created_at < 10000000000
+                                          ? 1000
+                                          : 1),
+                                  ),
+                                  { addSuffix: true },
+                                )}
+                              </Text>
+                            )}
                           </Flex>
                         </Card>
                       ))}

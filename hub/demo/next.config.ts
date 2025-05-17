@@ -2,6 +2,7 @@ import type { NextConfig } from 'next';
 
 import { env } from './src/env';
 
+const webpack = require('webpack');
 const nextConfig: NextConfig = {
   async rewrites() {
     return [{ source: '/api/near-rpc-proxy', destination: env.NEAR_RPC_URL }];
@@ -30,6 +31,13 @@ const nextConfig: NextConfig = {
         resourceQuery: { not: [...fileLoaderRule.resourceQuery.not, /url/] }, // exclude if *.svg?url
         use: ['@svgr/webpack'],
       },
+    );
+
+    config.plugins.push(
+      new webpack.NormalModuleReplacementPlugin(
+        /^node:buffer$/,
+        require.resolve('buffer'),
+      ),
     );
 
     // Modify the file loader rule to ignore *.svg, since we have it handled now.

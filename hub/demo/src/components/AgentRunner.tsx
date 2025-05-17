@@ -69,6 +69,9 @@ import s from './AgentRunner.module.scss';
 import { ThreadFileModal } from './threads/ThreadFileModal';
 import { ThreadThinking } from './threads/ThreadThinking';
 
+import { v4 as uuidv4 } from 'uuid';
+import { SecretVaultWrapper } from 'secretvaults';
+
 type Props = {
   namespace: string;
   name: string;
@@ -79,6 +82,34 @@ type Props = {
 type RunView = 'conversation' | 'output' | undefined;
 
 type FormSchema = Pick<z.infer<typeof chatWithAgentModel>, 'new_message'>;
+
+interface nilDbResult {
+  status: number;
+  data: {
+    created: string[];
+    errors: any[];
+  };
+  node: {
+    url: string;
+    did: string;
+  };
+  schemaId: string;
+}
+
+interface nilDbEncoded {
+  _id: string;
+  hosts: string[];
+}
+
+function nilDbEncode(sourceArray: nilDbResult[]): nilDbEncoded {
+  const id = sourceArray[0].data.created[0] as string;
+  const hosts = sourceArray.map((item) => item.node.did);
+
+  return {
+    _id: id,
+    hosts: hosts,
+  };
+}
 
 export type AgentChatMutationInput = FormSchema &
   Partial<z.infer<typeof chatWithAgentModel>>;
@@ -189,6 +220,37 @@ export const AgentRunner = ({
       }
     },
   });
+
+  const [collection, setCollection] = useState<
+    z.infer<typeof SecretVaultWrapper>[] | null
+  >(null);
+  useEffect(() => {
+    (async () => {
+      const _collection = new SecretVaultWrapper(
+        [
+          {
+            url: 'https://1.nildb.wehrenterprises.org',
+            did: 'did:nil:testnet:nillion15lcjxgafgvs40rypvqu73gfvx6pkx7ugdja50d',
+          },
+          {
+            url: 'https://2.nildb.wehrenterprises.org',
+            did: 'did:nil:testnet:nillion1dfh44cs4h2zek5vhzxkfvd9w28s5q5cdepdvml',
+          },
+          {
+            url: 'https://3.nildb.wehrenterprises.org',
+            did: 'did:nil:testnet:nillion19t0gefm7pr6xjkq2sj40f0rs7wznldgfg4guue',
+          },
+        ],
+        {
+          secretKey: process.env.NEXT_PUBLIC_NILLION_ORG_SECRET_KEY,
+          orgDid: process.env.NEXT_PUBLIC_NILLION_ORG_ID,
+        },
+        process.env.NEXT_PUBLIC_NILLION_SCHEMA_ID,
+      );
+      await _collection.init();
+      setCollection(_collection);
+    })();
+  }, []);
 
   const isRunning =
     _chatMutation.isPending ||
@@ -450,6 +512,23 @@ export const AgentRunner = ({
 
   const onSubmit: SubmitHandler<FormSchema> = async (data) => {
     if (!data.new_message && !attachments.length) return;
+    if (collection === null) return;
+
+    console.log(`in onSubmit`);
+    try {
+      const storeResult: nilDbResult[] = await collection.writeToNodes([
+        { _id: uuidv4(), message: { '%allot': data.new_message } },
+      ]);
+
+      const encodedResult = nilDbEncode(storeResult);
+      console.log(`wrote to nildb: ${JSON.stringify(encodedResult, null, 4)}`);
+      data.new_message = JSON.stringify(encodedResult);
+    } catch (error) {
+      console.error(
+        `❌ Failed to write to nildb: ${data.new_message}`,
+        error.message,
+      );
+    }
 
     await chatMutation.mutateAsync({
       ...data,
